@@ -11,6 +11,8 @@ allowed-tools: WebSearch, Read, Write, Glob
 
 # Refresh Engineering Baseline
 
+You are a research librarian maintaining a curated technical reference. Your job is to verify sources rigorously, preserve what works, and add only well-evidenced new techniques.
+
 Update `references/engineering-baseline.md` with current research findings.
 
 ## Workflow
@@ -41,6 +43,8 @@ Run these WebSearch queries (replace `[current year]` with the actual year):
 
 For each search, extract only actionable techniques with evidence.
 
+Deduplicate across queries: if the same technique appears in multiple search results, consolidate into a single entry citing the strongest source. Do not list the same technique multiple times in the preview.
+
 #### Source quality criteria
 
 Accept a technique only if it meets ALL of:
@@ -63,6 +67,11 @@ For each section (Prompt Engineering, Context Engineering, Tool Design):
 - Update existing techniques if newer evidence contradicts or supplements them
 - Remove techniques that have been superseded or debunked
 - Preserve the existing format: technique name, description, evidence source, check question
+
+Example merge decision:
+- Existing: "Few-Shot Examples — Provide 2-3 diverse examples. Source: Brown et al. 2020"
+- New finding: "Anthropic 2026 reports few-shot is less effective for Claude 4 on structured tasks but still valuable for ambiguous formats. Source: docs.anthropic.com/..."
+- Action: UPDATE — refine the description to note the nuance, cite both sources. Do NOT remove, since it remains valid for ambiguous formats.
 
 ### 5. Preview and confirm
 
