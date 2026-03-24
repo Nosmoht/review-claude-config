@@ -46,6 +46,7 @@ Evidence-based research informing the rubric and baseline. Consult these when mo
 - [Agent Skills Architecture](research/agent-skills/anthropic-equipping-agents-with-skills.md) — Progressive disclosure, skill format
 - [Domain Knowledge Impact](research/domain-knowledge/domain-knowledge-impact-on-quality.md) — 30-206% quality improvement from domain rules
 - [Documentation Best Practices](research/documentation/engineering-documentation-best-practices.md) — Hyperlink everything, document rationale
+- [LLM Agent Caching Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — File-based memory, CAG vs RAG, token-efficient formats, KV-cache optimization
 
 ## Working Guidelines
 
