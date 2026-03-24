@@ -5,13 +5,15 @@ A Claude Code skill that analyzes and optimizes Claude Code skills and agents us
 ## Skills
 
 - `/review-claude-config [folder]` — Audit all skills/agents in a folder (defaults to cwd). Read-only, produces per-item quality certificates.
+- `/suggest-skills [folder]` — Analyze a repository to identify missing skills. Read-only, produces prioritized suggestions with skeleton SKILL.md files.
 - `/refresh-engineering-baseline` — Update the engineering baseline with current research via WebSearch.
 
 ## Installation
 
-Copy both skill directories into any project's `.claude/skills/`:
+Copy skill directories into any project's `.claude/skills/`:
 ```
 cp -r .claude/skills/review-claude-config <target>/.claude/skills/
+cp -r .claude/skills/suggest-skills <target>/.claude/skills/
 cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 ```
 
@@ -21,16 +23,18 @@ cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 - `.claude/skills/review-claude-config/references/scoring-rubric.md` — 7-dimension A-F grading rubric
 - `.claude/skills/review-claude-config/references/engineering-baseline.md` — Curated prompt, context, and tool design techniques
 - `.claude/skills/review-claude-config/references/domain-cache/` — Cached domain research from review analysis agents (auto-populated, committed to git)
+- `.claude/skills/suggest-skills/SKILL.md` — Skill gap detection and suggestion skill
+- `.claude/skills/suggest-skills/references/signal-catalog.md` — Signal patterns and extraction criteria for detecting missing skills
 - `.claude/skills/refresh-engineering-baseline/SKILL.md` — Baseline refresh skill
 
 ## Conventions
 
 - Language: English
-- Reference files must stay within token budgets: rubric <1K, baseline <2K, domain cache entries ≤500 tokens each
+- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, domain cache entries ≤500 tokens each
 - Domain cache entries are committed to track research evolution and enable offline reuse. Refreshed on the same 90-day cycle as the engineering baseline.
 - Web content fetching (WebFetch) is optional in both skills. Skills degrade gracefully to WebSearch-only when WebFetch is unavailable.
-- The review skill is read-only on analyzed files — it writes review reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`
-- Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and should be committed to track skill quality evolution
+- The review and suggest skills are read-only on analyzed files — review writes reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`; suggest writes only reports to `.claude/reviews/`
+- Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and suggestion reports to `.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md` — both should be committed to track skill quality evolution
 - The baseline is static at review time; updates happen via `/refresh-engineering-baseline`
 - Commits use scoped conventional format: `type(scope): description` (e.g., `feat(review-skill):`, `fix(refresh-skill):`, `docs(project):`)
 - Review audit→fix chain commits use the report timestamp as shared identifier: `docs(reviews): add <timestamp> review report` → `fix(<scope>): address findings from <timestamp> review`
@@ -51,12 +55,15 @@ Evidence-based research informing the rubric and baseline. Consult these when mo
 - [Documentation Best Practices](research/documentation/engineering-documentation-best-practices.md) — Hyperlink everything, document rationale
 - [LLM Agent Caching Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — File-based memory, CAG vs RAG, token-efficient formats, KV-cache optimization
 - [Web Content Scraping Tools](research/web-scraping/web-content-scraping-tools.md) — Tool evaluation for full-content retrieval (WebFetch, Jina Reader, Firecrawl, Crawl4AI)
+- [Skill Gap Detection Approaches](research/skill-gap-detection/skill-gap-detection-approaches.md) — Extraction criteria, prior art survey, proactive gap analysis methodology
 
 ## Working Guidelines
 
 - **Verify subagent claims with evidence.** When a subagent/reviewer recommends changing the approach, verify the underlying assumptions with WebSearch or other evidence before accepting. Do not remove features without proof they don't add value. (Context: a reviewer once recommended dropping domain-specific research — we verified and found the reviewer was wrong, domain knowledge improves quality by 30-206%.)
 - **Iterate reviews until convergence.** After each review round, address findings, then launch another review. Stop only when a review returns no high/medium priority findings. Don't accept the first review as final.
+- **Research before design.** When working in novel domains (caching patterns, gap detection, new skill types), conduct WebSearch research before proposing architecture. Save findings as research files in `research/` with full source citations.
 - **Every claim needs a source.** All research files, documentation, and recommendations must link to verifiable sources. Follow the [documentation best practices](research/documentation/engineering-documentation-best-practices.md) used in this project.
+- **No external memory.** This repository must be portable. All project knowledge belongs in repo files (CLAUDE.md, research/, skill references), not in Claude's auto-memory system.
 
 ## Mandatory Plan Review
 
