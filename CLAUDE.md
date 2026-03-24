@@ -28,6 +28,7 @@ cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 - Language: English
 - Reference files must stay within token budgets: rubric <1K, baseline <2K, domain cache entries ≤500 tokens each
 - Domain cache entries are committed to track research evolution and enable offline reuse. Refreshed on the same 90-day cycle as the engineering baseline.
+- Web content fetching (WebFetch) is optional in both skills. Skills degrade gracefully to WebSearch-only when WebFetch is unavailable.
 - The review skill is read-only on analyzed files — it writes review reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`
 - Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and should be committed to track skill quality evolution
 - The baseline is static at review time; updates happen via `/refresh-engineering-baseline`
@@ -49,6 +50,7 @@ Evidence-based research informing the rubric and baseline. Consult these when mo
 - [Domain Knowledge Impact](research/domain-knowledge/domain-knowledge-impact-on-quality.md) — 30-206% quality improvement from domain rules
 - [Documentation Best Practices](research/documentation/engineering-documentation-best-practices.md) — Hyperlink everything, document rationale
 - [LLM Agent Caching Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — File-based memory, CAG vs RAG, token-efficient formats, KV-cache optimization
+- [Web Content Scraping Tools](research/web-scraping/web-content-scraping-tools.md) — Tool evaluation for full-content retrieval (WebFetch, Jina Reader, Firecrawl, Crawl4AI)
 
 ## Working Guidelines
 
