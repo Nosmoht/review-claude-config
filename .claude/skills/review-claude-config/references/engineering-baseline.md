@@ -12,7 +12,7 @@ last_refreshed: 2026-03-24
 
 **Role Priming** — Assign a specific role/persona ("You are a Kubernetes SRE"). Most effective when domain-specific. Check: does it establish behavioral context beyond generic instructions?
 
-**Chain-of-Thought** — Guide multi-step reasoning explicitly ("First check X, then evaluate Y based on the result"). Check: are complex decisions broken into explicit sequential steps?
+**Chain-of-Thought** — Guide multi-step reasoning explicitly ("First check X, then evaluate Y based on the result"). 19-point boost on MMLU-Pro for standard models. Skip explicit CoT for reasoning models — they chain internally. Check: are complex decisions broken into explicit sequential steps?
 
 **Few-Shot Examples** — Provide 2-3 diverse, canonical examples showing expected behavior. Avoid laundry lists of edge cases. Check: are examples present where output format or decision logic is non-obvious?
 
@@ -20,15 +20,21 @@ last_refreshed: 2026-03-24
 
 **Output Format Templates** — Literal templates with placeholders the model fills in. Check: is there a template or just a description of the output?
 
+**Degrees of Freedom** — Match instruction specificity to task fragility: low freedom (exact scripts) for fragile/error-prone operations, high freedom (text guidance) when multiple approaches are valid (Anthropic). Check: does the specificity level match the task's risk?
+
+**Verification Criteria** — Include tests, validators, or expected outputs so the agent can self-check. "Dramatically better" performance when agents verify their own work (Anthropic). Check: can the agent confirm its output is correct without human review?
+
+**Feedback Loops** — Run validator → fix errors → repeat for quality-critical outputs. Catches errors early and enables iterative improvement without human intervention (Anthropic). Check: do quality-critical steps include a validate-fix cycle?
+
 ## Context Engineering Techniques
 
-**Context Budget** — A focused 300-token context often outperforms 113K unfocused (Anthropic). Minimize tokens, maximize signal. Check: is information density high? Could the item achieve the same with fewer tokens?
+**Context Budget** — A focused 300-token context often outperforms 113K unfocused (Anthropic). Only add context the model doesn't already have — challenge each piece: "Does it justify its token cost?" (Anthropic 2026). Minimize tokens, maximize signal. Check: is information density high? Could the item achieve the same with fewer tokens?
 
 **Just-in-Time Retrieval** — Maintain lightweight identifiers (file paths, queries), load data on demand rather than pre-loading. Check: does the item load all context upfront or progressively?
 
 **Subagent Isolation** — Delegate focused subtasks to subagents with clean context windows. Return condensed summaries (1-2K tokens). Check: are complex tasks decomposed into isolated subtasks?
 
-**Reference File Separation** — Offload stable knowledge (rubrics, checklists, domain guides) to `references/` files loaded only when needed. Implements progressive disclosure (TOC → chapters → appendix). Check: is large stable content embedded inline or separated?
+**Reference File Separation** — Offload stable knowledge (rubrics, checklists, domain guides) to `references/` files loaded only when needed. Keep main file under 500 lines, references one level deep, ToC for files >100 lines (Anthropic 2026). Check: is large stable content embedded inline or separated?
 
 **Tool Set Curation** — Minimal, unambiguous tools. "If a human can't say which tool to use, the agent can't either" (Anthropic). Check: could any tools be removed without losing capability? Do any tools overlap?
 
@@ -54,5 +60,9 @@ last_refreshed: 2026-03-24
 - Anthropic: "Effective context engineering for AI agents"
 - Anthropic: "Writing tools for agents"
 - Anthropic: "Equipping agents with agent skills"
+- Anthropic: "Skill authoring best practices" (2026) — https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+- Anthropic: "Best practices for Claude Code" (2026) — https://code.claude.com/docs/en/best-practices
+- Fowler: "Context Engineering for Coding Agents" — https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html
 - Manus/Meta: "Context Engineering for AI Agents"
 - Chroma Research: "Context Rot"
+- Schulhoff et al.: "The Prompt Report" (2024) — https://arxiv.org/abs/2406.06608
