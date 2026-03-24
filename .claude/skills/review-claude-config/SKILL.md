@@ -7,7 +7,7 @@ description: >
   recommendations. Use when you want to audit skill/agent quality or before
   shipping new skills.
 argument-hint: [folder]
-allowed-tools: Agent, Read, Write, Glob, Grep, WebSearch
+allowed-tools: Agent, Read, Write, Glob, WebSearch
 ---
 
 # Review Claude Config
@@ -136,6 +136,16 @@ Example (no Write/Bash/Edit): Clarity=A(95), Completeness=B(85), PE=B(85),
 CE=A(95), Goal=B(85), Safety=A(95), Meta=B(85).
 Score = 95×.15 + 85×.15 + 85×.15 + 95×.15 + 85×.20 + 95×.10 + 85×.10 = 89.0 → B
 
+### Grading Boundary Examples
+
+**Clarity B vs C:** B has a clear workflow where step order is unambiguous but one
+conditional ("if needed") lacks specific criteria. C has steps that two models would
+sequence differently because dependencies between steps are not explicit.
+
+**Safety B vs C:** B restricts tools to what's needed and includes a confirmation gate
+before writes. C has tools broader than needed (e.g., Bash when only Read is required)
+or could modify user files without explicit confirmation.
+
 [If WebSearch was unavailable, add: "Goal Alignment scored without web
 verification."]
 
@@ -227,13 +237,32 @@ summary:
 
 **Body:** All per-item reports (Goal + Certificate + Strengths + Recommendations), Summary Table, Cross-Cutting Observations.
 
+**Large codebase handling:** If more than 20 items are reviewed, include full per-item reports only for items scoring C or below. A/B items get a one-line summary row only. All items are still analyzed and included in the Summary Table and frontmatter summary (preserves the "Analyze every discovered item" hard rule — analysis is not skipped, only report detail is reduced).
+
 ### Step 2: Write the report
 
 Write to: `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md`
 
 Use the current date and time for the timestamp. Create the `<target>/.claude/reviews/` directory if it does not exist. Timestamp ensures each run produces a unique file, supporting the "iterate until convergence" workflow.
 
-### Step 3: Confirm
+### Step 3: Delta comparison
+
+If a previous review report exists in `<target>/.claude/reviews/`:
+- Read the most recent prior report's frontmatter `summary` block
+- Compare each item's current grades against prior grades
+- Append a "Delta from Prior Review" section to the report body:
+
+```
+## Delta from Prior Review ([prior report date])
+
+| Item | Dimension | Previous | Current | Change |
+|------|-----------|----------|---------|--------|
+| [only rows where grades changed] |
+```
+
+If no prior report exists, skip this step.
+
+### Step 4: Confirm
 
 Tell the user the report file path and suggest: "Commit this file to track skill quality over time."
 
