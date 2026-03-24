@@ -6,7 +6,7 @@ description: >
   and Claude Code configuration guidance, then merges findings into the baseline.
   Use when the baseline's last_refreshed date is older than 3 months.
 disable-model-invocation: true
-allowed-tools: WebSearch, Read, Write
+allowed-tools: WebSearch, WebFetch, Read, Write
 ---
 
 # Refresh Engineering Baseline
@@ -22,6 +22,8 @@ Update `references/engineering-baseline.md` with current research findings.
 Read `.claude/skills/review-claude-config/references/engineering-baseline.md`. If the file is not found, report the error and stop.
 
 Read the current file content and extract the `last_refreshed` date from frontmatter. If `last_refreshed` is missing or unparseable, treat the baseline as stale and proceed directly to Step 3.
+
+Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fails or is unavailable, set `webfetch_available = false` and continue with WebSearch-only mode.
 
 ### 2. Freshness gate
 
@@ -58,6 +60,16 @@ Discard: marketing content, opinion pieces without evidence, tutorials without p
 - If WebSearch is completely unavailable (tool error), stop and tell the user: "WebSearch is required for baseline refresh but is unavailable. Baseline was not modified."
 - If fewer than 3 of 5 queries return useful results, warn the user: "Only [N]/5 searches returned actionable results. Proceeding with limited data — review changes carefully."
 - If no queries return useful results, stop and report: "No actionable search results. Baseline was not modified."
+
+### 3.5. Full-content retrieval (when WebFetch is available)
+
+If `webfetch_available = true`, after completing all WebSearch queries:
+
+1. From all search results across queries, identify the 3-5 most promising URLs (prefer: official Anthropic docs, peer-reviewed research, documented production systems).
+2. Fetch each URL with WebFetch using a targeted prompt: "Extract actionable prompt engineering, context engineering, and tool design techniques with evidence. Max 500 words."
+3. Use full article content — not just search snippets — when extracting techniques in Step 4. Full content provides benchmarks, nuanced conditions, and code examples that snippets miss.
+
+If `webfetch_available = false`, skip this step and proceed with search snippets as before.
 
 ### 4. Merge findings
 
