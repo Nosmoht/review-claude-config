@@ -29,6 +29,8 @@ cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 - The review skill is read-only on analyzed files — it only writes review reports to `.claude/reviews/`
 - Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and should be committed to track skill quality evolution
 - The baseline is static at review time; updates happen via `/refresh-engineering-baseline`
+- Commits use scoped conventional format: `type(scope): description` (e.g., `feat(review-skill):`, `fix(refresh-skill):`, `docs(project):`)
+- When acting on review findings: commit the report first, then commit fixes. This creates a traceable audit → fix chain in git history.
 
 ## Research References
 
@@ -47,5 +49,5 @@ Evidence-based research informing the rubric and baseline. Consult these when mo
 ## Working Guidelines
 
 - **Verify subagent claims with evidence.** When a subagent/reviewer recommends changing the approach, verify the underlying assumptions with WebSearch or other evidence before accepting. Do not remove features without proof they don't add value. (Context: a reviewer once recommended dropping domain-specific research — we verified and found the reviewer was wrong, domain knowledge improves quality by 30-206%.)
-- **Iterate reviews until convergence.** After each review round, address findings, then launch another review. Stop only when a review returns no high/medium priority findings. Don't accept the first review as final.
+- **Iterate reviews until convergence.** After each review round, address findings, then launch another review. Stop only when a review returns no high/medium priority findings. Don't accept the first review as final. This applies to plans too — before finalizing a plan, launch a review subagent to validate it against CLAUDE.md guidelines and research references.
 - **Every claim needs a source.** All research files, documentation, and recommendations must link to verifiable sources. Follow the [documentation best practices](research/documentation/engineering-documentation-best-practices.md) used in this project.
