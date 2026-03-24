@@ -7,6 +7,11 @@ A Claude Code skill that analyzes and optimizes Claude Code skills and agents us
 - `/review-claude-config [folder]` — Audit all skills/agents in a folder (defaults to cwd). Read-only, produces per-item quality certificates.
 - `/suggest-skills [folder]` — Analyze a repository to identify missing skills. Read-only, produces prioritized suggestions with skeleton SKILL.md files.
 - `/refresh-engineering-baseline` — Update the engineering baseline with current research via WebSearch.
+- `/apply-review-findings [report-path]` — Apply High/Medium review recommendations with audit-fix chain commits.
+- `/skill-scaffolding <skill-name>` — Create new skill directory with SKILL.md, references, and CLAUDE.md registration.
+- `/check-repo-health [all|freshness|tokens|integrity]` — Verify reference freshness, token budgets, and cross-skill integrity.
+- `/review-analytics [folder]` — Track grade trajectories and detect regressions across review reports.
+- `/research-index [folder]` — Detect drift between research/ files and CLAUDE.md Research References.
 
 ## Installation
 
@@ -15,6 +20,11 @@ Copy skill directories into any project's `.claude/skills/`:
 cp -r .claude/skills/review-claude-config <target>/.claude/skills/
 cp -r .claude/skills/suggest-skills <target>/.claude/skills/
 cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
+cp -r .claude/skills/apply-review-findings <target>/.claude/skills/
+cp -r .claude/skills/skill-scaffolding <target>/.claude/skills/
+cp -r .claude/skills/check-repo-health <target>/.claude/skills/
+cp -r .claude/skills/review-analytics <target>/.claude/skills/
+cp -r .claude/skills/research-index <target>/.claude/skills/
 ```
 
 ## File Structure
@@ -26,11 +36,20 @@ cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 - `.claude/skills/suggest-skills/SKILL.md` — Skill gap detection and suggestion skill
 - `.claude/skills/suggest-skills/references/signal-catalog.md` — Signal patterns and extraction criteria for detecting missing skills
 - `.claude/skills/refresh-engineering-baseline/SKILL.md` — Baseline refresh skill
+- `.claude/skills/apply-review-findings/SKILL.md` — Automated review finding application
+- `.claude/skills/apply-review-findings/references/commit-conventions.md` — Scoped commit format and audit-fix chain rules
+- `.claude/skills/skill-scaffolding/SKILL.md` — Skill directory scaffolding
+- `.claude/skills/skill-scaffolding/references/skill-template.md` — Default SKILL.md template
+- `.claude/skills/check-repo-health/SKILL.md` — Repository health dashboard
+- `.claude/skills/check-repo-health/references/health-thresholds.md` — Freshness, token, and integrity thresholds
+- `.claude/skills/review-analytics/SKILL.md` — Grade trajectory tracking
+- `.claude/skills/review-analytics/references/report-schema.md` — Review report frontmatter schema
+- `.claude/skills/research-index/SKILL.md` — Research directory drift detection
 
 ## Conventions
 
 - Language: English
-- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, domain cache entries ≤500 tokens each
+- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, domain cache entries ≤500 tokens each, new skill reference files (commit-conventions, skill-template, health-thresholds, report-schema) ≤500 tokens each
 - Domain cache entries are committed to track research evolution and enable offline reuse. Refreshed on the same 90-day cycle as the engineering baseline.
 - Web content fetching (WebFetch) is optional in both skills. Skills degrade gracefully to WebSearch-only when WebFetch is unavailable.
 - The review and suggest skills are read-only on analyzed files — review writes reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`; suggest writes only reports to `.claude/reviews/`
@@ -38,7 +57,10 @@ cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 - The baseline is static at review time; updates happen via `/refresh-engineering-baseline`
 - Commits use scoped conventional format: `type(scope): description` (e.g., `feat(review-skill):`, `fix(refresh-skill):`, `docs(project):`)
 - Review audit→fix chain commits use the report timestamp as shared identifier: `docs(reviews): add <timestamp> review report` → `fix(<scope>): address findings from <timestamp> review`
-- When acting on review findings: commit the report first, then commit fixes. This creates a traceable audit → fix chain in git history.
+- When acting on review findings: commit the report first, then commit fixes. This creates a traceable audit → fix chain in git history. The `/apply-review-findings` skill automates this workflow.
+- `/apply-review-findings` and `/skill-scaffolding` modify files — they require `disable-model-invocation: true` and user confirmation gates
+- `/check-repo-health` and `/review-analytics` are read-only diagnostic skills
+- `/research-index` edits only the Research References section of CLAUDE.md
 
 ## Research References
 
