@@ -7,7 +7,7 @@ description: >
   recommendations. Use when you want to audit skill/agent quality or before
   shipping new skills.
 argument-hint: [folder]
-allowed-tools: Agent, Read, Glob, Grep, WebSearch
+allowed-tools: Agent, Read, Write, Glob, Grep, WebSearch
 ---
 
 # Review Claude Config
@@ -46,7 +46,7 @@ Discover all Claude Code skills and agents. Use Glob with these patterns:
 - <folder>/**/.claude/skills/*/SKILL.md (monorepo support)
 - <folder>/**/.claude/agents/*.md (monorepo support)
 
-Exclude paths containing: node_modules, .git, vendor, dist, build
+Exclude paths containing: node_modules, .git, vendor, dist, build, .claude/reviews
 
 For each discovered file:
 - Read the full content
@@ -68,6 +68,9 @@ Each analysis agent receives a **byte-identical shared prefix** (rubric + baseli
 
 ```
 You are evaluating a Claude Code [Skill/Agent] for quality.
+
+Tools available: WebSearch (for domain research). Do not use Write, Edit,
+or Bash. You are evaluating, not modifying.
 
 ## Reference Materials
 
@@ -117,7 +120,17 @@ Return your report in this EXACT format:
 | Goal Alignment | [A-F] | 20% | [One line] |
 | Safety | [A-F] | [10/15%] | [One line] |
 | Metadata | [A-F] | [10/5%] | [One line] |
-| **Overall** | **[A-F]** | **100%** | |
+| **Overall** | **[A-F]** | **100%** | **Weighted: XX.X** |
+
+Calculate overall grade:
+1. Determine weights: if item has Write/Bash/Edit in allowed-tools,
+   Safety=15% and Metadata=5%; otherwise Safety=10% and Metadata=10%.
+   All other weights unchanged (Clarity 15%, Completeness 15%, PE 15%,
+   CE 15%, Goal Alignment 20%).
+2. Convert grades: A=95, B=85, C=75, D=65, F=50.
+3. Weighted score = sum(grade_value × weight) for all 7 dimensions.
+4. Map back: ≥90→A, ≥80→B, ≥70→C, ≥60→D, <60→F.
+5. Show in Overall Justification: "Weighted: XX.X → [Grade]"
 
 [If WebSearch was unavailable, add: "Goal Alignment scored without web
 verification."]
@@ -172,9 +185,54 @@ Identify patterns across items:
 - Systemic recommendations (e.g., "all agents would benefit from reference files")
 - Missing CLAUDE.md guidance that would benefit all items
 
+## Phase 4 — Report Persistence
+
+After presenting all reports to the user:
+
+### Step 1: Assemble report
+
+Construct a Markdown file with YAML frontmatter and full body.
+
+**Frontmatter:**
+```yaml
+---
+generated_by: review-claude-config
+schema_version: 1
+date: YYYY-MM-DD
+target: /absolute/path/to/target
+baseline_version: YYYY-MM-DD
+items_reviewed: N
+summary:
+  - name: item-name
+    type: Skill
+    path: relative/path/to/file
+    overall: B
+    score: 85.0
+    clarity: B
+    completeness: A
+    prompt_engineering: B
+    context_engineering: B
+    goal_alignment: B
+    safety: A
+    metadata: B
+---
+```
+
+**Body:** All per-item reports (Goal + Certificate + Strengths + Recommendations), Summary Table, Cross-Cutting Observations.
+
+### Step 2: Write the report
+
+Write to: `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md`
+
+Use the current date and time for the timestamp. Create the `<target>/.claude/reviews/` directory if it does not exist. Timestamp ensures each run produces a unique file, supporting the "iterate until convergence" workflow.
+
+### Step 3: Confirm
+
+Tell the user the report file path and suggest: "Commit this file to track skill quality over time."
+
 ## Hard Rules
 
-- **Read-only.** Never modify any files. Baseline is maintained via `/refresh-engineering-baseline`.
+- **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only file this skill writes is the report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md`.
 - **Analyze every discovered item.** Skip none.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every recommendation must include a concrete rewrite** — not just "improve X."
