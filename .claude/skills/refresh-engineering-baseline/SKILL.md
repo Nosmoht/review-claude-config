@@ -88,7 +88,7 @@ If no, stop and preserve the current file.
 
 Only after user confirmation. Update `engineering-baseline.md` with:
 - Set `last_refreshed` in frontmatter to today's date
-- Keep the file under 2K tokens — if it exceeds this, prioritize techniques with strongest evidence
+- Before writing, estimate the token count of the updated file. If it would exceed 2K tokens, remove the lowest-evidence techniques until it fits, and note the removals in the change report. If removing techniques would compromise coverage of a full section, warn the user before proceeding.
 - Preserve the existing structure and section headings
 - Add new sources to the Sources section at the bottom
 

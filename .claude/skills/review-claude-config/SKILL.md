@@ -277,7 +277,10 @@ Identify patterns across items:
 
 ## Phase 3.5 — Domain Cache Persistence
 
-After presenting all reports, persist domain research from analysis agents:
+After presenting all reports, confirm before writing:
+"Update domain cache with research for: [list of domain keys]?"
+
+If the user declines, skip cache persistence.
 
 1. Create the `references/domain-cache/` directory if it does not exist.
 2. Collect all "Domain Cache Update" sections from researcher agents that had STALE or MISS cache status.
