@@ -66,17 +66,17 @@ If no skills or agents are discovered, report that and stop.
 
 Before dispatching analysis agents, the orchestrator performs domain cache lookup:
 
-1. **Infer canonical domain keys.** For each discovered item, extract the primary technology/framework from the item's `description` frontmatter field and first ~200 tokens of content. Produce a lowercase hyphenated slug (e.g., `kubernetes`, `react-testing`, `terraform-iac`).
-   - Prefer the specific technology name over generic categories (e.g., `argocd` not `gitops`; `pytest` not `python-testing`). If ambiguous, use the skill's directory name as tiebreaker.
-   - Use compound keys when items target distinct sub-domains (e.g., `react-testing` and `react-performance` rather than collapsing both to `react`). Broader keys are preferred only when items genuinely overlap.
-   - If no clear domain is inferable (e.g., a generic "code-review" or "commit" skill), skip cache lookup for that item and use current behavior (WebSearch or model knowledge).
-   - **Normalization pass:** After inferring keys for all items, review the full list and normalize near-duplicates (e.g., collapse `react-test` and `react-testing` to the more specific form).
+1. **Load knowledge base index.** Read `references/domain-cache/INDEX.md`. If missing or empty, skip to step 3 (all items get MISS status and proceed with WebSearch as normal).
 
-2. **Lookup cached research.** Read `references/domain-cache/INDEX.md`. For each unique domain key:
-   - If found in index, check `last_refreshed` date: **CACHED** (<90 days) or **STALE** (≥90 days)
-   - If not found: **MISS**
+2. **Match or infer domain keys.** For each discovered item, determine its domain:
+   - Present the full INDEX.md table (keys + descriptions) as context.
+   - For each item, ask: "Which existing knowledge base entry best matches this item's domain? If none fit, generate a new key (lowercase-hyphenated, 2-4 words)."
+   - **Prefer reuse:** An existing key is always better than generating a new one that means the same thing. E.g., if `kubernetes` exists in the index and a skill targets Kubernetes, use `kubernetes` — do not generate `k8s` or `kube-orchestration`.
+   - If ambiguous between existing entries, prefer the more specific one (e.g., `argocd` over `gitops`). If ambiguous between existing and new, prefer existing.
+   - If no clear domain is inferable (e.g., a generic "code-review" or "commit" skill), skip cache lookup for that item and use current behavior (WebSearch or model knowledge).
+   - **Normalization pass (fallback):** After all items, review the full list and normalize near-duplicates (e.g., collapse `react-test` and `react-testing` to the more specific form).
+   - For each matched/new key: check `last_refreshed` date in INDEX.md. **CACHED** (<90 days), **STALE** (≥90 days), or **MISS** (new key, not in index).
    - For CACHED/STALE: read the full `references/domain-cache/{domain-key}.md` on-demand. If index says CACHED but the file is missing, treat as MISS.
-   - If INDEX.md is missing or fails to parse, treat all domains as MISS and log a warning.
 
 3. **Assign one researcher per domain.** For STALE/MISS domains shared by multiple items, designate only **one** analysis agent as the "researcher" for that domain. Other agents sharing the same domain are told: "Another agent is researching this domain — use cached content or model knowledge, do not WebSearch for domain research."
 
