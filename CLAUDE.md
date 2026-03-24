@@ -30,6 +30,7 @@ cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 - Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and should be committed to track skill quality evolution
 - The baseline is static at review time; updates happen via `/refresh-engineering-baseline`
 - Commits use scoped conventional format: `type(scope): description` (e.g., `feat(review-skill):`, `fix(refresh-skill):`, `docs(project):`)
+- Review audit→fix chain commits use the report timestamp as shared identifier: `docs(reviews): add <timestamp> review report` → `fix(<scope>): address findings from <timestamp> review`
 - When acting on review findings: commit the report first, then commit fixes. This creates a traceable audit → fix chain in git history.
 
 ## Research References

@@ -264,7 +264,7 @@ If no prior report exists, skip this step.
 
 ### Step 4: Confirm
 
-Tell the user the report file path and suggest: "Commit this file to track skill quality over time."
+Tell the user the report file path and suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS review report` (using the timestamp from the report filename). This ensures the docs commit and subsequent fix commits (`fix(<scope>): address findings from YYYY-MM-DDTHHMMSS review`) share the same identifier for traceability.
 
 ## Hard Rules
 
