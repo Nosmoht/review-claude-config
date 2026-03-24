@@ -37,7 +37,7 @@ Check `last_refreshed` date in the baseline frontmatter. If older than 3 months,
 
 **2. Discovery Agent**
 
-Launch an Agent to discover all skills and agents in the target folder:
+Launch an Agent (allowed-tools: Glob, Read) to discover all skills and agents in the target folder:
 
 ```
 Discover all Claude Code skills and agents. Use Glob with these patterns:
@@ -60,7 +60,7 @@ If no skills or agents are discovered, report that and stop.
 
 ## Phase 2 — Per-Item Analysis
 
-For each discovered item, launch an analysis Agent. Process in parallel, batched in groups of 8 (if more than 8 items). Present each batch's results before starting the next. Partial final batches are handled identically.
+For each discovered item, launch an analysis Agent with allowed-tools: WebSearch, Read (no Write, Edit, or Bash). Process in parallel, batched in groups of 8 (if more than 8 items). Present each batch's results before starting the next. Partial final batches are handled identically.
 
 Each analysis agent receives a **byte-identical shared prefix** (rubric + baseline content) followed by per-item specifics. This preserves KV-cache hits across agents.
 
@@ -69,7 +69,7 @@ Each analysis agent receives a **byte-identical shared prefix** (rubric + baseli
 ```
 You are evaluating a Claude Code [Skill/Agent] for quality.
 
-Tools available: WebSearch (for domain research). Do not use Write, Edit,
+Tools available: WebSearch (for domain research) and Read. Do not use Write, Edit,
 or Bash. You are evaluating, not modifying.
 
 ## Reference Materials
@@ -132,6 +132,10 @@ Calculate overall grade:
 4. Map back: ≥90→A, ≥80→B, ≥70→C, ≥60→D, <60→F.
 5. Show in Overall Justification: "Weighted: XX.X → [Grade]"
 
+Example (no Write/Bash/Edit): Clarity=A(95), Completeness=B(85), PE=B(85),
+CE=A(95), Goal=B(85), Safety=A(95), Meta=B(85).
+Score = 95×.15 + 85×.15 + 85×.15 + 95×.15 + 85×.20 + 95×.10 + 85×.10 = 89.0 → B
+
 [If WebSearch was unavailable, add: "Goal Alignment scored without web
 verification."]
 
@@ -187,7 +191,10 @@ Identify patterns across items:
 
 ## Phase 4 — Report Persistence
 
-After presenting all reports to the user:
+After presenting all reports to the user, confirm before writing:
+"Save review report to `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md`?"
+
+If the user declines, skip report writing but still display the report path that would have been used.
 
 ### Step 1: Assemble report
 
