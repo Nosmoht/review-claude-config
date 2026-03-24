@@ -16,3 +16,8 @@
 | nis2-kritis-compliance | 2026-03-24 | BSIG 2025, 10 minimum measures, incident reporting timelines, automation targets |
 | public-sector-procurement | 2026-03-24 | EU thresholds, eForms/TED API, Vergabebeschleunigungsgesetz, German procurement portals |
 | technology-radar | 2026-03-24 | ThoughtWorks methodology, rings as recommendation strength, 2025-2026 themes |
+| argocd | 2026-03-24 | Sync failure diagnosis, health states, remediation patterns, GitOps safety, sync loops |
+| cilium | 2026-03-24 | Policy debugging, audit mode, Hubble diagnostics, upgrade constraints, eBPF map inspection |
+| kubernetes-platform-reliability | 2026-03-24 | Pre-merge review practices, resource limits, RBAC, rollback plans, observability verification |
+| linux-kernel-tuning | 2026-03-24 | Kubernetes sysctl optimization, KSPP defaults, Talos UKI constraints, I/O schedulers |
+| talos | 2026-03-24 | A/B boot, node-by-node upgrade, etcd quorum protection, --stage flag, --preserve flag |
