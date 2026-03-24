@@ -20,13 +20,15 @@ cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 - `.claude/skills/review-claude-config/SKILL.md` — Main orchestrator skill
 - `.claude/skills/review-claude-config/references/scoring-rubric.md` — 7-dimension A-F grading rubric
 - `.claude/skills/review-claude-config/references/engineering-baseline.md` — Curated prompt, context, and tool design techniques
+- `.claude/skills/review-claude-config/references/domain-cache/` — Cached domain research from review analysis agents (auto-populated, committed to git)
 - `.claude/skills/refresh-engineering-baseline/SKILL.md` — Baseline refresh skill
 
 ## Conventions
 
 - Language: English
-- Reference files must stay within token budgets: rubric <1K, baseline <2K
-- The review skill is read-only on analyzed files — it only writes review reports to `.claude/reviews/`
+- Reference files must stay within token budgets: rubric <1K, baseline <2K, domain cache entries ≤500 tokens each
+- Domain cache entries are committed to track research evolution and enable offline reuse. Refreshed on the same 90-day cycle as the engineering baseline.
+- The review skill is read-only on analyzed files — it writes review reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`
 - Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and should be committed to track skill quality evolution
 - The baseline is static at review time; updates happen via `/refresh-engineering-baseline`
 - Commits use scoped conventional format: `type(scope): description` (e.g., `feat(review-skill):`, `fix(refresh-skill):`, `docs(project):`)

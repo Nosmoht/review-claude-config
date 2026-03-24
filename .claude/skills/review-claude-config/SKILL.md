@@ -60,6 +60,26 @@ If no skills or agents are discovered, report that and stop.
 
 ## Phase 2 — Per-Item Analysis
 
+### Step 0: Domain Cache Lookup
+
+Before dispatching analysis agents, the orchestrator performs domain cache lookup:
+
+1. **Infer canonical domain keys.** For each discovered item, extract the primary technology/framework from the item's `description` frontmatter field and first ~200 tokens of content. Produce a lowercase hyphenated slug (e.g., `kubernetes`, `react-testing`, `terraform-iac`).
+   - Prefer the specific technology name over generic categories (e.g., `argocd` not `gitops`; `pytest` not `python-testing`). If ambiguous, use the skill's directory name as tiebreaker.
+   - Use compound keys when items target distinct sub-domains (e.g., `react-testing` and `react-performance` rather than collapsing both to `react`). Broader keys are preferred only when items genuinely overlap.
+   - If no clear domain is inferable (e.g., a generic "code-review" or "commit" skill), skip cache lookup for that item and use current behavior (WebSearch or model knowledge).
+   - **Normalization pass:** After inferring keys for all items, review the full list and normalize near-duplicates (e.g., collapse `react-test` and `react-testing` to the more specific form).
+
+2. **Lookup cached research.** Read `references/domain-cache/INDEX.md`. For each unique domain key:
+   - If found in index, check `last_refreshed` date: **CACHED** (<90 days) or **STALE** (≥90 days)
+   - If not found: **MISS**
+   - For CACHED/STALE: read the full `references/domain-cache/{domain-key}.md` on-demand. If index says CACHED but the file is missing, treat as MISS.
+   - If INDEX.md is missing or fails to parse, treat all domains as MISS and log a warning.
+
+3. **Assign one researcher per domain.** For STALE/MISS domains shared by multiple items, designate only **one** analysis agent as the "researcher" for that domain. Other agents sharing the same domain are told: "Another agent is researching this domain — use cached content or model knowledge, do not WebSearch for domain research."
+
+### Step 1: Dispatch Analysis Agents
+
 For each discovered item, launch an analysis Agent with allowed-tools: WebSearch, Read (no Write, Edit, or Bash). Process in parallel, batched in groups of 8 (if more than 8 items). Present each batch's results before starting the next. Partial final batches are handled identically.
 
 Each analysis agent receives a **byte-identical shared prefix** (rubric + baseline content) followed by per-item specifics. This preserves KV-cache hits across agents.
@@ -87,15 +107,56 @@ or Bash. You are evaluating, not modifying.
 **Content:**
 [Insert full file content here]
 
+## Domain Research Cache
+
+**Domain:** [domain key or "none"]
+**Cache Status:** [CACHED | STALE | MISS | NONE]
+**Role:** [researcher | consumer]
+
+[If CACHED:]
+The following domain best practices were previously researched and cached.
+Use these as your domain knowledge for Step A — skip WebSearch for domain
+research. If cached content is clearly insufficient for this specific item,
+you may perform 1 supplemental WebSearch query.
+
+[Insert cached content here]
+
+[If STALE + researcher:]
+The following domain research was cached but is older than 90 days. Use it
+as a starting point, then perform 1 WebSearch query to verify and update.
+Return updated findings in the Domain Cache Update section at the end.
+
+[Insert cached content here]
+
+[If STALE + consumer:]
+The following domain research was cached (older than 90 days). Another agent
+is refreshing this domain. Use cached content as-is for your analysis.
+
+[Insert cached content here]
+
+[If MISS + researcher:]
+No cached domain research exists. Perform 1-2 WebSearch queries as normal.
+Return your findings in the Domain Cache Update section at the end.
+
+[If MISS + consumer:]
+No cached domain research exists and another agent is researching this domain.
+Use model knowledge only for domain context.
+
+[If NONE:]
+No domain was inferred for this item. Proceed with WebSearch as normal.
+
 ## Your Task — Two Steps
 
 ### Step A: Goal Inference + Domain Research
 
 1. Read the item and infer its primary goal/domain in one sentence.
-2. [If WebSearch available] Search for domain-specific best practices relevant to
-   this goal. Use 1-2 targeted queries (e.g., "[domain] best practices",
-   "[domain] automation checklist"). Extract only actionable best practices —
-   do not dump raw search results.
+2. Follow the Domain Research Cache instructions above:
+   - CACHED: use cached content, skip WebSearch (1 supplemental query if insufficient)
+   - STALE researcher: use cache as starting point + 1 WebSearch to verify/update
+   - STALE consumer: use cached content as-is
+   - MISS researcher: 1-2 WebSearch queries (standard behavior)
+   - MISS consumer: model knowledge only
+   - NONE: 1-2 WebSearch queries (standard behavior)
 3. Synthesize: what should a high-quality item in this domain include?
 
 ### Step B: Scoring + Recommendations
@@ -175,6 +236,21 @@ verification."]
 [If applicable: flag whether bundled reference files (checklists, rubrics, domain
 guides in a references/ subdirectory) would improve this item's context
 engineering. Explain what to extract and why.]
+
+### Domain Cache Update
+[Only include if Role is "researcher" AND Cache Status is STALE or MISS.
+Omit this section entirely for CACHED items and consumer-role agents.]
+
+**Domain:** [domain key]
+**Queries Used:**
+- "[query 1]"
+- "[query 2]"
+**Sources:**
+- [title](url)
+**Best Practices:**
+- [dense bullet 1]
+- [dense bullet 2]
+- [keep to ≤500 tokens total — no prose paragraphs]
 ```
 
 ## Phase 3 — Presentation
@@ -198,6 +274,38 @@ Identify patterns across items:
 - Consistent strengths (e.g., good safety practices across all items)
 - Systemic recommendations (e.g., "all agents would benefit from reference files")
 - Missing CLAUDE.md guidance that would benefit all items
+
+## Phase 3.5 — Domain Cache Persistence
+
+After presenting all reports, persist domain research from analysis agents:
+
+1. Create the `references/domain-cache/` directory if it does not exist.
+2. Collect all "Domain Cache Update" sections from researcher agents that had STALE or MISS cache status.
+3. For each update, format as a cache entry file with YAML frontmatter and body (≤500 tokens of bullet content — truncate if exceeded):
+
+```yaml
+---
+domain: [domain-key]
+last_refreshed: [today's date YYYY-MM-DD]
+queries:
+  - "[query 1]"
+  - "[query 2]"
+sources:
+  - url: [url]
+    title: "[title]"
+---
+
+# [Domain Name] — Domain Best Practices
+
+- [bullet 1]
+- [bullet 2]
+...
+```
+
+4. Write each entry to `references/domain-cache/{domain-key}.md`.
+5. Update `references/domain-cache/INDEX.md` — add or update rows for each written domain key. Create INDEX.md if it does not exist.
+6. If `websearch_available = false`, skip this entire phase — never write cache entries from model knowledge alone.
+7. Report to user: "Updated domain cache: [list of domain keys written/updated]"
 
 ## Phase 4 — Report Persistence
 
@@ -268,7 +376,8 @@ Tell the user the report file path and suggest committing with: `docs(reviews): 
 
 ## Hard Rules
 
-- **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only file this skill writes is the report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md`.
+- **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and domain cache entries in its own `references/domain-cache/`.
+- **Domain cache entries must come from WebSearch results only.** Never write cache entries based on model knowledge alone. If WebSearch is unavailable, skip cache persistence entirely.
 - **Analyze every discovered item.** Skip none.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every recommendation must include a concrete rewrite** — not just "improve X."
