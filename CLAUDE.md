@@ -26,8 +26,23 @@ cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 
 - Language: English
 - Reference files must stay within token budgets: rubric <1K, baseline <2K
-- The review skill is read-only — it never modifies analyzed files
+- The review skill is read-only on analyzed files — it only writes review reports to `.claude/reviews/`
+- Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and should be committed to track skill quality evolution
 - The baseline is static at review time; updates happen via `/refresh-engineering-baseline`
+
+## Research References
+
+Evidence-based research informing the rubric and baseline. Consult these when modifying skills or reviewing results:
+
+- [Skill & Agent Format Conventions](research/claude-code/skill-agent-format-conventions.md) — Valid frontmatter fields, body conventions, safety gates
+- [Prompt Engineering Techniques](research/prompt-engineering/prompt-engineering-techniques.md) — Evidence-backed techniques with academic sources
+- [Context Engineering Overview](research/context-engineering/context-engineering-overview.md) — Core principles, context rot, ACE framework
+- [Anthropic: Effective Context Engineering](research/context-engineering/anthropic-effective-context-engineering.md) — Official Anthropic guidance
+- [Manus Context Engineering Lessons](research/context-engineering/manus-context-engineering-lessons.md) — Production lessons, KV-cache, error preservation
+- [Tool Design for Agents](research/tool-design/anthropic-writing-tools-for-agents.md) — Anthropic's tool design best practices
+- [Agent Skills Architecture](research/agent-skills/anthropic-equipping-agents-with-skills.md) — Progressive disclosure, skill format
+- [Domain Knowledge Impact](research/domain-knowledge/domain-knowledge-impact-on-quality.md) — 30-206% quality improvement from domain rules
+- [Documentation Best Practices](research/documentation/engineering-documentation-best-practices.md) — Hyperlink everything, document rationale
 
 ## Working Guidelines
 

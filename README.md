@@ -35,8 +35,9 @@ cp -r .claude/skills/refresh-engineering-baseline <your-project>/.claude/skills/
 
 ## Architecture
 
-- [**`review-claude-config/SKILL.md`**](.claude/skills/review-claude-config/SKILL.md) — Read-only orchestrator skill. Dispatches parallel analysis subagents per item. Uses a static [engineering baseline](.claude/skills/review-claude-config/references/engineering-baseline.md) for consistent results.
-- [**`refresh-engineering-baseline/SKILL.md`**](.claude/skills/refresh-engineering-baseline/SKILL.md) — Separate skill to update the baseline reference via WebSearch. User-invoked only (has write side effects).
+- [**`review-claude-config/SKILL.md`**](.claude/skills/review-claude-config/SKILL.md) — Orchestrator skill. Dispatches parallel analysis subagents per item. Uses a static [engineering baseline](.claude/skills/review-claude-config/references/engineering-baseline.md) for consistent results. Read-only on analyzed files; writes reports to `.claude/reviews/`.
+- [**`refresh-engineering-baseline/SKILL.md`**](.claude/skills/refresh-engineering-baseline/SKILL.md) — Separate skill to update the baseline reference via WebSearch. User-invoked only. Includes freshness gate (90-day), source quality criteria with cross-validation, and user confirmation before writing.
+- **`.claude/reviews/`** — Timestamped review reports (`YYYY-MM-DDTHHMMSS-review-claude-config.md`) with YAML frontmatter for machine-readable tracking of skill quality evolution.
 - [**`references/scoring-rubric.md`**](.claude/skills/review-claude-config/references/scoring-rubric.md) — A-F grading criteria with discriminating examples per dimension
 - [**`references/engineering-baseline.md`**](.claude/skills/review-claude-config/references/engineering-baseline.md) — Curated prompt, context, and tool design techniques with evidence sources
 
@@ -49,7 +50,9 @@ Every design decision is evidence-based. See the full rationale in [docs/plannin
 | Separate review + refresh skills | Avoid race conditions, ensure consistent results | [Single Responsibility Principle](docs/planning-process-learnings.md#6-separate-concerns-static-baseline--refresh-skill) |
 | Domain WebSearch per item | Structural review alone misses domain-critical gaps | [30-206% quality improvement](research/domain-knowledge/domain-knowledge-impact-on-quality.md) |
 | Context Engineering as evaluation dimension | It's the broader discipline; prompt engineering is a subset | [Anthropic research](research/context-engineering/anthropic-effective-context-engineering.md) |
-| No Bash in allowed-tools | Enforces read-only via tooling, not just rules | [Principle of least privilege](research/tool-design/anthropic-writing-tools-for-agents.md) |
+| No Bash in allowed-tools | Enforces safety via tooling, not just rules | [Principle of least privilege](research/tool-design/anthropic-writing-tools-for-agents.md) |
+| Timestamped report files | Each review run produces a unique file, supporting iterate-until-convergence workflow | Multiple runs per day are expected |
+| Deterministic scoring formula | A=95, B=85, C=75, D=65, F=50 weighted sum ensures consistent Overall grades | Eliminates subjective variation across runs |
 | Token budgets (baseline <2K, rubric <1K) | Focused context outperforms unfocused context | [Context rot research](research/context-engineering/context-engineering-overview.md) |
 | Cache-friendly subagent dispatch | 10x cost difference cached vs uncached | [Manus/Meta production lessons](research/context-engineering/manus-context-engineering-lessons.md) |
 
