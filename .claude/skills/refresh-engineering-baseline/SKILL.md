@@ -6,7 +6,7 @@ description: >
   and Claude Code configuration guidance, then merges findings into the baseline.
   Use when the baseline's last_refreshed date is older than 3 months.
 disable-model-invocation: true
-allowed-tools: WebSearch, Read, Write, Glob
+allowed-tools: WebSearch, Read, Write
 ---
 
 # Refresh Engineering Baseline
@@ -19,11 +19,9 @@ Update `references/engineering-baseline.md` with current research findings.
 
 ### 1. Locate the baseline file
 
-Use Glob to find the engineering-baseline.md file:
-- `.claude/skills/review-claude-config/references/engineering-baseline.md`
-- If not found, report the error and stop.
+Read `.claude/skills/review-claude-config/references/engineering-baseline.md`. If the file is not found, report the error and stop.
 
-Read the current file content and extract the `last_refreshed` date from frontmatter.
+Read the current file content and extract the `last_refreshed` date from frontmatter. If `last_refreshed` is missing or unparseable, treat the baseline as stale and proceed directly to Step 3.
 
 ### 2. Freshness gate
 
@@ -34,7 +32,8 @@ If `last_refreshed` is less than 90 days ago:
 
 ### 3. Research current best practices
 
-Run these WebSearch queries (replace `[current year]` with the actual year):
+Run these WebSearch queries (replace `[current year]` with the actual year). After each query, check if new actionable techniques were found. If two consecutive queries yield no new techniques beyond what earlier queries found, skip remaining queries and note skipped queries in the change report.
+
 - "Claude Code skills agents best practices [current year]"
 - "prompt engineering techniques evidence research [current year]"
 - "context engineering LLM agents best practices [current year]"
@@ -65,6 +64,7 @@ Discard: marketing content, opinion pieces without evidence, tutorials without p
 For each section (Prompt Engineering, Context Engineering, Tool Design):
 - Add new techniques not already covered
 - Update existing techniques if newer evidence contradicts or supplements them
+- Spot-check 2-3 existing techniques per section against current sources to verify they remain accurate and well-evidenced
 - Remove techniques that have been superseded or debunked
 - Preserve the existing format: technique name, description, evidence source, check question
 
