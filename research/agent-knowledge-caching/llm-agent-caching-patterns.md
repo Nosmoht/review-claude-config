@@ -50,6 +50,10 @@ Ranked by reliability for LLM knowledge:
 
 Recommended TTLs: knowledge base answers 12-48h, classification results 24-72h, structured extraction indefinite (hash-keyed). Domain best practices (slowly changing) suit 90-day TTL.
 
+## Key Inference: Read-Index-First Pattern
+
+When an LLM must generate a cache key (e.g., domain slug for a knowledge base entry), presenting existing keys + descriptions before generation improves consistency — standard in-context learning. Without existing keys as context, the LLM generates blind and may produce near-duplicates (`react-test` vs `react-testing`). With existing keys visible, it reuses them. Related: [constrained generation](https://arxiv.org/html/2403.06988v1) shows up to 27% accuracy improvement for structured outputs (different task, same principle: constrain the output space). For file-based knowledge bases with an INDEX file: always load the index before inferring new keys. Retain a normalization pass as fallback for edge cases.
+
 ## Semantic Caching: When to Use
 
 Semantic caching (GPTCache, Redis) converts queries to embeddings and uses cosine similarity (0.85-0.95 threshold) for fuzzy matching. Achieves 30-68% hit rates on repetitive workloads. However, it adds infrastructure complexity (vector DB, embedding model) that only pays off at scale (thousands of queries). For bounded domain knowledge with predictable keys, exact-match file lookup is simpler and equally effective.
