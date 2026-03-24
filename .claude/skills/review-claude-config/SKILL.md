@@ -7,7 +7,7 @@ description: >
   recommendations. Use when you want to audit skill/agent quality or before
   shipping new skills.
 argument-hint: [folder]
-allowed-tools: Agent, Read, Write, Glob, WebSearch
+allowed-tools: Agent, Read, Write, Glob, WebSearch, WebFetch
 ---
 
 # Review Claude Config
@@ -21,9 +21,11 @@ Analyze all Claude Code skills and agents in a target folder and produce per-ite
 
 ## Phase 1 — Setup and Discovery
 
-### Step 0: WebSearch Availability Check
+### Step 0: Tool Availability Checks
 
 Attempt a trivial WebSearch (e.g., "Claude Code documentation"). If it fails or is unavailable, set `websearch_available = false` and continue. Goal Alignment will be scored from model knowledge only, marked `[no web verification]` on the certificate.
+
+Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fails or is unavailable, set `webfetch_available = false` and continue. Analysis agents will use WebSearch snippets only instead of fetching full article content.
 
 ### Steps 1-2: Launch in parallel
 
@@ -80,7 +82,7 @@ Before dispatching analysis agents, the orchestrator performs domain cache looku
 
 ### Step 1: Dispatch Analysis Agents
 
-For each discovered item, launch an analysis Agent with allowed-tools: WebSearch, Read (no Write, Edit, or Bash). Process in parallel, batched in groups of 8 (if more than 8 items). Present each batch's results before starting the next. Partial final batches are handled identically.
+For each discovered item, launch an analysis Agent with allowed-tools: WebSearch, WebFetch, Read (no Write, Edit, or Bash). If `webfetch_available = false`, omit WebFetch from the agent's allowed-tools. Process in parallel, batched in groups of 8 (if more than 8 items). Present each batch's results before starting the next. Partial final batches are handled identically.
 
 Each analysis agent receives a **byte-identical shared prefix** (rubric + baseline content) followed by per-item specifics. This preserves KV-cache hits across agents.
 
@@ -89,8 +91,11 @@ Each analysis agent receives a **byte-identical shared prefix** (rubric + baseli
 ```
 You are evaluating a Claude Code [Skill/Agent] for quality.
 
-Tools available: WebSearch (for domain research) and Read. Do not use Write, Edit,
-or Bash. You are evaluating, not modifying.
+Tools available: WebSearch (for domain research), WebFetch (for reading full article
+content from URLs found via WebSearch), and Read. Do not use Write, Edit, or Bash.
+You are evaluating, not modifying.
+
+[If WebFetch is unavailable, omit it from this line.]
 
 ## Reference Materials
 
@@ -157,7 +162,16 @@ No domain was inferred for this item. Proceed with WebSearch as normal.
    - MISS researcher: 1-2 WebSearch queries (standard behavior)
    - MISS consumer: model knowledge only
    - NONE: 1-2 WebSearch queries (standard behavior)
-3. Synthesize: what should a high-quality item in this domain include?
+3. **Full-Content Retrieval (when WebFetch is available):**
+   After WebSearch returns results, identify the 1-2 most relevant URLs
+   (prefer primary sources: official docs, peer-reviewed papers, production
+   case studies). Fetch each with WebFetch using a targeted prompt:
+   "Extract domain best practices, benchmarks, and configuration patterns
+   relevant to [domain]. Max 500 words."
+   Use the full content — not just search snippets — when synthesizing
+   domain knowledge and writing Domain Cache Update sections.
+   If WebFetch is unavailable, proceed with search snippets as before.
+4. Synthesize: what should a high-quality item in this domain include?
 
 ### Step B: Scoring + Recommendations
 
@@ -307,7 +321,7 @@ sources:
 
 4. Write each entry to `references/domain-cache/{domain-key}.md`.
 5. Update `references/domain-cache/INDEX.md` — add or update rows for each written domain key. Create INDEX.md if it does not exist.
-6. If `websearch_available = false`, skip this entire phase — never write cache entries from model knowledge alone.
+6. If `websearch_available = false` and `webfetch_available = false`, skip this entire phase — never write cache entries from model knowledge alone.
 7. Report to user: "Updated domain cache: [list of domain keys written/updated]"
 
 ## Phase 4 — Report Persistence
@@ -380,7 +394,7 @@ Tell the user the report file path and suggest committing with: `docs(reviews): 
 ## Hard Rules
 
 - **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and domain cache entries in its own `references/domain-cache/`.
-- **Domain cache entries must come from WebSearch results only.** Never write cache entries based on model knowledge alone. If WebSearch is unavailable, skip cache persistence entirely.
+- **Domain cache entries must come from web research (WebSearch and/or WebFetch) only.** Never write cache entries based on model knowledge alone. If WebSearch is unavailable, skip cache persistence entirely.
 - **Analyze every discovered item.** Skip none.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every recommendation must include a concrete rewrite** — not just "improve X."
