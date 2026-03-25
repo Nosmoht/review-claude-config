@@ -34,7 +34,6 @@ The plugin also installs a PreToolUse hook that automatically injects quality gu
 For repo-internal skills only (not globally needed):
 ```
 cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
-cp -r .claude/skills/apply-review-findings <target>/.claude/skills/
 cp -r .claude/skills/skill-scaffolding <target>/.claude/skills/
 cp -r .claude/skills/check-repo-health <target>/.claude/skills/
 cp -r .claude/skills/review-analytics <target>/.claude/skills/
@@ -67,11 +66,11 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 - `skills/apply-agent-review-findings/references/agent-fix-guide.md` — Agent-specific fix validation rules
 - `skills/apply-rule-review-findings/SKILL.md` — Single-rule fix application with rule-specific validation
 - `skills/apply-rule-review-findings/references/rule-fix-guide.md` — Rule-specific fix validation rules
+- `skills/apply-review-findings/SKILL.md` — Orchestrator: delegates to specialized type-specific appliers
+- `skills/apply-review-findings/references/commit-conventions.md` — Scoped commit format and audit-fix chain rules
 
 ### Repo-internal skills
 - `.claude/skills/refresh-engineering-baseline/SKILL.md` — Baseline refresh skill
-- `.claude/skills/apply-review-findings/SKILL.md` — Orchestrator: delegates to specialized type-specific appliers
-- `.claude/skills/apply-review-findings/references/commit-conventions.md` — Scoped commit format and audit-fix chain rules
 - `.claude/skills/skill-scaffolding/SKILL.md` — Skill directory scaffolding
 - `.claude/skills/skill-scaffolding/references/skill-template.md` — Default SKILL.md template
 - `.claude/skills/check-repo-health/SKILL.md` — Repository health dashboard
