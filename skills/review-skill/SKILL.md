@@ -176,6 +176,9 @@ summary:
 ```
 
 4. Write the report file. Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS review report`
+5. Suggest next steps:
+   - "To automatically apply High/Medium findings: `/apply-skill-review-findings <report-path>`"
+   - "To apply changes manually, use the Current/Recommended blocks in each recommendation as a guide."
 
 ## Error Handling
 
