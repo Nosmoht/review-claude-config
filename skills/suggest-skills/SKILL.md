@@ -7,6 +7,7 @@ description: >
   new project or expanding skill coverage in an existing one.
 argument-hint: [folder]
 allowed-tools: Agent, Read, Write, Glob, Grep, WebSearch, WebFetch
+disable-model-invocation: true
 ---
 
 # Suggest Skills
@@ -43,6 +44,8 @@ Launch an Agent (allowed-tools: Glob, Grep, Read) to collect raw repository sign
 ```
 Scan this repository and collect structured facts for each category below.
 Return facts only — no skill suggestions or interpretations.
+
+Scan limits: read at most 50 lines per file, scan at most 3 directory levels deep. If the repository is very large (>1000 files at top level), focus on root-level config files and the first level of subdirectories.
 
 ## Category A: Documentation
 Search for workflow instructions and manual steps:
@@ -392,9 +395,13 @@ Write to: `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md`
 
 Use the current date and time for the timestamp. Create `<target>/.claude/reviews/` if it does not exist.
 
-### Step 3: Confirm
+### Step 3: Confirm and Next Steps
 
 Tell the user the report file path and suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS suggest-skills report`
+
+Suggest next steps:
+- "Use `/skill-scaffolding <skill-name>` to create any suggested skill"
+- "Use `/review-claude-config` to audit the new skills after creation"
 
 ## Hard Rules
 
