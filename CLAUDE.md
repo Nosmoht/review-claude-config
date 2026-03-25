@@ -1,10 +1,10 @@
 # Review Claude Config
 
-A Claude Code skill that analyzes and optimizes Claude Code skills and agents using evidence-based prompt and context engineering evaluation.
+A Claude Code skill that analyzes and optimizes Claude Code skills, agents, and rules using evidence-based prompt and context engineering evaluation.
 
 ## Skills
 
-- `/review-claude-config [folder]` — Audit all skills/agents in a folder (defaults to cwd). Read-only, produces per-item quality certificates.
+- `/review-claude-config [folder]` — Audit all skills/agents/rules in a folder (defaults to cwd). Read-only, produces per-item quality certificates. Rules use a 3-dimension subset (Clarity, Completeness, Goal Alignment).
 - `/suggest-skills [folder]` — Analyze a repository to identify missing skills. Read-only, produces prioritized suggestions with skeleton SKILL.md files.
 - `/refresh-engineering-baseline` — Update the engineering baseline with current research via WebSearch.
 - `/apply-review-findings [report-path]` — Apply High/Medium review recommendations with audit-fix chain commits.
