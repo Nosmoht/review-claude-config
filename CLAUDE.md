@@ -35,9 +35,6 @@ The plugin also installs a PreToolUse hook that automatically injects quality gu
 For repo-internal skills only (not globally needed):
 ```
 cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
-cp -r .claude/skills/skill-scaffolding <target>/.claude/skills/
-cp -r .claude/skills/check-repo-health <target>/.claude/skills/
-cp -r .claude/skills/review-analytics <target>/.claude/skills/
 cp -r .claude/skills/research-index <target>/.claude/skills/
 ```
 
@@ -76,14 +73,15 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 - `skills/apply-review-findings/SKILL.md` — Orchestrator: delegates to specialized type-specific appliers
 - `skills/apply-review-findings/references/commit-conventions.md` — Scoped commit format and audit-fix chain rules
 
+- `skills/skill-scaffolding/SKILL.md` — Skill directory scaffolding
+- `skills/skill-scaffolding/references/skill-template.md` — Default SKILL.md template
+- `skills/check-repo-health/SKILL.md` — Repository health dashboard
+- `skills/check-repo-health/references/health-thresholds.md` — Freshness, token, and integrity thresholds
+- `skills/review-analytics/SKILL.md` — Grade trajectory tracking
+- `skills/review-analytics/references/report-schema.md` — Review report frontmatter schema
+
 ### Repo-internal skills
 - `.claude/skills/refresh-engineering-baseline/SKILL.md` — Baseline refresh skill
-- `.claude/skills/skill-scaffolding/SKILL.md` — Skill directory scaffolding
-- `.claude/skills/skill-scaffolding/references/skill-template.md` — Default SKILL.md template
-- `.claude/skills/check-repo-health/SKILL.md` — Repository health dashboard
-- `.claude/skills/check-repo-health/references/health-thresholds.md` — Freshness, token, and integrity thresholds
-- `.claude/skills/review-analytics/SKILL.md` — Grade trajectory tracking
-- `.claude/skills/review-analytics/references/report-schema.md` — Review report frontmatter schema
 - `.claude/skills/research-index/SKILL.md` — Research directory drift detection
 
 ## Conventions
