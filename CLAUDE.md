@@ -10,7 +10,10 @@ A Claude Code skill that analyzes and optimizes Claude Code skills, agents, and 
 - `/review-rule <path>` — Evaluate a single rule's quality across 3 dimensions (Clarity, Completeness, Goal Alignment).
 - `/suggest-skills [folder]` — Analyze a repository to identify missing skills. Read-only, produces prioritized suggestions with skeleton SKILL.md files.
 - `/refresh-engineering-baseline` — Update the engineering baseline with current research via WebSearch.
-- `/apply-review-findings [report-path]` — Apply High/Medium review recommendations with audit-fix chain commits.
+- `/apply-review-findings [report-path]` — Orchestrate application of High/Medium recommendations from any review report (batch or standalone). Delegates to specialized type-specific appliers.
+- `/apply-skill-review-findings [report-path]` — Apply review recommendations to a single skill with skill-specific validation (line count, token budgets, frontmatter, progressive disclosure).
+- `/apply-agent-review-findings [report-path]` — Apply review recommendations to a single agent with agent-specific validation (single-file constraint, model selection, trigger keywords, tool minimalism).
+- `/apply-rule-review-findings [report-path]` — Apply review recommendations to a single rule with rule-specific validation (no frontmatter, unambiguous verbs, scope explicitness, conflict detection).
 - `/skill-scaffolding <skill-name>` — Create new skill directory with SKILL.md, references, and CLAUDE.md registration.
 - `/check-repo-health [all|freshness|tokens|integrity]` — Verify reference freshness, token budgets, and cross-skill integrity.
 - `/review-analytics [folder]` — Track grade trajectories and detect regressions across review reports.
@@ -58,10 +61,16 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 - `skills/review-rule/references/rule-evaluation-guide.md` — Rule-specific evaluation patterns
 - `skills/suggest-skills/SKILL.md` — Skill gap detection and suggestion skill
 - `skills/suggest-skills/references/signal-catalog.md` — Signal patterns and extraction criteria
+- `skills/apply-skill-review-findings/SKILL.md` — Single-skill fix application with skill-specific validation
+- `skills/apply-skill-review-findings/references/skill-fix-guide.md` — Skill-specific fix validation rules
+- `skills/apply-agent-review-findings/SKILL.md` — Single-agent fix application with agent-specific validation
+- `skills/apply-agent-review-findings/references/agent-fix-guide.md` — Agent-specific fix validation rules
+- `skills/apply-rule-review-findings/SKILL.md` — Single-rule fix application with rule-specific validation
+- `skills/apply-rule-review-findings/references/rule-fix-guide.md` — Rule-specific fix validation rules
 
 ### Repo-internal skills
 - `.claude/skills/refresh-engineering-baseline/SKILL.md` — Baseline refresh skill
-- `.claude/skills/apply-review-findings/SKILL.md` — Automated review finding application
+- `.claude/skills/apply-review-findings/SKILL.md` — Orchestrator: delegates to specialized type-specific appliers
 - `.claude/skills/apply-review-findings/references/commit-conventions.md` — Scoped commit format and audit-fix chain rules
 - `.claude/skills/skill-scaffolding/SKILL.md` — Skill directory scaffolding
 - `.claude/skills/skill-scaffolding/references/skill-template.md` — Default SKILL.md template
@@ -74,7 +83,7 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 ## Conventions
 
 - Language: English
-- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, guidelines ≤500 tokens, domain cache entries ≤500 tokens each, evaluation guides (skill-evaluation-guide, agent-evaluation-guide, rule-evaluation-guide) ≤500 tokens each, other skill reference files (commit-conventions, skill-template, health-thresholds, report-schema) ≤500 tokens each
+- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, guidelines ≤500 tokens, domain cache entries ≤500 tokens each, evaluation guides (skill-evaluation-guide, agent-evaluation-guide, rule-evaluation-guide) ≤500 tokens each, fix guides (skill-fix-guide, agent-fix-guide, rule-fix-guide) ≤500 tokens each, other skill reference files (commit-conventions, skill-template, health-thresholds, report-schema) ≤500 tokens each
 - Domain cache entries are committed to track research evolution and enable offline reuse. Refreshed on the same 90-day cycle as the engineering baseline.
 - Web content fetching (WebFetch) is optional in both skills. Skills degrade gracefully to WebSearch-only when WebFetch is unavailable.
 - The review and suggest skills are read-only on analyzed files — review writes reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`; suggest writes only reports to `.claude/reviews/`
@@ -83,7 +92,7 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 - Commits use scoped conventional format: `type(scope): description` (e.g., `feat(review-skill):`, `fix(refresh-skill):`, `docs(project):`)
 - Review audit→fix chain commits use the report timestamp as shared identifier: `docs(reviews): add <timestamp> review report` → `fix(<scope>): address findings from <timestamp> review`
 - When acting on review findings: commit the report first, then commit fixes. This creates a traceable audit → fix chain in git history. The `/apply-review-findings` skill automates this workflow.
-- `/apply-review-findings` and `/skill-scaffolding` modify files — they require `disable-model-invocation: true` and user confirmation gates
+- `/apply-review-findings`, `/apply-skill-review-findings`, `/apply-agent-review-findings`, `/apply-rule-review-findings`, and `/skill-scaffolding` modify files — they require `disable-model-invocation: true` and user confirmation gates
 - `/check-repo-health` and `/review-analytics` are read-only diagnostic skills
 - `/research-index` edits only the Research References section of CLAUDE.md
 
