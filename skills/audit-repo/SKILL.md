@@ -1,0 +1,363 @@
+---
+name: audit-repo
+description: >
+  Analyze any repository to identify what Claude Code primitives (CLAUDE.md,
+  skills, agents, hooks/rules) it needs. Performs static analysis across
+  toolchain, ambiguity, conventions, architecture, domain knowledge, and token
+  efficiency. Produces a prioritized intervention matrix mapping error classes
+  to recommended primitives. Use when setting up Claude Code in a new project
+  or optimizing an existing configuration.
+argument-hint: [folder]
+allowed-tools: Agent, Read, Write, Glob, Grep, WebSearch, WebFetch
+disable-model-invocation: true
+---
+
+# Audit Repo
+
+Analyze a target repository's structure, toolchain, conventions, architecture, and token efficiency to produce a prioritized intervention matrix of recommended Claude Code primitives.
+
+## Argument Handling
+
+- `$ARGUMENTS` is the target folder path. If empty, use the current working directory.
+- Validate the folder exists and contains files. If the folder has no files, report that and stop.
+
+## Phase 1 — Setup
+
+### Step 0: Tool Availability Checks
+
+Attempt a trivial WebSearch (e.g., "Claude Code documentation"). If it fails or is unavailable, set `websearch_available = false` and continue. Recommendations will use model knowledge only, marked `[no web verification]`.
+
+Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fails or is unavailable, set `webfetch_available = false` and continue.
+
+### Step 1: Load References
+
+Read these files from the skill's own `references/` directory:
+- `references/signal-patterns.md` — file patterns per analysis step
+- `references/error-class-taxonomy.md` — error classes and primitive mapping
+- `references/primitive-decision-matrix.md` — decision rules per primitive type
+- `references/token-heuristics.md` — thresholds and scoring formulas
+- `references/audit-report-schema.md` — report frontmatter schema and body structure
+
+### Step 2: Initial Target Assessment
+
+Check the target folder for existing Claude Code configuration:
+- Glob for `<folder>/CLAUDE.md` — note if present, read first 50 lines
+- Glob for `<folder>/.claude/skills/*/SKILL.md` — count existing skills
+- Glob for `<folder>/.claude/agents/*.md` — count existing agents
+- Glob for `<folder>/.claude/rules/*.md` — count existing rules
+- Glob for `<folder>/.claude/hooks/` or hooks config — note if present
+
+Record: `existing_claude_config = true|false`, existing item counts.
+
+## Phase 2 — Static Repo Analysis
+
+Launch a **Repo Scanner Agent** to collect structured facts. The agent returns facts per category, not interpretations.
+
+Agent allowed-tools: Glob, Grep, Read, Bash.
+
+```
+You are scanning a repository to collect structured facts for an audit.
+Return facts only — no recommendations or interpretations.
+
+SCAN LIMITS:
+- Read at most 50 lines per file
+- Scan at most 4 directory levels deep
+- Cap file listings at 500 files per directory
+- BASH RESTRICTIONS: Only read-only commands allowed (find, wc, ls).
+  NEVER use: rm, mv, cp, tee, >, >>, mkdir, touch, or any write command.
+
+## Signal Patterns Reference
+[Insert signal-patterns.md content here]
+
+## Category A: Toolchain Detection
+Find all build/test/lint/deploy commands:
+- Glob for each toolchain signal file from the reference
+- For package.json: extract "scripts" section (first 50 lines)
+- For Makefile/Justfile: extract target names via Grep
+- For CI configs (.github/workflows/*.yml, .gitlab-ci.yml): extract
+  step commands via Grep for "run:" patterns
+- For pyproject.toml: extract [tool.pytest], [tool.ruff], [project.scripts]
+- For Cargo.toml, go.mod, build.gradle: note presence and language
+- Report: explicit command list per tool, or "NOT FOUND" per category
+
+## Category B: Ambiguity Measurement
+Quantify repository navigation complexity:
+- Bash: find . -type f -not -path './.git/*' -not -path '*/node_modules/*' |
+  awk -F/ '{print NF-1}' | sort -rn | head -1
+  (max directory depth)
+- Bash: find . -type d -not -path './.git/*' -not -path '*/node_modules/*' |
+  head -100 | while read d; do echo "$(ls -1 "$d" 2>/dev/null | wc -l) $d"; done |
+  sort -rn | head -10
+  (files per directory, top 10)
+- Grep for naming collisions: search for "export class|export function|def |
+  func |type " across source files, count duplicate names
+- Report: max depth, max files/dir, naming collision count, computed
+  sprawl score (depth × max_files × collisions)
+
+## Category C: Linter/Formatter Coverage
+Classify convention enforcement tiers:
+- Glob for each tier's detection files from signal-patterns.md
+- For each found linter config: note what conventions it enforces
+- Grep CI configs for lint/format/check steps
+- Glob for CLAUDE.md, .claude/rules/*.md, .cursorrules — note
+  convention instructions found
+- Report per convention type: which tier it's in (Deterministic,
+  CI-enforced, AI-instructed, or Undocumented)
+
+## Category D: Architecture Pattern Extraction
+Detect architecture patterns:
+- Glob for each architecture signature directory set from reference
+- Grep for DI framework markers (inversify, tsyringe, Dagger, Spring)
+- Glob for ADRs: docs/adr/, docs/decisions/, docs/architecture/
+- If hexagonal-like directories found, check import direction via Grep
+  (do adapters import from domain, or vice versa?)
+- Report: detected pattern(s) with evidence, ADR presence, DI framework
+
+## Category E: Domain Knowledge Inventory
+Check for domain documentation:
+- Glob for each domain knowledge source from signal-patterns.md
+  (OpenAPI, protobuf, GraphQL, glossary, ADRs, migrations, schemas)
+- For each found: note file path and brief content summary (first 20 lines)
+- Read README.md first 50 lines for business context sections
+- Report: available domain docs with paths, gaps (missing glossary,
+  no API spec, etc.)
+```
+
+If the scan agent fails entirely, report the error to the user and stop.
+
+## Phase 3 — Token Efficiency Analysis
+
+Launch a **Token Analyzer Agent** to compute quantitative metrics.
+
+Agent allowed-tools: Glob, Bash, Read.
+
+```
+You are analyzing a repository for token efficiency. Return metrics only.
+
+SCAN LIMITS:
+- Read at most 50 lines per file
+- Scan at most 4 directory levels deep
+- BASH RESTRICTIONS: Only read-only commands allowed (find, wc, ls).
+  NEVER use: rm, mv, cp, tee, >, >>, mkdir, touch, or any write command.
+
+## Token Heuristics Reference
+[Insert token-heuristics.md content here]
+
+## Metric A: File Size Distribution
+Find the largest source files:
+- Bash: find . -name '*.ts' -o -name '*.py' -o -name '*.go' -o -name '*.rs'
+  -o -name '*.java' -o -name '*.js' -o -name '*.tsx' -o -name '*.jsx' |
+  grep -v node_modules | grep -v .git |
+  xargs wc -l 2>/dev/null | sort -rn | head -20
+- Classify each file: >2000 (severe), >1000 (critical), >500 (token sink)
+- Estimate total token cost for top 10 files using language-specific density
+- Report: file list with line counts, classifications, estimated tokens
+
+## Metric B: Navigation Sprawl Score
+Compute the score from Phase 2 Category B results:
+- Use max_depth, max_files_per_dir, naming_collision_count
+- Formula: max_depth × max_files_per_dir × max(naming_collisions, 1)
+- Classify: >100 (P0 architecture map needed), 30-100 (selective hints),
+  <30 (no intervention)
+- Report: score, classification, breakdown
+
+## Metric C: Build Error Verbosity
+Classify detected build tools by verbosity:
+- Match each detected toolchain against the verbosity table in reference
+- Report: toolchain → expected verbosity level → token cost classification
+
+## Metric D: Monorepo Scope Isolation
+If monorepo markers found:
+- Count workspace packages/modules
+- Bash: grep -rn "from '@" --include='*.ts' --include='*.tsx' |
+  grep -v node_modules | wc -l
+  (cross-package import count for JS/TS monorepos)
+- For Go: count cross-module imports
+- Report: package count, cross-package import score, isolation assessment
+
+## Metric E: Context Burn Rate Estimate
+Based on repo characteristics:
+- Average file size × estimated reads per task type (from reference)
+- Flag if average file size > 300 lines (high burn rate)
+- Report: estimated tokens per simple edit, exploration, and refactor task
+```
+
+If the analyzer agent fails, report partial results and continue.
+
+## Phase 4 — Primitives Derivation
+
+The orchestrator synthesizes Phase 2 + Phase 3 results using error-class-taxonomy.md and primitive-decision-matrix.md as decision guides. This runs inline (not as a sub-agent) because it requires judgment that benefits from the full conversation context.
+
+### 4A: CLAUDE.md Gaps
+
+Review Phase 2 results against CLAUDE.md requirements:
+- **Toolchain**: Are build/test/lint/deploy commands discoverable from config files? If not → CLAUDE.md P0
+- **Architecture**: Is the architecture pattern explicitly documented (ADRs or CLAUDE.md)? If implicit only → CLAUDE.md P1
+- **Scope**: Is it a monorepo with cross-package boundaries? → CLAUDE.md P0 scope isolation rules
+- **Domain**: Are domain docs referenced? No glossary + complex domain → CLAUDE.md P2
+- **Navigation**: Is sprawl score >100? → CLAUDE.md P0 architecture map with entry points
+- **Large files**: Any files >500 LOC? → CLAUDE.md hints for relevant sections
+
+For each gap, include: specific evidence from Phase 2, concrete content suggestion (not just "add toolchain commands" but "add these specific commands found in package.json: [list]").
+
+### 4B: Skill Candidates
+
+From Phase 2 Category B (ambiguity) and scan results:
+- Are there ≥5 structurally similar files (components, services, handlers, migrations)?
+- Are there multi-step workflows in CI that could run locally?
+- Are there existing codegen templates (plop, hygen, cookiecutter)?
+
+Each candidate must pass 3/4 extraction criteria: recurrence, verification, non-obviousness, generalizability.
+
+Note: For deeper skill-specific analysis, recommend running `/suggest-skills [folder]` after the audit.
+
+### 4C: Agent Candidates
+
+From Phase 2 concern topology:
+- Separate lint/test configs per subdirectory → specialized agent per domain
+- Security scanning tools in CI (Trivy, Snyk, CodeQL, gitleaks) → security-reviewer agent
+- Separate deployment targets (Terraform, Helm, CDK) → infra-architect agent
+- CODEOWNERS with clear responsibility boundaries → agent per ownership area
+
+Decision: only recommend Agent if concern has BOTH its own toolchain AND its own evaluation criteria. Otherwise recommend Skill.
+
+### 4D: Hook/Rule Candidates
+
+From Phase 2 constraint extraction:
+- Pre-commit hooks (.pre-commit-config.yaml, .husky/) → PostToolUse hooks for formatters
+- Branch protection rules → Rule ("Never commit directly to main")
+- Secret scanning in CI → PreToolUse hook for secret detection
+- .gitignore/.dockerignore patterns → file-write restriction rules
+- Mandatory review labels → permission config recommendation
+
+Decision: if check is a single command with boolean output → Hook. If judgment needed → Rule.
+
+## Phase 5 — Needs Matrix and Report
+
+### Step 1: Assemble the Intervention Matrix
+
+For each identified gap from Phase 4:
+1. Assign **error class** from taxonomy (Toolchain, Navigation, Convention, Architecture, Repetition, Domain, Security)
+2. Assign **primitive type** (CLAUDE.md, Skill, Agent, Hook, Rule)
+3. Assign **priority**: P0 (CLAUDE.md basics + critical navigation), P1 (hooks + skills + security), P2 (agents + domain)
+4. Assign **token impact**: High/Medium/Low from Phase 3 metrics
+5. Cite **evidence**: specific file paths, metrics, or absence evidence
+
+Sort by priority (P0 first), then by token impact (High first).
+
+### Step 2: Optional Web Validation
+
+If `websearch_available = true`, validate the top 3 P0 recommendations:
+- 1-2 WebSearch queries to check if the recommended primitives align with best practices for the detected tech stack
+- Mark validated recommendations accordingly
+
+### Step 3: Build Report
+
+Assemble the report following `references/audit-report-schema.md`:
+
+**Frontmatter:** All required fields from schema (generated_by, schema_version, date, target, existing_claude_config, languages, repo_type, intervention_count, p0/p1/p2 counts, summary array).
+
+**Body:**
+
+```
+# Repository Audit Report
+
+## Repository Profile
+- **Target:** [absolute path]
+- **Languages:** [detected]
+- **Frameworks:** [detected]
+- **Existing Claude Config:** [yes/no — N skills, N agents, N rules, hooks: yes/no]
+- **Repository Type:** [Application / Skills-Config / Mixed]
+
+## Static Analysis Findings
+
+### Toolchain
+[findings with specific file paths and extracted commands]
+
+### Ambiguity Metrics
+| Metric | Value | Threshold | Status |
+|--------|-------|-----------|--------|
+| Max directory depth | N | >4 | OK/WARN |
+| Max files per directory | N | >30 | OK/WARN |
+| Naming collisions | N | >5 | OK/WARN |
+| Sprawl score | N | >100 | OK/WARN |
+
+### Convention Enforcement
+| Convention | Tier | Tool/Config | Gap |
+|-----------|------|-------------|-----|
+| [convention] | [1-4] | [config file] | [gap or "covered"] |
+
+### Architecture
+[detected patterns, evidence, ADR presence]
+
+### Domain Knowledge
+[available docs with paths, identified gaps]
+
+## Token Efficiency Findings
+
+### File Size Distribution
+[top N large files with line counts and estimated token costs]
+
+### Navigation Sprawl Score
+Score: [N] — [classification]
+Breakdown: depth [N] × files/dir [N] × collisions [N]
+
+### Build Error Verbosity
+[toolchain → verbosity → token cost]
+
+### Monorepo Isolation
+[workspace count, cross-package imports, assessment]
+
+### Context Burn Rate
+| Task Type | Estimated Tokens |
+|-----------|-----------------|
+| Simple edit | [N]K |
+| Exploration + edit | [N]K |
+| Multi-file refactor | [N]K |
+
+## Intervention Matrix
+
+| # | Error Class | Gap | Primitive | Priority | Token Impact | Evidence |
+|---|-------------|-----|-----------|----------|-------------|----------|
+| 1 | [class] | [description] | [type] | [P0-P2] | [H/M/L] | [cite] |
+
+## Recommendations
+
+### P0 — Immediate (CLAUDE.md Basics)
+[detailed recommendations with specific content to add]
+
+### P1 — Short-term (Hooks + Skills)
+[detailed recommendations with specific configurations]
+
+### P2 — Medium-term (Agents + Domain)
+[detailed recommendations]
+
+## Next Steps
+- Create or update CLAUDE.md with P0 items first
+- Run `/suggest-skills [folder]` for deeper skill gap analysis
+- Use `/skill-scaffolding <name>` for identified skill candidates
+- Re-run `/audit-repo [folder]` after changes to verify coverage
+- Run `/review-claude-config [folder]` to evaluate quality after creating primitives
+```
+
+### Step 4: Present and Persist
+
+Present the full report to the user.
+
+After presenting, confirm before writing: "Save audit report to `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-audit-repo.md`?"
+
+If confirmed, write the report. Create `<target>/.claude/reviews/` if it does not exist. If declined, display the path that would have been used.
+
+Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS audit-repo report`
+
+## Hard Rules
+
+- **Read-only on target repository.** Never modify any existing file. The only file this skill writes is the audit report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-audit-repo.md`.
+- **Bash only in sub-agents.** Bash is intentionally excluded from top-level allowed-tools and only granted to Phase 2/3 sub-agents. Sub-agent instructions explicitly prohibit write commands.
+- **Scan limits enforced.** Max 50 lines per file read, max 4 directory levels, max 500 files per listing. For very large repos (>5000 files), focus on root configs and first-level subdirectories.
+- **Every recommendation needs evidence.** Cite specific file paths, metrics, or absence evidence. Never recommend a primitive without explaining what analysis data supports it.
+- **No generation.** This skill produces a diagnostic matrix, not actual primitives. Recommend `/skill-scaffolding`, manual CLAUDE.md creation, or hook setup — don't create them.
+- **Present all findings before asking** about persistence or follow-up actions.
+- **Error handling.** If Phase 2 scan agent fails entirely, report the error and stop. If Phase 3 analyzer fails, report partial results and continue to Phase 4 with available data. Never silently skip.
+- **Graceful degradation.** Works without WebSearch (model knowledge only for validation, marked accordingly). Works without WebFetch.
+- **Stop conditions.** If target folder does not exist, has no files, or is not accessible: report and stop immediately.
