@@ -88,6 +88,8 @@ If no, stop.
 
 ## Phase 3 -- Apply Recommendations
 
+Example flow: Read `.claude/rules/commit-format.md` -> search for Current text "You should use conventional commits" -> found -> pre-edit: weak verb "should" in replacement flagged as warning (expected — it's being replaced) -> show preview -> user says "yes" -> Edit applied -> post-edit: no frontmatter added, no sibling contradictions found.
+
 For each recommendation (High impact first, then Medium):
 
 1. Read the target rule file at the path from the report's `summary` section.
