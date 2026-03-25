@@ -52,7 +52,7 @@ Show a summary table of all actionable findings before making any changes:
 
 | # | Item | Recommendation | Impact | File |
 |---|------|----------------|--------|------|
-| 1 | review-claude-config | Add confirmation gate | Medium | .claude/skills/review-claude-config/SKILL.md |
+| 1 | review-claude-config | Add confirmation gate | Medium | skills/review-claude-config/SKILL.md |
 ```
 
 Ask: "Proceed with applying these findings? (yes/no)"

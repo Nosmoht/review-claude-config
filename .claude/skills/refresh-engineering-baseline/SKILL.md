@@ -19,7 +19,7 @@ Update `references/engineering-baseline.md` with current research findings.
 
 ### 1. Locate the baseline file
 
-Read `.claude/skills/review-claude-config/references/engineering-baseline.md`. If the file is not found, report the error and stop.
+Read `skills/review-claude-config/references/engineering-baseline.md`. If the file is not found, report the error and stop.
 
 Read the current file content and extract the `last_refreshed` date from frontmatter. If `last_refreshed` is missing or unparseable, treat the baseline as stale and proceed directly to Step 3.
 

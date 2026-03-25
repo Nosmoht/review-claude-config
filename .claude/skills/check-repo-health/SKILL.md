@@ -24,9 +24,12 @@ Read `references/health-thresholds.md` for configurable thresholds.
 ### 2. Discover files
 
 Use Glob to build a file inventory:
-- `.claude/skills/*/SKILL.md` — all skill files
-- `.claude/skills/*/references/*.md` — all reference files
-- `.claude/skills/*/references/domain-cache/*.md` — domain cache entries
+- `.claude/skills/*/SKILL.md` — repo-internal skill files
+- `.claude/skills/*/references/*.md` — repo-internal reference files
+- `.claude/skills/*/references/domain-cache/*.md` — repo-internal domain cache entries
+- `skills/*/SKILL.md` — plugin skill files
+- `skills/*/references/*.md` — plugin reference files
+- `skills/*/references/domain-cache/*.md` — plugin domain cache entries
 - `research/**/*.md` — all research files
 - `CLAUDE.md` — project instructions
 
