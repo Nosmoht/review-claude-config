@@ -51,6 +51,26 @@ Build the SKILL.md content from the template:
 - **Workflow section:** Generate numbered step stubs based on the workflow description. Each step gets a heading and a 1-2 sentence placeholder.
 - **Hard Rules section:** Include standard rules (confirmation gates if write-capable, scope restrictions, error handling).
 
+Example generated output:
+
+    ---
+    name: lint-configs
+    description: >
+      Validate and fix linting configuration files across the repository.
+      Use when adding or updating ESLint, Prettier, or similar tool configs.
+    argument-hint: "[config-path]"
+    allowed-tools: Read, Glob
+    ---
+
+    # Lint Configs
+
+    You are a configuration validator...
+
+    ## Workflow
+
+    ### 1. Discover config files
+    [step placeholder]
+
 Present the full generated content to the user for review. Ask: "Does this look correct? (yes/edit/cancel)"
 - **yes** — Proceed to writing files.
 - **edit** — Ask what to change, regenerate, and preview again.
@@ -70,6 +90,8 @@ Create the skill directory and files:
 
    [TODO: Add content]
    ```
+
+If any write fails, report which files were successfully created and which failed. Do not proceed to Step 6 until all files are written.
 
 ### 6. Register in CLAUDE.md
 
