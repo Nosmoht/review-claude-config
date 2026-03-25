@@ -1,7 +1,7 @@
 ---
 name: review-claude-config
 description: >
-  Analyze and optimize all Claude Code skills, agents, and rules in a project's
+  Analyze and evaluate all Claude Code skills, agents, and rules in a project's
   .claude/ directory. Applies evidence-based prompt and context engineering
   evaluation with type-appropriate scoring dimensions, produces per-item quality
   certificates with concrete optimization recommendations. Use when you want to
