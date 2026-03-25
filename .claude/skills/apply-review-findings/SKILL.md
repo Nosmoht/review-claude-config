@@ -1,10 +1,10 @@
 ---
 name: apply-review-findings
 description: >
-  Apply recommendations from a review-claude-config report to the reviewed
-  files. Parses High and Medium impact findings, previews each change, and
-  commits with audit-fix chain convention linking fixes back to the review
-  timestamp. Use after running /review-claude-config to act on findings.
+  Apply recommendations from any review report (review-claude-config,
+  review-skill, review-agent, or review-rule) to the reviewed files. Delegates
+  to specialized type-specific appliers, then commits with audit-fix chain
+  convention. Use after running any /review-* skill to act on findings.
 argument-hint: "[report-path]"
 allowed-tools: Read, Edit, Glob, Bash
 disable-model-invocation: true
@@ -12,19 +12,19 @@ disable-model-invocation: true
 
 # Apply Review Findings
 
-You are a code editor applying structured review recommendations. Your job is to faithfully translate review findings into file edits, preserving the audit-fix traceability chain.
+You are a thin orchestrator that locates review reports, classifies items by type, and delegates fix application to specialized appliers. You handle report parsing, summary presentation, and the commit workflow. The specialized appliers handle type-specific validation and edit application.
 
 ## Workflow
 
 ### 1. Locate the review report
 
-If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `.claude/reviews/*-review-claude-config.md` and select the most recent report by filename timestamp.
+If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `.claude/reviews/*-review-*.md` and select the most recent report by filename timestamp.
 
-Read the report file. If the file does not exist or is not a review-claude-config report (check `generated_by` in frontmatter), report the error and stop.
+Read the report file. If the file does not exist or `generated_by` is not one of `review-claude-config`, `review-skill`, `review-agent`, `review-rule`, report the error and stop.
 
 ### 2. Parse recommendations
 
-Extract the YAML frontmatter to get: `date`, `target`, and `summary` (list of items with paths and grades).
+Extract the YAML frontmatter to get: `date`, `target`, `generated_by`, and `summary` (list of items with paths, types, and grades).
 
 Parse the report body for recommendation sections. Each recommendation follows this pattern:
 ```
@@ -41,7 +41,9 @@ Parse the report body for recommendation sections. Each recommendation follows t
 
 Filter to **High and Medium impact only**. Discard Low impact recommendations.
 
-If no High or Medium recommendations are found, tell the user: "No actionable findings — all recommendations are Low impact." Stop.
+If no High or Medium recommendations are found, tell the user: "No actionable findings -- all recommendations are Low impact." Stop.
+
+Group recommendations by item type using the `type` field in the `summary` array (Skill, Agent, or Rule). For single-item reports (`review-skill`, `review-agent`, `review-rule`), there is one group.
 
 ### 3. Present summary
 
@@ -50,52 +52,81 @@ Show a summary table of all actionable findings before making any changes:
 ```
 ## Actionable Findings
 
-| # | Item | Recommendation | Impact | File |
-|---|------|----------------|--------|------|
-| 1 | review-claude-config | Add confirmation gate | Medium | skills/review-claude-config/SKILL.md |
+| # | Item | Type | Recommendation | Impact | File |
+|---|------|------|----------------|--------|------|
+| 1 | review-skill | Skill | Add confirmation gate | Medium | skills/review-skill/SKILL.md |
+| 2 | my-agent | Agent | Fix model selection | High | .claude/agents/my-agent.md |
 ```
 
 Ask: "Proceed with applying these findings? (yes/no)"
 If no, stop.
 
-### 4. Apply recommendations one by one
+### 4. Discover specialized appliers
 
-For each recommendation (High impact first, then Medium):
+Locate specialized applier skills via Glob:
+- `**/apply-skill-review-findings/SKILL.md`
+- `**/apply-agent-review-findings/SKILL.md`
+- `**/apply-rule-review-findings/SKILL.md`
 
-1. Read the target file at the path from the report's `summary` section.
-2. Locate the **Current** text block in the actual file content.
-   - If the exact text is not found, the file may have changed since the review. Show the user the Current text from the report and ask: "This text was not found in the file. Skip this recommendation? (yes/no)" If yes, skip. If no, ask the user to identify the correct text to replace.
-3. Show the user:
-   - File path
-   - Current text (from the actual file)
-   - Recommended replacement (from the report)
-4. Ask: "Apply this change? (yes/skip/stop)"
-   - **yes** — Apply the edit using the Edit tool.
-   - **skip** — Move to the next recommendation.
-   - **stop** — End processing. Present summary of changes made so far.
+Read each found SKILL.md and its type-specific fix guide from `references/`.
 
-### 5. Present change summary
+If a specialized applier is not found for a type present in the report, warn: "No specialized applier found for type [Type]. Skipping [N] recommendations." Continue with other types.
 
-After processing all recommendations (or after user says "stop"), present:
+### 5. Dispatch to specialized appliers
+
+Extract the report timestamp from the filename (e.g., `2026-03-24T161200` from `2026-03-24T161200-review-skill.md`).
+
+For each type group (process sequentially -- edits require user confirmation):
+
+Construct the orchestration payload:
+
+```
+---orchestration---
+mode: orchestrated
+report_timestamp: YYYY-MM-DDTHHMMSS
+---
+
+## Items to Fix
+
+### Item: [name]
+**Path:** [file path]
+**Type:** [Skill|Agent|Rule]
+**Recommendations:**
+
+#### 1. [Title] (Impact: [High/Medium])
+[Description]
+
+**Current:**
+```[code block]```
+
+**Recommended:**
+```[code block]```
+```
+
+Dispatch an Agent with the specialized SKILL.md content, its fix guide, and the orchestration payload as the prompt. The agent applies edits with user confirmation and returns structured results.
+
+Collect results from each specialized applier.
+
+### 6. Aggregate and present change summary
+
+Combine results from all specialized appliers:
 
 ```
 ## Changes Applied
 
-| # | Item | Recommendation | Status |
-|---|------|----------------|--------|
-| 1 | review-claude-config | Add confirmation gate | Applied |
-| 2 | refresh-baseline | Token verification | Skipped |
+| # | Item | Type | Recommendation | Status |
+|---|------|------|----------------|--------|
+| 1 | review-skill | Skill | Add confirmation gate | Applied |
+| 2 | my-agent | Agent | Fix model selection | Skipped |
 
 Applied: N / Total: M
 ```
 
 If no changes were applied, stop here.
 
-### 6. Commit with audit-fix chain
+### 7. Commit with audit-fix chain
 
 Read `references/commit-conventions.md` for the commit format.
-
-Extract the timestamp from the report filename (e.g., `2026-03-24T161200` from `2026-03-24T161200-review-claude-config.md`).
 
 Check whether the review report itself has been committed. Run `git log --oneline --all -- <report-path>` via Bash. If the report is not yet committed, tell the user:
 
@@ -107,19 +138,19 @@ Commit the report now? (yes/no)"
 If yes, stage and commit the report via Bash.
 
 Then, for the fix commit:
-- Determine scope from the modified files. If all edits are within one skill directory, use that skill's name (e.g., `review-skill`). If multiple skills were edited, use comma-separated scopes.
+- Determine scope from the modified files. If all edits are within one skill/agent/rule, use that item's name. If multiple items were edited, use comma-separated scopes.
 - Compose the commit message: `fix(<scope>): address findings from <timestamp> review`
 - Show the commit message and ask: "Commit these changes? (yes/no)"
 - If yes, stage the modified files and commit via Bash.
 - If no, tell the user the changes are applied but uncommitted.
 
-### 7. Report
+### 8. Report
 
 Present the final status:
 - Files modified
 - Commits created (with hashes)
 - Recommendations not applied (skipped or stopped)
-- Suggest: "Run `/review-claude-config` again to verify improvements."
+- Suggest re-running the original review skill to verify improvements. Match to `generated_by`: if `review-skill`, suggest `/review-skill <path>`; if `review-agent`, suggest `/review-agent <path>`; if `review-rule`, suggest `/review-rule <path>`; if `review-claude-config`, suggest `/review-claude-config`.
 
 ## Hard Rules
 
@@ -130,3 +161,4 @@ Present the final status:
 - **Audit-fix chain.** Always commit the report before committing fixes. Use the report timestamp in the fix commit message.
 - **Preserve file structure.** Edits replace text blocks only. Never rewrite entire files.
 - **No Low impact changes.** Only apply High and Medium recommendations. Users who want Low impact changes should apply them manually.
+- **Delegate type-specific validation.** The orchestrator does not validate edits. Specialized appliers handle all type-specific checks.
