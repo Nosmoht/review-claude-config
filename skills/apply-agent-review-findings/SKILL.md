@@ -90,7 +90,10 @@ If no, stop.
 
 For each recommendation (High impact first, then Medium):
 
-1. Read the target agent file at the path from the report's `summary` section.
+1. Read the target agent file. Determine the path from:
+   - The report's `summary` frontmatter field (if it contains file paths), or
+   - The `**Path:**` line in the report body.
+   If no valid path is found, ask the user to provide the agent file path.
 2. Locate the **Current** text block in the actual file content.
    - If not found, show the user the Current text and ask: "This text was not found in the file. Skip this recommendation? (yes/no)" If yes, skip. If no, ask the user to identify the correct text.
 3. **Pre-edit validation** (agent-specific):
@@ -161,7 +164,8 @@ For the fix commit:
 Present final status:
 - Files modified
 - Commits created (with hashes)
-- Recommendations not applied
+- Recommendations not applied (with skip reason for each)
+- For validation-blocked recommendations: suggest manual resolution approach
 - Suggest: "Run `/review-agent <path>` again to verify improvements."
 
 ## Hard Rules
