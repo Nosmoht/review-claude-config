@@ -82,218 +82,81 @@ Before dispatching analysis agents, the orchestrator performs domain cache looku
 
 3. **Assign one researcher per domain.** For STALE/MISS domains shared by multiple items, designate only **one** analysis agent as the "researcher" for that domain. Other agents sharing the same domain are told: "Another agent is researching this domain — use cached content or model knowledge, do not WebSearch for domain research."
 
-### Step 1: Dispatch Analysis Agents
+### Step 1: Load Specialized Skill Content
 
-For each discovered item, launch an analysis Agent with allowed-tools: WebSearch, WebFetch, Read (no Write, Edit, or Bash). If `webfetch_available = false`, omit WebFetch from the agent's allowed-tools. Process in parallel, batched in groups of 8 (if more than 8 items). Present each batch's results before starting the next. Partial final batches are handled identically.
+Read the SKILL.md and evaluation guide for each type that has discovered items:
+- Skills: `../review-skill/SKILL.md` + `../review-skill/references/skill-evaluation-guide.md`
+- Agents: `../review-agent/SKILL.md` + `../review-agent/references/agent-evaluation-guide.md`
+- Rules: `../review-rule/SKILL.md` + `../review-rule/references/rule-evaluation-guide.md`
 
-Each analysis agent receives a **byte-identical shared prefix** (rubric + baseline content) followed by per-item specifics. This preserves KV-cache hits across agents.
+Only load the types that have discovered items (e.g., skip agent content if no agents found).
 
-### Analysis Agent Prompt Template
+### Step 2: Dispatch Analysis Agents
 
+Group discovered items by type (Skill, Agent, Rule). For each type group, construct a **type-specific shared prefix** that is **byte-identical** across all items of the same type. This maximizes KV-cache hits within each type group.
+
+**Type-specific shared prefix structure:**
 ```
-You are evaluating a Claude Code [Skill/Agent/Rule] for quality.
-
-Tools available: WebSearch (for domain research), WebFetch (for reading full article
-content from URLs found via WebSearch), and Read. Do not use Write, Edit, or Bash.
-You are evaluating, not modifying.
-
-[If WebFetch is unavailable, omit it from this line.]
+[Specialized SKILL.md instructions for this type]
 
 ## Reference Materials
 
 ### Scoring Rubric
-[Insert scoring-rubric.md content here]
+[Insert scoring-rubric.md content — identical across all types]
 
 ### Engineering Baseline
-[Insert engineering-baseline.md content here]
+[Insert engineering-baseline.md content — identical across all types]
+
+### Type-Specific Evaluation Guide
+[Insert the evaluation guide for this type]
+```
+
+**Per-item suffix** (appended after the shared prefix):
+
+```
+---orchestration---
+mode: orchestrated
+websearch_available: [true/false]
+webfetch_available: [true/false]
+domain_cache: |
+  [cached domain content, "none", or full cache protocol instructions:]
+  Domain: [domain key or "none"]
+  Cache Status: [CACHED | STALE | MISS | NONE]
+  Role: [researcher | consumer]
+
+  [If CACHED: insert cached content + "Use as domain knowledge, skip WebSearch.
+  1 supplemental query if insufficient."]
+
+  [If STALE + researcher: insert cached content + "Use as starting point +
+  1 WebSearch to verify/update. Return Domain Cache Update section."]
+
+  [If STALE + consumer: insert cached content + "Use as-is, another agent
+  is refreshing."]
+
+  [If MISS + researcher: "No cache. 1-2 WebSearch queries. Return Domain
+  Cache Update section."]
+
+  [If MISS + consumer: "No cache. Use model knowledge only."]
+
+  [If NONE: "No domain inferred. WebSearch as normal."]
+---
 
 ## Item Under Review
 
-**Type:** [Skill/Agent/Rule]
 **Path:** [file path]
 **Content:**
-[Insert full file content here]
-
-[If Type is Agent, add:]
-## Agent-Specific Evaluation Notes
-- **Metadata:** Evaluate `model` field appropriateness (haiku/sonnet/opus vs task complexity per Model Selection Conventions in the format research).
-- **Context Engineering:** Evaluate description and example blocks for activation precision, not progressive disclosure (agents are single-file).
-- **Completeness:** Evaluate `<example>` blocks for trigger pattern coverage.
-
-[If Type is Rule, add:]
-## Rule-Specific Evaluation
-Rules use only 3 dimensions (renormalized to 100%):
-- **Clarity (30%):** Is the rule unambiguous? Could two models interpret it differently?
-- **Completeness (30%):** Are edge cases and scope boundaries defined?
-- **Goal Alignment (40%):** Does the rule achieve its stated constraint?
-Skip: Prompt Engineering, Context Engineering, Safety, Metadata (rules have no tools, no frontmatter, and are directives not prompts). Use the Rule certificate format below.
-
-## Domain Research Cache
-
-**Domain:** [domain key or "none"]
-**Cache Status:** [CACHED | STALE | MISS | NONE]
-**Role:** [researcher | consumer]
-
-[If CACHED:]
-The following domain best practices were previously researched and cached.
-Use these as your domain knowledge for Step A — skip WebSearch for domain
-research. If cached content is clearly insufficient for this specific item,
-you may perform 1 supplemental WebSearch query.
-
-[Insert cached content here]
-
-[If STALE + researcher:]
-The following domain research was cached but is older than 90 days. Use it
-as a starting point, then perform 1 WebSearch query to verify and update.
-Return updated findings in the Domain Cache Update section at the end.
-
-[Insert cached content here]
-
-[If STALE + consumer:]
-The following domain research was cached (older than 90 days). Another agent
-is refreshing this domain. Use cached content as-is for your analysis.
-
-[Insert cached content here]
-
-[If MISS + researcher:]
-No cached domain research exists. Perform 1-2 WebSearch queries as normal.
-Return your findings in the Domain Cache Update section at the end.
-
-[If MISS + consumer:]
-No cached domain research exists and another agent is researching this domain.
-Use model knowledge only for domain context.
-
-[If NONE:]
-No domain was inferred for this item. Proceed with WebSearch as normal.
-
-## Your Task — Two Steps
-
-### Step A: Goal Inference + Domain Research
-
-1. Read the item and infer its primary goal/domain in one sentence.
-2. Follow the Domain Research Cache instructions above:
-   - CACHED: use cached content, skip WebSearch (1 supplemental query if insufficient)
-   - STALE researcher: use cache as starting point + 1 WebSearch to verify/update
-   - STALE consumer: use cached content as-is
-   - MISS researcher: 1-2 WebSearch queries (standard behavior)
-   - MISS consumer: model knowledge only
-   - NONE: 1-2 WebSearch queries (standard behavior)
-3. **Full-Content Retrieval (when WebFetch is available):**
-   After WebSearch returns results, identify the 1-2 most relevant URLs
-   (prefer primary sources: official docs, peer-reviewed papers, production
-   case studies). Fetch each with WebFetch using a targeted prompt:
-   "Extract domain best practices, benchmarks, and configuration patterns
-   relevant to [domain]. Max 500 words."
-   Use the full content — not just search snippets — when synthesizing
-   domain knowledge and writing Domain Cache Update sections.
-   If WebFetch is unavailable, proceed with search snippets as before.
-4. Synthesize: what should a high-quality item in this domain include?
-
-### Step B: Scoring + Recommendations
-
-Score using the rubric as the PRIMARY basis. Domain research from Step A informs
-Goal Alignment and enriches recommendations but does NOT alter scoring criteria
-for other dimensions.
-
-Return your report in this EXACT format:
-
-### Goal
-[One sentence describing what this item aims to achieve]
-
-### Certificate
-
-| Dimension | Grade | Weight | Justification |
-|-----------|-------|--------|---------------|
-| Clarity | [A-F] | 15% | [One line] |
-| Completeness | [A-F] | 15% | [One line] |
-| Prompt Engineering | [A-F] | 15% | [One line] |
-| Context Engineering | [A-F] | 15% | [One line] |
-| Goal Alignment | [A-F] | 20% | [One line] |
-| Safety | [A-F] | [10/15%] | [One line] |
-| Metadata | [A-F] | [10/5%] | [One line] |
-| **Overall** | **[A-F]** | **100%** | **Weighted: XX.X** |
-
-Calculate overall grade:
-1. Determine weights: if item has Write/Bash/Edit in allowed-tools,
-   Safety=15% and Metadata=5%; otherwise Safety=10% and Metadata=10%.
-   All other weights unchanged (Clarity 15%, Completeness 15%, PE 15%,
-   CE 15%, Goal Alignment 20%).
-2. Convert grades: A=95, B=85, C=75, D=65, F=50.
-3. Weighted score = sum(grade_value × weight) for all 7 dimensions.
-4. Map back: ≥90→A, ≥80→B, ≥70→C, ≥60→D, <60→F.
-5. Show in Overall Justification: "Weighted: XX.X → [Grade]"
-
-Example (no Write/Bash/Edit): Clarity=A(95), Completeness=B(85), PE=B(85),
-CE=A(95), Goal=B(85), Safety=A(95), Meta=B(85).
-Score = 95×.15 + 85×.15 + 85×.15 + 95×.15 + 85×.20 + 95×.10 + 85×.10 = 89.0 → B
-
-[If Type is Rule, use this certificate table instead:]
-
-| Dimension | Grade | Weight | Justification |
-|-----------|-------|--------|---------------|
-| Clarity | [A-F] | 30% | [One line] |
-| Completeness | [A-F] | 30% | [One line] |
-| Goal Alignment | [A-F] | 40% | [One line] |
-| **Overall** | **[A-F]** | **100%** | **Weighted: XX.X** |
-
-Calculate: Weighted score = Clarity×.30 + Completeness×.30 + GoalAlignment×.40.
-Convert and map back using the same grade scale (A=95, B=85, etc.).
-
-### Grading Boundary Examples
-
-**Clarity B vs C:** B has a clear workflow where step order is unambiguous but one
-conditional ("if needed") lacks specific criteria. C has steps that two models would
-sequence differently because dependencies between steps are not explicit.
-
-**Safety B vs C:** B restricts tools to what's needed and includes a confirmation gate
-before writes. C has tools broader than needed (e.g., Bash when only Read is required)
-or could modify user files without explicit confirmation.
-
-[If WebSearch was unavailable, add: "Goal Alignment scored without web
-verification."]
-
-### Strengths
-- [strength 1]
-- [strength 2]
-- [strength 3 if applicable]
-
-### Recommendations
-
-#### 1. [Title] (Impact: [High/Medium/Low])
-[What to change and why, referencing baseline techniques or domain best practices]
-
-**Current:**
-```
-[existing text from the item]
+[Insert full file content]
 ```
 
-**Recommended:**
-```
-[improved text — concrete rewrite]
-```
+**Dispatch rules:**
+- Allowed-tools per agent: WebSearch, WebFetch, Read (no Write, Edit, or Bash). Omit WebFetch if `webfetch_available = false`.
+- Process in parallel, batched in groups of 8. Present each batch's results before starting the next.
+- Each agent returns a structured certificate (or an `## ERROR` block on failure).
+- On agent error: log failure, continue with remaining items.
 
-[Repeat for each recommendation, ordered by impact]
+### Domain Cache Update Collection
 
-#### Reference File Recommendation
-[If applicable: flag whether bundled reference files (checklists, rubrics, domain
-guides in a references/ subdirectory) would improve this item's context
-engineering. Explain what to extract and why.]
-
-### Domain Cache Update
-[Only include if Role is "researcher" AND Cache Status is STALE or MISS.
-Omit this section entirely for CACHED items and consumer-role agents.]
-
-**Domain:** [domain key]
-**Queries Used:**
-- "[query 1]"
-- "[query 2]"
-**Sources:**
-- [title](url)
-**Best Practices:**
-- [dense bullet 1]
-- [dense bullet 2]
-- [keep to ≤500 tokens total — no prose paragraphs]
-```
+After all agents complete, collect "Domain Cache Update" sections from researcher agents that had STALE or MISS cache status. Hold these for Phase 3.5.
 
 ## Phase 3 — Presentation
 
