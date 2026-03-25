@@ -15,10 +15,18 @@ A Claude Code skill that analyzes and optimizes Claude Code skills, agents, and 
 
 ## Installation
 
-Copy skill directories into any project's `.claude/skills/`:
+This repository is a Claude Code plugin. Install it locally to make `/review-claude-config` and `/suggest-skills` available in all projects:
+
+```bash
+cc --plugin-dir /path/to/review-claude-config
 ```
-cp -r .claude/skills/review-claude-config <target>/.claude/skills/
-cp -r .claude/skills/suggest-skills <target>/.claude/skills/
+
+**Only local installation via `--plugin-dir` is supported.** Marketplace installation would break domain cache writes since `${CLAUDE_PLUGIN_ROOT}` would point to a read-only directory.
+
+The plugin also installs a PreToolUse hook that automatically injects quality guidelines when editing SKILL.md, agent, or rule files in any project.
+
+For repo-internal skills only (not globally needed):
+```
 cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
 cp -r .claude/skills/apply-review-findings <target>/.claude/skills/
 cp -r .claude/skills/skill-scaffolding <target>/.claude/skills/
@@ -29,12 +37,20 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 
 ## File Structure
 
-- `.claude/skills/review-claude-config/SKILL.md` — Main orchestrator skill
-- `.claude/skills/review-claude-config/references/scoring-rubric.md` — 7-dimension A-F grading rubric
-- `.claude/skills/review-claude-config/references/engineering-baseline.md` — Curated prompt, context, and tool design techniques
-- `.claude/skills/review-claude-config/references/domain-cache/` — Cached domain research from review analysis agents (auto-populated, committed to git)
-- `.claude/skills/suggest-skills/SKILL.md` — Skill gap detection and suggestion skill
-- `.claude/skills/suggest-skills/references/signal-catalog.md` — Signal patterns and extraction criteria for detecting missing skills
+### Plugin (globally available via `--plugin-dir`)
+- `.claude-plugin/plugin.json` — Plugin manifest
+- `hooks/hooks.json` — Hook registration (PreToolUse quality gate, SessionStart freshness check)
+- `hooks/skill_quality_gate.py` — Injects quality guidelines when editing SKILL.md/agent/rule files
+- `hooks/session_check.py` — Warns if engineering baseline is stale (>90 days)
+- `hooks/guidelines.md` — Distilled quality checklist from rubric + baseline
+- `skills/review-claude-config/SKILL.md` — Main orchestrator skill
+- `skills/review-claude-config/references/scoring-rubric.md` — 7-dimension A-F grading rubric
+- `skills/review-claude-config/references/engineering-baseline.md` — Curated prompt, context, and tool design techniques
+- `skills/review-claude-config/references/domain-cache/` — Cached domain research (auto-populated, committed to git)
+- `skills/suggest-skills/SKILL.md` — Skill gap detection and suggestion skill
+- `skills/suggest-skills/references/signal-catalog.md` — Signal patterns and extraction criteria
+
+### Repo-internal skills
 - `.claude/skills/refresh-engineering-baseline/SKILL.md` — Baseline refresh skill
 - `.claude/skills/apply-review-findings/SKILL.md` — Automated review finding application
 - `.claude/skills/apply-review-findings/references/commit-conventions.md` — Scoped commit format and audit-fix chain rules
@@ -49,7 +65,7 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 ## Conventions
 
 - Language: English
-- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, domain cache entries ≤500 tokens each, new skill reference files (commit-conventions, skill-template, health-thresholds, report-schema) ≤500 tokens each
+- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, guidelines ≤500 tokens, domain cache entries ≤500 tokens each, new skill reference files (commit-conventions, skill-template, health-thresholds, report-schema) ≤500 tokens each
 - Domain cache entries are committed to track research evolution and enable offline reuse. Refreshed on the same 90-day cycle as the engineering baseline.
 - Web content fetching (WebFetch) is optional in both skills. Skills degrade gracefully to WebSearch-only when WebFetch is unavailable.
 - The review and suggest skills are read-only on analyzed files — review writes reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`; suggest writes only reports to `.claude/reviews/`
