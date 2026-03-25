@@ -48,13 +48,15 @@ Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fai
 
 ### Step 1: Load References
 
-Read shared references from the sibling skill directory:
-- `../review-claude-config/references/scoring-rubric.md`
-- `../review-claude-config/references/engineering-baseline.md`
+Locate the `review-claude-config` skill directory (sibling skill in the same plugin). Read these shared references from it:
+- `references/scoring-rubric.md` — the grading criteria
+- `references/engineering-baseline.md` — prompt, context, and tool design techniques
 
-**If either file is not found, abort with error:** "Required reference not found: [path]. Ensure review-claude-config is installed as a sibling skill."
+Use Glob to find the files if the path is not immediately known: `**/review-claude-config/references/scoring-rubric.md`
 
-Read the type-specific evaluation guide:
+**If either file is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
+
+Read the type-specific evaluation guide from this skill's own directory:
 - `references/rule-evaluation-guide.md`
 
 ## Phase 2 — Evaluation

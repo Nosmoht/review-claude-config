@@ -84,10 +84,12 @@ Before dispatching analysis agents, the orchestrator performs domain cache looku
 
 ### Step 1: Load Specialized Skill Content
 
+Locate the specialized review skills (sibling directories in the same plugin). Use Glob if paths are not immediately known: `**/review-skill/SKILL.md`, `**/review-agent/SKILL.md`, `**/review-rule/SKILL.md`.
+
 Read the SKILL.md and evaluation guide for each type that has discovered items:
-- Skills: `../review-skill/SKILL.md` + `../review-skill/references/skill-evaluation-guide.md`
-- Agents: `../review-agent/SKILL.md` + `../review-agent/references/agent-evaluation-guide.md`
-- Rules: `../review-rule/SKILL.md` + `../review-rule/references/rule-evaluation-guide.md`
+- Skills: `review-skill/SKILL.md` + `review-skill/references/skill-evaluation-guide.md`
+- Agents: `review-agent/SKILL.md` + `review-agent/references/agent-evaluation-guide.md`
+- Rules: `review-rule/SKILL.md` + `review-rule/references/rule-evaluation-guide.md`
 
 Only load the types that have discovered items (e.g., skip agent content if no agents found).
 
