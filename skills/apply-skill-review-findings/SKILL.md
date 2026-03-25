@@ -88,6 +88,8 @@ If no, stop.
 
 ## Phase 3 -- Apply Recommendations
 
+Example flow: Read `skills/review-skill/SKILL.md` -> search for Current text -> found at line 45 -> pre-edit: 128 lines (under 500) -> show preview -> user says "yes" -> Edit applied -> post-edit: frontmatter valid, 128 lines OK.
+
 For each recommendation (High impact first, then Medium):
 
 1. Read the target SKILL.md file at the path from the report's `summary` section.
@@ -142,7 +144,7 @@ Read the shared commit conventions (loaded in Phase 1 Step 3).
 
 Extract the timestamp from the report filename (e.g., `2026-03-24T161200` from `2026-03-24T161200-review-skill.md`).
 
-Check whether the review report has been committed: `git log --oneline --all -- <report-path>` via Bash. If not committed, tell the user:
+Check whether the review report has been committed: `git log --oneline --all -- <report-path>` via Bash. If the command fails (not a git repo, or other error), warn the user and skip the commit workflow -- edits are already applied. If not committed, tell the user:
 
 "The review report is not yet committed. The audit-fix chain requires committing the report first:
 `docs(reviews): add <timestamp> review report`
