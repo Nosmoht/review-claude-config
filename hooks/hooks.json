@@ -1,0 +1,28 @@
+{
+  "description": "Skill quality hooks: edit-time guidelines injection and baseline freshness check",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/skill_quality_gate.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/session_check.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

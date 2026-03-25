@@ -1,0 +1,8 @@
+{
+  "name": "skill-quality",
+  "version": "1.0.0",
+  "description": "Evidence-based quality review for Claude Code skills, agents, and rules. Injects quality guidelines when editing SKILL.md files and provides /review-claude-config and /suggest-skills globally.",
+  "author": {
+    "name": "ntbc"
+  }
+}
