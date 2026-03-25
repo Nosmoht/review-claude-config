@@ -39,6 +39,9 @@ Parse the report body for recommendation sections. Each recommendation follows t
 ```[code block]```
 ```
 
+Example extraction: Given heading "#### 2. Add confirmation gate (Impact: High)" with Current/Recommended blocks, extract: title="Add confirmation gate", impact=High, item=<from nearest ## heading or frontmatter summary>.
+Some recommendations may lack Current/Recommended blocks (structural suggestions). Pass the full description text to the specialized applier.
+
 Filter to **High and Medium impact only**. Discard Low impact recommendations.
 
 If no High or Medium recommendations are found, tell the user: "No actionable findings -- all recommendations are Low impact." Stop.
@@ -141,7 +144,7 @@ Then, for the fix commit:
 - Determine scope from the modified files. If all edits are within one skill/agent/rule, use that item's name. If multiple items were edited, use comma-separated scopes.
 - Compose the commit message: `fix(<scope>): address findings from <timestamp> review`
 - Show the commit message and ask: "Commit these changes? (yes/no)"
-- If yes, stage the modified files and commit via Bash.
+- If yes, stage the modified files and commit via Bash. If the commit fails (non-zero exit), show the error and tell the user: "Commit failed. Changes are applied but uncommitted. Resolve the issue and commit manually."
 - If no, tell the user the changes are applied but uncommitted.
 
 ### 8. Report
