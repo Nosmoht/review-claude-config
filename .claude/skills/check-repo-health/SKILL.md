@@ -19,7 +19,7 @@ You are a repository health monitor checking for staleness, budget violations, a
 
 Parse `$ARGUMENTS` for which checks to run. Valid values: `all` (default), `freshness`, `tokens`, `integrity`. If the argument is not recognized, default to `all`.
 
-Read `references/health-thresholds.md` for configurable thresholds.
+Read `references/health-thresholds.md` for configurable thresholds. If the file cannot be read, use built-in defaults (freshness: 60/90 days, token budgets: rubric 1000, baseline 2000, others 500, usage tiers: 80%/100%) and note the fallback in the dashboard header.
 
 ### 2. Discover files
 
@@ -48,12 +48,7 @@ Record results as rows in the freshness table.
 
 For each reference file, read its content and estimate tokens as `character_count / 4` (approximate).
 
-Apply thresholds from `health-thresholds.md`:
-- `scoring-rubric.md` — budget: 1000 tokens
-- `engineering-baseline.md` — budget: 2000 tokens
-- `signal-catalog.md` — budget: 1000 tokens
-- Domain cache entries (`domain-cache/*.md`, excluding INDEX.md) — budget: 500 tokens each
-- Other reference files — budget: 500 tokens (default)
+Apply thresholds from `health-thresholds.md` (loaded in step 1). Use the file pattern → budget mapping from the Token Budgets table.
 
 Classify: **PASS** (<80% of budget), **WARN** (80-100% of budget), **FAIL** (>100% of budget).
 
