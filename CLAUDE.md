@@ -9,6 +9,7 @@ A Claude Code skill that analyzes and optimizes Claude Code skills, agents, and 
 - `/review-agent <path>` — Evaluate a single agent's quality across 7 dimensions with agent-specific checks (model selection, activation precision, trigger coverage).
 - `/review-rule <path>` — Evaluate a single rule's quality across 3 dimensions (Clarity, Completeness, Goal Alignment).
 - `/suggest-skills [folder]` — Analyze a repository to identify missing skills. Read-only, produces prioritized suggestions with skeleton SKILL.md files.
+- `/audit-repo [folder]` — Analyze any repository to identify needed Claude Code primitives (CLAUDE.md, skills, agents, hooks/rules). Produces a prioritized intervention matrix mapping error classes to recommended primitives. Read-only, writes report to `.claude/reviews/`.
 - `/refresh-engineering-baseline` — Update the engineering baseline with current research via WebSearch.
 - `/apply-review-findings [report-path]` — Orchestrate application of High/Medium recommendations from any review report (batch or standalone). Delegates to specialized type-specific appliers.
 - `/apply-skill-review-findings [report-path]` — Apply review recommendations to a single skill with skill-specific validation (line count, token budgets, frontmatter, progressive disclosure).
@@ -60,6 +61,12 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 - `skills/review-rule/references/rule-evaluation-guide.md` — Rule-specific evaluation patterns
 - `skills/suggest-skills/SKILL.md` — Skill gap detection and suggestion skill
 - `skills/suggest-skills/references/signal-catalog.md` — Signal patterns and extraction criteria
+- `skills/audit-repo/SKILL.md` — Repository audit skill (static analysis, token efficiency, primitives derivation, needs matrix)
+- `skills/audit-repo/references/signal-patterns.md` — Glob/Grep patterns per analysis step
+- `skills/audit-repo/references/error-class-taxonomy.md` — 7 error classes with indicators and primitive mapping
+- `skills/audit-repo/references/primitive-decision-matrix.md` — Decision rules for primitive type selection
+- `skills/audit-repo/references/token-heuristics.md` — Thresholds and scoring for token efficiency analysis
+- `skills/audit-repo/references/audit-report-schema.md` — YAML frontmatter schema and body structure for audit reports
 - `skills/apply-skill-review-findings/SKILL.md` — Single-skill fix application with skill-specific validation
 - `skills/apply-skill-review-findings/references/skill-fix-guide.md` — Skill-specific fix validation rules
 - `skills/apply-agent-review-findings/SKILL.md` — Single-agent fix application with agent-specific validation
@@ -82,11 +89,11 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 ## Conventions
 
 - Language: English
-- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, guidelines ≤500 tokens, domain cache entries ≤500 tokens each, evaluation guides (skill-evaluation-guide, agent-evaluation-guide, rule-evaluation-guide) ≤500 tokens each, fix guides (skill-fix-guide, agent-fix-guide, rule-fix-guide) ≤500 tokens each, other skill reference files (commit-conventions, skill-template, health-thresholds, report-schema) ≤500 tokens each
+- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, guidelines ≤500 tokens, domain cache entries ≤500 tokens each, evaluation guides (skill-evaluation-guide, agent-evaluation-guide, rule-evaluation-guide) ≤500 tokens each, fix guides (skill-fix-guide, agent-fix-guide, rule-fix-guide) ≤500 tokens each, audit-repo references (signal-patterns, error-class-taxonomy, primitive-decision-matrix, token-heuristics, audit-report-schema) ≤500 tokens each, other skill reference files (commit-conventions, skill-template, health-thresholds, report-schema) ≤500 tokens each
 - Domain cache entries are committed to track research evolution and enable offline reuse. Refreshed on the same 90-day cycle as the engineering baseline.
 - Web content fetching (WebFetch) is optional in both skills. Skills degrade gracefully to WebSearch-only when WebFetch is unavailable.
-- The review and suggest skills are read-only on analyzed files — review writes reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`; suggest writes only reports to `.claude/reviews/`
-- Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` (batch), `.claude/reviews/YYYY-MM-DDTHHMMSS-review-{skill|agent|rule}.md` (standalone), and `.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md` (suggestions) — all should be committed to track skill quality evolution
+- The review, suggest, and audit skills are read-only on analyzed files — review writes reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`; suggest and audit-repo write only reports to `.claude/reviews/`
+- Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` (batch), `.claude/reviews/YYYY-MM-DDTHHMMSS-review-{skill|agent|rule}.md` (standalone), `.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md` (suggestions), and `.claude/reviews/YYYY-MM-DDTHHMMSS-audit-repo.md` (audit) — all should be committed to track quality evolution
 - The baseline is static at review time; updates happen via `/refresh-engineering-baseline`
 - Commits use scoped conventional format: `type(scope): description` (e.g., `feat(review-skill):`, `fix(refresh-skill):`, `docs(project):`)
 - Review audit→fix chain commits use the report timestamp as shared identifier: `docs(reviews): add <timestamp> review report` → `fix(<scope>): address findings from <timestamp> review`
@@ -111,6 +118,11 @@ Evidence-based research informing the rubric and baseline. Consult these when mo
 - [LLM Agent Caching Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — File-based memory, CAG vs RAG, token-efficient formats, KV-cache optimization
 - [Web Content Scraping Tools](research/web-scraping/web-content-scraping-tools.md) — Tool evaluation for full-content retrieval (WebFetch, Jina Reader, Firecrawl, Crawl4AI)
 - [Skill Gap Detection Approaches](research/skill-gap-detection/skill-gap-detection-approaches.md) — Extraction criteria, prior art survey, proactive gap analysis methodology
+- [Repo Readiness Frameworks](research/repo-static-analysis/repo-readiness-frameworks.md) — Static analysis frameworks predicting AI tool effectiveness
+- [Context Window Optimization](research/token-efficiency/context-window-optimization.md) — Context rot, token density, navigation cost heuristics
+- [Architecture Pattern Recognition](research/architecture-detection/architecture-pattern-recognition.md) — Hybrid detection, signature directories, domain docs
+- [Error Class to Primitive Mapping](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale limits, error taxonomy, primitive decision framework
+- [Repo Audit Methodology](research/repo-audit/repo-audit-methodology.md) — Systematic 6-phase methodology for deducing Claude Code primitives from repo structure
 
 ## Working Guidelines
 
