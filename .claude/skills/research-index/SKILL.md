@@ -19,6 +19,8 @@ You are an index maintainer ensuring the CLAUDE.md Research References section s
 
 If `$ARGUMENTS` contains a folder path, use it as the target. Otherwise, use the current working directory.
 
+Verify `<target>` exists using Glob on `<target>/CLAUDE.md`. If it does not exist, tell the user: "Target folder not found or has no CLAUDE.md." Stop.
+
 Glob `<target>/research/**/*.md` to find all research files. If the `research/` directory does not exist or contains no `.md` files, tell the user: "No research files found in `<target>/research/`." Stop.
 
 For each research file, read the first 5 lines to extract the title (first `# ` heading).
@@ -37,13 +39,14 @@ Extract for each entry: title, relative path, description.
 ### 3. Compare and classify
 
 Build two sets:
-- **On disk:** All research file paths found by Glob.
-- **In CLAUDE.md:** All paths referenced in the Research References section.
+- **On disk:** All research file paths found by Glob, with their extracted titles.
+- **In CLAUDE.md:** All paths referenced in the Research References section, with their titles.
 
 Classify each item:
-- **OK** — File exists on disk AND is referenced in CLAUDE.md.
+- **OK** — File exists on disk AND is referenced in CLAUDE.md with a matching title.
 - **UNLINKED** — File exists on disk but is NOT referenced in CLAUDE.md.
 - **BROKEN** — Referenced in CLAUDE.md but file does NOT exist on disk.
+- **STALE** — File exists and is referenced, but the CLAUDE.md title does not match the file's heading.
 
 ### 4. Present drift report
 
@@ -73,7 +76,7 @@ If yes:
 
 Use Edit to make targeted changes to the `## Research References` section only. Never modify other sections of CLAUDE.md.
 
-After editing, show the updated Research References section to the user.
+After editing, re-run the comparison from Step 3 against the updated CLAUDE.md. If drift remains, report the remaining issues and offer to fix. Otherwise, confirm: "All drift resolved."
 
 ### 6. Suggest commit
 
