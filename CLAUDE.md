@@ -4,7 +4,10 @@ A Claude Code skill that analyzes and optimizes Claude Code skills, agents, and 
 
 ## Skills
 
-- `/review-claude-config [folder]` — Audit all skills/agents/rules in a folder (defaults to cwd). Read-only, produces per-item quality certificates. Rules use a 3-dimension subset (Clarity, Completeness, Goal Alignment).
+- `/review-claude-config [folder]` — Audit all skills/agents/rules in a folder (defaults to cwd). Delegates to specialized reviewers, adds cross-item analysis. Read-only, produces per-item quality certificates.
+- `/review-skill <path>` — Evaluate a single skill's quality across 7 dimensions. Can be used standalone or delegated by /review-claude-config.
+- `/review-agent <path>` — Evaluate a single agent's quality across 7 dimensions with agent-specific checks (model selection, activation precision, trigger coverage).
+- `/review-rule <path>` — Evaluate a single rule's quality across 3 dimensions (Clarity, Completeness, Goal Alignment).
 - `/suggest-skills [folder]` — Analyze a repository to identify missing skills. Read-only, produces prioritized suggestions with skeleton SKILL.md files.
 - `/refresh-engineering-baseline` — Update the engineering baseline with current research via WebSearch.
 - `/apply-review-findings [report-path]` — Apply High/Medium review recommendations with audit-fix chain commits.
@@ -43,10 +46,16 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 - `hooks/skill_quality_gate.py` — Injects quality guidelines when editing SKILL.md/agent/rule files
 - `hooks/session_check.py` — Warns if engineering baseline is stale (>90 days)
 - `hooks/guidelines.md` — Distilled quality checklist from rubric + baseline
-- `skills/review-claude-config/SKILL.md` — Main orchestrator skill
-- `skills/review-claude-config/references/scoring-rubric.md` — 7-dimension A-F grading rubric
-- `skills/review-claude-config/references/engineering-baseline.md` — Curated prompt, context, and tool design techniques
+- `skills/review-claude-config/SKILL.md` — Orchestrator skill (discovery, delegation, cross-item analysis, report persistence)
+- `skills/review-claude-config/references/scoring-rubric.md` — 7-dimension A-F grading rubric (shared by all review skills)
+- `skills/review-claude-config/references/engineering-baseline.md` — Curated prompt, context, and tool design techniques (shared by all review skills)
 - `skills/review-claude-config/references/domain-cache/` — Cached domain research (auto-populated, committed to git)
+- `skills/review-skill/SKILL.md` — Single-skill quality evaluation (7 dimensions)
+- `skills/review-skill/references/skill-evaluation-guide.md` — Skill-specific evaluation patterns
+- `skills/review-agent/SKILL.md` — Single-agent quality evaluation (7 dimensions + agent-specific checks)
+- `skills/review-agent/references/agent-evaluation-guide.md` — Agent-specific evaluation patterns
+- `skills/review-rule/SKILL.md` — Single-rule quality evaluation (3 dimensions)
+- `skills/review-rule/references/rule-evaluation-guide.md` — Rule-specific evaluation patterns
 - `skills/suggest-skills/SKILL.md` — Skill gap detection and suggestion skill
 - `skills/suggest-skills/references/signal-catalog.md` — Signal patterns and extraction criteria
 
@@ -65,11 +74,11 @@ cp -r .claude/skills/research-index <target>/.claude/skills/
 ## Conventions
 
 - Language: English
-- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, guidelines ≤500 tokens, domain cache entries ≤500 tokens each, new skill reference files (commit-conventions, skill-template, health-thresholds, report-schema) ≤500 tokens each
+- Reference files must stay within token budgets: rubric <1K, baseline <2K, signal-catalog <1K, guidelines ≤500 tokens, domain cache entries ≤500 tokens each, evaluation guides (skill-evaluation-guide, agent-evaluation-guide, rule-evaluation-guide) ≤500 tokens each, other skill reference files (commit-conventions, skill-template, health-thresholds, report-schema) ≤500 tokens each
 - Domain cache entries are committed to track research evolution and enable offline reuse. Refreshed on the same 90-day cycle as the engineering baseline.
 - Web content fetching (WebFetch) is optional in both skills. Skills degrade gracefully to WebSearch-only when WebFetch is unavailable.
 - The review and suggest skills are read-only on analyzed files — review writes reports to `.claude/reviews/` and domain cache entries to its own `references/domain-cache/`; suggest writes only reports to `.claude/reviews/`
-- Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and suggestion reports to `.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md` — both should be committed to track skill quality evolution
+- Review reports are saved to `.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` (batch), `.claude/reviews/YYYY-MM-DDTHHMMSS-review-{skill|agent|rule}.md` (standalone), and `.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md` (suggestions) — all should be committed to track skill quality evolution
 - The baseline is static at review time; updates happen via `/refresh-engineering-baseline`
 - Commits use scoped conventional format: `type(scope): description` (e.g., `feat(review-skill):`, `fix(refresh-skill):`, `docs(project):`)
 - Review audit→fix chain commits use the report timestamp as shared identifier: `docs(reviews): add <timestamp> review report` → `fix(<scope>): address findings from <timestamp> review`
