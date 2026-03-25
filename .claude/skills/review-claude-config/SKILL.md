@@ -1,18 +1,18 @@
 ---
 name: review-claude-config
 description: >
-  Analyze and optimize all Claude Code skills and agents in a project's .claude/
-  directory. Applies evidence-based prompt and context engineering evaluation,
-  produces per-item quality certificates with concrete optimization
-  recommendations. Use when you want to audit skill/agent quality or before
-  shipping new skills.
+  Analyze and optimize all Claude Code skills, agents, and rules in a project's
+  .claude/ directory. Applies evidence-based prompt and context engineering
+  evaluation with type-appropriate scoring dimensions, produces per-item quality
+  certificates with concrete optimization recommendations. Use when you want to
+  audit skill/agent/rule quality or before shipping new skills.
 argument-hint: [folder]
 allowed-tools: Agent, Read, Write, Glob, WebSearch, WebFetch
 ---
 
 # Review Claude Config
 
-Analyze all Claude Code skills and agents in a target folder and produce per-item quality certificates with optimization recommendations.
+Analyze all Claude Code skills, agents, and rules in a target folder and produce per-item quality certificates with optimization recommendations.
 
 ## Argument Handling
 
@@ -39,26 +39,28 @@ Check `last_refreshed` date in the baseline frontmatter. If older than 3 months,
 
 **2. Discovery Agent**
 
-Launch an Agent (allowed-tools: Glob, Read) to discover all skills and agents in the target folder:
+Launch an Agent (allowed-tools: Glob, Read) to discover all skills, agents, and rules in the target folder:
 
 ```
-Discover all Claude Code skills and agents. Use Glob with these patterns:
+Discover all Claude Code skills, agents, and rules. Use Glob with these patterns:
 - <folder>/.claude/skills/*/SKILL.md
 - <folder>/.claude/agents/*.md
+- <folder>/.claude/rules/*.md
 - <folder>/**/.claude/skills/*/SKILL.md (monorepo support)
 - <folder>/**/.claude/agents/*.md (monorepo support)
+- <folder>/**/.claude/rules/*.md (monorepo support)
 
 Exclude paths containing: node_modules, .git, vendor, dist, build, .claude/reviews
 
 For each discovered file:
 - Read the full content
-- Classify as "Skill" or "Agent"
+- Classify as "Skill", "Agent", or "Rule"
 - Return: file path, type, full content
 
-Also note (but do not analyze): existence of CLAUDE.md, .claude/rules/, .claude/settings.json
+Also note (but do not analyze): existence of CLAUDE.md, .claude/settings.json
 ```
 
-If no skills or agents are discovered, report that and stop.
+If no skills, agents, or rules are discovered, report that and stop.
 
 ## Phase 2 — Per-Item Analysis
 
@@ -89,7 +91,7 @@ Each analysis agent receives a **byte-identical shared prefix** (rubric + baseli
 ### Analysis Agent Prompt Template
 
 ```
-You are evaluating a Claude Code [Skill/Agent] for quality.
+You are evaluating a Claude Code [Skill/Agent/Rule] for quality.
 
 Tools available: WebSearch (for domain research), WebFetch (for reading full article
 content from URLs found via WebSearch), and Read. Do not use Write, Edit, or Bash.
@@ -107,10 +109,24 @@ You are evaluating, not modifying.
 
 ## Item Under Review
 
-**Type:** [Skill/Agent]
+**Type:** [Skill/Agent/Rule]
 **Path:** [file path]
 **Content:**
 [Insert full file content here]
+
+[If Type is Agent, add:]
+## Agent-Specific Evaluation Notes
+- **Metadata:** Evaluate `model` field appropriateness (haiku/sonnet/opus vs task complexity per Model Selection Conventions in the format research).
+- **Context Engineering:** Evaluate description and example blocks for activation precision, not progressive disclosure (agents are single-file).
+- **Completeness:** Evaluate `<example>` blocks for trigger pattern coverage.
+
+[If Type is Rule, add:]
+## Rule-Specific Evaluation
+Rules use only 3 dimensions (renormalized to 100%):
+- **Clarity (30%):** Is the rule unambiguous? Could two models interpret it differently?
+- **Completeness (30%):** Are edge cases and scope boundaries defined?
+- **Goal Alignment (40%):** Does the rule achieve its stated constraint?
+Skip: Prompt Engineering, Context Engineering, Safety, Metadata (rules have no tools, no frontmatter, and are directives not prompts). Use the Rule certificate format below.
 
 ## Domain Research Cache
 
@@ -211,6 +227,18 @@ Example (no Write/Bash/Edit): Clarity=A(95), Completeness=B(85), PE=B(85),
 CE=A(95), Goal=B(85), Safety=A(95), Meta=B(85).
 Score = 95×.15 + 85×.15 + 85×.15 + 95×.15 + 85×.20 + 95×.10 + 85×.10 = 89.0 → B
 
+[If Type is Rule, use this certificate table instead:]
+
+| Dimension | Grade | Weight | Justification |
+|-----------|-------|--------|---------------|
+| Clarity | [A-F] | 30% | [One line] |
+| Completeness | [A-F] | 30% | [One line] |
+| Goal Alignment | [A-F] | 40% | [One line] |
+| **Overall** | **[A-F]** | **100%** | **Weighted: XX.X** |
+
+Calculate: Weighted score = Clarity×.30 + Completeness×.30 + GoalAlignment×.40.
+Convert and map back using the same grade scale (A=95, B=85, etc.).
+
 ### Grading Boundary Examples
 
 **Clarity B vs C:** B has a clear workflow where step order is unambiguous but one
@@ -278,7 +306,8 @@ Present each item's report to the user. After all items, add:
 
 | Item | Type | Overall | Clarity | Completeness | PE | CE | Goal | Safety | Meta |
 |------|------|---------|---------|--------------|----|----|------|--------|------|
-| ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+| ... | Skill/Agent | ... | ... | ... | ... | ... | ... | ... | ... |
+| ... | Rule | ... | ... | ... | — | — | ... | — | — |
 ```
 
 ### Cross-Cutting Observations
@@ -346,17 +375,17 @@ baseline_version: YYYY-MM-DD
 items_reviewed: N
 summary:
   - name: item-name
-    type: Skill
+    type: Skill                          # Skill, Agent, or Rule
     path: relative/path/to/file
     overall: B
     score: 85.0
     clarity: B
     completeness: A
-    prompt_engineering: B
-    context_engineering: B
+    prompt_engineering: B                # null for Rules
+    context_engineering: B               # null for Rules
     goal_alignment: B
-    safety: A
-    metadata: B
+    safety: A                            # null for Rules
+    metadata: B                          # null for Rules
 ---
 ```
 

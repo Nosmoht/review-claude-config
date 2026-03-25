@@ -15,17 +15,17 @@ baseline_version: YYYY-MM-DD            # Engineering baseline version used
 items_reviewed: N                        # Count of items
 summary:                                 # Array of reviewed items
   - name: item-name                      # Kebab-case identifier
-    type: Skill                          # Skill or Agent
+    type: Skill                          # Skill, Agent, or Rule
     path: relative/path/to/SKILL.md      # Relative to target
     overall: B                           # A-F composite grade
     score: 85.0                          # Weighted numeric score (0-100)
     clarity: B                           # Per-dimension grades (A-F)
     completeness: A
-    prompt_engineering: B
-    context_engineering: B
+    prompt_engineering: B                # null for Rules
+    context_engineering: B               # null for Rules
     goal_alignment: B
-    safety: A
-    metadata: B
+    safety: A                            # null for Rules
+    metadata: B                          # null for Rules
 ---
 ```
 
