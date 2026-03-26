@@ -53,6 +53,7 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 - Domain cache entries committed to git, refreshed on 90-day cycle alongside engineering baseline
 - WebFetch is optional — all skills degrade gracefully to WebSearch-only when WebFetch is unavailable
 - Baseline is static at review time; updates only via `/refresh-engineering-baseline`
+- Baseline queries in `refresh-engineering-baseline` must cover all rubric dimensions in `scoring-rubric.md` — when adding a dimension, add a corresponding query and merge routing rule
 - Path is the canonical portfolio identity in review analytics; `name` is a display label
 - Commits: scoped conventional format `type(scope): description` (e.g., `feat(review-skill):`, `docs(project):`)
 - Audit-fix chain: commit the report first (`docs(reviews): add <timestamp> review report`), then commit fixes (`fix(<scope>): address findings from <timestamp> review`). The timestamp links them.
