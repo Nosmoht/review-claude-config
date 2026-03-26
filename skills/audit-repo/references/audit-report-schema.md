@@ -24,6 +24,7 @@ summary:                                # Required. Array of interventions
     primitive: CLAUDE.md                # Enum: CLAUDE.md|Skill|Agent|Hook|Rule
     priority: P0                        # Enum: P0|P1|P2
     token_impact: High                  # Enum: High|Medium|Low
+    signal_source: "—"                  # Optional. For Skill primitives: "repetition" or catalog signal name
 ---
 ```
 

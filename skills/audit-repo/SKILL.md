@@ -38,6 +38,10 @@ Read these files from the skill's own `references/` directory:
 - `references/token-heuristics.md` — thresholds and scoring formulas
 - `references/audit-report-schema.md` — report frontmatter schema and body structure
 
+Read from the sibling `suggest-skills` skill's references:
+- Locate via Glob: `**/suggest-skills/references/signal-catalog.md`
+- This provides the Application Signal Table and Skills Repository Signal Table for Phase 4B skill detection
+
 ### Step 2: Initial Target Assessment
 
 Check the target folder for existing Claude Code configuration:
@@ -202,14 +206,33 @@ For each gap, include: specific evidence from Phase 2, concrete content suggesti
 
 ### 4B: Skill Candidates
 
+#### Structural repetition checks
+
 From Phase 2 Category B (ambiguity) and scan results:
 - Are there ≥5 structurally similar files (components, services, handlers, migrations)?
 - Are there multi-step workflows in CI that could run locally?
 - Are there existing codegen templates (plop, hygen, cookiecutter)?
 
-Each candidate must pass 3/4 extraction criteria: recurrence, verification, non-obviousness, generalizability.
+#### Signal catalog checks
 
-Note: For deeper skill-specific analysis, recommend running `/suggest-skills [folder]` after the audit.
+Using the signal-catalog.md loaded in Phase 1, match Phase 2 scan results against the Application Signal Table (or Skills Repository Signal Table if `repo_type` is Skills-Config or Mixed):
+
+For each signal row in the table:
+1. Check if the file pattern matches any Phase 2 findings (e.g., "Database migrations" matches if `migrations/` was found in Category E)
+2. Check if a corresponding skill already exists (from Phase 1 Step 2 skill inventory)
+3. If the signal matches AND no existing skill covers it → candidate
+
+#### Validation gate
+
+Each candidate (from either source) must pass 3/4 extraction criteria:
+- **Recurrence**: pattern appears in 2+ files/contexts
+- **Verification**: workflow expressible as 5-10 clear steps
+- **Non-obviousness**: requires domain expertise or multi-step logic
+- **Generalizability**: works across different inputs/projects
+
+Do NOT recommend skills for single-command operations, simple aliases, or workflows with fewer than 3 distinct steps.
+
+In the intervention matrix, include a `signal_source` for each Skill row: "repetition" for structural checks, or the signal name from the catalog (e.g., "Database migrations", "Test config without test skill").
 
 ### 4C: Agent Candidates
 
@@ -317,9 +340,11 @@ Breakdown: depth [N] × files/dir [N] × collisions [N]
 
 ## Intervention Matrix
 
-| # | Error Class | Gap | Primitive | Priority | Token Impact | Evidence |
-|---|-------------|-----|-----------|----------|-------------|----------|
-| 1 | [class] | [description] | [type] | [P0-P2] | [H/M/L] | [cite] |
+| # | Error Class | Gap | Primitive | Priority | Token Impact | Signal Source | Evidence |
+|---|-------------|-----|-----------|----------|-------------|--------------|----------|
+| 1 | [class] | [description] | [type] | [P0-P2] | [H/M/L] | [source*] | [cite] |
+
+*Signal Source: For Skill primitives, include "repetition" or the catalog signal name (e.g., "Database migrations"). For other primitives, use "—".
 
 ## Recommendations
 
@@ -334,8 +359,8 @@ Breakdown: depth [N] × files/dir [N] × collisions [N]
 
 ## Next Steps
 - Create or update CLAUDE.md with P0 items first
-- Run `/suggest-skills [folder]` for deeper skill gap analysis
-- Use `/skill-scaffolding <name>` for identified skill candidates
+- Use `/scaffold-skill <name>` for identified skill candidates
+- Run `/suggest-skills [folder]` for Layer 2 open reasoning about skill opportunities beyond the signal catalog
 - Re-run `/audit-repo [folder]` after changes to verify coverage
 - Run `/review-claude-config [folder]` to evaluate quality after creating primitives
 ```
@@ -356,7 +381,7 @@ Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS audit-repo report
 - **Bash only in sub-agents.** Bash is intentionally excluded from top-level allowed-tools and only granted to Phase 2/3 sub-agents. Sub-agent instructions explicitly prohibit write commands.
 - **Scan limits enforced.** Max 50 lines per file read, max 4 directory levels, max 500 files per listing. For very large repos (>5000 files), focus on root configs and first-level subdirectories.
 - **Every recommendation needs evidence.** Cite specific file paths, metrics, or absence evidence. Never recommend a primitive without explaining what analysis data supports it.
-- **No generation.** This skill produces a diagnostic matrix, not actual primitives. Recommend `/skill-scaffolding`, manual CLAUDE.md creation, or hook setup — don't create them.
+- **No generation.** This skill produces a diagnostic matrix, not actual primitives. Recommend `/scaffold-skill`, manual CLAUDE.md creation, or hook setup — don't create them.
 - **Present all findings before asking** about persistence or follow-up actions.
 - **Error handling.** If Phase 2 scan agent fails entirely, report the error and stop. If Phase 3 analyzer fails, report partial results and continue to Phase 4 with available data. Never silently skip.
 - **Graceful degradation.** Works without WebSearch (model knowledge only for validation, marked accordingly). Works without WebFetch.
