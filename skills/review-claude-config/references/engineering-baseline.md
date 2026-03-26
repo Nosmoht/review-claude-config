@@ -22,7 +22,7 @@ last_refreshed: 2026-03-26
 
 **Degrees of Freedom** — Match instruction specificity to task fragility: low freedom (exact scripts) for fragile/error-prone operations, high freedom (text guidance) when multiple approaches are valid (Anthropic). Check: does the specificity level match the task's risk?
 
-**Verification Criteria** — Include tests, validators, or expected outputs so the agent can self-check. "Dramatically better" performance when agents verify their own work (Anthropic). Check: can the agent confirm its output is correct without human review?
+**Verification Criteria** — Include tests, validators, or expected outputs so the agent can self-check. "Dramatically better" performance when agents verify their own work (Anthropic). Use rule-based validators for quantitative constraints and LLM-based validators for qualitative ones (RECAST, ICLR 2026). Check: can the agent confirm its output is correct without human review?
 
 **Feedback Loops** — Run validator → fix errors → repeat for quality-critical outputs. Catches errors early and enables iterative improvement without human intervention (Anthropic). Check: do quality-critical steps include a validate-fix cycle?
 
@@ -56,6 +56,8 @@ last_refreshed: 2026-03-26
 
 **Stop Conditions** — Define explicit exit criteria for loops, retries, and recursive operations. 90% of infinite loop cases trace to missing max_turns or termination signals (Agent Patterns). Recommended limits: 3-5 retries per task, hard ceiling on total actions. Check: could the skill run indefinitely without intervention?
 
+**Knowledge Gap Detection** — Teach agents to recognize when they lack domain knowledge and fall back to tool calls or user escalation rather than hallucinating. "Introspection prompts teach agents to recognize knowledge gaps" (Authority Partners 2026). Check: does the skill handle the case where it lacks sufficient information?
+
 ## Tool Design Techniques
 
 **Descriptions as Onboarding** — Write tool descriptions as if explaining to a new team member. Make implicit context explicit. "Small refinements yield dramatic improvements" (Anthropic). Check: would someone unfamiliar understand when and how to use each tool?
@@ -87,3 +89,4 @@ last_refreshed: 2026-03-26
 - OWASP: "Top 10 for Agentic Applications" (2026) — https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/
 - GitHub Blog: "Multi-agent workflows" (2026) — https://github.blog/ai-and-ml/generative-ai/multi-agent-workflows-often-fail-heres-how-to-engineer-ones-that-dont/
 - Authority Partners: "AI Agent Guardrails Production Guide" (2026) — https://authoritypartners.com/insights/ai-agent-guardrails-production-guide-for-2026/
+- HatchWorks AI: "AI Agent Design Best Practices" (2026) — https://hatchworks.com/blog/ai-agents/ai-agent-design-best-practices/
