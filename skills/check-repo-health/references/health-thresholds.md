@@ -28,4 +28,11 @@ Token budget status:
 
 ## Integrity
 
-Binary pass/fail — no thresholds. A reference either resolves or it does not.
+References either resolve or they do not. Severity from the dependency registry determines status:
+
+| Sub-check | Behavior |
+|-----------|----------|
+| 5c-i: Registry (fatal) | FAIL if target missing |
+| 5c-i: Registry (warn) | WARN if target missing |
+| 5c-i: Registry (skip) | PASS (info only) if target missing |
+| 5c-ii: Heuristic | WARN if reference found but UNREGISTERED |

@@ -65,7 +65,21 @@ Read the `## Research References` section of CLAUDE.md. For each linked path (e.
 Read the `## File Structure` section of CLAUDE.md. For each file path mentioned, Glob to verify it exists. Record PASS or FAIL per path.
 
 **5c. Cross-skill references**
-For each SKILL.md, search the body for paths referencing sibling skills or shared reference files (patterns like `../`, `references/`, or sibling skill names). For each reference found, Glob to verify the target file exists. Record PASS or FAIL per reference.
+
+**5c-i. Registry check.** Read `references/cross-skill-dependencies.md`. For each row in the dependency table:
+1. Glob for the Target path as-is (paths are relative to the repo root).
+2. Record the result with the row's Severity value:
+   - `fatal` target missing → **FAIL**
+   - `warn` target missing → **WARN**
+   - `skip` target missing → **PASS** (informational only)
+   - Target exists → **PASS**
+
+If the registry file cannot be read, note the fallback in the dashboard header and skip to 5c-ii.
+
+**5c-ii. Heuristic scan.** For each SKILL.md (across both `skills/` and `.claude/skills/`), search the body for paths referencing sibling skills or shared reference files (patterns like `../`, `**/`, `references/`, or sibling skill names). For each reference found:
+1. Glob to verify the target file exists.
+2. Check whether this source→target pair already appears in the registry.
+3. Record: **PASS** (exists, registered), **FAIL** (missing), or **UNREGISTERED** (exists but not in registry — add it to `references/cross-skill-dependencies.md`).
 
 ### 6. Present dashboard
 
