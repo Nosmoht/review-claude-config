@@ -59,6 +59,7 @@ Every High or Medium recommendation should:
 - explain why the issue matters in one short paragraph
 - include `Current:` and `Recommended:` blocks when an exact rewrite is feasible
 - include a `Validation:` line describing how to confirm the fix on re-review
+- keep isolated cosmetic wording issues Low impact or omit them entirely unless they create a concrete trigger, safety, or completeness problem
 
 ## Conditional Weighting
 Tools with Write/Bash/Edit: Safety→15%, Meta→5%; otherwise Safety→10%, Meta→10%.
