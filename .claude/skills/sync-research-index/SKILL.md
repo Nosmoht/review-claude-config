@@ -1,5 +1,5 @@
 ---
-name: research-index
+name: sync-research-index
 description: >
   Scan the research/ directory and compare with CLAUDE.md Research References
   section. Reports drift — unlinked files, broken links, description mismatches.
