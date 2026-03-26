@@ -2,9 +2,10 @@
 name: apply-review-findings
 description: >
   Apply recommendations from any review report (review-claude-config,
-  review-skill, review-agent, or review-rule) to the reviewed files. Delegates
-  to specialized type-specific appliers, then commits with audit-fix chain
-  convention. Use after running any /review-* skill to act on findings.
+  review-skill, review-agent, or review-rule) to the reviewed files. Processes
+  High/Medium findings first, then optionally offers Low findings for A-grade
+  convergence. Delegates to specialized type-specific appliers, then commits
+  with audit-fix chain convention. Use after running any /review-* skill.
 argument-hint: "[report-path]"
 allowed-tools: Read, Edit, Glob, Bash
 disable-model-invocation: true
@@ -42,9 +43,17 @@ Parse the report body for recommendation sections. Each recommendation follows t
 Example extraction: Given heading "#### 2. Add confirmation gate (Impact: High)" with Current/Recommended blocks, extract: title="Add confirmation gate", impact=High, item=<from nearest ## heading or frontmatter summary>.
 Some recommendations may lack Current/Recommended blocks (structural suggestions). Pass the full description text to the specialized applier.
 
-Filter to **High and Medium impact only**. Discard Low impact recommendations.
+Filter into two groups: **High/Medium** recommendations and **Low** recommendations.
 
-If no High or Medium recommendations are found, tell the user: "No actionable findings -- all recommendations are Low impact." Stop.
+If no High or Medium recommendations are found, skip to **Step 2a: Low Impact Offer**.
+
+### 2a. Low Impact Offer
+
+If no High/Medium recommendations exist, tell the user:
+
+"No High or Medium findings. N Low impact recommendations remain. These are minor improvements that can help reach an A-grade. Address them? (yes/no)"
+
+If no, stop. If yes, promote the Low recommendations into the actionable set and continue to Step 3.
 
 Group recommendations by item type using the `type` field in the `summary` array (Skill, Agent, or Rule). For single-item reports (`review-skill`, `review-agent`, `review-rule`), there is one group.
 
@@ -127,6 +136,16 @@ Applied: N / Total: M
 
 If no changes were applied, stop here.
 
+### 6a. Low Impact Pass
+
+If Low impact recommendations were set aside in Step 2 and at least one High/Medium change was applied, ask:
+
+"N Low impact findings remain. Address them to reach A-grade? (yes/no)"
+
+If yes, re-enter Step 5 with the Low recommendations. Use the same orchestration payload format but with `(Impact: Low)` on each recommendation heading. Collect results and append to the change summary table.
+
+If no, note in the final report: "N Low impact findings were not applied."
+
 ### 7. Commit with audit-fix chain
 
 Read `references/commit-conventions.md` for the commit format.
@@ -175,5 +194,5 @@ When the user responds: **1** → invoke the verify command. **2** → ask which
 - **User confirmation at every stage.** Confirm before starting, before each edit, and before committing.
 - **Audit-fix chain.** Always commit the report before committing fixes. Use the report timestamp in the fix commit message.
 - **Preserve file structure.** Edits replace text blocks only. Never rewrite entire files.
-- **No Low impact changes.** Only apply High and Medium recommendations. Users who want Low impact changes should apply them manually.
+- **High/Medium first.** Always process High and Medium recommendations before Low. Low impact recommendations are only offered after High/Medium are resolved, or when no High/Medium exist.
 - **Delegate type-specific validation.** The orchestrator does not validate edits. Specialized appliers handle all type-specific checks.

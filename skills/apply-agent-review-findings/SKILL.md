@@ -1,10 +1,11 @@
 ---
 name: apply-agent-review-findings
 description: >
-  Apply High/Medium recommendations from a review-agent report to the reviewed
-  agent file. Previews each change with user confirmation and commits with
-  audit-fix chain convention. Use after running /review-agent or when delegated
-  by /apply-review-findings.
+  Apply recommendations from a review-agent report to the reviewed agent file.
+  Processes High/Medium findings first, then optionally offers Low findings
+  for A-grade convergence. Previews each change with user confirmation and
+  commits with audit-fix chain convention. Use after running /review-agent
+  or when delegated by /apply-review-findings.
 argument-hint: "[report-path]"
 allowed-tools: Read, Edit, Glob, Bash
 disable-model-invocation: true
@@ -61,9 +62,17 @@ Parse the report body for recommendation sections matching:
 ```[code block]```
 ```
 
-Filter to **High and Medium impact only**.
+Filter into two groups: **High/Medium** recommendations and **Low** recommendations.
 
-If no actionable recommendations found, tell the user: "No actionable findings -- all recommendations are Low impact." Stop.
+If no High/Medium recommendations exist, skip to **Step 2a: Low Impact Offer**.
+
+### Step 2a: Low Impact Offer
+
+If no High/Medium recommendations exist, tell the user:
+
+"No High or Medium findings. N Low impact recommendations remain. These are minor improvements that can help reach an A-grade. Address them? (yes/no)"
+
+If no, stop. If yes, promote the Low recommendations into the actionable set and continue to Phase 2.
 
 ### Step 3: Load References
 
@@ -140,6 +149,18 @@ Present the change summary table (same format as above).
 
 If no changes were applied, stop here.
 
+**Low Impact Pass (standalone mode only):**
+
+If Low impact recommendations were set aside in Step 2 and at least one High/Medium change was applied, ask:
+
+"N Low impact findings remain. Address them to reach A-grade? (yes/no)"
+
+If yes, loop back to Phase 3 with the Low recommendations. Process through the same preview/confirm/validate pipeline. Append results to the change summary table.
+
+If no, note: "N Low impact findings were not applied."
+
+In orchestrated mode, do not prompt — process whatever recommendations the orchestrator sends.
+
 **Commit with audit-fix chain:**
 
 Read the shared commit conventions (loaded in Phase 1 Step 3).
@@ -189,4 +210,4 @@ When the user responds: **1** → invoke `/review-agent` with the agent path. **
 - **User confirmation at every stage.** Confirm before starting, before each edit, and before committing.
 - **Audit-fix chain.** Always commit the report before committing fixes.
 - **Preserve file structure.** Edits replace text blocks only. Never rewrite entire files.
-- **No Low impact changes.** Only apply High and Medium recommendations.
+- **High/Medium first.** Always process High and Medium recommendations before Low. Low impact recommendations are only offered after High/Medium are resolved, or when no High/Medium exist.
