@@ -47,6 +47,11 @@ Return facts only — no skill suggestions or interpretations.
 
 Scan limits: read at most 50 lines per file, scan at most 3 directory levels deep. If the repository is very large (>1000 files at top level), focus on root-level config files and the first level of subdirectories.
 
+ERROR HANDLING:
+- If a Glob pattern returns no results, report "NOT FOUND" for that item within the category.
+- If a file cannot be read, report under the category: "ERROR: [path] — [reason]" and continue.
+- Always produce output for every category, even if empty (use "No results" with brief explanation).
+
 ## Category A: Documentation
 Search for workflow instructions and manual steps:
 - Read CLAUDE.md if it exists. Extract: numbered process steps, "always do X"
@@ -55,6 +60,11 @@ Search for workflow instructions and manual steps:
   it describes a multi-step process.
 - Read README.md if it exists. Extract: development workflow sections, setup
   instructions, contributing guides with process steps.
+- Report in this exact format:
+
+| Source | Type | Content |
+|--------|------|---------|
+| [CLAUDE.md/rules/README] | process/instruction/workflow | [extracted text] |
 
 ## Category B: Existing Skill/Agent Coverage
 Build an inventory of what already exists:
@@ -63,6 +73,11 @@ Build an inventory of what already exists:
 - For each discovered item: read full content, extract name, description, and
   what workflows/domains it covers.
 - Exclude paths containing: node_modules, .git, vendor, dist, build
+- Report in this exact format:
+
+| Path | Name | Type | Covers |
+|------|------|------|--------|
+| [file path] | [item name] | Skill/Agent | [workflows/domains covered] |
 
 ## Category C: Tech Stack
 Detect languages, frameworks, and infrastructure:
@@ -71,7 +86,13 @@ Detect languages, frameworks, and infrastructure:
 - For package.json: extract "scripts" keys and key dependencies
 - Glob for: Dockerfile, docker-compose.yml, *.tf, kustomization.yaml,
   helm/Chart.yaml, k8s/*.yaml
-- Report: primary language(s), frameworks, infrastructure tooling
+- Report in this exact format:
+
+| Category | Detected |
+|----------|----------|
+| Languages | [list] |
+| Frameworks | [list] |
+| Infrastructure | [list] |
 
 ## Category D: CI/CD & Automation
 Scan pipelines, build targets, and scripts:
@@ -80,6 +101,11 @@ Scan pipelines, build targets, and scripts:
 - Glob: Makefile, Justfile, Taskfile.yml — extract target names and descriptions
 - Glob: scripts/* — list script names and infer purpose from filename/shebang
 - Glob: .pre-commit-config.yaml — extract hook names
+- Report in this exact format:
+
+| Source | Name | Triggers | Key Steps |
+|--------|------|----------|-----------|
+| [CI/Makefile/scripts] | [name] | [trigger events] | [key steps] |
 
 ## Category E: Git Conventions (static files only)
 Analyze git-related configuration and conventions from files on disk:
@@ -88,6 +114,11 @@ Analyze git-related configuration and conventions from files on disk:
 - Glob for .github/CODEOWNERS — extract ownership boundaries
 - Read CHANGELOG.md or HISTORY.md if present — note release cadence
 - Glob for .github/pull_request_template.md, .github/ISSUE_TEMPLATE/
+- Report in this exact format:
+
+| File | Purpose | Content |
+|------|---------|---------|
+| [path] | [purpose] | [relevant patterns or content] |
 
 ## Category F: Quality & Config
 Scan for linting, testing, and formatting configuration:
@@ -95,7 +126,13 @@ Scan for linting, testing, and formatting configuration:
   jest.config*, vitest.config*, pytest.ini, pyproject.toml (check for
   [tool.pytest] section), .pre-commit-config.yaml
 - For test configs: note the test framework and any custom configuration
-- Report: config files found and their frameworks
+- Report in this exact format:
+
+| Config File | Framework | Type |
+|-------------|-----------|------|
+| [path] | [framework name] | lint/test/format |
+
+COMPLETION: You are done when all 6 categories (A through F) have a report section. If a category produces no results, include it with "No results."
 ```
 
 If the repository scan agent fails entirely, report the error to the user and stop.
@@ -169,6 +206,10 @@ You are matching repository scan results against a signal catalog.
 | Signal | Match? | Evidence | Existing Coverage | Suggestion |
 |--------|--------|----------|-------------------|------------|
 | [row]  | YES/NO | [files]  | [overlap or none] | [skill name or skip] |
+
+Example rows (for calibration):
+| Database migrations | YES | migrations/ dir with 12 files | None | migrate-db |
+| Test config without test skill | NO | — | — | — |
 ```
 
 ### Step 2: Layer 2 — Open Reasoning
@@ -235,6 +276,29 @@ For each opportunity you identify:
    AND the Layer 1 results.
 
 4. **Generate output** for each valid suggestion:
+
+**Example suggestions (for calibration — show decision logic, not full skeletons):**
+
+### Suggestion: validate-helm-charts
+**Discovery Method:** Open reasoning (not table-matched)
+**Signal Sources:** 12 Helm chart files in deploy/charts/, CI pipeline runs helm lint
+**Signal Strength:** Strong — multiple charts with shared patterns, no validation skill
+**Extraction Criteria:**
+- Recurrence: PASS — 12 chart files across 3 services
+- Verification: PASS — lint, template, dry-run, diff = 5 clear steps
+- Non-obviousness: PASS — requires Helm domain knowledge + cluster context
+- Generalizability: PASS — works for any Helm-based deployment
+**Web Evidence:** Helm best practices confirm value of pre-deploy validation
+**Rationale:** Repeated manual helm lint + template + diff cycles; a skill would standardize and catch drift.
+
+### Suggestion: (rejected example — fails extraction criteria)
+**Signal Sources:** Single .env.example file
+**Extraction Criteria:**
+- Recurrence: FAIL — only 1 file, no pattern
+- Non-obviousness: FAIL — copying .env.example is a single command
+**Decision:** Rejected — fails 2/4 criteria (needs 3/4). Single-command operations do not justify skills.
+
+**Your suggestions follow this format:**
 
 ### Suggestion: [skill-name]
 

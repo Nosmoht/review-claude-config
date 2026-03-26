@@ -55,9 +55,24 @@ Exclude paths containing: node_modules, .git, vendor, dist, build, .claude/revie
 For each discovered file:
 - Read the full content
 - Classify as "Skill", "Agent", or "Rule"
-- Return: file path, type, full content
+
+Return results in this exact format per item:
+
+### [file path]
+**Type:** Skill | Agent | Rule
+**Content:**
+[full file content]
+
+If a file cannot be read, return:
+### [file path]
+**Type:** Unknown
+**Error:** [reason]
+
+If a Glob pattern returns no results, skip it silently (not all repos have all types).
 
 Also note (but do not analyze): existence of CLAUDE.md, .claude/settings.json
+
+COMPLETION: You are done when all Glob patterns have been checked and all readable files are classified.
 ```
 
 If no skills, agents, or rules are discovered, report that and stop.
