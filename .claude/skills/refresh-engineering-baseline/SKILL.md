@@ -65,13 +65,19 @@ Discard: marketing content, opinion pieces without evidence, tutorials without p
 
 ### 3.5. Full-content retrieval (when WebFetch is available)
 
-If `webfetch_available = true`, after completing all WebSearch queries:
+If `webfetch_available = true`, after completing all WebSearch queries, fetch URLs in two tiers. Tier 1 guarantees every topic gets at least one full-text source; Tier 2 adds depth on the strongest results.
 
-1. From all search results across queries, identify the 3-5 most promising URLs (prefer: official Anthropic docs, peer-reviewed research, documented production systems).
-2. Fetch each URL with WebFetch using a targeted prompt: "Extract actionable prompt engineering, context engineering, tool design, safety, and instruction clarity techniques with evidence. Max 500 words."
-3. Use full article content — not just search snippets — when extracting techniques in Step 4. Full content provides benchmarks, nuanced conditions, and code examples that snippets miss.
+**Tier 1 — Coverage (1 fetch per executed query):**
+For each query that was actually executed (not skipped by early termination), identify the single most promising URL from its search results and fetch it with WebFetch. This yields 4-6 fetches depending on how many queries ran.
 
-If `webfetch_available = false`, skip this step and proceed with search snippets as before.
+**Tier 2 — Depth (2-3 additional fetches):**
+From all remaining search results across all queries, identify the 2-3 most promising URLs not already fetched in Tier 1 (prefer: official Anthropic docs, peer-reviewed research, documented production systems). No duplicates across tiers or within Tier 2.
+
+Fetch each URL with WebFetch using a targeted prompt: "Extract actionable prompt engineering, context engineering, tool design, safety, and instruction clarity techniques with evidence. Max 500 words."
+
+Use full article content — not just search snippets — when extracting techniques in Step 4. Full content provides benchmarks, nuanced conditions, and code examples that snippets miss.
+
+**Total: 6-9 fetches.** If `webfetch_available = false`, skip this step entirely and proceed with search snippets as before.
 
 ### 4. Merge findings
 

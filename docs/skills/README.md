@@ -95,7 +95,7 @@ Maintenance Chain:
 | review-skill | Light (1-2 queries) | Domain best practices for reviewed skill |
 | review-agent | Light (1-2 queries) | Domain best practices for reviewed agent |
 | review-rule | Light (1-2 queries) | Domain best practices for reviewed rule |
-| refresh-engineering-baseline | Heavy (6 queries + 3-5 fetches) | Structured queries with source quality criteria |
+| refresh-engineering-baseline | Heavy (6 queries + 6-9 fetches) | Structured queries with two-tier fetch strategy |
 | suggest-skills | Medium (Layer 2 agent) | Open reasoning agent validates with WebSearch |
 | audit-repo | Light (optional) | Web validation of top 3 P0 recommendations |
 | All other skills/hooks | None | No web research |

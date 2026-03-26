@@ -54,7 +54,7 @@ flowchart TD
     CONT --> FETCH
 
     FETCH{"3.5. WebFetch available?"}
-    FETCH -- "Yes" --> WF["Fetch 3-5 most promising URLs<br/>Targeted prompt: actionable<br/>techniques, max 500 words"]
+    FETCH -- "Yes" --> WF["Tier 1: 1 fetch per query<br/>Tier 2: 2-3 best remaining URLs<br/>Total: 6-9 fetches"]
     FETCH -- "No" --> MERGE
 
     WF --> MERGE["4. Merge findings<br/>Per section: add / update / remove<br/>Spot-check 2-3 existing techniques"]
@@ -125,11 +125,17 @@ Execute 6 named WebSearch queries, each appending the current year:
 
 ### Step 3.5: Full-content retrieval (if WebFetch available)
 
-If WebFetch is available, identify the 3--5 most promising URLs from all search results. Fetch each with a targeted extraction prompt:
+If WebFetch is available, fetch URLs in two tiers to ensure topic coverage:
+
+**Tier 1 — Coverage:** For each executed query, fetch the single most promising URL (4--6 fetches depending on early termination).
+
+**Tier 2 — Depth:** From remaining results across all queries, fetch the 2--3 best URLs not already in Tier 1.
+
+Fetch each with a targeted extraction prompt:
 
 > "Extract actionable prompt engineering, context engineering, tool design, safety, and instruction clarity techniques with evidence. Max 500 words."
 
-This step is skipped entirely when WebFetch is not available. The skill proceeds directly to merge with WebSearch results only.
+**Total: 6--9 fetches.** This step is skipped entirely when WebFetch is not available.
 
 ### Step 4: Merge findings
 
@@ -189,7 +195,7 @@ Output a summary table:
 This is the most research-intensive skill in the repository. Its research pipeline includes:
 
 - **6 named WebSearch queries** with early termination (stop if 2 consecutive queries yield nothing new)
-- **3--5 WebFetch requests** for full article content extraction (when WebFetch is available)
+- **6--9 WebFetch requests** in two tiers: 1 per query for coverage + 2-3 for depth (when WebFetch is available)
 - **Strict source quality criteria** requiring credible, actionable, and cross-validated sources
 - **Deduplication** across all query results
 - **18-month recency filter** discarding outdated material
