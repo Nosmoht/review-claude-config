@@ -1,7 +1,7 @@
 ---
 name: engineering-baseline
 description: Evidence-based prompt, context, and tool design techniques for evaluating Claude Code skills and agents
-last_refreshed: 2026-03-24
+last_refreshed: 2026-03-26
 ---
 
 # Engineering Baseline
@@ -28,6 +28,10 @@ last_refreshed: 2026-03-24
 
 **Evidence-First Critique** — In review tasks, prefer recommendations grounded in explicit quotes, paths, or line references rather than generic quality judgments. Check: would another reviewer be able to verify the claim from the artifact alone?
 
+**Constraint Scaling Limit** — Keep simultaneous constraints per instruction under 10; performance degrades markedly beyond this threshold (RECAST, ICLR 2026). Each constraint should be independently verifiable. Check: could any constraints be split across steps to reduce per-step count?
+
+**Deterministic Conditionals** — Write conditions as explicit binary tests ("if file exceeds 500 lines") not vague qualifiers ("if needed", "when appropriate"). Conditional instructions are the top failure mode in agentic scenarios (AGENTIF, NeurIPS 2025). Check: would two models produce the same branching decision?
+
 ## Context Engineering Techniques
 
 **Context Budget** — A focused 300-token context often outperforms 113K unfocused (Anthropic). Only add context the model doesn't already have — challenge each piece: "Does it justify its token cost?" (Anthropic 2026). Minimize tokens, maximize signal. Check: is information density high? Could the item achieve the same with fewer tokens?
@@ -48,6 +52,10 @@ last_refreshed: 2026-03-24
 
 **KV-Cache Friendliness** — Stable prefixes, append-only patterns. Single-token prefix differences invalidate cache (10x cost difference). Check: for multi-agent dispatch, are shared prefixes byte-identical?
 
+**Confirmation Gates** — Require explicit user confirmation before destructive or irreversible operations (file deletion, force push, production writes). 74% of production agents depend on human-in-the-loop checkpoints (Practical DevSecOps 2026). Check: can the skill modify or delete data without user approval?
+
+**Stop Conditions** — Define explicit exit criteria for loops, retries, and recursive operations. 90% of infinite loop cases trace to missing max_turns or termination signals (Agent Patterns). Recommended limits: 3-5 retries per task, hard ceiling on total actions. Check: could the skill run indefinitely without intervention?
+
 ## Tool Design Techniques
 
 **Descriptions as Onboarding** — Write tool descriptions as if explaining to a new team member. Make implicit context explicit. "Small refinements yield dramatic improvements" (Anthropic). Check: would someone unfamiliar understand when and how to use each tool?
@@ -62,6 +70,8 @@ last_refreshed: 2026-03-24
 
 **Avoid Time-Sensitive Guidance** — Stable prompt assets should avoid phrases like "today", "latest", or "current year" unless the task is explicitly time-bound. Check: will the instruction still make sense months later?
 
+**Typed Schemas** — Use typed interfaces with strict schemas at tool boundaries. Invalid inputs should fail fast rather than propagate bad state. MCP validates input/output schemas before tool execution (GitHub Blog 2026). Check: do tool parameters have explicit types and validation?
+
 ## Sources
 - Anthropic: "Effective context engineering for AI agents"
 - Anthropic: "Writing tools for agents"
@@ -72,3 +82,8 @@ last_refreshed: 2026-03-24
 - Manus/Meta: "Context Engineering for AI Agents"
 - Chroma Research: "Context Rot"
 - Schulhoff et al.: "The Prompt Report" (2024) — https://arxiv.org/abs/2406.06608
+- RECAST: "Constraint Following Benchmark" (ICLR 2026) — https://arxiv.org/abs/2505.19030
+- AGENTIF: "Instruction Following in Agentic Scenarios" (NeurIPS 2025) — https://arxiv.org/abs/2505.16944
+- OWASP: "Top 10 for Agentic Applications" (2026) — https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/
+- GitHub Blog: "Multi-agent workflows" (2026) — https://github.blog/ai-and-ml/generative-ai/multi-agent-workflows-often-fail-heres-how-to-engineer-ones-that-dont/
+- Authority Partners: "AI Agent Guardrails Production Guide" (2026) — https://authoritypartners.com/insights/ai-agent-guardrails-production-guide-for-2026/
