@@ -1,6 +1,6 @@
 # Review Claude Config
 
-Evidence-based quality review plugin for Claude Code skills, agents, and rules. Evaluates across 7 dimensions with A-F grading, produces actionable optimization recommendations.
+Evidence-based quality review plugin for Claude Code skills, agents, and rules. Evaluates across 7 dimensions, produces evidence-backed optimization recommendations, and treats grades as summaries rather than proof.
 
 ## What It Does
 
@@ -14,7 +14,7 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
    - Goal Alignment (20%) — Will it actually achieve its stated goal?
    - Safety (10-15%) — Are dangerous cases prevented?
    - Metadata (5-10%) — Is frontmatter correct and complete?
-4. **Produces** per-item quality certificates with grades (A-F), strengths, and concrete optimization recommendations with rewrites
+4. **Produces** per-item quality certificates with grades (A-F), strengths, and concrete optimization recommendations with evidence, rewrites, and validation guidance
 
 ## Installation
 
@@ -89,14 +89,14 @@ Start here to explore what skills a project would benefit from.
 
 ```
 /check-repo-health [all|freshness|tokens|integrity]  # Reference freshness, token budgets, integrity
-/review-analytics [folder]                            # Grade trajectories and regression detection
+/review-analytics [folder]                            # Path-first grade trajectories and regression detection
 /sync-research-index [folder]                         # Detect drift between research/ and CLAUDE.md
 ```
 
 ### Develop
 
 ```
-/scaffold-skill <name>             # Generate skill directory with SKILL.md, references/, CLAUDE.md registration
+/scaffold-skill [plugin|maintenance] <name>  # Generate a plugin or maintenance skill and register it in existing docs
 /refresh-engineering-baseline      # Update baseline with current web research
 ```
 
@@ -109,7 +109,7 @@ Start here to explore what skills a project would benefit from.
   - [**`engineering-baseline.md`**](skills/review-claude-config/references/engineering-baseline.md) — Curated prompt, context, and tool design techniques with evidence sources
   - [**`domain-cache/`**](skills/review-claude-config/references/domain-cache/) — 24 pre-researched domains committed to git, refreshed on 90-day cycles
 - **`hooks/`** — Two hooks configured in `hooks.json`:
-  - `skill_quality_gate.py` (PreToolUse on Edit/Write) — injects [`guidelines.md`](hooks/guidelines.md) quality checklist when editing skill, agent, or rule files
+  - `skill_quality_gate.py` (PreToolUse on Edit/Write) — injects a short, high-signal quality checklist from [`guidelines.md`](hooks/guidelines.md) when editing skill, agent, or rule files
   - `session_check.py` (SessionStart) — warns if engineering baseline is stale (>90 days)
 - **`.claude/skills/`** — 2 repo-internal maintenance skills (not globally needed): `refresh-engineering-baseline`, `sync-research-index`
 - **`.claude/reviews/`** — Timestamped review reports (`YYYY-MM-DDTHHMMSS-{type}.md`) with YAML frontmatter for tracking quality evolution
@@ -125,6 +125,7 @@ Every design decision is evidence-based. See the full rationale in [docs/plannin
 | Context Engineering as evaluation dimension | It's the broader discipline; prompt engineering is a subset | [Anthropic research](research/context-engineering/anthropic-effective-context-engineering.md) |
 | No Bash in review allowed-tools | Enforces safety via tooling, not just rules | [Principle of least privilege](research/tool-design/anthropic-writing-tools-for-agents.md) |
 | Timestamped report files | Each review run produces a unique file, supporting iterate-until-convergence workflow | Multiple runs per day are expected |
+| Evidence-first findings | Review comments should be verifiable and re-checkable, not just plausible | Prompt/context-first review philosophy |
 | Deterministic scoring formula | A=95, B=85, C=75, D=65, F=50 weighted sum ensures consistent Overall grades | Eliminates subjective variation across runs |
 | Token budgets (baseline <2K, rubric <1K) | Focused context outperforms unfocused context | [Context rot research](research/context-engineering/context-engineering-overview.md) |
 | Cache-friendly subagent dispatch | 10x cost difference cached vs uncached | [Manus/Meta production lessons](research/context-engineering/manus-context-engineering-lessons.md) |
@@ -154,6 +155,8 @@ All research is saved in [`research/`](research/) organized by topic:
 ## For Colleagues
 
 If you want to learn from how this project was built — the iterative planning process, evidence-based decision making, subagent review loops, and the mistakes we almost made — read [**Planning Process Learnings**](docs/planning-process-learnings.md).
+
+For manual regression checks of the review prompts and analytics conventions, use [**Review Eval Cases**](docs/review-eval-cases.md).
 
 ## Primary Sources
 

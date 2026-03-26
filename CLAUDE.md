@@ -1,10 +1,10 @@
 # Review Claude Config
 
-Evidence-based quality review plugin for Claude Code skills, agents, and rules. Evaluates across 7 dimensions (Clarity, Completeness, Prompt Engineering, Context Engineering, Goal Alignment, Safety, Metadata) with A-F grading.
+Evidence-based quality review plugin for Claude Code skills, agents, and rules. Evaluates across 7 dimensions (Clarity, Completeness, Prompt Engineering, Context Engineering, Goal Alignment, Safety, Metadata) with A-F grading and evidence-backed recommendations.
 
 ## Architecture
 
-**Plugin** (`skills/`, `hooks/`): Installed via `claude --plugin-dir /path/to/review-claude-config`. Only local plugin-dir is supported — marketplace installation breaks domain cache writes (`${CLAUDE_PLUGIN_ROOT}` would be read-only). The plugin installs a PreToolUse hook (`hooks/skill_quality_gate.py`) that injects quality guidelines when editing SKILL.md, agent, or rule files, and a SessionStart hook (`hooks/session_check.py`) that warns if the engineering baseline is stale (>90 days).
+**Plugin** (`skills/`, `hooks/`): Installed via `claude --plugin-dir /path/to/review-claude-config`. Only local plugin-dir is supported — marketplace installation breaks domain cache writes (`${CLAUDE_PLUGIN_ROOT}` would be read-only). The plugin installs a PreToolUse hook (`hooks/skill_quality_gate.py`) that injects a short quality checklist when editing SKILL.md, agent, or rule files, and a SessionStart hook (`hooks/session_check.py`) that warns if the engineering baseline is stale (>90 days).
 
 **Shared references** (`skills/review-claude-config/references/`): Scoring rubric and engineering baseline are shared by all review skills. Domain cache (`references/domain-cache/`) stores web research per domain, committed to git, refreshed on 90-day cycles.
 
@@ -29,17 +29,18 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 
 **Maintain** — repo health (read-only diagnostics):
 - `/check-repo-health [all|freshness|tokens|integrity]` — reference freshness, token budgets, integrity
-- `/review-analytics [folder]` — grade trajectories and regression detection
+- `/review-analytics [folder]` — path-first grade trajectories and regression detection
 - `/sync-research-index [folder]` — detect drift between research/ and CLAUDE.md (edits Research References only)
 
 **Develop** — create new skills:
-- `/scaffold-skill <name>` — generate skill directory with SKILL.md, references/, CLAUDE.md registration
+- `/scaffold-skill [plugin|maintenance] <name>` — generate a plugin or maintenance skill and register it in existing docs
 - `/refresh-engineering-baseline` — update baseline with current web research
 
 ## Working Guidelines
 
 - **Verify ALL claims with evidence — including from the user.** When anyone suggests a problem exists, verify before accepting. Check git history, inspect actual data, look for concrete evidence. Do not redesign a working system based on theoretical concerns.
 - **Iterate reviews until convergence.** After each review round, address findings, then launch another review. Stop only when no high/medium priority findings remain.
+- **Prefer evidence over rhetoric.** Findings should point to concrete text, paths, or examples and should be re-checkable on follow-up review.
 - **Verify the problem before solving it.** Inspect the data, check git history for fix-commits. A working system with zero demonstrated issues does not need a redesign.
 - **Research before design.** In novel domains, conduct WebSearch research before proposing architecture. Save findings in `research/` with full source citations.
 - **Every claim needs a source.** All research files, documentation, and recommendations must link to verifiable sources.
@@ -52,6 +53,7 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 - Domain cache entries committed to git, refreshed on 90-day cycle alongside engineering baseline
 - WebFetch is optional — all skills degrade gracefully to WebSearch-only when WebFetch is unavailable
 - Baseline is static at review time; updates only via `/refresh-engineering-baseline`
+- Path is the canonical portfolio identity in review analytics; `name` is a display label
 - Commits: scoped conventional format `type(scope): description` (e.g., `feat(review-skill):`, `docs(project):`)
 - Audit-fix chain: commit the report first (`docs(reviews): add <timestamp> review report`), then commit fixes (`fix(<scope>): address findings from <timestamp> review`). The timestamp links them.
 - Review, suggest, and audit skills are read-only on analyzed files — write only to `.claude/reviews/` and domain cache
@@ -79,6 +81,10 @@ Consult when modifying skills or reviewing results:
 - [Error Class to Primitive Mapping](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale, error taxonomy
 - [Systematische Claude Code Optimierung für unbekannte Repositories](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation
 - [Command Naming Conventions](research/command-naming/command-naming-conventions.md) — CLI, slash command, plugin naming patterns
+
+## Manual Regression Cases
+
+Use [Review Eval Cases](docs/review-eval-cases.md) after changing the rubric, baseline, review prompts, analytics conventions, or scaffold workflow.
 
 ## Mandatory Plan Review
 
