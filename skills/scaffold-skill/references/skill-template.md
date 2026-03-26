@@ -1,6 +1,6 @@
 ---
 name: skill-template
-description: Default SKILL.md template with valid frontmatter fields and body structure
+description: Default SKILL.md template with valid frontmatter fields and body structure for plugin or maintenance skills
 ---
 
 ## Frontmatter Template
@@ -50,3 +50,4 @@ user-invocable: false                     # Optional: set if Claude-only (rare)
 - Reference files: create in `references/` subdirectory, keep ≤500 tokens each
 - Workflow steps: sequential numbering, explicit conditionals, stop conditions
 - Hard Rules: negative constraints at the end of the file
+- Registration must target existing `README.md`/`CLAUDE.md` sections only; never assume `## Skills`, `## File Structure`, or `## Installation` exist

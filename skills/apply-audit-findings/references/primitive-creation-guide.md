@@ -32,5 +32,5 @@ description: Validation rules and conventions for creating each Claude Code prim
 ## Skills
 
 - **Never create inline.** Skill creation requires frontmatter, workflow steps, references, and CLAUDE.md registration
-- Present the recommendation and instruct: "Run `/scaffold-skill <name>` to create this skill"
+- Present the recommendation and instruct: "Run `/scaffold-skill plugin <name>` to create this skill"
 - Provide: name, one-line description, and key context from the audit recommendation

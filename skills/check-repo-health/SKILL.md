@@ -61,8 +61,8 @@ Perform three integrity sub-checks:
 **5a. CLAUDE.md Research References**
 Read the `## Research References` section of CLAUDE.md. For each linked path (e.g., `research/prompt-engineering/prompt-engineering-techniques.md`), Glob to verify the file exists. Record PASS or FAIL per link.
 
-**5b. CLAUDE.md File Structure**
-Read the `## File Structure` section of CLAUDE.md. For each file path mentioned, Glob to verify it exists. Record PASS or FAIL per path.
+**5b. CLAUDE.md Architecture / Structure**
+Read the `## Architecture` section of CLAUDE.md. If `## Architecture` is missing, fall back to one alias in this order: `## Structure`, `## Layout`, `## File Structure`. For each file path or directory path mentioned in the chosen section, Glob to verify it exists. Record PASS or FAIL per path. If none of these sections exist, record one FAIL row for the missing section rather than erroring out.
 
 **5c. Cross-skill references**
 For each SKILL.md, search the body for paths referencing sibling skills or shared reference files (patterns like `../`, `references/`, or sibling skill names). For each reference found, Glob to verify the target file exists. Record PASS or FAIL per reference.

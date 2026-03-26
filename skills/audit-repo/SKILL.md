@@ -359,7 +359,7 @@ Breakdown: depth [N] × files/dir [N] × collisions [N]
 
 ## Next Steps
 - Create or update CLAUDE.md with P0 items first
-- Use `/scaffold-skill <name>` for identified skill candidates
+- Use `/scaffold-skill plugin <name>` for identified skill candidates
 - Run `/suggest-skills [folder]` for Layer 2 open reasoning about skill opportunities beyond the signal catalog
 - Re-run `/audit-repo [folder]` after changes to verify coverage
 - Run `/review-claude-config [folder]` to evaluate quality after creating primitives
@@ -382,7 +382,7 @@ After all output is complete, end your response with this menu (substitute `<rep
 ---
 **What's next?**
 1. Apply audit findings → `/apply-audit-findings <report-path>`
-2. Scaffold a recommended skill → `/scaffold-skill <name>`
+2. Scaffold a recommended skill → `/scaffold-skill plugin <name>`
 3. Explore skill opportunities → `/suggest-skills <target>`
 4. Done
 

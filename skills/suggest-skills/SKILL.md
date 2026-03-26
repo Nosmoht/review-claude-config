@@ -403,7 +403,7 @@ Then end your response with this menu (substitute `<target>` with the analyzed f
 
 ---
 **What's next?**
-1. Scaffold a suggested skill → `/scaffold-skill <name>`
+1. Scaffold a suggested skill → `/scaffold-skill plugin <name>`
 2. Review existing skills → `/review-claude-config <target>`
 3. Done
 

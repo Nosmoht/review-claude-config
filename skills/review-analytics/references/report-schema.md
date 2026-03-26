@@ -14,9 +14,9 @@ target: /absolute/path                   # Reviewed directory
 baseline_version: YYYY-MM-DD            # Engineering baseline version used
 items_reviewed: N                        # Count of items
 summary:                                 # Array of reviewed items
-  - name: item-name                      # Kebab-case identifier
+  - name: item-name                      # Display label for the item
     type: Skill                          # Skill, Agent, or Rule
-    path: relative/path/to/SKILL.md      # Relative to target
+    path: relative/path/to/SKILL.md      # Canonical tracking key within a report series
     overall: B                           # A-F composite grade
     score: 85.0                          # Weighted numeric score (0-100)
     clarity: B                           # Per-dimension grades (A-F)
@@ -28,6 +28,11 @@ summary:                                 # Array of reviewed items
     metadata: B                          # null for Rules
 ---
 ```
+
+Tracking guidance:
+- Use `type + path` as the primary portfolio identity across multiple reports.
+- Treat `name` as a display label only.
+- If a path disappears and a new path appears, report a rename/move candidate instead of silently merging by name.
 
 ## Grade Values
 

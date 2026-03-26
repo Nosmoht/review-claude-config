@@ -1,10 +1,10 @@
 ---
 name: scaffold-skill
 description: >
-  Create a new Claude Code skill directory with SKILL.md, optional references/,
-  and CLAUDE.md registration. Generates valid frontmatter and phase-based body
-  following project conventions. Use when adding a new skill to the repository.
-argument-hint: "<skill-name>"
+  Create a new Claude Code skill in either plugin or maintenance mode, generate
+  a valid SKILL.md plus optional references/, and register it in the existing
+  repository docs. Use when adding a new skill to this repository.
+argument-hint: "[plugin|maintenance] <skill-name>"
 allowed-tools: Read, Write, Edit, Glob
 disable-model-invocation: true
 ---
@@ -17,11 +17,15 @@ You are a skill builder creating correctly structured Claude Code skills. Your j
 
 ### 1. Validate skill name
 
-Parse `$ARGUMENTS` as the skill name. If empty, ask the user for a skill name.
+Parse `$ARGUMENTS` as `[mode] <skill-name>`.
+
+- If the first token is `plugin` or `maintenance`, use it as the mode.
+- Otherwise, default to `plugin` and treat the full argument as `<skill-name>`.
+- If the skill name is empty after parsing, ask the user for it.
 
 Validate:
 - Name must be kebab-case (lowercase, hyphens only, no spaces or underscores).
-- Name must not conflict with an existing skill. Glob `.claude/skills/*/SKILL.md` to check.
+- Name must not conflict with an existing skill. Glob both `skills/*/SKILL.md` and `.claude/skills/*/SKILL.md` to check.
 
 If validation fails, report the issue and ask for a corrected name.
 
@@ -41,6 +45,7 @@ Ask the user for:
 4. **Argument hint** — What argument does the skill accept? (optional, e.g., `[folder]`, `<file-path>`)
 5. **Reference files needed?** — List names and purposes of reference files to create in `references/`. (optional)
 6. **Workflow complexity** — How many steps? Brief description of each. (used to generate workflow stubs)
+7. **Registration summary** — One sentence describing where this skill belongs in the existing command/architecture docs.
 
 ### 4. Generate SKILL.md
 
@@ -80,8 +85,8 @@ Present the full generated content to the user for review. Ask: "Does this look 
 
 Create the skill directory and files:
 
-1. Write `.claude/skills/<skill-name>/SKILL.md` with the generated content.
-2. If reference files were specified, create `.claude/skills/<skill-name>/references/` and write each reference file with frontmatter stubs:
+1. If mode is `plugin`, write `skills/<skill-name>/SKILL.md`. If mode is `maintenance`, write `.claude/skills/<skill-name>/SKILL.md`.
+2. If reference files were specified, create the matching `references/` directory under the chosen mode path and write each reference file with frontmatter stubs:
    ```yaml
    ---
    name: <reference-name>
@@ -93,15 +98,14 @@ Create the skill directory and files:
 
 If any write fails, report which files were successfully created and which failed. Do not proceed to Step 6 until all files are written.
 
-### 6. Register in CLAUDE.md
+### 6. Register in repository docs
 
-Read CLAUDE.md. Add entries to three sections:
+Use only existing documentation sections. Do not invent `## Skills`, `## File Structure`, or `## Installation`.
 
-- **`## Skills`** — Append: `- /<skill-name> [args]` — Description.`
-- **`## File Structure`** — Append the new skill's directory listing.
-- **`## Installation`** — Append a `cp -r` command for the new skill.
+- **Plugin mode:** Update the relevant command subsection in `README.md`, the matching command subsection in `CLAUDE.md`, and the existing architecture/inventory prose where plugin skills are described.
+- **Maintenance mode:** Update only `CLAUDE.md` where repo-internal maintenance skills and their commands are described.
 
-Use Edit to make targeted additions to each section. Never rewrite existing entries.
+Use Edit to make targeted additions. Never rewrite unrelated sections.
 
 ### 7. Suggest commit and next steps
 

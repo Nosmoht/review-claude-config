@@ -34,19 +34,22 @@ For each report, read the YAML frontmatter and extract:
 - `items_reviewed` — count
 - `summary` — array of items with: `name`, `type`, `path`, `overall`, `score`, `clarity`, `completeness`, `prompt_engineering`, `context_engineering`, `goal_alignment`, `safety`, `metadata`
 
+Treat `path` as the canonical tracking key inside a report series. Treat `name` as a display label only.
+
 If a report has malformed or missing frontmatter, skip it with a warning: "Skipped report `<filename>`: could not parse frontmatter."
 
 Extract the timestamp from each filename for display (e.g., `2026-03-24T161200`).
 
 ### 3. Build time series
 
-For each unique item name across all reports, build a time series:
+For each unique `type + path` combination across all reports, build a time series:
 - Track the `overall` grade and `score` at each report timestamp.
 - Track per-dimension grades: clarity, completeness, prompt_engineering, context_engineering, goal_alignment, safety, metadata.
 
 Handle items that appear or disappear across reports:
 - **New item:** First appearance marked as "New" (no prior data point).
 - **Removed item:** Last seen in an older report but absent in the most recent. Marked as "Removed."
+- **Rename/move candidate:** A path disappears and a new path appears for the same type in the next report. Flag it as a candidate instead of silently merging by `name`.
 
 ### 4. Compute trajectories
 
@@ -67,10 +70,10 @@ Present three views:
 ```
 ## Grade Trajectories
 
-| Item | [timestamp 1] | [timestamp 2] | ... | Trend |
-|------|---------------|---------------|-----|-------|
-| review-claude-config | B (85.0) | A (93.5) | ... | Improving |
-| refresh-baseline | B (82.0) | A (93.1) | ... | Improving |
+| Item Path | Display Name | [timestamp 1] | [timestamp 2] | ... | Trend |
+|-----------|--------------|---------------|---------------|-----|-------|
+| skills/review-claude-config/SKILL.md | review-claude-config | B (85.0) | A (93.5) | ... | Improving |
+| .claude/skills/refresh-engineering-baseline/SKILL.md | refresh-engineering-baseline | B (82.0) | A (93.1) | ... | Improving |
 
 Items tracked: N | Reports analyzed: M
 ```
@@ -97,6 +100,9 @@ Items tracked: N | Reports analyzed: M
 
 ### Removed Items
 - [item]: last seen in [timestamp] with grade [grade]
+
+### Rename/Move Candidates
+- [old path] → [new path]: same type, path changed, review manually before treating as continuity
 
 ### Systemic Issues
 - [dimension] regressed across 2+ items simultaneously (possible systemic cause)
@@ -137,4 +143,5 @@ If no regressions (classification is "Improving" or "Stable"), skip the menu —
 - **Handle malformed reports gracefully.** Skip with a warning, never error out.
 - **Present all data before conclusions.** Show the three views before the summary.
 - **Timestamp sorting is lexicographic.** YYYY-MM-DDTHHMMSS format sorts correctly as strings.
+- **Track by path first.** `type + path` is the canonical identity; `name` is only a label.
 - **Grade comparison order.** A > B > C > D > F for trend computation.
