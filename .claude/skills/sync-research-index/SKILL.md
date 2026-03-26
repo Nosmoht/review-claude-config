@@ -62,7 +62,7 @@ Classify each item:
 **Summary:** X files on disk, Y linked in CLAUDE.md, Z unlinked, W broken links.
 ```
 
-If all files are OK (no UNLINKED or BROKEN entries), tell the user: "Research index is in sync. No changes needed." Stop.
+If all files are OK (no UNLINKED, BROKEN, or STALE entries), tell the user: "Research index is in sync. No changes needed." Stop.
 
 ### 5. Offer to sync
 
@@ -73,6 +73,7 @@ If no, stop.
 If yes:
 - **For UNLINKED files:** Read each file to extract its title and a one-line summary. Add an entry to the Research References section following the existing format: `- [Title](relative/path) — Description`
 - **For BROKEN links:** Remove the entry from the Research References section.
+- **For STALE files:** Update the CLAUDE.md entry title to match the file's current `# ` heading.
 
 Use Edit to make targeted changes to the `## Research References` section only. Never modify other sections of CLAUDE.md.
 

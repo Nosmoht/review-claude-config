@@ -40,6 +40,7 @@ Run these WebSearch queries (replace `[current year]` with the actual year). Aft
 - "prompt engineering techniques evidence research [current year]"
 - "context engineering LLM agents best practices [current year]"
 - "AI agent tool design best practices [current year]"
+- "LLM agent caching memory patterns KV-cache [current year]"
 - "Anthropic Claude Code documentation skills"
 
 For each search, extract only actionable techniques with evidence.
@@ -58,7 +59,7 @@ Discard: marketing content, opinion pieces without evidence, tutorials without p
 #### WebSearch failure handling
 
 - If WebSearch is completely unavailable (tool error), stop and tell the user: "WebSearch is required for baseline refresh but is unavailable. Baseline was not modified."
-- If fewer than 3 of 5 queries return useful results, warn the user: "Only [N]/5 searches returned actionable results. Proceeding with limited data — review changes carefully."
+- If fewer than 3 of 6 queries return useful results, warn the user: "Only [N]/6 searches returned actionable results. Proceeding with limited data — review changes carefully."
 - If no queries return useful results, stop and report: "No actionable search results. Baseline was not modified."
 
 ### 3.5. Full-content retrieval (when WebFetch is available)
