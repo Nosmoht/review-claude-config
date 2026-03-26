@@ -12,6 +12,8 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 
 **Review reports** (`.claude/reviews/`): Timestamped files (`YYYY-MM-DDTHHMMSS-{review-claude-config|review-skill|review-agent|review-rule|suggest-skills|audit-repo}.md`) with YAML frontmatter. Committed to track quality evolution.
 
+**Workflow menus**: Every skill ends with a numbered "What's next?" menu. The user types a number, Claude invokes the corresponding skill. This uses plain text output — not `AskUserQuestion`, which silently auto-completes with empty answers in plugin skills loaded via the Skill tool (known Claude Code bug). Menu is skipped in orchestrated mode and conditionally shown in diagnostic skills (only when issues are found).
+
 ## Commands
 
 **Review** — evaluate quality (read-only on analyzed files):
@@ -23,14 +25,15 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 **Fix** — apply review recommendations (require `disable-model-invocation: true`, user confirmation):
 - `/apply-review-findings [report]` — orchestrate fixes from any review report
 - `/apply-skill-review-findings [report]` | `/apply-agent-review-findings [report]` | `/apply-rule-review-findings [report]`
+- `/apply-audit-findings [report]` — create primitives recommended by audit-repo (CLAUDE.md sections, hooks, rules)
 
 **Maintain** — repo health (read-only diagnostics):
 - `/check-repo-health [all|freshness|tokens|integrity]` — reference freshness, token budgets, integrity
 - `/review-analytics [folder]` — grade trajectories and regression detection
-- `/research-index [folder]` — detect drift between research/ and CLAUDE.md (edits Research References only)
+- `/sync-research-index [folder]` — detect drift between research/ and CLAUDE.md (edits Research References only)
 
 **Develop** — create new skills:
-- `/skill-scaffolding <name>` — generate skill directory with SKILL.md, references/, CLAUDE.md registration
+- `/scaffold-skill <name>` — generate skill directory with SKILL.md, references/, CLAUDE.md registration
 - `/refresh-engineering-baseline` — update baseline with current web research
 
 ## Working Guidelines
@@ -52,7 +55,7 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 - Commits: scoped conventional format `type(scope): description` (e.g., `feat(review-skill):`, `docs(project):`)
 - Audit-fix chain: commit the report first (`docs(reviews): add <timestamp> review report`), then commit fixes (`fix(<scope>): address findings from <timestamp> review`). The timestamp links them.
 - Review, suggest, and audit skills are read-only on analyzed files — write only to `.claude/reviews/` and domain cache
-- Apply skills and skill-scaffolding modify files — require `disable-model-invocation: true` and user confirmation gates
+- Apply skills and scaffold-skill modify files — require `disable-model-invocation: true` and user confirmation gates
 
 ## Research References
 
@@ -74,7 +77,8 @@ Consult when modifying skills or reviewing results:
 - [Context Window Optimization](research/token-efficiency/context-window-optimization.md) — context rot, token density
 - [Architecture Pattern Recognition](research/architecture-detection/architecture-pattern-recognition.md) — hybrid detection
 - [Error Class to Primitive Mapping](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale, error taxonomy
-- [Repo Audit Methodology](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation
+- [Systematische Claude Code Optimierung für unbekannte Repositories](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation
+- [Command Naming Conventions](research/command-naming/command-naming-conventions.md) — CLI, slash command, plugin naming patterns
 
 ## Mandatory Plan Review
 
