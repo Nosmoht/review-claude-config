@@ -26,6 +26,8 @@ last_refreshed: 2026-03-24
 
 **Feedback Loops** — Run validator → fix errors → repeat for quality-critical outputs. Catches errors early and enables iterative improvement without human intervention (Anthropic). Check: do quality-critical steps include a validate-fix cycle?
 
+**Evidence-First Critique** — In review tasks, prefer recommendations grounded in explicit quotes, paths, or line references rather than generic quality judgments. Check: would another reviewer be able to verify the claim from the artifact alone?
+
 ## Context Engineering Techniques
 
 **Context Budget** — A focused 300-token context often outperforms 113K unfocused (Anthropic). Only add context the model doesn't already have — challenge each piece: "Does it justify its token cost?" (Anthropic 2026). Minimize tokens, maximize signal. Check: is information density high? Could the item achieve the same with fewer tokens?
@@ -39,6 +41,8 @@ last_refreshed: 2026-03-24
 **Tool Set Curation** — Minimal, unambiguous tools. "If a human can't say which tool to use, the agent can't either" (Anthropic). Check: could any tools be removed without losing capability? Do any tools overlap?
 
 **Output Conciseness** — Structured, concise outputs prevent downstream context bloat. Check: does the output format avoid unnecessary verbosity?
+
+**Activation Precision** — Descriptions should make it obvious when a skill or agent should trigger and when it should not. Check: would this wording accidentally activate on unrelated user requests?
 
 **Error Preservation** — Keep failed attempts in context for self-correction rather than hiding them (Manus/Meta). Check: does the item acknowledge and learn from errors?
 
@@ -55,6 +59,8 @@ last_refreshed: 2026-03-24
 **Meaningful Identifiers** — Semantic names over cryptic IDs reduce hallucination. Check: are parameter names and identifiers self-describing?
 
 **Actionable Errors** — Error messages should suggest specific fixes, not return opaque codes. Check: do error paths guide the agent toward resolution?
+
+**Avoid Time-Sensitive Guidance** — Stable prompt assets should avoid phrases like "today", "latest", or "current year" unless the task is explicitly time-bound. Check: will the instruction still make sense months later?
 
 ## Sources
 - Anthropic: "Effective context engineering for AI agents"

@@ -117,8 +117,12 @@ Calculate overall grade:
 
 ### Recommendations
 
-#### 1. [Title] (Impact: [High/Medium/Low])
-[What to change and why, referencing domain best practices]
+#### 1. [Title] (Impact: [High/Medium/Low], Category: [Scope|Clarity|Completeness|Alignment|Exceptions])
+**Evidence:** [Quote or summarize the exact text that caused the issue, with path or section reference]
+
+**Why it matters:** [What to change and why, referencing domain best practices]
+
+**Validation:** [How to confirm the fix on re-review]
 
 **Current:**
 ```
@@ -150,7 +154,7 @@ target: /absolute/path/to/rule
 baseline_version: YYYY-MM-DD
 items_reviewed: 1
 summary:
-  - name: rule-name
+  - name: rule-name                     # display label; analytics should track by path first
     type: Rule
     path: relative/path/to/rule.md
     overall: B
@@ -197,6 +201,6 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 
 - **Read-only on the analyzed rule.** Never modify the rule being reviewed. Write only to `.claude/reviews/`.
 - **Apply the rubric strictly.** Do not inflate grades.
-- **Every recommendation must include a concrete rewrite** — not just "improve X."
+- **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present the full certificate before any follow-up actions.**
 - **Use only 3 dimensions.** Never score rules on PE, CE, Safety, or Metadata.

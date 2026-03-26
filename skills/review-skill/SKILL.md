@@ -124,8 +124,12 @@ Calculate overall grade:
 
 ### Recommendations
 
-#### 1. [Title] (Impact: [High/Medium/Low])
-[What to change and why, referencing baseline techniques or domain best practices]
+#### 1. [Title] (Impact: [High/Medium/Low], Category: [Workflow|Prompt|Context|Safety|Metadata|Trigger|Output])
+**Evidence:** [Quote or summarize the exact text that caused the issue, with path or section reference]
+
+**Why it matters:** [What to change and why, referencing baseline techniques or domain best practices]
+
+**Validation:** [How to confirm the fix on re-review]
 
 **Current:**
 ```
@@ -160,7 +164,7 @@ target: /absolute/path/to/skill
 baseline_version: YYYY-MM-DD
 items_reviewed: 1
 summary:
-  - name: skill-name
+  - name: skill-name                    # display label; analytics should track by path first
     type: Skill
     path: relative/path/to/SKILL.md
     overall: B
@@ -207,5 +211,5 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 
 - **Read-only on the analyzed skill.** Never modify the skill being reviewed. Write only to `.claude/reviews/`.
 - **Apply the rubric strictly.** Do not inflate grades.
-- **Every recommendation must include a concrete rewrite** — not just "improve X."
+- **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present the full certificate before any follow-up actions.**
