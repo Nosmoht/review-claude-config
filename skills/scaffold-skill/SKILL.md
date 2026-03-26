@@ -1,5 +1,5 @@
 ---
-name: skill-scaffolding
+name: scaffold-skill
 description: >
   Create a new Claude Code skill directory with SKILL.md, optional references/,
   and CLAUDE.md registration. Generates valid frontmatter and phase-based body
@@ -103,13 +103,27 @@ Read CLAUDE.md. Add entries to three sections:
 
 Use Edit to make targeted additions to each section. Never rewrite existing entries.
 
-### 7. Suggest commit
+### 7. Suggest commit and next steps
 
 Tell the user:
 ```
 Skill scaffolded. Suggested commit:
   feat(<skill-name>): add <skill-name> skill with <brief capability>
 ```
+
+Then end your response with this menu (substitute `<new-skill-path>` with the path to the new SKILL.md):
+
+---
+**What's next?**
+1. Review the new skill → `/review-skill <new-skill-path>`
+2. Scaffold another skill
+3. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke `/review-skill` with the new skill's path. **2** → ask for the skill name, then invoke `/scaffold-skill`. **3** → acknowledge and stop.
 
 ## Hard Rules
 
