@@ -99,10 +99,26 @@ Note: Token estimates use chars/4 approximation.
 **Summary:** X passed, Y warnings, Z failures
 ```
 
-If any FAIL results exist, add a **Remediation** section:
+If any FAIL or WARN results exist, add a **Remediation** section:
 - For stale files: "Run `/refresh-engineering-baseline`" or "Domain cache entry X is N days old — will be refreshed on next review run."
 - For token budget violations: "File X is ~N tokens over the N-token budget. Consider trimming."
 - For broken references: "Path X referenced in Y does not exist. Update the reference or create the file."
+
+Then end your response with this menu:
+
+---
+**What's next?**
+1. Refresh stale baseline → `/refresh-engineering-baseline`
+2. Run a full review → `/review-claude-config`
+3. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke `/refresh-engineering-baseline`. **2** → invoke `/review-claude-config`. **3** → acknowledge and stop.
+
+If all checks passed (no FAIL or WARN), skip the menu — just present the dashboard.
 
 ## Hard Rules
 

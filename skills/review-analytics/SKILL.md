@@ -116,6 +116,21 @@ Classification:
 - **Stable** — No items regressing, majority stable.
 - **Declining** — Any item regressing in the latest report, or systemic dimension regression.
 
+If any regressions were detected (classification is "Declining"), end your response with this menu:
+
+---
+**What's next?**
+1. Review regressing items → `/review-claude-config`
+2. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke `/review-claude-config`. **2** → acknowledge and stop.
+
+If no regressions (classification is "Improving" or "Stable"), skip the menu — just present the dashboard.
+
 ## Hard Rules
 
 - **Read-only.** Never modify any file. This is a diagnostic skill only.

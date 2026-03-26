@@ -375,6 +375,23 @@ If confirmed, write the report. Create `<target>/.claude/reviews/` if it does no
 
 Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS audit-repo report`
 
+### Step 5: What's Next?
+
+After all output is complete, end your response with this menu (substitute `<report-path>` with the actual report path, `<target>` with the analyzed folder):
+
+---
+**What's next?**
+1. Apply audit findings → `/apply-audit-findings <report-path>`
+2. Scaffold a recommended skill → `/scaffold-skill <name>`
+3. Explore skill opportunities → `/suggest-skills <target>`
+4. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke `/apply-audit-findings` with the report path. **2** → ask which skill from the intervention matrix, then invoke `/scaffold-skill`. **3** → invoke `/suggest-skills` with the target folder. **4** → acknowledge and stop.
+
 ## Hard Rules
 
 - **Read-only on target repository.** Never modify any existing file. The only file this skill writes is the audit report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-audit-repo.md`.

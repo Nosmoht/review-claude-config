@@ -285,6 +285,22 @@ If no prior report exists, skip this step.
 
 Tell the user the report file path and suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS review report` (using the timestamp from the report filename). This ensures the docs commit and subsequent fix commits (`fix(<scope>): address findings from YYYY-MM-DDTHHMMSS review`) share the same identifier for traceability.
 
+### Step 5: What's Next?
+
+After all output is complete, end your response with this menu (substitute `<report-path>` with the actual report path from step 2):
+
+---
+**What's next?**
+1. Apply review findings → `/apply-review-findings <report-path>`
+2. View grade analytics → `/review-analytics`
+3. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke `/apply-review-findings` with the report path. **2** → invoke `/review-analytics`. **3** → acknowledge and stop.
+
 ## Hard Rules
 
 - **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and domain cache entries in its own `references/domain-cache/`.

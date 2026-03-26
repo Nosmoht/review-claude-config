@@ -399,9 +399,19 @@ Use the current date and time for the timestamp. Create `<target>/.claude/review
 
 Tell the user the report file path and suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS suggest-skills report`
 
-Suggest next steps:
-- "Use `/skill-scaffolding <skill-name>` to create any suggested skill"
-- "Use `/review-claude-config` to audit the new skills after creation"
+Then end your response with this menu (substitute `<target>` with the analyzed folder):
+
+---
+**What's next?**
+1. Scaffold a suggested skill → `/scaffold-skill <name>`
+2. Review existing skills → `/review-claude-config <target>`
+3. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → ask which skill from the suggestions, then invoke `/scaffold-skill`. **2** → invoke `/review-claude-config` with the target folder. **3** → acknowledge and stop.
 
 ## Hard Rules
 

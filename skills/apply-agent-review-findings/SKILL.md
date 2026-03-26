@@ -166,7 +166,19 @@ Present final status:
 - Commits created (with hashes)
 - Recommendations not applied (with skip reason for each)
 - For validation-blocked recommendations: suggest manual resolution approach
-- Suggest: "Run `/review-agent <path>` again to verify improvements."
+Then end your response with this menu (substitute `<path>` with the target agent path):
+
+---
+**What's next?**
+1. Verify improvements → `/review-agent <path>`
+2. Apply findings from another report
+3. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke `/review-agent` with the agent path. **2** → ask for the report path, then invoke `/apply-agent-review-findings`. **3** → acknowledge and stop.
 
 ## Hard Rules
 

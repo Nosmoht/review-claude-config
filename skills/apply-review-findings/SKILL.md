@@ -153,7 +153,19 @@ Present the final status:
 - Files modified
 - Commits created (with hashes)
 - Recommendations not applied (skipped or stopped)
-- Suggest re-running the original review skill to verify improvements. Match to `generated_by`: if `review-skill`, suggest `/review-skill <path>`; if `review-agent`, suggest `/review-agent <path>`; if `review-rule`, suggest `/review-rule <path>`; if `review-claude-config`, suggest `/review-claude-config`.
+Then end your response with this menu. Determine the verify command from `generated_by`: if `review-skill` → `/review-skill <path>`, if `review-agent` → `/review-agent <path>`, if `review-rule` → `/review-rule <path>`, if `review-claude-config` → `/review-claude-config <target>`.
+
+---
+**What's next?**
+1. Verify improvements → `<verify-command>`
+2. Review a specific item
+3. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke the verify command. **2** → ask which item, then invoke the matching `/review-*` command. **3** → acknowledge and stop.
 
 ## Hard Rules
 

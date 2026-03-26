@@ -166,9 +166,21 @@ summary:
 ```
 
 4. Write the report file. Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS review report`
-5. Suggest next steps:
-   - "To automatically apply High/Medium findings: `/apply-rule-review-findings <report-path>`"
-   - "To apply changes manually, use the Current/Recommended blocks in each recommendation as a guide."
+5. **What's Next?** (standalone mode only — skip in orchestrated mode)
+
+After all output is complete, end your response with this menu (substitute `<report-path>` with the actual report path from step 4):
+
+---
+**What's next?**
+1. Apply findings → `/apply-rule-review-findings <report-path>`
+2. Review another rule
+3. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke `/apply-rule-review-findings` with the report path. **2** → ask for the rule path, then invoke `/review-rule`. **3** → acknowledge and stop.
 
 ## Error Handling
 

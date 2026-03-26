@@ -163,7 +163,19 @@ Present final status:
 - Files modified
 - Commits created (with hashes)
 - Recommendations not applied (skipped or stopped)
-- Suggest: "Run `/review-skill <path>` again to verify improvements."
+Then end your response with this menu (substitute `<path>` with the target skill path, `<report-path>` with any other report path if needed):
+
+---
+**What's next?**
+1. Verify improvements → `/review-skill <path>`
+2. Apply findings from another report
+3. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke `/review-skill` with the skill path. **2** → ask for the report path, then invoke `/apply-skill-review-findings`. **3** → acknowledge and stop.
 
 ## Hard Rules
 

@@ -162,7 +162,19 @@ Present final status:
 - Files modified
 - Commits created (with hashes)
 - Recommendations not applied
-- Suggest: "Run `/review-rule <path>` again to verify improvements."
+Then end your response with this menu (substitute `<path>` with the target rule path):
+
+---
+**What's next?**
+1. Verify improvements → `/review-rule <path>`
+2. Apply findings from another report
+3. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → invoke `/review-rule` with the rule path. **2** → ask for the report path, then invoke `/apply-rule-review-findings`. **3** → acknowledge and stop.
 
 ## Hard Rules
 
