@@ -30,19 +30,21 @@ flowchart TD
     C -- "No" --> STOP1["STOP<br/>(no changes)"]
     C -- "Yes" --> D
 
-    B -- "No (stale)" --> D["3. Research current best practices<br/>5 named WebSearch queries"]
+    B -- "No (stale)" --> D["3. Research current best practices<br/>6 named WebSearch queries"]
 
-    D --> Q1["Query 1: Claude Code<br/>skills agents best practices"]
+    D --> Q1["Query 1: Agentic workflow<br/>patterns multi-agent orchestration"]
     D --> Q2["Query 2: Prompt engineering<br/>techniques evidence research"]
     D --> Q3["Query 3: Context engineering<br/>LLM agents best practices"]
     D --> Q4["Query 4: AI agent tool<br/>design best practices"]
-    D --> Q5["Query 5: Anthropic Claude Code<br/>documentation skills"]
+    D --> Q5["Query 5: AI agent safety<br/>guardrails best practices"]
+    D --> Q6["Query 6: LLM instruction<br/>following clarity research"]
 
     Q1 --> FILTER["Source quality filter<br/>+ deduplication"]
     Q2 --> FILTER
     Q3 --> FILTER
     Q4 --> FILTER
     Q5 --> FILTER
+    Q6 --> FILTER
 
     FILTER --> EARLY{"Early termination:<br/>2 consecutive queries<br/>yield no new techniques?"}
     EARLY -- "Yes" --> SKIP["Skip remaining queries"]
@@ -90,15 +92,16 @@ If the user declines the force refresh, the skill stops without changes.
 
 ### Step 3: Research current best practices
 
-Execute 5 named WebSearch queries, each appending the current year:
+Execute 6 named WebSearch queries, each appending the current year:
 
 | # | Query |
 |---|-------|
-| 1 | "Claude Code skills agents best practices [year]" |
+| 1 | "agentic workflow patterns multi-agent orchestration [year]" |
 | 2 | "prompt engineering techniques evidence research [year]" |
 | 3 | "context engineering LLM agents best practices [year]" |
 | 4 | "AI agent tool design best practices [year]" |
-| 5 | "Anthropic Claude Code documentation skills" |
+| 5 | "AI agent safety guardrails best practices [year]" |
+| 6 | "LLM instruction following clarity research [year]" |
 
 **Early termination:** If 2 consecutive queries yield no new techniques, skip the remaining queries.
 
@@ -117,14 +120,14 @@ Execute 5 named WebSearch queries, each appending the current year:
 | Condition | Action |
 |-----------|--------|
 | WebSearch unavailable | STOP immediately |
-| < 3 of 5 queries produce useful results | WARN the user, continue with available data |
-| 0 of 5 queries produce useful results | STOP (no data to merge) |
+| < 4 of 6 queries produce useful results | WARN the user, continue with available data |
+| 0 of 6 queries produce useful results | STOP (no data to merge) |
 
 ### Step 3.5: Full-content retrieval (if WebFetch available)
 
 If WebFetch is available, identify the 3--5 most promising URLs from all search results. Fetch each with a targeted extraction prompt:
 
-> "Extract actionable prompt/context/tool design techniques with evidence. Max 500 words."
+> "Extract actionable prompt engineering, context engineering, tool design, safety, and instruction clarity techniques with evidence. Max 500 words."
 
 This step is skipped entirely when WebFetch is not available. The skill proceeds directly to merge with WebSearch results only.
 
@@ -132,6 +135,7 @@ This step is skipped entirely when WebFetch is not available. The skill proceeds
 
 For each section of the baseline (Prompt Engineering, Context Engineering, Tool Design):
 
+0. **Route** findings to sections: safety/guardrail techniques (least-privilege, confirmation gates, stop conditions) to Context Engineering; instruction clarity techniques (constraint limits, deterministic conditionals) to Prompt Engineering; agentic workflow techniques to the best-fit section.
 1. **Add** new techniques not present in the current baseline.
 2. **Update** existing techniques where newer evidence contradicts or supplements what is recorded.
 3. **Spot-check** 2--3 existing techniques per section against search results to verify they remain current.
@@ -184,7 +188,7 @@ Output a summary table:
 
 This is the most research-intensive skill in the repository. Its research pipeline includes:
 
-- **5 named WebSearch queries** with early termination (stop if 2 consecutive queries yield nothing new)
+- **6 named WebSearch queries** with early termination (stop if 2 consecutive queries yield nothing new)
 - **3--5 WebFetch requests** for full article content extraction (when WebFetch is available)
 - **Strict source quality criteria** requiring credible, actionable, and cross-validated sources
 - **Deduplication** across all query results

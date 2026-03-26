@@ -55,7 +55,7 @@ Process flow documentation for all skills and hooks in the review-claude-config 
 ### Maintenance Skills
 
 - [check-repo-health](check-repo-health.md) — Reference freshness, token budgets, and integrity dashboard
-- [refresh-engineering-baseline](refresh-engineering-baseline.md) — Update baseline with current web research (5 queries, source quality criteria)
+- [refresh-engineering-baseline](refresh-engineering-baseline.md) — Update baseline with current web research (6 queries, source quality criteria)
 - [sync-research-index](sync-research-index.md) — Detect and fix drift between research/ files and CLAUDE.md references
 
 ### Hooks (automatic, event-driven)
@@ -95,7 +95,7 @@ Maintenance Chain:
 | review-skill | Light (1-2 queries) | Domain best practices for reviewed skill |
 | review-agent | Light (1-2 queries) | Domain best practices for reviewed agent |
 | review-rule | Light (1-2 queries) | Domain best practices for reviewed rule |
-| refresh-engineering-baseline | Heavy (5 queries + 3-5 fetches) | Structured queries with source quality criteria |
+| refresh-engineering-baseline | Heavy (6 queries + 3-5 fetches) | Structured queries with source quality criteria |
 | suggest-skills | Medium (Layer 2 agent) | Open reasoning agent validates with WebSearch |
 | audit-repo | Light (optional) | Web validation of top 3 P0 recommendations |
 | All other skills/hooks | None | No web research |

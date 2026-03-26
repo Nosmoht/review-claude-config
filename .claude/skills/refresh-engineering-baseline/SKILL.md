@@ -3,8 +3,9 @@ name: refresh-engineering-baseline
 description: >
   Update the engineering baseline reference file with current best practices
   from web research. Searches for latest prompt engineering, context engineering,
-  and Claude Code configuration guidance, then merges findings into the baseline.
-  Use when the baseline's last_refreshed date is older than 3 months.
+  tool design, safety, and instruction clarity guidance, then merges findings
+  into the baseline. Use when the baseline's last_refreshed date is older than
+  3 months.
 disable-model-invocation: true
 allowed-tools: WebSearch, WebFetch, Read, Write
 ---
@@ -36,11 +37,12 @@ If `last_refreshed` is less than 90 days ago:
 
 Run these WebSearch queries (replace `[current year]` with the actual year). After each query, check if new actionable techniques were found. If two consecutive queries yield no new techniques beyond what earlier queries found, skip remaining queries and note skipped queries in the change report.
 
-- "Claude Code skills agents best practices [current year]"
+- "agentic workflow patterns multi-agent orchestration [current year]"
 - "prompt engineering techniques evidence research [current year]"
 - "context engineering LLM agents best practices [current year]"
 - "AI agent tool design best practices [current year]"
-- "Anthropic Claude Code documentation skills"
+- "AI agent safety guardrails best practices [current year]"
+- "LLM instruction following clarity research [current year]"
 
 For each search, extract only actionable techniques with evidence.
 
@@ -58,7 +60,7 @@ Discard: marketing content, opinion pieces without evidence, tutorials without p
 #### WebSearch failure handling
 
 - If WebSearch is completely unavailable (tool error), stop and tell the user: "WebSearch is required for baseline refresh but is unavailable. Baseline was not modified."
-- If fewer than 3 of 5 queries return useful results, warn the user: "Only [N]/5 searches returned actionable results. Proceeding with limited data — review changes carefully."
+- If fewer than 4 of 6 queries return useful results, warn the user: "Only [N]/6 searches returned actionable results. Proceeding with limited data — review changes carefully."
 - If no queries return useful results, stop and report: "No actionable search results. Baseline was not modified."
 
 ### 3.5. Full-content retrieval (when WebFetch is available)
@@ -66,7 +68,7 @@ Discard: marketing content, opinion pieces without evidence, tutorials without p
 If `webfetch_available = true`, after completing all WebSearch queries:
 
 1. From all search results across queries, identify the 3-5 most promising URLs (prefer: official Anthropic docs, peer-reviewed research, documented production systems).
-2. Fetch each URL with WebFetch using a targeted prompt: "Extract actionable prompt engineering, context engineering, and tool design techniques with evidence. Max 500 words."
+2. Fetch each URL with WebFetch using a targeted prompt: "Extract actionable prompt engineering, context engineering, tool design, safety, and instruction clarity techniques with evidence. Max 500 words."
 3. Use full article content — not just search snippets — when extracting techniques in Step 4. Full content provides benchmarks, nuanced conditions, and code examples that snippets miss.
 
 If `webfetch_available = false`, skip this step and proceed with search snippets as before.
@@ -74,6 +76,9 @@ If `webfetch_available = false`, skip this step and proceed with search snippets
 ### 4. Merge findings
 
 For each section (Prompt Engineering, Context Engineering, Tool Design):
+- Route safety and guardrail techniques (least-privilege, confirmation gates, stop conditions) to Context Engineering
+- Route instruction clarity techniques (constraint limits, deterministic conditionals) to Prompt Engineering
+- Route agentic workflow techniques to the best-fit section (decomposition patterns to PE, orchestration patterns to CE)
 - Add new techniques not already covered
 - Update existing techniques if newer evidence contradicts or supplements them
 - Spot-check 2-3 existing techniques per section against current sources to verify they remain accurate and well-evidenced
