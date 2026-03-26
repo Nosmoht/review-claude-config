@@ -18,19 +18,30 @@ A Claude Code skill to analyze and optimize all Claude Code skills and agents in
 
 ## Installation
 
-Copy both skill directories into your project:
+Install as a Claude Code plugin (makes all review skills globally available):
 
 ```bash
-cp -r .claude/skills/review-claude-config <your-project>/.claude/skills/
-cp -r .claude/skills/refresh-engineering-baseline <your-project>/.claude/skills/
+claude --plugin-dir /path/to/review-claude-config
+```
+
+**Only local `--plugin-dir` is supported.** Marketplace installation would break domain cache writes since `${CLAUDE_PLUGIN_ROOT}` would point to a read-only directory.
+
+For repo-internal maintenance skills only (not globally needed):
+```bash
+cp -r .claude/skills/refresh-engineering-baseline <target>/.claude/skills/
+cp -r .claude/skills/research-index <target>/.claude/skills/
 ```
 
 ## Usage
 
 ```
-/review-claude-config              # Analyze skills/agents in current directory
-/review-claude-config /path/to    # Analyze skills/agents in a specific folder
-/refresh-engineering-baseline      # Update the baseline with latest research
+/review-claude-config              # Audit all skills/agents/rules in current directory
+/review-claude-config /path/to    # Audit a specific folder
+/review-skill <path>              # Review a single skill
+/suggest-skills                   # Identify missing skills
+/audit-repo                       # Map error classes to recommended primitives
+/apply-review-findings            # Apply High/Medium findings from latest review
+/refresh-engineering-baseline     # Update the baseline with latest research
 ```
 
 ## Architecture
