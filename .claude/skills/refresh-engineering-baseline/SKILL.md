@@ -85,6 +85,9 @@ For each section (Prompt Engineering, Context Engineering, Tool Design):
 - Route safety and guardrail techniques (least-privilege, confirmation gates, stop conditions) to Context Engineering
 - Route instruction clarity techniques (constraint limits, deterministic conditionals) to Prompt Engineering
 - Route agentic workflow techniques to the best-fit section (decomposition patterns to PE, orchestration patterns to CE)
+
+Note: Completeness and Metadata are structural evaluation dimensions assessed via the rubric, not technique-driven domains. They do not require dedicated research queries.
+
 - Add new techniques not already covered
 - Update existing techniques if newer evidence contradicts or supplements them
 - Spot-check 2-3 existing techniques per section against current sources to verify they remain accurate and well-evidenced
