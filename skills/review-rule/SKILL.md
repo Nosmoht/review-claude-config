@@ -68,6 +68,7 @@ Read the type-specific evaluation guide from this skill's own directory:
    - If `websearch_available`: perform 1-2 WebSearch queries for domain best practices related to the rule's constraint.
    - If `webfetch_available`: fetch 1-2 most relevant URLs with WebFetch using prompt: "Extract domain best practices, benchmarks, and configuration patterns relevant to [domain]. Max 500 words."
    - If neither available: use model knowledge only.
+   - Apply source quality criteria from `references/source-quality-criteria.md`: discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
 3. Synthesize: what should a high-quality rule in this domain enforce?
 
 ### Step B: Scoring + Recommendations

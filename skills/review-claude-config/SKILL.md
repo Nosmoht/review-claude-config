@@ -34,6 +34,7 @@ Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fai
 Read these files from the skill's own `references/` directory:
 - `references/scoring-rubric.md` — the grading criteria
 - `references/engineering-baseline.md` — prompt, context, and tool design techniques
+- `references/source-quality-criteria.md` — source credibility criteria for web research
 
 Check `last_refreshed` date in the baseline frontmatter. If older than 3 months, warn the user: "Baseline was last refreshed on [date]. Consider running `/refresh-engineering-baseline` for current best practices."
 
@@ -124,6 +125,9 @@ Group discovered items by type (Skill, Agent, Rule). For each type group, constr
 ### Engineering Baseline
 [Insert engineering-baseline.md content — identical across all types]
 
+### Source Quality Criteria
+[Insert source-quality-criteria.md content — identical across all types]
+
 ### Type-Specific Evaluation Guide
 [Insert the evaluation guide for this type]
 ```
@@ -145,13 +149,15 @@ domain_cache: |
   1 supplemental query if insufficient."]
 
   [If STALE + researcher: insert cached content + "Use as starting point +
-  1 WebSearch to verify/update. Return Domain Cache Update section."]
+  1 WebSearch to verify/update. Apply discard rules from source-quality-criteria.md.
+  Tag each source with tier (1/2/3). Return Domain Cache Update section."]
 
   [If STALE + consumer: insert cached content + "Use as-is, another agent
   is refreshing."]
 
-  [If MISS + researcher: "No cache. 1-2 WebSearch queries. Return Domain
-  Cache Update section."]
+  [If MISS + researcher: "No cache. 1-2 WebSearch queries. Apply discard rules
+  from source-quality-criteria.md. Tag each source with tier (1/2/3). Return
+  Domain Cache Update section."]
 
   [If MISS + consumer: "No cache. Use model knowledge only."]
 
@@ -220,6 +226,7 @@ queries:
 sources:
   - url: [url]
     title: "[title]"
+    tier: [1|2|3]
 ---
 
 # [Domain Name] — Domain Best Practices

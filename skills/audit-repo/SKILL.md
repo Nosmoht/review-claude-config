@@ -332,6 +332,7 @@ Sort by priority (P0 first), then by token impact (High first).
 
 If `websearch_available = true`, validate the top 3 P0 recommendations:
 - 1-2 WebSearch queries to check if the recommended primitives align with best practices for the detected tech stack
+- Apply source quality criteria from `references/source-quality-criteria.md`: discard marketing/opinion/outdated content, prefer Tier 1-2 sources
 - Mark validated recommendations accordingly
 
 ### Step 3: Build Report

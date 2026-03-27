@@ -265,6 +265,8 @@ For each opportunity you identify:
 1. **Validate with WebSearch.** Perform 1-2 WebSearch queries to confirm
    the domain benefits from skill-based automation. If WebSearch is
    unavailable, use model knowledge and mark [no web verification].
+   Apply source quality criteria from `references/source-quality-criteria.md`:
+   discard marketing/opinion/outdated content, prefer Tier 1-2 sources.
 
 2. **Apply extraction criteria.** Each suggestion MUST pass at least 3 of 4:
    - Recurrence: Pattern appears in 2+ contexts

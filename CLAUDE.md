@@ -82,6 +82,7 @@ Consult when modifying skills or reviewing results:
 - [Error Class to Primitive Mapping](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale, error taxonomy
 - [Systematische Claude Code Optimierung für unbekannte Repositories](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation
 - [Command Naming Conventions](research/command-naming/command-naming-conventions.md) — CLI, slash command, plugin naming patterns
+- [Web Research Quality Evaluation](research/source-quality/web-research-quality-evaluation.md) — CRAAP, E-E-A-T, credibility assessment, academic APIs
 
 ## Manual Regression Cases
 

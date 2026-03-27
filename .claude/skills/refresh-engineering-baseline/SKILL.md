@@ -50,12 +50,10 @@ Deduplicate across queries: if the same technique appears in multiple search res
 
 #### Source quality criteria
 
-Accept a technique only if it meets ALL of:
-1. **Credible source** — Official vendor documentation (Anthropic, OpenAI, Google DeepMind), peer-reviewed research (arXiv with citations), or documented production system (Manus, Vercel, LangChain, etc.)
-2. **Actionable** — Describes a specific, implementable technique (not a general principle like "be clear")
-3. **Cross-validated** — Either (a) appears in 2+ independent credible sources, OR (b) comes from a primary vendor source with concrete evidence (benchmarks, A/B tests, production metrics)
+Apply shared criteria from `skills/review-claude-config/references/source-quality-criteria.md` (discard rules, tier classification, cross-validation). Additionally, for baseline techniques specifically:
 
-Discard: marketing content, opinion pieces without evidence, tutorials without primary sources, sources older than 18 months.
+1. **Actionable** — Must describe a specific, implementable technique (not a general principle like "be clear")
+2. **Credible source examples** — Official vendor docs (Anthropic, OpenAI, Google DeepMind), peer-reviewed research (arXiv with citations), documented production systems (Manus, Vercel, LangChain)
 
 #### WebSearch failure handling
 
