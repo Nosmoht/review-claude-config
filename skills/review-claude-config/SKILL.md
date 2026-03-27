@@ -4,7 +4,7 @@ description: >
   Analyze and evaluate all Claude Code skills, agents, and rules in a project's
   .claude/ directory. Applies evidence-based prompt and context engineering
   evaluation with type-appropriate scoring dimensions, produces per-item quality
-  certificates with concrete optimization recommendations. Use when you want to
+  certificates with evidence-backed optimization recommendations. Use when you want to
   audit skill/agent/rule quality or before shipping new skills.
 argument-hint: [folder]
 allowed-tools: Agent, Read, Write, Glob, WebSearch, WebFetch
@@ -34,6 +34,7 @@ Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fai
 Read these files from the skill's own `references/` directory:
 - `references/scoring-rubric.md` — the grading criteria
 - `references/engineering-baseline.md` — prompt, context, and tool design techniques
+- `references/source-quality-criteria.md` — source credibility criteria for web research
 
 Check `last_refreshed` date in the baseline frontmatter. If older than 3 months, warn the user: "Baseline was last refreshed on [date]. Consider running `/refresh-engineering-baseline` for current best practices."
 
@@ -55,9 +56,24 @@ Exclude paths containing: node_modules, .git, vendor, dist, build, .claude/revie
 For each discovered file:
 - Read the full content
 - Classify as "Skill", "Agent", or "Rule"
-- Return: file path, type, full content
+
+Return results in this exact format per item:
+
+### [file path]
+**Type:** Skill | Agent | Rule
+**Content:**
+[full file content]
+
+If a file cannot be read, return:
+### [file path]
+**Type:** Unknown
+**Error:** [reason]
+
+If a Glob pattern returns no results, skip it silently (not all repos have all types).
 
 Also note (but do not analyze): existence of CLAUDE.md, .claude/settings.json
+
+COMPLETION: You are done when all Glob patterns have been checked and all readable files are classified.
 ```
 
 If no skills, agents, or rules are discovered, report that and stop.
@@ -109,6 +125,9 @@ Group discovered items by type (Skill, Agent, Rule). For each type group, constr
 ### Engineering Baseline
 [Insert engineering-baseline.md content — identical across all types]
 
+### Source Quality Criteria
+[Insert source-quality-criteria.md content — identical across all types]
+
 ### Type-Specific Evaluation Guide
 [Insert the evaluation guide for this type]
 ```
@@ -130,13 +149,15 @@ domain_cache: |
   1 supplemental query if insufficient."]
 
   [If STALE + researcher: insert cached content + "Use as starting point +
-  1 WebSearch to verify/update. Return Domain Cache Update section."]
+  1 WebSearch to verify/update. Apply discard rules from source-quality-criteria.md.
+  Tag each source with tier (1/2/3). Return Domain Cache Update section."]
 
   [If STALE + consumer: insert cached content + "Use as-is, another agent
   is refreshing."]
 
-  [If MISS + researcher: "No cache. 1-2 WebSearch queries. Return Domain
-  Cache Update section."]
+  [If MISS + researcher: "No cache. 1-2 WebSearch queries. Apply discard rules
+  from source-quality-criteria.md. Tag each source with tier (1/2/3). Return
+  Domain Cache Update section."]
 
   [If MISS + consumer: "No cache. Use model knowledge only."]
 
@@ -182,6 +203,7 @@ Identify patterns across items:
 - Consistent strengths (e.g., good safety practices across all items)
 - Systemic recommendations (e.g., "all agents would benefit from reference files")
 - Missing CLAUDE.md guidance that would benefit all items
+- Where possible, cite one concrete example path per pattern so the observation is easy to verify
 
 ## Phase 3.5 — Domain Cache Persistence
 
@@ -204,6 +226,7 @@ queries:
 sources:
   - url: [url]
     title: "[title]"
+    tier: [1|2|3]
 ---
 
 # [Domain Name] — Domain Best Practices
@@ -239,7 +262,7 @@ target: /absolute/path/to/target
 baseline_version: YYYY-MM-DD
 items_reviewed: N
 summary:
-  - name: item-name
+  - name: item-name                     # display label; analytics should track by path first
     type: Skill                          # Skill, Agent, or Rule
     path: relative/path/to/file
     overall: B
@@ -255,6 +278,13 @@ summary:
 ```
 
 **Body:** All per-item reports (Goal + Certificate + Strengths + Recommendations), Summary Table, Cross-Cutting Observations.
+
+For every High or Medium recommendation in the body, preserve the same evidence-first format used by the single-item reviewers:
+- Heading with `Impact` and `Category`
+- `Evidence:`
+- `Why it matters:`
+- `Validation:`
+- `Current:` / `Recommended:` when an exact rewrite is feasible
 
 **Large codebase handling:** If more than 20 items are reviewed, include full per-item reports only for items scoring C or below. A/B items get a one-line summary row only. All items are still analyzed and included in the Summary Table and frontmatter summary (preserves the "Analyze every discovered item" hard rule — analysis is not skipped, only report detail is reduced).
 
@@ -307,6 +337,6 @@ When the user responds: **1** → invoke `/apply-review-findings` with the repor
 - **Domain cache entries must come from web research (WebSearch and/or WebFetch) only.** Never write cache entries based on model knowledge alone. If WebSearch is unavailable, skip cache persistence entirely.
 - **Analyze every discovered item.** Skip none.
 - **Apply the rubric strictly.** Do not inflate grades.
-- **Every recommendation must include a concrete rewrite** — not just "improve X."
+- **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present all reports before asking** about follow-up actions.
 - **Error handling:** If an analysis agent fails, report the failure with partial results and continue with remaining items. Never silently skip.

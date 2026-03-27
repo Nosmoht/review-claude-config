@@ -3,8 +3,9 @@ name: refresh-engineering-baseline
 description: >
   Update the engineering baseline reference file with current best practices
   from web research. Searches for latest prompt engineering, context engineering,
-  and Claude Code configuration guidance, then merges findings into the baseline.
-  Use when the baseline's last_refreshed date is older than 3 months.
+  tool design, safety, and instruction clarity guidance, then merges findings
+  into the baseline. Use when the baseline's last_refreshed date is older than
+  3 months.
 disable-model-invocation: true
 allowed-tools: WebSearch, WebFetch, Read, Write
 ---
@@ -36,12 +37,12 @@ If `last_refreshed` is less than 90 days ago:
 
 Run these WebSearch queries (replace `[current year]` with the actual year). After each query, check if new actionable techniques were found. If two consecutive queries yield no new techniques beyond what earlier queries found, skip remaining queries and note skipped queries in the change report.
 
-- "Claude Code skills agents best practices [current year]"
+- "agentic workflow patterns multi-agent orchestration [current year]"
 - "prompt engineering techniques evidence research [current year]"
 - "context engineering LLM agents best practices [current year]"
 - "AI agent tool design best practices [current year]"
-- "LLM agent caching memory patterns KV-cache [current year]"
-- "Anthropic Claude Code documentation skills"
+- "AI agent safety guardrails best practices [current year]"
+- "LLM instruction following clarity research [current year]"
 
 For each search, extract only actionable techniques with evidence.
 
@@ -49,32 +50,42 @@ Deduplicate across queries: if the same technique appears in multiple search res
 
 #### Source quality criteria
 
-Accept a technique only if it meets ALL of:
-1. **Credible source** — Official vendor documentation (Anthropic, OpenAI, Google DeepMind), peer-reviewed research (arXiv with citations), or documented production system (Manus, Vercel, LangChain, etc.)
-2. **Actionable** — Describes a specific, implementable technique (not a general principle like "be clear")
-3. **Cross-validated** — Either (a) appears in 2+ independent credible sources, OR (b) comes from a primary vendor source with concrete evidence (benchmarks, A/B tests, production metrics)
+Apply shared criteria from `skills/review-claude-config/references/source-quality-criteria.md` (discard rules, tier classification, cross-validation). Additionally, for baseline techniques specifically:
 
-Discard: marketing content, opinion pieces without evidence, tutorials without primary sources, sources older than 18 months.
+1. **Actionable** — Must describe a specific, implementable technique (not a general principle like "be clear")
+2. **Credible source examples** — Official vendor docs (Anthropic, OpenAI, Google DeepMind), peer-reviewed research (arXiv with citations), documented production systems (Manus, Vercel, LangChain)
 
 #### WebSearch failure handling
 
 - If WebSearch is completely unavailable (tool error), stop and tell the user: "WebSearch is required for baseline refresh but is unavailable. Baseline was not modified."
-- If fewer than 3 of 6 queries return useful results, warn the user: "Only [N]/6 searches returned actionable results. Proceeding with limited data — review changes carefully."
+- If fewer than 4 of 6 queries return useful results, warn the user: "Only [N]/6 searches returned actionable results. Proceeding with limited data — review changes carefully."
 - If no queries return useful results, stop and report: "No actionable search results. Baseline was not modified."
 
 ### 3.5. Full-content retrieval (when WebFetch is available)
 
-If `webfetch_available = true`, after completing all WebSearch queries:
+If `webfetch_available = true`, after completing all WebSearch queries, fetch URLs in two tiers. Tier 1 guarantees every topic gets at least one full-text source; Tier 2 adds depth on the strongest results.
 
-1. From all search results across queries, identify the 3-5 most promising URLs (prefer: official Anthropic docs, peer-reviewed research, documented production systems).
-2. Fetch each URL with WebFetch using a targeted prompt: "Extract actionable prompt engineering, context engineering, and tool design techniques with evidence. Max 500 words."
-3. Use full article content — not just search snippets — when extracting techniques in Step 4. Full content provides benchmarks, nuanced conditions, and code examples that snippets miss.
+**Tier 1 — Coverage (1 fetch per executed query):**
+For each query that was actually executed (not skipped by early termination), identify the single most promising URL from its search results and fetch it with WebFetch. This yields 4-6 fetches depending on how many queries ran.
 
-If `webfetch_available = false`, skip this step and proceed with search snippets as before.
+**Tier 2 — Depth (2-3 additional fetches):**
+From all remaining search results across all queries, identify the 2-3 most promising URLs not already fetched in Tier 1 (prefer: official Anthropic docs, peer-reviewed research, documented production systems). No duplicates across tiers or within Tier 2.
+
+Fetch each URL with WebFetch using a targeted prompt: "Extract actionable prompt engineering, context engineering, tool design, safety, and instruction clarity techniques with evidence. Max 500 words."
+
+Use full article content — not just search snippets — when extracting techniques in Step 4. Full content provides benchmarks, nuanced conditions, and code examples that snippets miss.
+
+**Total: 6-9 fetches.** If `webfetch_available = false`, skip this step entirely and proceed with search snippets as before.
 
 ### 4. Merge findings
 
 For each section (Prompt Engineering, Context Engineering, Tool Design):
+- Route safety and guardrail techniques (least-privilege, confirmation gates, stop conditions) to Context Engineering
+- Route instruction clarity techniques (constraint limits, deterministic conditionals) to Prompt Engineering
+- Route agentic workflow techniques to the best-fit section (decomposition patterns to PE, orchestration patterns to CE)
+
+Note: Completeness and Metadata are structural evaluation dimensions assessed via the rubric, not technique-driven domains. They do not require dedicated research queries.
+
 - Add new techniques not already covered
 - Update existing techniques if newer evidence contradicts or supplements them
 - Spot-check 2-3 existing techniques per section against current sources to verify they remain accurate and well-evidenced

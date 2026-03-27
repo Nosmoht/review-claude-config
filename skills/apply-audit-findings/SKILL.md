@@ -127,7 +127,7 @@ For each intervention, follow the type-specific procedure below.
    Description: <from recommendation>
    Context: <key details from audit>
 
-   Run `/scaffold-skill <name>` to create this skill.
+   Run `/scaffold-skill plugin <name>` to create this skill.
    ```
 2. Record as "Deferred to /scaffold-skill" in the results table.
 3. No confirmation needed — nothing is written.
@@ -190,7 +190,7 @@ Then end your response with this menu (substitute `<target>` with the target rep
 
 ---
 **What's next?**
-1. Scaffold a deferred skill → `/scaffold-skill <name>`
+1. Scaffold a deferred skill → `/scaffold-skill plugin <name>`
 2. Verify coverage → `/audit-repo <target>`
 3. Review created primitives → `/review-claude-config <target>`
 4. Done

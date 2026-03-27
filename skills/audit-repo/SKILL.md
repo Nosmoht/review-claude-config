@@ -70,6 +70,12 @@ SCAN LIMITS:
 - BASH RESTRICTIONS: Only read-only commands allowed (find, wc, ls).
   NEVER use: rm, mv, cp, tee, >, >>, mkdir, touch, or any write command.
 
+ERROR HANDLING:
+- If a Glob pattern returns no results, report "NOT FOUND" for that item within the category.
+- If a file cannot be read, report under the category: "ERROR: [path] — [reason]" and continue.
+- If a Bash command fails, report the command and error output under the category. Do not skip silently.
+- Always produce output for every category, even if empty (use "No results" with brief explanation).
+
 ## Signal Patterns Reference
 [Insert signal-patterns.md content here]
 
@@ -82,7 +88,13 @@ Find all build/test/lint/deploy commands:
   step commands via Grep for "run:" patterns
 - For pyproject.toml: extract [tool.pytest], [tool.ruff], [project.scripts]
 - For Cargo.toml, go.mod, build.gradle: note presence and language
-- Report: explicit command list per tool, or "NOT FOUND" per category
+- Report in this exact format:
+
+| Tool | Source File | Commands |
+|------|-------------|----------|
+| [tool name] | [config file path] | [extracted commands] |
+
+NOT FOUND: [list categories with no detected tools]
 
 ## Category B: Ambiguity Measurement
 Quantify repository navigation complexity:
@@ -95,8 +107,14 @@ Quantify repository navigation complexity:
   (files per directory, top 10)
 - Grep for naming collisions: search for "export class|export function|def |
   func |type " across source files, count duplicate names
-- Report: max depth, max files/dir, naming collision count, computed
-  sprawl score (depth × max_files × collisions)
+- Report in this exact format:
+
+| Metric | Value |
+|--------|-------|
+| Max depth | [N] |
+| Max files/dir | [N] |
+| Naming collisions | [N] |
+| Sprawl score | [N] (depth × max_files × collisions) |
 
 ## Category C: Linter/Formatter Coverage
 Classify convention enforcement tiers:
@@ -105,8 +123,11 @@ Classify convention enforcement tiers:
 - Grep CI configs for lint/format/check steps
 - Glob for CLAUDE.md, .claude/rules/*.md, .cursorrules — note
   convention instructions found
-- Report per convention type: which tier it's in (Deterministic,
-  CI-enforced, AI-instructed, or Undocumented)
+- Report in this exact format:
+
+| Convention | Tier | Tool/Config |
+|-----------|------|-------------|
+| [convention type] | Deterministic/CI-enforced/AI-instructed/Undocumented | [config file or "none"] |
 
 ## Category D: Architecture Pattern Extraction
 Detect architecture patterns:
@@ -115,7 +136,11 @@ Detect architecture patterns:
 - Glob for ADRs: docs/adr/, docs/decisions/, docs/architecture/
 - If hexagonal-like directories found, check import direction via Grep
   (do adapters import from domain, or vice versa?)
-- Report: detected pattern(s) with evidence, ADR presence, DI framework
+- Report in this exact format:
+  Pattern: [name or "none detected"]
+  Evidence: [directory paths or file patterns]
+  ADRs: [yes — path | no]
+  DI Framework: [name or "none"]
 
 ## Category E: Domain Knowledge Inventory
 Check for domain documentation:
@@ -123,8 +148,15 @@ Check for domain documentation:
   (OpenAPI, protobuf, GraphQL, glossary, ADRs, migrations, schemas)
 - For each found: note file path and brief content summary (first 20 lines)
 - Read README.md first 50 lines for business context sections
-- Report: available domain docs with paths, gaps (missing glossary,
-  no API spec, etc.)
+- Report in this exact format:
+
+| Type | Path | Summary |
+|------|------|---------|
+| [doc type] | [file path] | [brief content summary] |
+
+Gaps: [list missing domain docs — e.g., no glossary, no API spec]
+
+COMPLETION: You are done when all 5 categories (A through E) have a report section. If a category cannot be fully scanned due to repo size or access issues, report what you found and note the limitation.
 ```
 
 If the scan agent fails entirely, report the error to the user and stop.
@@ -144,6 +176,12 @@ SCAN LIMITS:
 - BASH RESTRICTIONS: Only read-only commands allowed (find, wc, ls).
   NEVER use: rm, mv, cp, tee, >, >>, mkdir, touch, or any write command.
 
+ERROR HANDLING:
+- If a Glob pattern returns no results, report "NOT FOUND" for that item within the category.
+- If a file cannot be read, report under the category: "ERROR: [path] — [reason]" and continue.
+- If a Bash command fails, report the command and error output under the category. Do not skip silently.
+- Always produce output for every category, even if empty (use "No results" with brief explanation).
+
 ## Token Heuristics Reference
 [Insert token-heuristics.md content here]
 
@@ -155,7 +193,11 @@ Find the largest source files:
   xargs wc -l 2>/dev/null | sort -rn | head -20
 - Classify each file: >2000 (severe), >1000 (critical), >500 (token sink)
 - Estimate total token cost for top 10 files using language-specific density
-- Report: file list with line counts, classifications, estimated tokens
+- Report in this exact format:
+
+| File | Lines | Classification | Est. Tokens |
+|------|-------|---------------|-------------|
+| [path] | [N] | severe/critical/token sink | [N] |
 
 ## Metric B: Navigation Sprawl Score
 Compute the score from Phase 2 Category B results:
@@ -163,12 +205,19 @@ Compute the score from Phase 2 Category B results:
 - Formula: max_depth × max_files_per_dir × max(naming_collisions, 1)
 - Classify: >100 (P0 architecture map needed), 30-100 (selective hints),
   <30 (no intervention)
-- Report: score, classification, breakdown
+- Report in this exact format:
+  Score: [N]
+  Classification: [P0 architecture map needed / selective hints / no intervention]
+  Breakdown: depth [N] × files/dir [N] × collisions [N]
 
 ## Metric C: Build Error Verbosity
 Classify detected build tools by verbosity:
 - Match each detected toolchain against the verbosity table in reference
-- Report: toolchain → expected verbosity level → token cost classification
+- Report in this exact format:
+
+| Toolchain | Verbosity | Token Cost |
+|-----------|-----------|------------|
+| [tool] | low/medium/high | [classification] |
 
 ## Metric D: Monorepo Scope Isolation
 If monorepo markers found:
@@ -177,13 +226,24 @@ If monorepo markers found:
   grep -v node_modules | wc -l
   (cross-package import count for JS/TS monorepos)
 - For Go: count cross-module imports
-- Report: package count, cross-package import score, isolation assessment
+- Report in this exact format:
+  Packages: [N]
+  Cross-imports: [N]
+  Assessment: [isolation assessment text]
 
 ## Metric E: Context Burn Rate Estimate
 Based on repo characteristics:
 - Average file size × estimated reads per task type (from reference)
 - Flag if average file size > 300 lines (high burn rate)
-- Report: estimated tokens per simple edit, exploration, and refactor task
+- Report in this exact format:
+
+| Task Type | Est. Tokens |
+|-----------|-------------|
+| Simple edit | [N]K |
+| Exploration + edit | [N]K |
+| Multi-file refactor | [N]K |
+
+COMPLETION: You are done when all 5 metrics (A through E) have a report section. If a metric cannot be computed, report "N/A" with explanation.
 ```
 
 If the analyzer agent fails, report partial results and continue.
@@ -272,6 +332,7 @@ Sort by priority (P0 first), then by token impact (High first).
 
 If `websearch_available = true`, validate the top 3 P0 recommendations:
 - 1-2 WebSearch queries to check if the recommended primitives align with best practices for the detected tech stack
+- Apply source quality criteria from `references/source-quality-criteria.md`: discard marketing/opinion/outdated content, prefer Tier 1-2 sources
 - Mark validated recommendations accordingly
 
 ### Step 3: Build Report
@@ -359,7 +420,7 @@ Breakdown: depth [N] × files/dir [N] × collisions [N]
 
 ## Next Steps
 - Create or update CLAUDE.md with P0 items first
-- Use `/scaffold-skill <name>` for identified skill candidates
+- Use `/scaffold-skill plugin <name>` for identified skill candidates
 - Run `/suggest-skills [folder]` for Layer 2 open reasoning about skill opportunities beyond the signal catalog
 - Re-run `/audit-repo [folder]` after changes to verify coverage
 - Run `/review-claude-config [folder]` to evaluate quality after creating primitives
@@ -382,7 +443,7 @@ After all output is complete, end your response with this menu (substitute `<rep
 ---
 **What's next?**
 1. Apply audit findings → `/apply-audit-findings <report-path>`
-2. Scaffold a recommended skill → `/scaffold-skill <name>`
+2. Scaffold a recommended skill → `/scaffold-skill plugin <name>`
 3. Explore skill opportunities → `/suggest-skills <target>`
 4. Done
 

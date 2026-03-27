@@ -56,13 +56,13 @@ Record results as rows in the tokens table.
 
 ### 5. Check reference integrity (if `all` or `integrity`)
 
-Perform three integrity sub-checks:
+Perform four integrity sub-checks:
 
 **5a. CLAUDE.md Research References**
 Read the `## Research References` section of CLAUDE.md. For each linked path (e.g., `research/prompt-engineering/prompt-engineering-techniques.md`), Glob to verify the file exists. Record PASS or FAIL per link.
 
-**5b. CLAUDE.md File Structure**
-Read the `## File Structure` section of CLAUDE.md. For each file path mentioned, Glob to verify it exists. Record PASS or FAIL per path.
+**5b. CLAUDE.md Architecture / Structure**
+Read the `## Architecture` section of CLAUDE.md. If `## Architecture` is missing, fall back to one alias in this order: `## Structure`, `## Layout`, `## File Structure`. For each file path or directory path mentioned in the chosen section, Glob to verify it exists. Record PASS or FAIL per path. If none of these sections exist, record one FAIL row for the missing section rather than erroring out.
 
 **5c. Cross-skill references**
 
@@ -80,6 +80,25 @@ If the registry file cannot be read, note the fallback in the dashboard header a
 1. Glob to verify the target file exists.
 2. Check whether this source→target pair already appears in the registry.
 3. Record: **PASS** (exists, registered), **FAIL** (missing), or **UNREGISTERED** (exists but not in registry — add it to `references/cross-skill-dependencies.md`).
+
+**5d. Rubric-dimension consistency**
+Read `skills/review-claude-config/references/scoring-rubric.md` and extract the canonical dimension list from the `## Dimensions` section — each `### N. Name` heading defines one dimension. This produces the full set and the rule subset defined in `## Rule-Specific Scoring`.
+
+Then read each consumer file and verify its dimensions match the expected set:
+
+| Consumer file | Expected set | How dimensions appear |
+|---|---|---|
+| `skills/review-analytics/references/report-schema.md` | Full (snake_case: `clarity`, `completeness`, `prompt_engineering`, `context_engineering`, `goal_alignment`, `safety`, `metadata`) | YAML field names in the frontmatter example |
+| `skills/review-skill/SKILL.md` | Full | Dimension column values in the certificate table template (exclude the "Overall" row — it is a computed aggregate, not a dimension) |
+| `skills/review-agent/SKILL.md` | Full | Same as review-skill |
+| `skills/review-rule/SKILL.md` | Rule subset | Same format, fewer dimensions |
+| `skills/review-analytics/SKILL.md` | Full (snake_case) | Dimension field names referenced in the report parsing instructions |
+| `skills/review-claude-config/SKILL.md` | Full (with abbreviations: PE=Prompt Engineering, CE=Context Engineering, Goal=Goal Alignment, Meta=Metadata) | Column headers in the summary table template |
+| `CLAUDE.md` | Full | Parenthetical list in the opening paragraph |
+
+For each consumer: PASS if all expected dimensions are present and no unexpected dimensions appear. FAIL if any dimension is missing or extra, noting which ones.
+
+Record results in the Reference Integrity table with Source = consumer file path, Reference = `scoring-rubric.md`, Status = PASS or FAIL (with mismatch details if FAIL).
 
 ### 6. Present dashboard
 
@@ -117,6 +136,7 @@ If any FAIL or WARN results exist, add a **Remediation** section:
 - For stale files: "Run `/refresh-engineering-baseline`" or "Domain cache entry X is N days old — will be refreshed on next review run."
 - For token budget violations: "File X is ~N tokens over the N-token budget. Consider trimming."
 - For broken references: "Path X referenced in Y does not exist. Update the reference or create the file."
+- For dimension mismatches: "Consumer X has [missing/extra] dimensions vs scoring-rubric.md. Update the consumer to match."
 
 Then end your response with this menu:
 

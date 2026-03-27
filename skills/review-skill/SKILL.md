@@ -67,6 +67,7 @@ Read the type-specific evaluation guide from this skill's own directory:
    - If `websearch_available`: perform 1-2 WebSearch queries for domain best practices.
    - If `webfetch_available`: fetch 1-2 most relevant URLs with WebFetch using prompt: "Extract domain best practices, benchmarks, and configuration patterns relevant to [domain]. Max 500 words."
    - If neither available: use model knowledge only.
+   - Apply source quality criteria from `references/source-quality-criteria.md`: discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
 3. Synthesize: what should a high-quality skill in this domain include?
 
 ### Step B: Scoring + Recommendations
@@ -124,8 +125,12 @@ Calculate overall grade:
 
 ### Recommendations
 
-#### 1. [Title] (Impact: [High/Medium/Low])
-[What to change and why, referencing baseline techniques or domain best practices]
+#### 1. [Title] (Impact: [High/Medium/Low], Category: [Workflow|Prompt|Context|Safety|Metadata|Trigger|Output])
+**Evidence:** [Quote or summarize the exact text that caused the issue, with path or section reference]
+
+**Why it matters:** [What to change and why, referencing baseline techniques or domain best practices]
+
+**Validation:** [How to confirm the fix on re-review]
 
 **Current:**
 ```
@@ -160,7 +165,7 @@ target: /absolute/path/to/skill
 baseline_version: YYYY-MM-DD
 items_reviewed: 1
 summary:
-  - name: skill-name
+  - name: skill-name                    # display label; analytics should track by path first
     type: Skill
     path: relative/path/to/SKILL.md
     overall: B
@@ -207,5 +212,5 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 
 - **Read-only on the analyzed skill.** Never modify the skill being reviewed. Write only to `.claude/reviews/`.
 - **Apply the rubric strictly.** Do not inflate grades.
-- **Every recommendation must include a concrete rewrite** — not just "improve X."
+- **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present the full certificate before any follow-up actions.**

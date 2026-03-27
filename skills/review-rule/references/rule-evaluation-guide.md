@@ -12,6 +12,7 @@ Rules are always-active constraints applied to all conversations. They have no t
 - Are terms precisely defined (not "appropriate", "good", "reasonable")?
 - Is scope explicit (which files, which operations, which contexts)?
 - Are action verbs unambiguous ("must", "never" vs "should", "try to")?
+- Can a reviewer point to concrete text as evidence for each claimed problem?
 
 ## Completeness Assessment (30%)
 - Are edge cases addressed?
@@ -36,3 +37,4 @@ Rules lack tools (→ Safety irrelevant), frontmatter (→ Metadata irrelevant),
 - Overly broad scope (applies to everything, enforces nothing specific)
 - No scope boundaries (no indication of when the rule doesn't apply)
 - Aspirational language ("try to", "when possible") instead of constraints
+- Recommendations that cannot be re-checked on a follow-up review

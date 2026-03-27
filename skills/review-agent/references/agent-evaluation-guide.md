@@ -16,6 +16,7 @@ description: Type-specific evaluation criteria for Claude Code agents (single-fi
 - Description must contain natural trigger keywords matching intended use
 - Description should be specific enough to avoid false activation on unrelated requests
 - Description should be broad enough to catch all legitimate triggers
+- Description should explain what the agent does and when to use it
 - Check for `<example>` blocks — these significantly improve activation precision
 
 ## Trigger Pattern Coverage
@@ -44,3 +45,4 @@ description: Type-specific evaluation criteria for Claude Code agents (single-fi
 - Generic description that matches too many unrelated requests
 - Missing `<example>` blocks when trigger conditions are non-obvious
 - Tool list copied from another agent without pruning unused tools
+- Time-sensitive trigger wording in a reusable agent description

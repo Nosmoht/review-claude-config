@@ -29,9 +29,13 @@ Extract the YAML frontmatter to get: `date`, `target`, `generated_by`, and `summ
 
 Parse the report body for recommendation sections. Each recommendation follows this pattern:
 ```
-#### N. Title (Impact: High/Medium/Low)
+#### N. Title (Impact: High/Medium/Low[, Category: ...])
 
-[Description]
+**Evidence:** [text]
+
+**Why it matters:** [text]
+
+**Validation:** [text]
 
 **Current:**
 ```[code block]```
@@ -40,8 +44,8 @@ Parse the report body for recommendation sections. Each recommendation follows t
 ```[code block]```
 ```
 
-Example extraction: Given heading "#### 2. Add confirmation gate (Impact: High)" with Current/Recommended blocks, extract: title="Add confirmation gate", impact=High, item=<from nearest ## heading or frontmatter summary>.
-Some recommendations may lack Current/Recommended blocks (structural suggestions). Pass the full description text to the specialized applier.
+Example extraction: Given heading "#### 2. Add confirmation gate (Impact: High, Category: Safety)" with Evidence/Why it matters/Validation plus Current/Recommended blocks, extract: title="Add confirmation gate", impact=High, category=Safety, evidence=<text>, why=<text>, validation=<text>, item=<from nearest ## heading or frontmatter summary>.
+Some recommendations may lack Current/Recommended blocks (structural suggestions). Pass the full structured text to the specialized applier.
 
 Filter into two groups: **High/Medium** recommendations and **Low** recommendations.
 
@@ -106,7 +110,11 @@ report_timestamp: YYYY-MM-DDTHHMMSS
 **Recommendations:**
 
 #### 1. [Title] (Impact: [High/Medium])
-[Description]
+**Evidence:** [text]
+
+**Why it matters:** [text]
+
+**Validation:** [text]
 
 **Current:**
 ```[code block]```
@@ -115,7 +123,7 @@ report_timestamp: YYYY-MM-DDTHHMMSS
 ```[code block]```
 ```
 
-Dispatch an Agent with the specialized SKILL.md content, its fix guide, and the orchestration payload as the prompt. The agent applies edits with user confirmation and returns structured results.
+Dispatch an Agent with the specialized SKILL.md content, its fix guide, and the orchestration payload as the prompt. The agent applies edits with user confirmation and returns structured results. Preserve `Evidence`, `Why it matters`, and `Validation` in the payload even when the edit anchor remains `Current`/`Recommended`.
 
 Collect results from each specialized applier.
 

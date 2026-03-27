@@ -51,9 +51,13 @@ Extract the YAML frontmatter to get: `date`, `target`, and `summary`.
 
 Parse the report body for recommendation sections matching:
 ```
-#### N. Title (Impact: High/Medium/Low)
+#### N. Title (Impact: High/Medium/Low[, Category: ...])
 
-[Description]
+**Evidence:** [text]
+
+**Why it matters:** [text]
+
+**Validation:** [text]
 
 **Current:**
 ```[code block]```
@@ -110,6 +114,7 @@ For each recommendation (High impact first, then Medium):
    - If the edit removes scope qualifiers (file types, operation types, directory patterns, context conditions), warn: "This edit narrows or removes scope boundaries. Verify the rule still applies to the intended targets."
 4. Show the user:
    - File path
+   - Evidence / Why it matters / Validation (from the report)
    - Current text (from the actual file)
    - Recommended replacement (from the report)
    - Any validation warnings from step 3
@@ -203,6 +208,7 @@ When the user responds: **1** → invoke `/review-rule` with the rule path. **2*
 - **No frontmatter injection.** Rules are plain Markdown. Never add YAML frontmatter to a rule file.
 - **Scope restriction.** Only edit files listed in the review report's `summary` section.
 - **Preview before every edit.** Always show current and recommended text before applying.
+- **Preserve review context.** Always carry `Evidence`, `Why it matters`, and `Validation` through previews even though `Current`/`Recommended` remain the edit anchors.
 - **User confirmation at every stage.** Confirm before starting, before each edit, and before committing.
 - **Audit-fix chain.** Always commit the report before committing fixes.
 - **Preserve file structure.** Edits replace text blocks only. Never rewrite entire files.

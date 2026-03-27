@@ -10,6 +10,7 @@ description: Type-specific evaluation criteria for Claude Code skills (SKILL.md 
 - Is main SKILL.md under 500 lines?
 - Are supplementary files loaded on-demand (Read) rather than pre-loaded?
 - Does the skill use subagent isolation for complex subtasks?
+- Does the description make activation boundaries clear without matching unrelated requests?
 
 ## Workflow Structure
 - Are steps numbered with explicit sequential dependencies?
@@ -32,6 +33,7 @@ description: Type-specific evaluation criteria for Claude Code skills (SKILL.md 
 - Is the output format specified with a literal template or example?
 - Are all sections/fields defined?
 - Does the output format prevent downstream context bloat?
+- For review skills: do findings include `Evidence:` and `Validation:` so another reviewer could confirm them?
 
 ## Safety Patterns (for skills with Write/Bash/Edit)
 - Confirmation gates before destructive or irreversible operations?
@@ -44,3 +46,4 @@ description: Type-specific evaluation criteria for Claude Code skills (SKILL.md 
 - Tool list includes tools never referenced in the workflow
 - Missing output format specification (relying on implicit model behavior)
 - No error handling for tool failures or unavailable tools
+- Time-sensitive wording in reusable prompt assets
