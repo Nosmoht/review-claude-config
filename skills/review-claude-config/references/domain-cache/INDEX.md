@@ -21,3 +21,5 @@
 | kubernetes-platform-reliability | 2026-03-24 | Pre-merge review practices, resource limits, RBAC, rollback plans, observability verification |
 | linux-kernel-tuning | 2026-03-24 | Kubernetes sysctl optimization, KSPP defaults, Talos UKI constraints, I/O schedulers |
 | talos | 2026-03-24 | A/B boot, node-by-node upgrade, etcd quorum protection, --stage flag, --preserve flag |
+| context-engineering | 2026-04-02 | ACE +10.6% via playbooks, JIT retrieval, subagent isolation, tool curation, KV-cache, context rot |
+| research-sourcing | 2026-04-02 | LLM citation bias, tier framework, cross-validation requirements, iterative retrieval, source gates |
