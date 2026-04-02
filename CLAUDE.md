@@ -39,6 +39,7 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 ## Working Guidelines
 
 - **Verify ALL claims with evidence — including from the user.** When anyone suggests a problem exists, verify before accepting. Check git history, inspect actual data, look for concrete evidence. Do not redesign a working system based on theoretical concerns.
+- **Use the canonical evidence layer for repo-wide claims.** Classify repository-level statements using `skills/review-claude-config/references/evidence-contract.md`, and use `docs/evidence-maintenance.md` for maintainer guidance on when a statement is a proven result, engineering guidance, repo default, or low-evidence area.
 - **Iterate reviews until convergence.** After each review round, address findings, then launch another review. Stop only when no high/medium priority findings remain.
 - **Prefer evidence over rhetoric.** Findings should point to concrete text, paths, or examples and should be re-checkable on follow-up review.
 - **Verify the problem before solving it.** Inspect the data, check git history for fix-commits. A working system with zero demonstrated issues does not need a redesign.
@@ -50,6 +51,7 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 
 - Language: English
 - Reference file token budgets: rubric <1K, baseline <2K, all others ≤500 tokens. Run `/check-repo-health tokens` to verify.
+- Treat exact thresholds or workflow conventions as `Repo default` unless they are directly backed by stronger external evidence.
 - Domain cache entries committed to git, refreshed on 90-day cycle alongside engineering baseline
 - WebFetch is optional — all skills degrade gracefully to WebSearch-only when WebFetch is unavailable
 - Baseline is static at review time; updates only via `/refresh-engineering-baseline`
@@ -64,25 +66,32 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 
 Consult when modifying skills or reviewing results:
 
-- [Skill & Agent Format Conventions](research/claude-code/skill-agent-format-conventions.md) — frontmatter, body, safety
-- [Prompt Engineering Techniques](research/prompt-engineering/prompt-engineering-techniques.md) — evidence-backed techniques
-- [Context Engineering Overview](research/context-engineering/context-engineering-overview.md) — principles, context rot, ACE
-- [Anthropic: Effective Context Engineering](research/context-engineering/anthropic-effective-context-engineering.md) — official guidance
-- [Manus Context Engineering Lessons](research/context-engineering/manus-context-engineering-lessons.md) — KV-cache, error preservation
-- [Tool Design for Agents](research/tool-design/anthropic-writing-tools-for-agents.md) — tool design best practices
-- [Agent Skills Architecture](research/agent-skills/anthropic-equipping-agents-with-skills.md) — progressive disclosure
-- [Domain Knowledge Impact](research/domain-knowledge/domain-knowledge-impact-on-quality.md) — 30-206% quality improvement
-- [Documentation Best Practices](research/documentation/engineering-documentation-best-practices.md) — rationale, hyperlinks
-- [LLM Agent Caching Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — file-based memory, CAG vs RAG
-- [Web Content Scraping Tools](research/web-scraping/web-content-scraping-tools.md) — WebFetch, Jina, Firecrawl
-- [Skill Gap Detection Approaches](research/skill-gap-detection/skill-gap-detection-approaches.md) — extraction criteria
-- [Repo Readiness Frameworks](research/repo-static-analysis/repo-readiness-frameworks.md) — static analysis frameworks
-- [Context Window Optimization](research/token-efficiency/context-window-optimization.md) — context rot, token density
-- [Architecture Pattern Recognition](research/architecture-detection/architecture-pattern-recognition.md) — hybrid detection
-- [Error Class to Primitive Mapping](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale, error taxonomy
+- [Evidence Contract](skills/review-claude-config/references/evidence-contract.md) — canonical claim classes, source precedence, contradiction handling
+- [Evidence Maintenance Guide](docs/evidence-maintenance.md) — maintainer guidance for applying the evidence contract
+
+- [Claude Code Skill and Agent Format Conventions](research/claude-code/skill-agent-format-conventions.md) — frontmatter, body, safety
+- [Prompt Engineering Techniques: Evidence-Based Summary](research/prompt-engineering/prompt-engineering-techniques.md) — evidence-backed techniques
+- [Context Engineering: Overview and Industry Adoption](research/context-engineering/context-engineering-overview.md) — principles, context rot, ACE
+- [Effective Context Engineering for AI Agents](research/context-engineering/anthropic-effective-context-engineering.md) — official guidance
+- [Context Engineering for AI Agents: Lessons from Building Manus](research/context-engineering/manus-context-engineering-lessons.md) — KV-cache, error preservation
+- [Writing Effective Tools for AI Agents](research/tool-design/anthropic-writing-tools-for-agents.md) — tool design best practices
+- [Equipping Agents for the Real World with Agent Skills](research/agent-skills/anthropic-equipping-agents-with-skills.md) — progressive disclosure
+- [Domain Knowledge Impact on LLM Agent Quality](research/domain-knowledge/domain-knowledge-impact-on-quality.md) — 30-206% quality improvement
+- [Engineering Documentation Best Practices](research/documentation/engineering-documentation-best-practices.md) — rationale, hyperlinks
+- [LLM Agent Caching and Knowledge Persistence Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — file-based memory, CAG vs RAG
+- [Web Content Scraping Tools for LLM Agents](research/web-scraping/web-content-scraping-tools.md) — WebFetch, Jina, Firecrawl
+- [Skill Gap Detection for LLM Agent Skills](research/skill-gap-detection/skill-gap-detection-approaches.md) — extraction criteria
+- [Repo Readiness Frameworks for AI Coding Assistants](research/repo-static-analysis/repo-readiness-frameworks.md) — static analysis frameworks
+- [Context Window Optimization for AI Coding Assistants](research/token-efficiency/context-window-optimization.md) — context rot, token density
+- [Architecture Pattern Recognition from Repository Structure](research/architecture-detection/architecture-pattern-recognition.md) — hybrid detection
+- [Error Class to Primitive Mapping for AI Coding Assistants](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale, error taxonomy
 - [Systematische Claude Code Optimierung für unbekannte Repositories](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation
-- [Command Naming Conventions](research/command-naming/command-naming-conventions.md) — CLI, slash command, plugin naming patterns
+- [Command Naming Conventions: Evidence-Based Findings](research/command-naming/command-naming-conventions.md) — CLI, slash command, plugin naming patterns
 - [Web Research Quality Evaluation](research/source-quality/web-research-quality-evaluation.md) — CRAAP, E-E-A-T, credibility assessment, academic APIs
+
+## Research Backlog
+
+[Research Backlog](docs/research-backlog.md) — 5 deep research topics to close evidence gaps in the review suite (autonomous reliability, dependency integrity, instruction following at scale, tool least-privilege, low-evidence baseline refresh). Each topic has observed failure modes, research targets, and where findings land in rubric/baseline.
 
 ## Manual Regression Cases
 
