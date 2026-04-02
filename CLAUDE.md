@@ -40,7 +40,8 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 
 - **Verify ALL claims with evidence — including from the user.** When anyone suggests a problem exists, verify before accepting. Check git history, inspect actual data, look for concrete evidence. Do not redesign a working system based on theoretical concerns.
 - **Use the canonical evidence layer for repo-wide claims.** Classify repository-level statements using `skills/review-claude-config/references/evidence-contract.md`, and use `docs/evidence-maintenance.md` for maintainer guidance on when a statement is a proven result, engineering guidance, repo default, or low-evidence area.
-- **Iterate reviews until convergence.** After each review round, address findings, then launch another review. Stop only when no high/medium priority findings remain.
+- **Iterate reviews until convergence.** After each review round, address findings, then launch another review. Stop only when no high/medium priority findings remain. Low findings must still be reported.
+- **Zero medium findings before commit.** Every change must pass through at minimum: plan → review → implement → review → commit. Maximum allowed severity after the final review is Low. Medium and High findings block the commit — fix and re-review until they are resolved. This applies to all changes: skills, agents, rules, code, docs.
 - **Prefer evidence over rhetoric.** Findings should point to concrete text, paths, or examples and should be re-checkable on follow-up review.
 - **Verify the problem before solving it.** Inspect the data, check git history for fix-commits. A working system with zero demonstrated issues does not need a redesign.
 - **Research before design.** In novel domains, conduct WebSearch research before proposing architecture. Save findings in `research/` with full source citations.
@@ -55,7 +56,7 @@ Evidence-based quality review plugin for Claude Code skills, agents, and rules. 
 - Domain cache entries committed to git, refreshed on 90-day cycle alongside engineering baseline
 - WebFetch is optional — all skills degrade gracefully to WebSearch-only when WebFetch is unavailable
 - Baseline is static at review time; updates only via `/refresh-engineering-baseline`
-- Baseline queries in `refresh-engineering-baseline` must cover all rubric dimensions in `scoring-rubric.md` — when adding a dimension, add a corresponding query and merge routing rule
+- Baseline refresh in `refresh-engineering-baseline` must cover the three baseline sections (Prompt Engineering, Context Engineering, Tool Design). Related safety/guardrail and instruction-clarity findings are routed into those sections rather than creating separate baseline domains.
 - Path is the canonical portfolio identity in review analytics; `name` is a display label
 - Commits: scoped conventional format `type(scope): description` (e.g., `feat(review-skill):`, `docs(project):`)
 - Audit-fix chain: commit the report first (`docs(reviews): add <timestamp> review report`), then commit fixes (`fix(<scope>): address findings from <timestamp> review`). The timestamp links them.
@@ -88,6 +89,10 @@ Consult when modifying skills or reviewing results:
 - [Systematische Claude Code Optimierung für unbekannte Repositories](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation
 - [Command Naming Conventions: Evidence-Based Findings](research/command-naming/command-naming-conventions.md) — CLI, slash command, plugin naming patterns
 - [Web Research Quality Evaluation](research/source-quality/web-research-quality-evaluation.md) — CRAAP, E-E-A-T, credibility assessment, academic APIs
+
+## Change Discipline
+
+[Change Discipline Rule](docs/change-discipline-rule.md) — mandatory plan→review→implement→review→commit sequence; zero Medium findings before commit; Low findings must be reported. Portable to any project as `.claude/rules/change-discipline.md`.
 
 ## Research Backlog
 
