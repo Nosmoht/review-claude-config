@@ -45,3 +45,6 @@ Update when adding skills with cross-skill dependencies. Heuristic scan (5c-ii) 
 | refresh-engineering-baseline | skills/review-claude-config/references/source-quality-criteria.md | fatal |
 | review-analytics | skills/review-claude-config/references/review-report-contract.md | fatal |
 | review-analytics | skills/review-analytics/references/report-schema.md | warn |
+| review-skill | skills/review-claude-config/references/source-quality-criteria.md | warn |
+| review-agent | skills/review-claude-config/references/source-quality-criteria.md | warn |
+| review-rule | skills/review-claude-config/references/source-quality-criteria.md | warn |
