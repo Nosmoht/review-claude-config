@@ -1,10 +1,16 @@
 # Domain Knowledge Impact on LLM Agent Quality
 
+## Provenance Metadata
+
+- Strongest source tier: Tier 1
+- Source basis: Mixed sources - arXiv 2601.15153, arXiv 2511.07568, and arXiv 2505.17037. Two additional domain-enhancement studies are discussed below as supplemental context and are not part of the bounded citation basis for this note.
+- Last reviewed: 2026-04-03
+
 **Sources:** Multiple academic papers (WebSearch 2026-03-24)
 
 ## Key Finding
 
-Domain-specific knowledge significantly improves LLM agent task completion quality. This contradicts the assumption that structural evaluation alone (prompt/context engineering quality) is sufficient — domain knowledge is necessary to assess whether an agent will actually achieve its goal.
+Domain-specific knowledge significantly improves LLM agent task completion quality. Structural quality alone is not a sufficient proxy for outcome quality in specialized domains.
 
 ## Evidence
 
@@ -20,6 +26,9 @@ Domain-specific knowledge significantly improves LLM agent task completion quali
 
 - Hierarchical Task Network (HTN) decomposition in agentic LLM workflows **significantly increased task success in difficult multi-step tasks**
 - This improvement is **effective regardless of the base LLM**
+
+### Supplemental Domain-Enhancement Examples
+These examples remain useful context, but they are not part of the bounded citation basis because the current note does not carry stable public identifiers for them.
 
 ### Domain-Enhanced Framework (GSI Agent)
 **Source:** GSI Agent study — domain-enhanced LLM framework
@@ -40,13 +49,6 @@ Domain-specific knowledge significantly improves LLM agent task completion quali
 - Nuanced finding: While generally increasing prompt specificity does not have a significant impact, there appears to be a **specificity range across all models where the LLM performs the best**
 - Domain-specific vocabulary matters most in specialized fields (STEM, medicine, law)
 
-## Implications for Skill/Agent Evaluation
+## Research-Level Implication
 
-1. **Completeness cannot be assessed without domain knowledge.** A Kubernetes troubleshooting skill that's beautifully structured but misses CRD ordering dependencies would score high on structure but fail in practice.
-
-2. **Goal Alignment is the highest-value dimension.** It captures whether the item will actually work in its intended domain, which is where the biggest quality gains exist.
-
-3. **Domain research per item is justified** despite the WebSearch cost/latency, because:
-   - Subagent isolation prevents noisy results from polluting other analyses
-   - Graceful degradation when WebSearch fails means no hard dependency
-   - The alternative (structural-only review) misses the most impactful improvements
+The literature in this note supports the narrower conclusion that specialized domain or procedural knowledge can materially affect agent outcome quality. Repo-specific evaluation policy should be derived separately in dossier-level interpretation.

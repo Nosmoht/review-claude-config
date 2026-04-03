@@ -1,5 +1,11 @@
 # Web Research Quality Evaluation
 
+## Provenance Metadata
+
+- Strongest source tier: Tier 1
+- Source basis: Mixed sources - arXiv 2410.21360, Google quality guidelines, library-science evaluation guidance, Perplexity docs, and Semantic Scholar docs summarized in this file
+- Last reviewed: 2026-04-03
+
 How to evaluate and filter web research results by source credibility, with focus on automated approaches suitable for LLM agent workflows.
 
 **Sources:**
@@ -37,6 +43,6 @@ Free access to 200M papers. Supports citation count filtering, year range, venue
 - **Web of Science Lite (Clarivate)**: Peer-reviewed metadata. Requires API key.
 - **Google Scholar API** (via Serply/similar): Academic search, citation counts, author data. Third-party wrappers.
 
-## Design Decision
+## Research-Level Implication
 
-For this project: no external API dependencies. Use a shared discard-rules + tier-classification approach that the LLM applies during research. Tier tags on sources provide transparency. Rationale: (1) avoids API key management, (2) works offline/degraded, (3) aligns with existing graceful-degradation pattern. Academic APIs (especially Semantic Scholar via MCP) remain viable future enhancements if quality issues persist.
+The sources in this note support using explicit source filtering and transparent tiering when evaluating research quality. Project-specific policy decisions about external APIs or tooling should be made in repo-level interpretation, not in this summary.

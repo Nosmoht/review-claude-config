@@ -12,7 +12,7 @@ Each item includes: the gap, why it matters (observed failure mode), what to res
 | 2 | Multi-primitive dependency integrity | TODO | `research/multi-primitive-dependencies/` | Completeness, audit-repo |
 | 3 | Instruction following under rule load | TODO | `research/instruction-following-at-scale/` | Rule-specific scoring |
 | 4 | Least-privilege tool grants | TODO | `research/agent-tool-least-privilege/` | Safety dimension |
-| 5 | Low-evidence baseline refresh | TODO | (updates existing research files) | Baseline evidence classes |
+| 5 | Low-evidence baseline refresh | PARTIAL | (updates existing research files) | Baseline evidence classes |
 
 ---
 
@@ -66,7 +66,7 @@ Each item includes: the gap, why it matters (observed failure mode), what to res
 
 **Where findings land:**
 - Rule-specific scoring: add guidance on when rule count signals a problem (e.g., "if >N rules share a theme, consider consolidation")
-- Baseline: update Constraint Load from `[Low-evidence area]` if research supports specific thresholds
+- Baseline: Constraint Load upgraded from `[Low-evidence area]` to `[Engineering guidance]` (2026-04-03) based on Anthropic's effective context engineering guidance and three tier 1 papers (ScaledIF arXiv:2510.14842, Prospective Memory arXiv:2603.23530, IF Reliability arXiv:2512.14754)
 - Review recommendations: when reviewing a rule set (review-claude-config batch mode), flag rule count and overlap
 
 ---
@@ -91,14 +91,14 @@ Each item includes: the gap, why it matters (observed failure mode), what to res
 
 ## 5. Low-evidence baseline refresh
 
-**Gap:** Three baseline techniques are marked `[Low-evidence area]`: Dynamic Tool Loadout, Context Compression, Constraint Load. These are used in review recommendations but acknowledged as weakly grounded.
+**Gap:** Two baseline techniques remain marked `[Low-evidence area]`: Dynamic Tool Loadout, Context Compression. Constraint Load was upgraded to `[Engineering guidance]` on 2026-04-03. These are used in review recommendations but acknowledged as weakly grounded.
 
 **Observed relevance:** Context Compression and Constraint Load both applied during aegis-runtime work (rule 70 defines compaction triggers; rules 40-43 each carry ~7 constraints per rule). Dynamic Tool Loadout is relevant to topic 4 above.
 
 **Research targets:**
 - Context Compression: summarization strategies for long agent sessions, KV-cache optimization, Manus context engineering lessons (already in research/)
 - Dynamic Tool Loadout: tool filtering benchmarks, effect of tool count on selection accuracy
-- Constraint Load: AGENTIF constraint-following results, step-splitting effectiveness studies
+- Constraint Load: DONE — upgraded to `[Engineering guidance]` (see status table)
 
 **Where findings land:**
 - Baseline: upgrade evidence class if research supports, or add specific caveats/thresholds

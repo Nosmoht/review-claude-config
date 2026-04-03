@@ -1,9 +1,11 @@
 ---
 name: error-class-taxonomy
-description: Seven error classes with diagnostic indicators and primitive mappings
+description: Seven error classes with diagnostic indicators and evidence-informed primitive mappings
 ---
 
 ## Error Classes
+
+The error classes are deterministic labels for common repo failure modes. The primitive mappings are evidence-informed recommendations and sometimes rely on repo-policy or heuristic interpretation.
 
 | # | Class | What Goes Wrong | Diagnostic Signal | Primary Primitive | Token Impact |
 |---|-------|----------------|-------------------|-------------------|-------------|
@@ -20,6 +22,8 @@ description: Seven error classes with diagnostic indicators and primitive mappin
 - **P0**: Toolchain + Navigation — highest leverage for both correctness and token efficiency
 - **P1**: Convention + Architecture + Repetition + Security — automatable guardrails and patterns
 - **P2**: Domain — highest effort, only when domain docs are missing and domain is complex
+
+Priority tiers are `Repo default` planning conventions for this repository.
 
 ## Evidence Mapping
 

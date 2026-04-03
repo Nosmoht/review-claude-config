@@ -5,6 +5,8 @@ description: Shared source credibility criteria for all skills performing web re
 
 # Source Quality Criteria
 
+Repo-level claim classification is defined in [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md). This file governs source filtering and cross-validation for research inputs; the evidence contract governs how repository claims are labeled once sources have been evaluated.
+
 ## Discard Rules (hard filter)
 
 Reject any source that matches:
@@ -32,5 +34,5 @@ Claims used in Goal Alignment scoring must meet one of:
 
 ## Notes
 
-- The "actionable" criterion (technique must be specific and implementable) applies to `refresh-engineering-baseline` only, not to domain research generally.
+- Consumer-specific workflows may add task filters after applying this shared source filter. Example: `refresh-engineering-baseline` also requires techniques to be specific and implementable before they are eligible for the baseline.
 - Existing domain cache entries without `tier` fields are valid (grandfathered).

@@ -1,6 +1,6 @@
 # apply-rule-review-findings
 
-Apply High/Medium recommendations from a review-rule report to the reviewed rule file. Previews each change with user confirmation and commits with audit-fix chain convention. Includes rule-specific validation: frontmatter blocking, weak verb detection, scope boundary preservation, and sibling rule contradiction detection.
+Apply review-rule recommendations to the reviewed rule file. Process dispatchable High/Medium findings first, optionally offer dispatchable Low findings, and keep anchorless findings visible as manual follow-up items. Previews each change with user confirmation and commits with audit-fix chain convention. Includes rule-specific validation: frontmatter blocking, weak verb detection, scope boundary preservation, and sibling rule contradiction detection.
 
 ## Overview
 
@@ -17,74 +17,9 @@ Apply High/Medium recommendations from a review-rule report to the reviewed rule
 
 ## Purpose
 
-This skill closes the feedback loop between `/review-rule` and actual rule improvements. It reads a review-rule report, extracts High and Medium impact recommendations, and applies them to the target rule file with interactive confirmation at every step.
+This skill closes the feedback loop between `/review-rule` and actual rule improvements. It reads a review-rule report, parses historical and canonical recommendation shapes as needed, and applies dispatchable recommendations to the target rule file. Findings without `Current` and `Recommended` anchors remain manual-only follow-up items, and Low findings are deferred rather than discarded.
 
 What distinguishes this skill from the other apply-* skills is its rule-specific validation layer. Claude Code rules are plain Markdown directives that must be unambiguous and enforceable. They must not contain YAML frontmatter, should avoid weak/aspirational language, and must not contradict sibling rules in the same directory. The skill enforces all of these constraints through pre-edit and post-edit validation checks.
-
-## Workflow
-
-```mermaid
-flowchart TD
-    A["Start: /apply-rule-review-findings<br/>[report-path]"] --> B{"Orchestration<br/>metadata block<br/>present?"}
-    B -- Yes --> C["Orchestrated mode:<br/>Use provided items,<br/>skip report parsing"]
-    B -- No --> D["Standalone mode:<br/>Locate & parse report"]
-
-    D --> E{"Report found<br/>& valid?"}
-    E -- No --> F["Error: Report not found<br/>or wrong generator. STOP"]
-    E -- Yes --> G["Filter to High/Medium<br/>recommendations only"]
-    G --> H{"Actionable<br/>findings?"}
-    H -- No --> I["No actionable findings.<br/>STOP"]
-    H -- Yes --> J["Load references:<br/>rule-fix-guide.md<br/>commit-conventions.md"]
-
-    C --> K
-    J --> K["Present summary table<br/>of actionable findings"]
-    K --> L{"User confirms<br/>proceed?"}
-    L -- No --> M["STOP"]
-    L -- Yes --> N["For each recommendation<br/>(High first, then Medium)"]
-
-    N --> O["Read target rule file<br/>Locate Current text"]
-    O --> P{"Current text<br/>found in file?"}
-    P -- No --> Q["Ask user: Skip or<br/>identify correct text"]
-    P -- Yes --> R["PRE-EDIT VALIDATION"]
-
-    R --> R1{"Recommended text<br/>starts with '---'?"}
-    R1 -- Yes --> R1a["BLOCK: Rules must<br/>not have frontmatter"]
-    R1 -- No --> R2{"Weak verbs found?<br/>should, try to,<br/>consider, etc."}
-    R2 -- Yes --> R2a["WARN: Replace with<br/>must / never / always"]
-    R2 -- No --> R3{"Edit removes<br/>scope qualifiers?"}
-    R3 -- Yes --> R3a["WARN: Verify rule still<br/>applies to intended targets"]
-    R3 -- No --> S["Show preview:<br/>path, evidence, current,<br/>recommended, warnings"]
-
-    R2a --> S
-    R3a --> S
-
-    S --> T{"User: apply /<br/>skip / stop?"}
-    T -- skip --> N
-    T -- stop --> V["End processing"]
-    T -- apply --> U["Edit tool: apply change"]
-
-    U --> W["POST-EDIT VALIDATION"]
-    W --> W1{"File starts<br/>with '---'?"}
-    W1 -- Yes --> W1a["WARN: Frontmatter<br/>detected after edit"]
-    W1 -- No --> W2["Read sibling rules<br/>in same directory"]
-    W2 --> W3{"Contradictions<br/>with siblings?<br/>e.g. always X vs never X"}
-    W3 -- Yes --> W3a["WARN: Sibling rule<br/>contradiction detected"]
-    W3 -- No --> W4{"Action verbs<br/>unambiguous?<br/>must/never/always"}
-    W4 -- No --> W4a["WARN: Aspirational<br/>language in edited text"]
-    W4 -- Yes --> X["Edit validated"]
-
-    W1a --> X
-    W3a --> X
-    W4a --> X
-
-    X --> N
-
-    V --> Y["Present results table"]
-    Y --> Z{"Any changes<br/>applied?"}
-    Z -- No --> AA["STOP"]
-    Z -- Yes --> AB["Audit-fix chain:<br/>Commit report first,<br/>then commit fixes"]
-    AB --> AC["What's next? menu"]
-```
 
 ## Process Steps
 
@@ -96,17 +31,27 @@ The skill checks whether the prompt contains an orchestration metadata block (`-
 
 **Step 1: Locate report.** If `$ARGUMENTS` contains a file path, use it directly. Otherwise, Glob `.claude/reviews/*-review-rule.md` and select the most recent report by filename timestamp. Read the report and verify `generated_by` is `review-rule`. If validation fails, report the error and stop.
 
-**Step 2: Parse and filter.** Extract YAML frontmatter (`date`, `target`, `summary`) and parse the report body for recommendation sections. Each recommendation has: title, impact level, evidence, rationale, validation criteria, and Current/Recommended code blocks. Filter to **High and Medium impact only**. If none remain, inform the user and stop.
+**Step 2: Parse and classify.** Extract YAML frontmatter (`date`, `target`, `summary`) and parse the report body for recommendation sections. Historical reports may use `###` instead of `####` and may omit `Evidence`, `Why it matters`, or `Validation`. Classify findings into:
+- **Dispatchable**: includes both `Current` and `Recommended`
+- **Manual-only**: lacks one or both rewrite anchors
+
+Then split dispatchable findings into:
+- **High/Medium**
+- **Low**
+
+If no High/Medium dispatchable findings exist:
+- if dispatchable Low findings exist, show any manual-only findings first and then offer them as an optional Low-impact pass
+- otherwise present manual-only findings as follow-up items and stop
 
 **Step 3: Load references.** Read `references/rule-fix-guide.md` for rule-specific validation rules. Locate shared commit conventions via Glob (`**/apply-review-findings/references/commit-conventions.md`). If commit conventions are not found, warn but continue.
 
 ### Phase 2 -- Present Summary
 
-Display a table of all actionable findings with recommendation number, title, impact level, and target file path. Ask the user to confirm before proceeding.
+Display a table of all dispatchable findings with recommendation number, title, impact level, and target file path. If manual-only findings are present, show them in a separate `## Manual Follow-Up` table with the reason `Missing Current/Recommended anchors`. Ask the user to confirm before proceeding.
 
 ### Phase 3 -- Apply Recommendations
 
-Process each recommendation in priority order (High first, then Medium). For each:
+Process each dispatchable recommendation in priority order (High first, then Medium). Offer Low-impact findings afterward when applicable. For each:
 
 1. **Read target file** and locate the Current text block in the actual file content. If not found, ask the user whether to skip or identify the correct text.
 
@@ -156,7 +101,7 @@ End with the "What's next?" menu:
 - **User confirmation at every stage.** Confirm before starting, before each edit, and before committing.
 - **Audit-fix chain.** Always commit the report before committing fixes. The report timestamp links the two commits.
 - **Preserve file structure.** Edits replace text blocks only. Never rewrite entire files.
-- **No Low impact changes.** Only apply High and Medium recommendations.
+- **High/Medium first.** Apply High and Medium recommendations first. Offer dispatchable Low findings afterward instead of discarding them.
 - **Preserve review context.** Always carry Evidence, Why it matters, and Validation through previews.
 
 ## Reference Files

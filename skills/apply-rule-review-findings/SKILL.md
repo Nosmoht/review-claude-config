@@ -47,36 +47,39 @@ Read the report file. If the file does not exist or `generated_by` is not `revie
 
 ### Step 2: Parse and Filter
 
-Extract the YAML frontmatter to get: `date`, `target`, and `summary`.
+Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`.
+- Prefer `skills/review-claude-config/references/review-report-contract.md` when present.
+- Otherwise use the sibling `.claude/skills/review-claude-config/references/review-report-contract.md` copy.
 
-Parse the report body for recommendation sections matching:
-```
-#### N. Title (Impact: High/Medium/Low[, Category: ...])
+Read that file as the forward-looking report contract. Extract the YAML frontmatter to get: `date`, `target`, and `summary`.
 
-**Evidence:** [text]
+Parse the report body using consumer compatibility rules:
+- modern headings may use `####`
+- historical headings may use `###`
+- historical reports may omit `Evidence`, `Why it matters`, or `Validation`
+- only recommendations with both `Current` and `Recommended` are dispatchable for edits
 
-**Why it matters:** [text]
+Classify recommendations:
+- **Dispatchable**: includes `Current` and `Recommended`
+- **Manual-only**: lacks one or both rewrite anchors
 
-**Validation:** [text]
+Filter dispatchable recommendations into two groups: **High/Medium** recommendations and **Low** recommendations.
 
-**Current:**
-```[code block]```
-
-**Recommended:**
-```[code block]```
-```
-
-Filter into two groups: **High/Medium** recommendations and **Low** recommendations.
-
-If no High/Medium recommendations exist, skip to **Step 2a: Low Impact Offer**.
+If no High/Medium dispatchable recommendations exist:
+- if dispatchable Low recommendations exist, skip to **Step 2a: Low Impact Offer**
+- otherwise present any manual-only findings as manual follow-up items and stop
 
 ### Step 2a: Low Impact Offer
 
-If no High/Medium recommendations exist, tell the user:
+If manual-only findings are present, show them before offering the Low-impact pass. Keep them visible even when dispatchable Low findings exist.
+
+If dispatchable Low recommendations exist, tell the user:
 
 "No High or Medium findings. N Low impact recommendations remain. These are minor improvements that can help reach an A-grade. Address them? (yes/no)"
 
-If no, stop. If yes, promote the Low recommendations into the actionable set and continue to Phase 2.
+If no, stop after preserving the manual-only findings as follow-up items. If yes, promote the Low recommendations into the actionable set and continue to Phase 2.
+
+If there are no dispatchable recommendations but manual-only findings exist, present them as manual follow-up items and stop. Do not attempt file edits without rewrite anchors.
 
 ### Step 3: Load References
 
@@ -86,7 +89,7 @@ Locate shared commit conventions via Glob: `**/apply-review-findings/references/
 
 ## Phase 2 -- Present Summary
 
-Show a summary table of all actionable findings:
+Show a summary table of all dispatchable findings:
 
 ```
 ## Actionable Findings
@@ -94,6 +97,16 @@ Show a summary table of all actionable findings:
 | # | Recommendation | Impact | File |
 |---|----------------|--------|------|
 | 1 | Add scope boundaries | High | .claude/rules/foo.md |
+```
+
+If manual-only findings are present, also show:
+
+```
+## Manual Follow-Up
+
+| # | Recommendation | Impact | Reason |
+|---|----------------|--------|--------|
+| 1 | Tighten rationale wording | Medium | Missing Current/Recommended anchors |
 ```
 
 Ask: "Proceed with applying these findings? (yes/no)"
@@ -149,6 +162,8 @@ Validation warnings: [list any warnings]
 
 Present the change summary table (same format as above).
 
+If any manual-only findings were not dispatchable, list them separately as manual follow-up items.
+
 If no changes were applied, stop here.
 
 **Low Impact Pass (standalone mode only):**
@@ -162,6 +177,7 @@ If yes, loop back to Phase 3 with the Low recommendations. Process through the s
 If no, note: "N Low impact findings were not applied."
 
 In orchestrated mode, do not prompt — process whatever recommendations the orchestrator sends.
+The orchestrator must send only dispatchable recommendations with both `Current` and `Recommended`.
 
 **Commit with audit-fix chain:**
 

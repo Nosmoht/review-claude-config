@@ -1,6 +1,6 @@
 # refresh-engineering-baseline
 
-Update the engineering baseline reference file with current web research. The most research-intensive skill in the repository, executing multiple web queries with strict source quality filtering.
+Update the engineering baseline reference file with current web research. The most research-intensive skill in the repository, executing multiple web queries to refresh the three baseline sections while routing related safety and instruction-clarity findings into them.
 
 ## Overview
 
@@ -16,62 +16,9 @@ Update the engineering baseline reference file with current web research. The mo
 
 ## Purpose
 
-The engineering baseline (`skills/review-claude-config/references/engineering-baseline.md`) is a shared reference consumed by all review skills. It encodes current best practices for prompt engineering, context engineering, and tool design as concrete, evidence-backed techniques. Over time, the field evolves and the baseline becomes stale. This skill refreshes it by conducting structured web research, merging new findings with existing content, and enforcing the 2K token budget.
+The engineering baseline (`skills/review-claude-config/references/engineering-baseline.md`) is a shared reference consumed by all review skills. It encodes current best practices for prompt engineering, context engineering, and tool design as concrete, evidence-backed techniques. Related safety/guardrail and instruction-clarity findings are routed into those three sections rather than treated as separate baseline domains. This skill refreshes the baseline by conducting structured web research, merging new findings with existing content, classifying claims with the canonical evidence contract, and enforcing the 2K token budget.
 
 The skill is the only writer of the engineering baseline. All other skills treat the baseline as read-only at review time. The 90-day refresh cycle is enforced by a freshness gate: if the baseline was refreshed recently, the skill asks before proceeding, preventing unnecessary churn.
-
-## Workflow
-
-```mermaid
-flowchart TD
-    A["1. Locate baseline<br/>Read engineering-baseline.md<br/>Extract last_refreshed date<br/>Test WebFetch availability"] --> B{"2. Freshness gate<br/>last_refreshed < 90 days?"}
-
-    B -- "Yes (fresh)" --> C["Tell user baseline is fresh<br/>Ask: Force refresh?"]
-    C -- "No" --> STOP1["STOP<br/>(no changes)"]
-    C -- "Yes" --> D
-
-    B -- "No (stale)" --> D["3. Research current best practices<br/>6 named WebSearch queries"]
-
-    D --> Q1["Query 1: Agentic workflow<br/>patterns multi-agent orchestration"]
-    D --> Q2["Query 2: Prompt engineering<br/>techniques evidence research"]
-    D --> Q3["Query 3: Context engineering<br/>LLM agents best practices"]
-    D --> Q4["Query 4: AI agent tool<br/>design best practices"]
-    D --> Q5["Query 5: AI agent safety<br/>guardrails best practices"]
-    D --> Q6["Query 6: LLM instruction<br/>following clarity research"]
-
-    Q1 --> FILTER["Source quality filter<br/>+ deduplication"]
-    Q2 --> FILTER
-    Q3 --> FILTER
-    Q4 --> FILTER
-    Q5 --> FILTER
-    Q6 --> FILTER
-
-    FILTER --> EARLY{"Early termination:<br/>2 consecutive queries<br/>yield no new techniques?"}
-    EARLY -- "Yes" --> SKIP["Skip remaining queries"]
-    EARLY -- "No" --> CONT["Continue all queries"]
-
-    SKIP --> FETCH
-    CONT --> FETCH
-
-    FETCH{"3.5. WebFetch available?"}
-    FETCH -- "Yes" --> WF["Tier 1: 1 fetch per query<br/>Tier 2: 2-3 best remaining URLs<br/>Total: 6-9 fetches"]
-    FETCH -- "No" --> MERGE
-
-    WF --> MERGE["4. Merge findings<br/>Per section: add / update / remove<br/>Spot-check 2-3 existing techniques"]
-
-    MERGE --> PREVIEW["5. Preview and confirm<br/>Show ADD / UPDATE / REMOVE<br/>with sources + token projection"]
-    PREVIEW --> CONFIRM{"User: Apply?"}
-
-    CONFIRM -- "No" --> STOP2["STOP<br/>(no changes)"]
-    CONFIRM -- "Yes" --> WRITE["6. Write updated file<br/>Set last_refreshed = today<br/>Enforce <= 2K tokens"]
-
-    WRITE --> REPORT["7. Report changes<br/>Added / Updated / Removed<br/>Unchanged / Token count"]
-
-    style STOP1 fill:#f9f,stroke:#333
-    style STOP2 fill:#f9f,stroke:#333
-    style FILTER fill:#ffd,stroke:#333
-    style REPORT fill:#dfd,stroke:#333
-```
 
 ## Process Steps
 
@@ -107,11 +54,10 @@ Execute 6 named WebSearch queries, each appending the current year:
 
 **Deduplication:** Techniques found across multiple queries are merged, keeping the strongest evidence source.
 
-**Source quality criteria (ALL must be met):**
+**Source quality criteria:** Apply the shared rules from `source-quality-criteria.md` for discard filtering, tier classification, and cross-validation. Then add these baseline-specific filters:
 
-1. **Credible source** -- Official vendor docs, peer-reviewed research, or documented production systems.
-2. **Actionable** -- Specific implementable technique, not a general principle.
-3. **Cross-validated** -- Confirmed by 2+ independent sources, OR a primary vendor source with concrete evidence.
+1. **Actionable** -- Specific implementable technique, not a general principle.
+2. **Evidence fit** -- Prefer official vendor docs, peer-reviewed research, and documented production systems when selecting supported techniques for the baseline.
 
 **Discard:** Marketing material, opinion without evidence, tutorials without primary sources, anything older than 18 months.
 
@@ -146,7 +92,8 @@ For each section of the baseline (Prompt Engineering, Context Engineering, Tool 
 2. **Update** existing techniques where newer evidence contradicts or supplements what is recorded.
 3. **Spot-check** 2--3 existing techniques per section against search results to verify they remain current.
 4. **Remove** techniques only if evidence shows they are superseded or debunked.
-5. **Preserve format** for every technique: technique name, description, evidence source, check question.
+5. **Classify** each claim cluster using the canonical evidence classes from `evidence-contract.md`.
+6. **Split mixed entries** when a single technique combines strong evidence, weaker guidance, or repo-default choices.
 
 ### Step 5: Preview and confirm
 
@@ -172,7 +119,7 @@ Apply all confirmed changes to `skills/review-claude-config/references/engineeri
 
 - Set `last_refreshed` in YAML frontmatter to today's date.
 - Enforce the 2K token budget. If the updated file would exceed 2000 tokens, remove techniques with the weakest evidence until the file fits.
-- Preserve the existing file structure and format exactly.
+- Preserve the three top-level section headings, but allow internal formatting changes needed to keep evidence classes explicit.
 
 ### Step 7: Report changes
 
@@ -203,7 +150,7 @@ This is the most research-intensive skill in the repository. Its research pipeli
 
 ## Hard Rules
 
-1. **Preserve file structure and format exactly.** The baseline file format must not change.
+1. **Preserve the top-level section structure.** The internal prose format may change if needed to keep evidence classes explicit.
 2. **Never exceed 2K tokens.** Remove lowest-evidence techniques if the budget would be exceeded.
 3. **Every technique must cite an evidence source.** No technique is added without a verifiable reference.
 4. **Do not remove unless evidence shows wrong or superseded.** Existing techniques are presumed valid unless contradicted.
@@ -216,6 +163,8 @@ This skill does not have reference files of its own. It writes to the shared eng
 | File | Relationship | Token Budget |
 |------|-------------|-------------|
 | `skills/review-claude-config/references/engineering-baseline.md` | **Write target** (the file this skill updates) | <=2000 |
+| `skills/review-claude-config/references/evidence-contract.md` | **Read-only contract** (classification rules) | -- |
+| `skills/review-claude-config/references/source-quality-criteria.md` | **Read-only filter contract** (source filtering and cross-validation) | -- |
 
 ## Interactions
 

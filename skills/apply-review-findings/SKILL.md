@@ -7,7 +7,7 @@ description: >
   convergence. Delegates to specialized type-specific appliers, then commits
   with audit-fix chain convention. Use after running any /review-* skill.
 argument-hint: "[report-path]"
-allowed-tools: Read, Edit, Glob, Bash
+allowed-tools: Agent, Read, Edit, Glob, Bash
 disable-model-invocation: true
 ---
 
@@ -25,45 +25,49 @@ Read the report file. If the file does not exist or `generated_by` is not one of
 
 ### 2. Parse recommendations
 
-Extract the YAML frontmatter to get: `date`, `target`, `generated_by`, and `summary` (list of items with paths, types, and grades).
+Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`.
+- Prefer `skills/review-claude-config/references/review-report-contract.md` when present.
+- Otherwise use the sibling `.claude/skills/review-claude-config/references/review-report-contract.md` copy.
 
-Parse the report body for recommendation sections. Each recommendation follows this pattern:
-```
-#### N. Title (Impact: High/Medium/Low[, Category: ...])
+Read that file as the forward-looking parse contract. Extract the YAML frontmatter fields defined there: `date`, `target`, `generated_by`, and `summary` (list of items with paths, types, and grades).
 
-**Evidence:** [text]
+Parse the report body using consumer compatibility rules:
+- modern recommendation headings may use `####`
+- historical recommendation headings may use `###`
+- heading: `#### N. Title (Impact: High/Medium/Low[, Category: ...])`
+- forward-looking fields: `Evidence`, `Why it matters`, `Validation`
+- historical reports may omit one or more of those fields
+- optional fields: `Current`, `Recommended`
 
-**Why it matters:** [text]
+Example extraction: Given heading "#### 2. Add confirmation gate (Impact: High, Category: Safety)" with Evidence/Why it matters/Validation plus Current/Recommended blocks, extract: title="Add confirmation gate", impact=High, category=Safety, evidence=<text>, why=<text>, validation=<text>, item=<from nearest item heading or frontmatter summary>.
 
-**Validation:** [text]
+After parsing, classify each recommendation:
+- **Dispatchable**: contains both `Current` and `Recommended`, so a specialized applier can attempt an edit
+- **Manual-only**: valid review finding, but lacks one or both rewrite anchors
 
-**Current:**
-```[code block]```
+Split dispatchable recommendations into two groups: **High/Medium** and **Low**.
 
-**Recommended:**
-```[code block]```
-```
-
-Example extraction: Given heading "#### 2. Add confirmation gate (Impact: High, Category: Safety)" with Evidence/Why it matters/Validation plus Current/Recommended blocks, extract: title="Add confirmation gate", impact=High, category=Safety, evidence=<text>, why=<text>, validation=<text>, item=<from nearest ## heading or frontmatter summary>.
-Some recommendations may lack Current/Recommended blocks (structural suggestions). Pass the full structured text to the specialized applier.
-
-Filter into two groups: **High/Medium** recommendations and **Low** recommendations.
-
-If no High or Medium recommendations are found, skip to **Step 2a: Low Impact Offer**.
+If no dispatchable High or Medium recommendations are found:
+- if dispatchable Low recommendations exist, skip to **Step 2a: Low Impact Offer**
+- otherwise show any manual-only findings and stop
 
 ### 2a. Low Impact Offer
 
-If no High/Medium recommendations exist, tell the user:
+If manual-only findings are present, show them before offering the Low-impact pass. Keep them visible even when dispatchable Low findings exist.
+
+If dispatchable Low recommendations exist, tell the user:
 
 "No High or Medium findings. N Low impact recommendations remain. These are minor improvements that can help reach an A-grade. Address them? (yes/no)"
 
-If no, stop. If yes, promote the Low recommendations into the actionable set and continue to Step 3.
+If no, stop after preserving the manual-only findings as follow-up items. If yes, promote the Low recommendations into the actionable set and continue to Step 3.
 
-Group recommendations by item type using the `type` field in the `summary` array (Skill, Agent, or Rule). For single-item reports (`review-skill`, `review-agent`, `review-rule`), there is one group.
+Group dispatchable recommendations by item type using the `type` field in the `summary` array (Skill, Agent, or Rule). For single-item reports (`review-skill`, `review-agent`, `review-rule`), there is one group.
+
+If no dispatchable recommendations exist at all, show any manual-only findings and stop.
 
 ### 3. Present summary
 
-Show a summary table of all actionable findings before making any changes:
+Show a summary table of all dispatchable findings before making any changes:
 
 ```
 ## Actionable Findings
@@ -73,6 +77,18 @@ Show a summary table of all actionable findings before making any changes:
 | 1 | review-skill | Skill | Add confirmation gate | Medium | skills/review-skill/SKILL.md |
 | 2 | my-agent | Agent | Fix model selection | High | .claude/agents/my-agent.md |
 ```
+
+Then show a manual-only summary when applicable:
+
+```
+## Manual Follow-Up
+
+| # | Item | Type | Recommendation | Impact | Reason |
+|---|------|------|----------------|--------|--------|
+| 1 | review-skill | Skill | Clarify workflow policy | Medium | Missing Current/Recommended anchors |
+```
+
+If there are no dispatchable findings and at least one manual-only finding, stop after showing the manual follow-up section.
 
 Ask: "Proceed with applying these findings? (yes/no)"
 If no, stop.
@@ -123,7 +139,7 @@ report_timestamp: YYYY-MM-DDTHHMMSS
 ```[code block]```
 ```
 
-Dispatch an Agent with the specialized SKILL.md content, its fix guide, and the orchestration payload as the prompt. The agent applies edits with user confirmation and returns structured results. Preserve `Evidence`, `Why it matters`, and `Validation` in the payload even when the edit anchor remains `Current`/`Recommended`.
+Dispatch an Agent with the specialized SKILL.md content, its fix guide, and the orchestration payload as the prompt. Only dispatch recommendations already classified as dispatchable. Preserve `Evidence`, `Why it matters`, and `Validation` in the payload even though the edit anchors remain `Current`/`Recommended`.
 
 Collect results from each specialized applier.
 
@@ -180,6 +196,7 @@ Present the final status:
 - Files modified
 - Commits created (with hashes)
 - Recommendations not applied (skipped or stopped)
+- Manual-only findings not dispatched
 Then end your response with this menu. Determine the verify command from `generated_by`: if `review-skill` → `/review-skill <path>`, if `review-agent` → `/review-agent <path>`, if `review-rule` → `/review-rule <path>`, if `review-claude-config` → `/review-claude-config <target>`.
 
 ---

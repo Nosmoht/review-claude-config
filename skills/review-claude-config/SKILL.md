@@ -6,7 +6,7 @@ description: >
   evaluation with type-appropriate scoring dimensions, produces per-item quality
   certificates with evidence-backed optimization recommendations. Use when you want to
   audit skill/agent/rule quality or before shipping new skills.
-argument-hint: [folder]
+argument-hint: "[folder] [--validation]"
 allowed-tools: Agent, Read, Write, Glob, WebSearch, WebFetch
 ---
 
@@ -16,16 +16,28 @@ Analyze all Claude Code skills, agents, and rules in a target folder and produce
 
 ## Argument Handling
 
-- `$ARGUMENTS` is the target folder path. If empty, use the current working directory.
-- Validate the folder exists. If no `.claude/` directory is found at any level, report that and stop.
+Parse `$ARGUMENTS` into:
+- `validation_mode = true` if the standalone token `--validation` is present
+- `target_folder` = the remaining argument text after removing `--validation`
+
+If `target_folder` is empty, use the current working directory.
+
+Validate the folder exists. If no `.claude/` directory is found at any level, report that and stop.
+
+Validation mode is a bounded release/CI path. It is not the default user flow.
 
 ## Phase 1 — Setup and Discovery
 
 ### Step 0: Tool Availability Checks
 
-Attempt a trivial WebSearch (e.g., "Claude Code documentation"). If it fails or is unavailable, set `websearch_available = false` and continue. Goal Alignment will be scored from model knowledge only, marked `[no web verification]` on the certificate.
+If `validation_mode = true`:
+- set `websearch_available = false`
+- set `webfetch_available = false`
+- skip live tool probes entirely
 
-Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fails or is unavailable, set `webfetch_available = false` and continue. Analysis agents will use WebSearch snippets only instead of fetching full article content.
+Otherwise:
+- Attempt a trivial WebSearch (e.g., "Claude Code documentation"). If it fails or is unavailable, set `websearch_available = false` and continue. Goal Alignment will be scored from model knowledge only, marked `[no web verification]` on the certificate.
+- Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fails or is unavailable, set `webfetch_available = false` and continue. Analysis agents will use WebSearch snippets only instead of fetching full article content.
 
 ### Steps 1-2: Launch in parallel
 
@@ -33,7 +45,7 @@ Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fai
 
 Read these files from the skill's own `references/` directory:
 - `references/scoring-rubric.md` — the grading criteria
-- `references/engineering-baseline.md` — prompt, context, and tool design techniques
+- `references/engineering-baseline.md` — prompt, context, and tool design techniques with canonical evidence-class labels
 - `references/source-quality-criteria.md` — source credibility criteria for web research
 
 Check `last_refreshed` date in the baseline frontmatter. If older than 3 months, warn the user: "Baseline was last refreshed on [date]. Consider running `/refresh-engineering-baseline` for current best practices."
@@ -78,9 +90,22 @@ COMPLETION: You are done when all Glob patterns have been checked and all readab
 
 If no skills, agents, or rules are discovered, report that and stop.
 
+Sort the discovered items lexicographically by file path before returning them to the orchestrator.
+
 ## Phase 2 — Per-Item Analysis
 
 ### Step 0: Domain Cache Lookup
+
+If `validation_mode = true`, skip the cache workflow entirely:
+- assign every item `Domain: none`
+- assign `Cache Status: NONE`
+- assign `Role: consumer`
+- do not load `domain-cache/INDEX.md`
+- do not infer domains
+- do not designate researchers
+- do not persist cache updates later
+
+Otherwise continue with the normal cache workflow below.
 
 Before dispatching analysis agents, the orchestrator performs domain cache lookup:
 
@@ -171,9 +196,17 @@ domain_cache: |
 [Insert full file content]
 ```
 
+If `validation_mode = true`, select a deterministic validation sample before dispatch:
+- take the first lexicographic Skill, if any
+- then the first lexicographic Agent, if any
+- then the first lexicographic Rule, if any
+- if fewer than 3 items were selected, fill the remaining slots with the next lexicographic undispatched items regardless of type
+- analyze at most 3 items total
+
 **Dispatch rules:**
 - Allowed-tools per agent: WebSearch, WebFetch, Read (no Write, Edit, or Bash). Omit WebFetch if `webfetch_available = false`.
-- Process in parallel, batched in groups of 8. Present each batch's results before starting the next.
+- If `validation_mode = true`, dispatch the sampled items in a single batch and do not present intermediate per-batch output.
+- Otherwise process in parallel, batched in groups of 8. Present each batch's results before starting the next.
 - Each agent returns a structured certificate (or an `## ERROR` block on failure).
 - On agent error: log failure, continue with remaining items.
 
@@ -181,7 +214,34 @@ domain_cache: |
 
 After all agents complete, collect "Domain Cache Update" sections from researcher agents that had STALE or MISS cache status. Hold these for Phase 3.5.
 
+If `validation_mode = true`, skip this collection step entirely.
+
 ## Phase 3 — Presentation
+
+If `validation_mode = true`, do not print full per-item reports. Instead present only:
+
+```markdown
+## Validation Summary
+
+- Mode: validation
+- Target: <folder>
+- Items discovered: N
+- Items analyzed: M
+- Sampled paths:
+  - <path 1>
+  - <path 2>
+  - <path 3>
+
+| Item | Type | Overall | Score |
+|------|------|---------|-------|
+| ... | ... | ... | ... |
+```
+
+If any sampled item returns an `## ERROR` block, surface it directly under `## Validation Summary`.
+
+Skip the normal full report presentation, Cross-Cutting Observations, Phase 3.5, Phase 4, and the follow-up menu in validation mode.
+
+Otherwise continue with the normal presentation below.
 
 Present each item's report to the user. After all items, add:
 
@@ -243,6 +303,8 @@ sources:
 
 ## Phase 4 — Report Persistence
 
+If `validation_mode = true`, skip this entire phase.
+
 After presenting all reports to the user, confirm before writing:
 "Save review report to `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md`?"
 
@@ -250,41 +312,17 @@ If the user declines, skip report writing but still display the report path that
 
 ### Step 1: Assemble report
 
-Construct a Markdown file with YAML frontmatter and full body.
+Construct a Markdown file with canonical YAML frontmatter from `references/review-report-contract.md` and a full body.
 
-**Frontmatter:**
-```yaml
----
-generated_by: review-claude-config
-schema_version: 1
-date: YYYY-MM-DD
-target: /absolute/path/to/target
-baseline_version: YYYY-MM-DD
-items_reviewed: N
-summary:
-  - name: item-name                     # display label; analytics should track by path first
-    type: Skill                          # Skill, Agent, or Rule
-    path: relative/path/to/file
-    overall: B
-    score: 85.0
-    clarity: B
-    completeness: A
-    prompt_engineering: B                # null for Rules
-    context_engineering: B               # null for Rules
-    goal_alignment: B
-    safety: A                            # null for Rules
-    metadata: B                          # null for Rules
----
-```
+Required producer-specific values:
+- `generated_by: review-claude-config`
+- one `summary` entry per discovered item
+- `type + path` as the canonical portfolio identity
+- `null` for rule-only non-applicable dimensions
 
 **Body:** All per-item reports (Goal + Certificate + Strengths + Recommendations), Summary Table, Cross-Cutting Observations.
 
-For every High or Medium recommendation in the body, preserve the same evidence-first format used by the single-item reviewers:
-- Heading with `Impact` and `Category`
-- `Evidence:`
-- `Why it matters:`
-- `Validation:`
-- `Current:` / `Recommended:` when an exact rewrite is feasible
+For every High or Medium recommendation in the body, preserve the shared recommendation schema from `references/review-report-contract.md`.
 
 **Large codebase handling:** If more than 20 items are reviewed, include full per-item reports only for items scoring C or below. A/B items get a one-line summary row only. All items are still analyzed and included in the Summary Table and frontmatter summary (preserves the "Analyze every discovered item" hard rule — analysis is not skipped, only report detail is reduced).
 
@@ -335,7 +373,7 @@ When the user responds: **1** → invoke `/apply-review-findings` with the repor
 
 - **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and domain cache entries in its own `references/domain-cache/`.
 - **Domain cache entries must come from web research (WebSearch and/or WebFetch) only.** Never write cache entries based on model knowledge alone. If WebSearch is unavailable, skip cache persistence entirely.
-- **Analyze every discovered item.** Skip none.
+- **Analyze every discovered item.** Skip none in the normal mode. Validation mode is the only exception and must stay capped at the deterministic sample described above.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present all reports before asking** about follow-up actions.

@@ -1,11 +1,11 @@
 ---
 name: signal-catalog
-description: Baseline signal patterns for detecting missing skill opportunities — used as Layer 1 in a hybrid approach (table matching + open LLM reasoning)
+description: Baseline signal patterns for detecting missing skill opportunities — deterministic Layer 1 signals plus repo-level decision aids
 ---
 
 # Signal Catalog
 
-This catalog is the **deterministic baseline** (Layer 1). It catches known patterns reliably. Layer 2 (open reasoning) catches everything else — opportunities that no static table can anticipate.
+This catalog is the **deterministic baseline** (Layer 1). It catches known patterns reliably. Layer 2 (open reasoning) catches everything else — opportunities that no static table can anticipate. The catalog itself is a repo-maintained decision aid, not a canonical scientific taxonomy of skill gaps.
 
 ## Repository Type Classification
 
@@ -49,6 +49,8 @@ For repositories where `.claude/skills/` is the primary content:
 
 ## Strength Classification
 
+These strength labels are repo-level signal heuristics for prioritization, not external evidence classes.
+
 - **Strong**: Signal appears in 2+ categories OR represents a high-risk workflow (deploy, migrations, IaC)
 - **Moderate**: Single clear signal with well-defined workflow boundaries
 - **Weak**: Single signal with ambiguous workflow scope — requires corroboration
@@ -70,3 +72,5 @@ Do NOT suggest skills for:
 - Single-command operations (e.g., "run prettier", "npm test")
 - Simple aliases that add no decision logic
 - Workflows with fewer than 3 distinct steps
+
+The exact 3-of-4 gate and complexity cutoffs are `Repo default` filtering rules for this repository.

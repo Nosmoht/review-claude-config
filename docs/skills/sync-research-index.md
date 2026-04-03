@@ -16,41 +16,6 @@ The skill operates in three phases: discovery, analysis, and reporting/sync. It 
 
 Because the skill has `disable-model-invocation: true`, it runs without spawning sub-agents. It never modifies research files themselves and only edits the Research References section of CLAUDE.md. This makes it safe to run at any time as a quick health check after adding or removing research files.
 
-## Process Flow Diagram
-
-```mermaid
-flowchart TD
-    A["Start: /sync-research-index [folder]"] --> B{"Folder argument<br/>provided?"}
-    B -- Yes --> C["Set target = argument folder"]
-    B -- No --> D["Set target = current working directory"]
-    C --> E{"target/CLAUDE.md<br/>exists?"}
-    D --> E
-    E -- No --> F["Report: Target folder not found<br/>or has no CLAUDE.md. STOP"]
-    E -- Yes --> G["Glob target/research/**/*.md"]
-    G --> H{"Research files<br/>found?"}
-    H -- No --> I["Report: No research files found<br/>in target/research/. STOP"]
-    H -- Yes --> J["Read first 5 lines of each<br/>research file to extract title"]
-    J --> K["Read CLAUDE.md"]
-    K --> L{"Research References<br/>section exists?"}
-    L -- No --> M["Report: No Research References<br/>section found in CLAUDE.md. STOP"]
-    L -- Yes --> N["Parse entries:<br/>- [Title](path) -- Description"]
-    N --> O["Build two sets:<br/>- On disk (paths + titles)<br/>- In CLAUDE.md (paths + titles)"]
-    O --> P["Classify each item:<br/>OK / UNLINKED / BROKEN / STALE"]
-    P --> Q["Present drift report table<br/>with status, path, detail"]
-    Q --> R{"Any UNLINKED, BROKEN,<br/>or STALE entries?"}
-    R -- No --> S["Report: Research index is<br/>in sync. No changes needed. STOP"]
-    R -- Yes --> T{"User confirms<br/>sync?"}
-    T -- No --> U["STOP (no changes made)"]
-    T -- Yes --> V["Add entries for UNLINKED files<br/>Remove entries for BROKEN links"]
-    V --> W["Edit CLAUDE.md<br/>Research References section only"]
-    W --> X["Re-run comparison<br/>against updated CLAUDE.md"]
-    X --> Y{"Remaining<br/>drift?"}
-    Y -- Yes --> Z["Report remaining issues<br/>and offer to fix again"]
-    Y -- No --> AA["Confirm: All drift resolved"]
-    AA --> AB["Suggest commit:<br/>docs(project): sync research<br/>references in CLAUDE.md"]
-    Z --> AB
-```
-
 ## Process Steps
 
 ### Phase 1 -- Discovery

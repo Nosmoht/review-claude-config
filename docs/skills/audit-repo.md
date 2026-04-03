@@ -1,6 +1,6 @@
 # audit-repo
 
-Analyze any repository to identify what Claude Code primitives (CLAUDE.md sections, skills, agents, hooks, rules) it needs. Uses two sub-agents for static analysis and token efficiency measurement, then derives an intervention matrix with prioritized recommendations.
+Analyze any repository to identify what Claude Code primitives (CLAUDE.md sections, skills, agents, hooks, rules) it needs. Uses two sub-agents for static analysis and token efficiency measurement, then derives an intervention matrix with prioritized recommendations. The derivation layer is evidence-informed, but parts of it remain heuristic or repo-policy driven rather than benchmark-settled science.
 
 ## Overview
 
@@ -16,69 +16,9 @@ Analyze any repository to identify what Claude Code primitives (CLAUDE.md sectio
 
 ## Purpose
 
-The skill performs a comprehensive static analysis of any repository to answer: "What Claude Code primitives does this repo need, and why?" It examines the repository's toolchain, architecture, naming conventions, linter coverage, domain knowledge artifacts, and token efficiency characteristics. From these signals it derives a prioritized intervention matrix mapping error classes to specific primitives (CLAUDE.md sections, skills, agents, hooks, rules), each backed by concrete evidence from the scan.
+The skill performs a comprehensive static analysis of any repository to answer: "What Claude Code primitives does this repo need, and why?" It examines the repository's toolchain, architecture, naming conventions, linter coverage, domain knowledge artifacts, and token efficiency characteristics. From these signals it derives a prioritized intervention matrix mapping error classes to specific primitives (CLAUDE.md sections, skills, agents, hooks, rules), each backed by concrete evidence from the scan and labeled with an evidence class and confidence level.
 
 The skill is strictly read-only on the target repository. It writes only the final audit report to `.claude/reviews/`. It does not generate any primitives -- it produces a diagnostic matrix that other skills (`/scaffold-skill`, `/suggest-skills`) can act on.
-
-## Process Flow Diagram
-
-```mermaid
-flowchart TD
-    Start["Start: /audit-repo [folder]"] --> P1
-
-    subgraph P1["Phase 1 -- Setup"]
-        S0["Step 0: Tool checks<br/>(WebSearch, WebFetch)"]
-        S0 --> S1["Step 1: Load references<br/>- signal-patterns.md<br/>- error-class-taxonomy.md<br/>- primitive-decision-matrix.md<br/>- token-heuristics.md<br/>- audit-report-schema.md<br/>- signal-catalog.md (from suggest-skills)"]
-        S1 --> S2["Step 2: Initial assessment<br/>- Existing CLAUDE.md?<br/>- .claude/skills?<br/>- Agents, rules, hooks?"]
-    end
-
-    P1 --> P2
-
-    subgraph P2["Phase 2 -- Static Repo Analysis (Repo Scanner Agent)"]
-        direction TB
-        ScanNote["Agent: Glob, Grep, Read, Bash<br/>SCAN LIMITS: 50 lines/file,<br/>4 levels deep, 500 files/dir,<br/>read-only Bash only"]
-        ScanNote --> CatA["A: Toolchain Detection<br/>package.json scripts,<br/>Makefile targets,<br/>CI step commands"]
-        ScanNote --> CatB["B: Ambiguity Measurement<br/>max depth, files/dir,<br/>naming collisions,<br/>sprawl score"]
-        ScanNote --> CatC["C: Linter/Formatter Coverage<br/>Deterministic / CI-enforced /<br/>AI-instructed / Undocumented"]
-        ScanNote --> CatD["D: Architecture Pattern Extraction<br/>directory signatures,<br/>DI markers, ADRs,<br/>import direction"]
-        ScanNote --> CatE["E: Domain Knowledge Inventory<br/>OpenAPI, protobuf, GraphQL,<br/>glossary, ADRs, migrations,<br/>schemas"]
-    end
-
-    P2 --> P3
-
-    subgraph P3["Phase 3 -- Token Efficiency Analysis (Token Analyzer Agent)"]
-        direction TB
-        TokenNote["Agent: Glob, Bash, Read<br/>Same scan limits"]
-        TokenNote --> MetA["A: File Size Distribution<br/>>2000 severe, >1000 critical,<br/>>500 token sink"]
-        TokenNote --> MetB["B: Navigation Sprawl Score<br/>depth x max_files x collisions<br/>>100 P0, 30-100 selective,<br/><30 no intervention"]
-        TokenNote --> MetC["C: Build Error Verbosity<br/>toolchain -> expected verbosity<br/>-> token cost"]
-        TokenNote --> MetD["D: Monorepo Scope Isolation<br/>workspace count,<br/>cross-package imports"]
-        TokenNote --> MetE["E: Context Burn Rate<br/>estimated tokens<br/>per task type"]
-    end
-
-    P3 --> P4
-
-    subgraph P4["Phase 4 -- Primitives Derivation (inline)"]
-        direction TB
-        D4A["4A: CLAUDE.md Gaps<br/>Toolchain, Architecture,<br/>Scope, Domain,<br/>Navigation, Large files"]
-        D4B["4B: Skill Candidates<br/>Structural repetition +<br/>signal catalog matching +<br/>validation gate (3/4 criteria:<br/>Recurrence, Verification,<br/>Non-obviousness,<br/>Generalizability)"]
-        D4C["4C: Agent Candidates<br/>Only if concern has BOTH<br/>own toolchain AND<br/>own evaluation criteria"]
-        D4D["4D: Hook/Rule Candidates<br/>Single command boolean -> Hook<br/>Judgment needed -> Rule"]
-    end
-
-    P4 --> P5
-
-    subgraph P5["Phase 5 -- Needs Matrix and Report"]
-        direction TB
-        M1["Step 1: Assemble intervention matrix<br/>(error class, gap, primitive,<br/>priority P0/P1/P2, token impact,<br/>signal source, evidence)"]
-        M1 --> M2{"WebSearch<br/>available?"}
-        M2 -- Yes --> M2a["Step 2: Validate top 3 P0<br/>recs against best practices<br/>for detected tech stack"]
-        M2 -- No --> M3
-        M2a --> M3["Step 3: Build report<br/>frontmatter + body:<br/>Repository Profile,<br/>Static Analysis,<br/>Token Efficiency,<br/>Intervention Matrix,<br/>Recommendations"]
-        M3 --> M4["Step 4: Present and persist<br/>.claude/reviews/<br/>YYYY-MM-DDTHHMMSS-audit-repo.md"]
-        M4 --> M5["Step 5: What's next?<br/>1. Scaffold a skill<br/>2. Run suggest-skills<br/>3. Apply audit findings<br/>4. Done"]
-    end
-```
 
 ## Process Steps
 
@@ -148,19 +88,19 @@ This phase runs inline in the top-level skill (not delegated to a sub-agent). It
 
 **4A: CLAUDE.md Gaps.** Checks whether the repository's CLAUDE.md (if any) covers six areas: Toolchain (build/test/deploy commands), Architecture (directory layout and patterns), Scope (monorepo boundaries), Domain (key terminology and schemas), Navigation (how to find things), and Large files (files that need special handling). Each uncovered area becomes a gap with a specific CLAUDE.md section recommendation.
 
-**4B: Skill Candidates.** Identifies potential skills through two methods: (1) structural repetition in the codebase (repeated multi-step patterns that could be automated), and (2) signal catalog matching (comparing repo signals against known skill patterns from `signal-catalog.md`). Each candidate must pass a validation gate requiring at least 3 of 4 extraction criteria:
+**4B: Skill Candidates.** Identifies potential skills through two methods: (1) structural repetition in the codebase (repeated multi-step patterns that could be automated), and (2) signal catalog matching (comparing repo signals against known skill patterns from `signal-catalog.md`). Each candidate must pass a validation gate requiring at least 3 of 4 extraction criteria. This gate is a repo-level heuristic filter, not a universal law of skill design:
 - **Recurrence** -- the pattern appears multiple times
 - **Verification** -- success/failure can be objectively checked
 - **Non-obviousness** -- the steps are not trivially derivable from file names
 - **Generalizability** -- the skill would work across similar repositories
 
-**4C: Agent Candidates.** An agent is recommended only when a concern has BOTH its own toolchain (distinct tools needed) AND its own evaluation criteria (separate success metrics). This is a deliberately high bar to avoid over-engineering.
+**4C: Agent Candidates.** An agent is recommended only when a concern has BOTH its own toolchain (distinct tools needed) AND its own evaluation criteria (separate success metrics). This is a deliberately conservative repo policy to avoid over-engineering.
 
-**4D: Hook/Rule Candidates.** The decision between hook and rule follows a simple heuristic: if the check can be expressed as a single command with a boolean pass/fail result, it should be a hook. If judgment is needed to evaluate the result, it should be a rule.
+**4D: Hook/Rule Candidates.** The decision between hook and rule follows an evidence-informed heuristic: if the check can be expressed as a single command with a boolean pass/fail result, it should be a hook. If judgment is needed to evaluate the result, it should be a rule.
 
 ### Phase 5 -- Needs Matrix and Report
 
-**Step 1: Assemble intervention matrix.** Combines all findings into a structured matrix. Each row contains: error class (from taxonomy), gap description, recommended primitive type, priority (P0/P1/P2), estimated token impact, signal source (which analysis step produced the evidence), and concrete evidence (file paths, metrics, or patterns observed).
+**Step 1: Assemble intervention matrix.** Combines all findings into a structured matrix. Each row contains: error class (from taxonomy), gap description, recommended primitive type, priority (P0/P1/P2), estimated token impact, evidence class (canonical vocabulary), confidence, signal source (which analysis step produced the evidence), and concrete evidence (file paths, metrics, or patterns observed).
 
 **Step 2: Optional web validation.** If `websearch_available` is true, the skill runs WebSearch queries to validate the top 3 P0 recommendations against best practices for the detected tech stack. This adds confidence to recommendations but is not required -- the skill degrades gracefully without web access.
 
@@ -207,5 +147,6 @@ Web research is optional and limited to Phase 5, Step 2. If WebSearch is availab
 2. **Bash only in sub-agents.** Bash is allowed in the Repo Scanner and Token Analyzer agents but not at the top-level skill scope.
 3. **Scan limits enforced.** 50 lines per file, 4 directory levels deep, 500 files per directory listing, read-only Bash commands only.
 4. **Every recommendation needs evidence.** Each row in the intervention matrix must cite concrete file paths, metrics, or patterns observed during the scan. No speculative recommendations.
-5. **No generation.** The skill produces a diagnostic matrix only. It does not create CLAUDE.md sections, skills, agents, hooks, or rules. That is the job of apply and scaffold skills.
-6. **Present all before follow-up.** The complete report is shown to the user before offering the "What's next?" menu.
+5. **Expose uncertainty honestly.** Every intervention must include `evidence_class` and `confidence`, and heuristic or repo-policy mappings must stay labeled as such.
+6. **No generation.** The skill produces a diagnostic matrix only. It does not create CLAUDE.md sections, skills, agents, hooks, or rules. That is the job of apply and scaffold skills.
+7. **Present all before follow-up.** The complete report is shown to the user before offering the "What's next?" menu.

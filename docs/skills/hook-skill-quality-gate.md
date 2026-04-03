@@ -14,23 +14,6 @@ The skill quality gate is a PreToolUse hook that fires every time Claude attempt
 
 The hook operates silently — if the file being edited is not a skill, agent, or rule, or if the plugin environment is not configured, it returns empty JSON and has no effect. All exceptions are caught and suppressed to prevent hook failures from blocking normal editing operations.
 
-## Process Flow Diagram
-
-```mermaid
-flowchart TD
-    Start([PreToolUse Event:<br/>Edit / Write / MultiEdit]) --> CheckEnv{CLAUDE_PLUGIN_ROOT<br/>set?}
-    CheckEnv -->|no| Silent1[Return empty JSON]
-    CheckEnv -->|yes| ReadInput[Read tool_input.file_path<br/>from stdin JSON]
-    ReadInput --> MatchPattern{File matches<br/>skill/agent/rule<br/>pattern?}
-    MatchPattern -->|no| Silent2[Return empty JSON]
-    MatchPattern -->|yes| LoadGuidelines[Read guidelines.md<br/>from plugin hooks/ dir]
-    LoadGuidelines --> Inject[Return JSON with<br/>systemMessage: guidelines content]
-
-    style Silent1 fill:#f0f0f0,stroke:#999
-    style Silent2 fill:#f0f0f0,stroke:#999
-    style Inject fill:#d4edda,stroke:#28a745
-```
-
 ## Process Steps
 
 ### Step 1: Environment Check

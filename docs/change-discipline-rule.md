@@ -5,7 +5,13 @@
 
 Every change follows this mandatory sequence. No step may be skipped.
 
-1. **Plan** — design the change; have it reviewed by a subagent before proceeding
+1. **Plan** — design the change; have it reviewed by a subagent before proceeding. The review subagent must receive all of:
+   - The full plan content
+   - CLAUDE.md (so the reviewer can check alignment with project conventions)
+   - Relevant research references (the specific `research/` files that apply to the planned changes)
+   - The files being changed (so the reviewer can verify feasibility and catch conflicts)
+   - A review checklist — explicit questions the reviewer must answer
+   Address all High and Medium findings before presenting the plan for approval.
 2. **Review** — launch one or more review subagents against the planned change; address all High and Medium findings
 3. **Implement** — make the change
 4. **Review** — launch review subagents against the implemented change; address all High and Medium findings; re-review until clean

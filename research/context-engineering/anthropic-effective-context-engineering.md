@@ -1,5 +1,11 @@
 # Effective Context Engineering for AI Agents
 
+## Provenance Metadata
+
+- Strongest source tier: Tier 1
+- Source basis: Single source - Anthropic Engineering Blog, "Effective context engineering for AI agents"
+- Last reviewed: 2026-04-03
+
 **Source:** [Anthropic Engineering Blog](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
 **Fetched:** 2026-03-24
 

@@ -2,10 +2,10 @@
 name: refresh-engineering-baseline
 description: >
   Update the engineering baseline reference file with current best practices
-  from web research. Searches for latest prompt engineering, context engineering,
-  tool design, safety, and instruction clarity guidance, then merges findings
-  into the baseline. Use when the baseline's last_refreshed date is older than
-  3 months.
+  from web research. Searches for current prompt engineering, context
+  engineering, and tool design guidance, then routes related safety and
+  instruction-clarity findings into those sections before merging them into the
+  baseline. Use when the baseline's last_refreshed date is older than 3 months.
 disable-model-invocation: true
 allowed-tools: WebSearch, WebFetch, Read, Write
 ---
@@ -21,6 +21,7 @@ Update `references/engineering-baseline.md` with current research findings.
 ### 1. Locate the baseline file
 
 Read `skills/review-claude-config/references/engineering-baseline.md`. If the file is not found, report the error and stop.
+Read `skills/review-claude-config/references/evidence-contract.md` to load the canonical evidence classes and source precedence rules.
 
 Read the current file content and extract the `last_refreshed` date from frontmatter. If `last_refreshed` is missing or unparseable, treat the baseline as stale and proceed directly to Step 3.
 
@@ -35,7 +36,7 @@ If `last_refreshed` is less than 90 days ago:
 
 ### 3. Research current best practices
 
-Run these WebSearch queries (replace `[current year]` with the actual year). After each query, check if new actionable techniques were found. If two consecutive queries yield no new techniques beyond what earlier queries found, skip remaining queries and note skipped queries in the change report.
+Run these WebSearch queries (replace `[current year]` with the actual year). After each query, check if new actionable techniques were found for the three baseline sections. If two consecutive queries yield no new techniques beyond what earlier queries found, skip remaining queries and note skipped queries in the change report.
 
 - "agentic workflow patterns multi-agent orchestration [current year]"
 - "prompt engineering techniques evidence research [current year]"
@@ -50,10 +51,10 @@ Deduplicate across queries: if the same technique appears in multiple search res
 
 #### Source quality criteria
 
-Apply shared criteria from `skills/review-claude-config/references/source-quality-criteria.md` (discard rules, tier classification, cross-validation). Additionally, for baseline techniques specifically:
+Apply shared criteria from `skills/review-claude-config/references/source-quality-criteria.md` (discard rules, tier classification, cross-validation). For baseline techniques, add these task-specific filters:
 
 1. **Actionable** — Must describe a specific, implementable technique (not a general principle like "be clear")
-2. **Credible source examples** — Official vendor docs (Anthropic, OpenAI, Google DeepMind), peer-reviewed research (arXiv with citations), documented production systems (Manus, Vercel, LangChain)
+2. **Evidence fit** — Prefer official vendor docs, peer-reviewed research, and documented production systems when choosing which supported technique to keep
 
 #### WebSearch failure handling
 
@@ -79,18 +80,20 @@ Use full article content — not just search snippets — when extracting techni
 
 ### 4. Merge findings
 
-For each section (Prompt Engineering, Context Engineering, Tool Design):
+For each baseline section (Prompt Engineering, Context Engineering, Tool Design):
 - Route safety and guardrail techniques (least-privilege, confirmation gates, stop conditions) to Context Engineering
 - Route instruction clarity techniques (constraint limits, deterministic conditionals) to Prompt Engineering
 - Route agentic workflow techniques to the best-fit section (decomposition patterns to PE, orchestration patterns to CE)
 
-Note: Completeness and Metadata are structural evaluation dimensions assessed via the rubric, not technique-driven domains. They do not require dedicated research queries.
+Note: Completeness, Goal Alignment, Safety, and Metadata are rubric dimensions, not separate baseline sections. Safety and instruction-clarity findings are routed into the three baseline sections above rather than creating new domains.
 
 - Add new techniques not already covered
 - Update existing techniques if newer evidence contradicts or supplements them
 - Spot-check 2-3 existing techniques per section against current sources to verify they remain accurate and well-evidenced
 - Remove techniques that have been superseded or debunked
-- Preserve the existing format: technique name, description, evidence source, check question
+- Classify each claim cluster using the canonical evidence classes from `evidence-contract.md`
+- If a technique mixes multiple evidence classes, split it into smaller claim clusters rather than hiding the difference under one label
+- Preserve the section structure, but do not preserve the previous prose format if it prevents clear evidence classification
 
 Example merge decision:
 - Existing: "Few-Shot Examples — Provide 2-3 diverse examples. Source: Brown et al. 2020"
@@ -103,6 +106,7 @@ Present the proposed changes to the user using the report format from Step 7. In
 - Techniques to ADD (with source)
 - Techniques to UPDATE (show before/after)
 - Techniques to REMOVE (with justification)
+- Evidence-class changes for any rewritten techniques
 - Projected token count
 
 Ask: "Apply these changes to engineering-baseline.md? (yes/no)"
@@ -113,7 +117,8 @@ If no, stop and preserve the current file.
 Only after user confirmation. Update `engineering-baseline.md` with:
 - Set `last_refreshed` in frontmatter to today's date
 - Before writing, estimate the token count of the updated file. If it would exceed 2K tokens, remove the lowest-evidence techniques until it fits, and note the removals in the change report. If removing techniques would compromise coverage of a full section, warn the user before proceeding.
-- Preserve the existing structure and section headings
+- Preserve the Prompt / Context / Tool section headings
+- Preserve explicit evidence-class labels on each claim cluster
 - Add new sources to the Sources section at the bottom
 
 ### 7. Report changes
@@ -143,7 +148,7 @@ Present the change report in this format:
 
 ## Hard Rules
 
-- Preserve the file structure and format exactly
+- Preserve the three section headings, but allow prose structure changes needed for evidence classification
 - Do not exceed 2K tokens in the output file
 - Every technique must cite an evidence source
 - Do not remove techniques unless evidence shows they are wrong or superseded

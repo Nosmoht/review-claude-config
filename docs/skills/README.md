@@ -1,6 +1,6 @@
 # Skill & Hook Documentation
 
-Process flow documentation for all skills and hooks in the review-claude-config plugin. Each file contains a complete process description, Mermaid flowchart diagram, research behavior details, and reference file inventory.
+System map for the plugin's skills and hooks. Use this page for component inventory, workflow chains, and compact comparisons. Detailed behavior for a specific command lives in its own page.
 
 ## Quick Reference
 
@@ -22,80 +22,51 @@ Process flow documentation for all skills and hooks in the review-claude-config 
 | [check-repo-health](check-repo-health.md) | Maintenance | `/check-repo-health [all\|freshness\|tokens\|integrity]` | Standalone |
 | [refresh-engineering-baseline](refresh-engineering-baseline.md) | Maintenance | `/refresh-engineering-baseline` | Standalone |
 | [sync-research-index](sync-research-index.md) | Maintenance | `/sync-research-index [folder]` | Standalone |
-| [hook-skill-quality-gate](hook-skill-quality-gate.md) | Hook | PreToolUse: `Edit\|Write\|MultiEdit` | Automatic |
-| [hook-session-check](hook-session-check.md) | Hook | SessionStart | Automatic |
+| [hook-skill-quality-gate](hook-skill-quality-gate.md) | Hook | `PreToolUse` | Automatic |
+| [hook-session-check](hook-session-check.md) | Hook | `SessionStart` | Automatic |
 
 ## By Function
 
-### Review Skills (read-only analysis)
-
-- [review-claude-config](review-claude-config.md) — Batch audit all skills/agents/rules with per-item quality certificates
-- [review-skill](review-skill.md) — Evaluate a single skill across 7 dimensions
-- [review-agent](review-agent.md) — Evaluate a single agent with model selection and activation precision checks
-- [review-rule](review-rule.md) — Evaluate a single rule across 3 dimensions (Clarity, Completeness, Goal Alignment)
-- [review-analytics](review-analytics.md) — Grade trajectories, regression detection, portfolio health dashboard
-
-### Fix/Apply Skills (modify files)
-
-- [apply-review-findings](apply-review-findings.md) — Orchestrator that delegates to type-specific appliers
-- [apply-skill-review-findings](apply-skill-review-findings.md) — Apply recommendations to SKILL.md files with skill-specific validation
-- [apply-agent-review-findings](apply-agent-review-findings.md) — Apply recommendations to agent files with single-file constraint enforcement
-- [apply-rule-review-findings](apply-rule-review-findings.md) — Apply recommendations to rule files with weak-verb and contradiction detection
-- [apply-audit-findings](apply-audit-findings.md) — Create CLAUDE.md sections, hooks, and rules from audit reports
-
-### Discovery Skills (read-only analysis)
-
-- [audit-repo](audit-repo.md) — Static analysis for Claude Code primitive needs with intervention matrix
-- [suggest-skills](suggest-skills.md) — Two-layer skill gap detection (table matching + open reasoning)
-
-### Development Skills (create files)
-
-- [scaffold-skill](scaffold-skill.md) — Generate new skills from template with interactive requirements gathering
-
-### Maintenance Skills
-
-- [check-repo-health](check-repo-health.md) — Reference freshness, token budgets, and integrity dashboard
-- [refresh-engineering-baseline](refresh-engineering-baseline.md) — Update baseline with current web research (6 queries, source quality criteria)
-- [sync-research-index](sync-research-index.md) — Detect and fix drift between research/ files and CLAUDE.md references
-
-### Hooks (automatic, event-driven)
-
-- [hook-skill-quality-gate](hook-skill-quality-gate.md) — Injects quality guidelines when editing skill/agent/rule files
-- [hook-session-check](hook-session-check.md) — Warns at session start if engineering baseline is stale
+- **Review:** `review-claude-config`, `review-skill`, `review-agent`, `review-rule`, `review-analytics`
+- **Fix/Apply:** `apply-review-findings`, `apply-skill-review-findings`, `apply-agent-review-findings`, `apply-rule-review-findings`, `apply-audit-findings`
+- **Discovery:** `audit-repo`, `suggest-skills`
+- **Development:** `scaffold-skill`
+- **Maintenance:** `check-repo-health`, `refresh-engineering-baseline`, `sync-research-index`
+- **Hooks:** `hook-skill-quality-gate`, `hook-session-check`
 
 ## Workflow Chains
 
-The skills form several workflow chains:
-
 ```
 Review Chain:
-  /review-claude-config ──delegates──> /review-skill, /review-agent, /review-rule
-  /review-claude-config ──suggests──> /apply-review-findings, /review-analytics
+  /review-claude-config -> /review-skill, /review-agent, /review-rule
+  /review-claude-config -> /apply-review-findings, /review-analytics
 
 Apply Chain:
-  /apply-review-findings ──delegates──> /apply-skill-review-findings
-                                        /apply-agent-review-findings
-                                        /apply-rule-review-findings
+  /apply-review-findings -> /apply-skill-review-findings
+                           /apply-agent-review-findings
+                           /apply-rule-review-findings
 
 Audit Chain:
-  /audit-repo ──suggests──> /apply-audit-findings ──defers──> /scaffold-skill
-              ──suggests──> /suggest-skills
+  /audit-repo -> /apply-audit-findings -> /scaffold-skill
+              -> /suggest-skills
 
 Maintenance Chain:
-  hook-session-check ──suggests──> /refresh-engineering-baseline
-  /check-repo-health ──suggests──> /refresh-engineering-baseline
-                     ──suggests──> /review-claude-config
+  hook-session-check -> /refresh-engineering-baseline
+  /check-repo-health -> /refresh-engineering-baseline
+                     -> /review-claude-config
 ```
 
-## Research Behavior Summary
+## Mode and Research Summary
 
-| Component | Research Level | Details |
-|-----------|--------------|---------|
-| review-claude-config | Domain cache + WebSearch/WebFetch | Cache-mediated, researcher/consumer roles |
-| review-skill | Light (1-2 queries) | Domain best practices for reviewed skill |
-| review-agent | Light (1-2 queries) | Domain best practices for reviewed agent |
-| review-rule | Light (1-2 queries) | Domain best practices for reviewed rule |
-| refresh-engineering-baseline | Heavy (6 queries + 6-9 fetches) | Structured queries with two-tier fetch strategy |
-| suggest-skills | Medium (Layer 2 agent) | Open reasoning agent validates with WebSearch |
-| audit-repo | Light (optional) | Web validation of top 3 P0 recommendations |
-| All other skills/hooks | None | No web research |
+| Component | Mode Summary | Research Summary |
+|-----------|--------------|------------------|
+| `review-claude-config` | Standalone orchestrator | Domain cache + WebSearch/WebFetch coordination |
+| `review-skill`, `review-agent`, `review-rule` | Standalone + orchestrated workers | Light domain research |
+| `apply-review-findings` and specialized appliers | Standalone orchestrator + orchestrated workers | No web research |
+| `audit-repo`, `suggest-skills` | Standalone discovery | Heuristic analysis with optional validation |
+| `refresh-engineering-baseline` | Standalone maintenance | Heavy structured research |
+| All other skills/hooks | Standalone or automatic | No web research |
+
+## Conventions
+
+**Workflow menus:** Every skill ends with a numbered "What's next?" menu. The user types a number, Claude invokes the corresponding skill. This uses plain text output — not `AskUserQuestion`, which silently auto-completes with empty answers in plugin skills loaded via the Skill tool (known Claude Code bug). Menu is skipped in orchestrated mode and conditionally shown in diagnostic skills (only when issues are found).
