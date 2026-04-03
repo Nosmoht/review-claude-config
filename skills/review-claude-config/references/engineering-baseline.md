@@ -88,3 +88,4 @@ last_refreshed: 2026-04-03
 - Mei et al. (2025): "A Survey of Context Engineering for LLMs" (arXiv:2507.13334)
 - Qi et al. (2025): "AGENTIF" (arXiv:2505.16944)
 - Anthropic (2025): "Building Effective Agents"
+- Internal research (2026): "Autonomous Agent Reliability: Frameworks and Failure Taxonomies"
