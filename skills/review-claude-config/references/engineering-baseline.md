@@ -1,7 +1,7 @@
 ---
 name: engineering-baseline
 description: Evidence-based prompt, context, and tool design techniques for evaluating Claude Code skills and agents
-last_refreshed: 2026-04-02
+last_refreshed: 2026-04-03
 ---
 
 # Engineering Baseline
@@ -52,6 +52,12 @@ last_refreshed: 2026-04-02
 
 **Retry Ceilings** `[Repo default]` — When a task includes retries, keep the retry budget small and explicit so failures escalate instead of looping invisibly. Check: is there a concrete retry limit?
 
+**Idempotency Design** `[Proven result]` — Make tool operations produce the same result when executed multiple times, enabling safe retries. Check: can every tool call that creates, modifies, or deletes be safely retried? LLM agents retry 15-30% of tool calls due to timeouts or validation errors (Fast.io, Google Cloud Vertex AI, Inngest).
+
+**Circuit Breaker Pattern** `[Engineering guidance]` — Track failures in a sliding window and temporarily halt requests when thresholds are exceeded to prevent cascade failures. Check: does the workflow stop calling a failing service after repeated failures? AWS, Microsoft, and academic research recommend circuit breakers as standard architectural components (AWS Prescriptive Guidance; arXiv:2512.16856; arXiv:2512.09458).
+
+**Progressive Fallback** `[Engineering guidance]` — When operations fail, degrade through self-correction, fallback strategies, and escalation rather than immediate failure. Check: does the workflow have multiple recovery paths instead of binary success/failure? Fast.io and Maxim.ai recommend layered error handling for production agents.
+
 **Knowledge Gap Detection** `[Engineering guidance]` — Teach the system to escalate, retrieve more context, or admit uncertainty when required knowledge is missing. Check: does the workflow prevent confident guessing when information is insufficient?
 
 **Dynamic Tool Loadout** `[Low-evidence area]` — Pre-filter available tools when a large shared catalog creates selection ambiguity, but treat exact numeric cutoffs as heuristic unless benchmarked for the target environment. Check: does the agent see only the tools relevant to the current task?
@@ -82,3 +88,4 @@ last_refreshed: 2026-04-02
 - Mei et al. (2025): "A Survey of Context Engineering for LLMs" (arXiv:2507.13334)
 - Qi et al. (2025): "AGENTIF" (arXiv:2505.16944)
 - Anthropic (2025): "Building Effective Agents"
+- Internal research (2026): "Autonomous Agent Reliability: Frameworks and Failure Taxonomies"
