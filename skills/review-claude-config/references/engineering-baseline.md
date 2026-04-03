@@ -24,7 +24,7 @@ last_refreshed: 2026-04-02
 
 **Evidence-First Critique** `[Engineering guidance]` — In review tasks, ground findings in quotes, paths, or specific examples rather than generic quality language. Check: could another reviewer verify the claim from the artifact?
 
-**Constraint Load** `[Low-evidence area]` — When a step carries many simultaneous constraints, split it into smaller steps. Check: would breaking the step reduce ambiguity or hidden tradeoffs?
+**Constraint Load** `[Engineering guidance]` — When a step carries many simultaneous constraints, split it into smaller steps. Check: would breaking the step reduce ambiguity or hidden tradeoffs? Anthropic recommends task decomposition to manage constraint scope (Effective Context Engineering for AI Agents). Degradation under constraint load demonstrated by ScaledIF (arXiv:2510.14842), Prospective Memory Failures (arXiv:2603.23530), and IF Reliability (arXiv:2512.14754).
 
 **Deterministic Conditionals** `[Proven result]` — Write branch conditions as observable tests, not vague phrases like "if needed" or "as appropriate". Check: would two models take the same branch from the same input?
 

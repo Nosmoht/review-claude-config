@@ -1,6 +1,6 @@
 # Review Claude Config
 
-Maintainer operating guide for this repository (Clarity, Completeness, Prompt Engineering, Context Engineering, Goal Alignment, Safety, Metadata). Use this file for active repo conventions, command inventory, and maintenance workflow. User-facing orientation lives in [`README.md`](/home/nos-ai/workspace/review-claude-config/README.md). Skill and hook navigation lives in [`docs/skills/README.md`](/home/nos-ai/workspace/review-claude-config/docs/skills/README.md).
+Maintainer operating guide for this repository (Clarity, Completeness, Prompt Engineering, Context Engineering, Goal Alignment, Safety, Metadata). Use this file for active repo conventions, command inventory, and maintenance workflow. User-facing orientation lives in [README.md](README.md). Skill and hook navigation lives in [docs/skills/README.md](docs/skills/README.md).
 
 ## Architecture
 
@@ -44,8 +44,9 @@ This is the authoritative maintainer command inventory for the repo.
 
 ## Working Guidelines
 
-- **Verify claims before acting on them.** Check the repo, reports, or git history instead of accepting a proposed problem at face value.
-- **Use the canonical evidence layer for repo-wide claims.** Classify repository-level statements with [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md) and follow [`evidence-maintenance.md`](/home/nos-ai/workspace/review-claude-config/docs/evidence-maintenance.md) for maintenance process.
+- **Every claim needs a source.** All research files, documentation, and recommendations must link to verifiable sources.
+- **Verify claims before acting on them.** Check git history, inspect actual data. Do not redesign a working system based on theoretical concerns.
+- **Use the canonical evidence layer for repo-wide claims.** Classify repository-level statements with [evidence-contract.md](skills/review-claude-config/references/evidence-contract.md) and follow [evidence-maintenance.md](docs/evidence-maintenance.md) for maintenance process.
 - **Iterate reviews until convergence.** Address findings, then re-review. Medium and High findings block completion.
 - **Prefer evidence over rhetoric.** Findings should cite concrete paths, text, or examples.
 - **Research before design in novel areas.** Save results in `research/` with sources.
@@ -68,22 +69,41 @@ This is the authoritative maintainer command inventory for the repo.
 
 ## Research References
 
-- [`skills/review-claude-config/references/evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md) - canonical claim classes and source precedence
-- [`docs/evidence-maintenance.md`](/home/nos-ai/workspace/review-claude-config/docs/evidence-maintenance.md) - evidence-layer maintenance process
-- [`skills/review-claude-config/references/review-report-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/review-report-contract.md) - canonical review/report contract
-- [`skills/review-claude-config/references/source-quality-criteria.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/source-quality-criteria.md) - research filtering and cross-validation
-- [`skills/review-claude-config/references/engineering-baseline.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/engineering-baseline.md) - prompt/context/tool design baseline
-- [`research/claude-code/skill-agent-format-conventions.md`](/home/nos-ai/workspace/review-claude-config/research/claude-code/skill-agent-format-conventions.md)
-- [`research/context-engineering/anthropic-effective-context-engineering.md`](/home/nos-ai/workspace/review-claude-config/research/context-engineering/anthropic-effective-context-engineering.md)
-- [`research/tool-design/anthropic-writing-tools-for-agents.md`](/home/nos-ai/workspace/review-claude-config/research/tool-design/anthropic-writing-tools-for-agents.md)
-- [`research/agent-skills/anthropic-equipping-agents-with-skills.md`](/home/nos-ai/workspace/review-claude-config/research/agent-skills/anthropic-equipping-agents-with-skills.md)
-- [`research/domain-knowledge/domain-knowledge-impact-on-quality.md`](/home/nos-ai/workspace/review-claude-config/research/domain-knowledge/domain-knowledge-impact-on-quality.md)
-- [`research/source-quality/web-research-quality-evaluation.md`](/home/nos-ai/workspace/review-claude-config/research/source-quality/web-research-quality-evaluation.md)
+- [Evidence Contract](skills/review-claude-config/references/evidence-contract.md) — canonical claim classes and source precedence
+- [Evidence Maintenance Guide](docs/evidence-maintenance.md) — evidence-layer maintenance process
+- [Review Report Contract](skills/review-claude-config/references/review-report-contract.md) — canonical review/report contract
+- [Source Quality Criteria](skills/review-claude-config/references/source-quality-criteria.md) — research filtering and cross-validation
+- [Engineering Baseline](skills/review-claude-config/references/engineering-baseline.md) — prompt/context/tool design baseline
+- [Scientific Research Dossier](docs/scientific-research-dossier.md) — repo-level evidence synthesis and theme matrix
+- [Claude Code Skill and Agent Format Conventions](research/claude-code/skill-agent-format-conventions.md) — frontmatter, body, safety
+- [Prompt Engineering Techniques: Evidence-Based Summary](research/prompt-engineering/prompt-engineering-techniques.md) — evidence-backed techniques
+- [Context Engineering: Overview and Industry Adoption](research/context-engineering/context-engineering-overview.md) — principles, context rot, ACE
+- [Effective Context Engineering for AI Agents](research/context-engineering/anthropic-effective-context-engineering.md) — official guidance
+- [Context Engineering for AI Agents: Lessons from Building Manus](research/context-engineering/manus-context-engineering-lessons.md) — KV-cache, error preservation
+- [Writing Effective Tools for AI Agents](research/tool-design/anthropic-writing-tools-for-agents.md) — tool design best practices
+- [Equipping Agents for the Real World with Agent Skills](research/agent-skills/anthropic-equipping-agents-with-skills.md) — progressive disclosure
+- [Domain Knowledge Impact on LLM Agent Quality](research/domain-knowledge/domain-knowledge-impact-on-quality.md) — 30-206% quality improvement
+- [Engineering Documentation Best Practices](research/documentation/engineering-documentation-best-practices.md) — rationale, hyperlinks
+- [LLM Agent Caching and Knowledge Persistence Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — file-based memory, CAG vs RAG
+- [Web Content Scraping Tools for LLM Agents](research/web-scraping/web-content-scraping-tools.md) — WebFetch, Jina, Firecrawl
+- [Skill Gap Detection for LLM Agent Skills](research/skill-gap-detection/skill-gap-detection-approaches.md) — extraction criteria
+- [Repo Readiness Frameworks for AI Coding Assistants](research/repo-static-analysis/repo-readiness-frameworks.md) — static analysis frameworks
+- [Context Window Optimization for AI Coding Assistants](research/token-efficiency/context-window-optimization.md) — context rot, token density
+- [Architecture Pattern Recognition from Repository Structure](research/architecture-detection/architecture-pattern-recognition.md) — hybrid detection
+- [Error Class to Primitive Mapping for AI Coding Assistants](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale, error taxonomy
+- [Systematische Claude Code Optimierung für unbekannte Repositories](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation
+- [Command Naming Conventions: Evidence-Based Findings](research/command-naming/command-naming-conventions.md) — CLI, slash command, plugin naming patterns
+- [Web Research Quality Evaluation](research/source-quality/web-research-quality-evaluation.md) — CRAAP, E-E-A-T, credibility assessment
+- [Change Discipline Workflow Research](research/change-discipline/change-discipline-workflow-research.md) — multi-perspective review, LLM self-review blindspots
 
 ## Change Discipline
 
-[`docs/change-discipline-rule.md`](/home/nos-ai/workspace/review-claude-config/docs/change-discipline-rule.md) is authoritative for the plan -> review -> implement -> review -> commit sequence and the zero-Medium rule.
+Change Discipline Rule ([docs/change-discipline-rule.md](docs/change-discipline-rule.md)) — mandatory plan→review→implement→review→commit; **subagent must receive plan+CLAUDE.md+research+target files+checklist** before any plan approval. Zero Medium findings before commit. Applies to all changes: skills, agents, rules, code, docs.
+
+## Research Backlog
+
+[Research Backlog](docs/research-backlog.md) — 5 deep research topics for review suite quality gaps (autonomous reliability, dependency integrity, instruction following at scale, tool least-privilege, low-evidence baseline refresh).
 
 ## Manual Regression Cases
 
-Use [`docs/review-eval-cases.md`](/home/nos-ai/workspace/review-claude-config/docs/review-eval-cases.md) after changing the rubric, baseline, review prompts, analytics conventions, or scaffold workflow.
+Use [Review Eval Cases](docs/review-eval-cases.md) after changing the rubric, baseline, review prompts, analytics conventions, or scaffold workflow.

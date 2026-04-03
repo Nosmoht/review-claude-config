@@ -6,7 +6,7 @@ Research supporting the global change discipline rule for Claude Code sessions.
 
 ### 1. Proportional review processes outperform uniform ceremony
 
-Requiring uniform high-ceremony review for all changes causes costs to exceed benefits for low-risk changes. Google's 9-million-review study found that knowledge transfer — not defect detection — drives most code-review ROI. PRs under 400 LOC capture 66-75% of defects at 200 LOC/hour; oversized PRs drop below 50% detection rates.
+Requiring uniform high-ceremony review for all changes causes costs to exceed benefits for low-risk changes. Google's 9-million-review study found that knowledge transfer — not defect detection — drives most code-review ROI. Separately, a large-scale PR analysis (cited via Augment Code) found PRs under 400 LOC capture 66-75% of defects at 200 LOC/hour; oversized PRs drop below 50% detection rates. (These are distinct studies; the LOC metrics do not originate from the Google study.)
 
 Agentic workflow research recommends SIMPLE/COMPLEX classification to scale ceremony proportionally: simple changes plan all tasks upfront; complex changes plan one task at a time.
 
@@ -41,7 +41,7 @@ LLMs overemphasize technical validity in reviews and systematically underweight 
 Mitigations:
 - Multi-lens assessment: security, quality, architecture perspectives (Salesforce Prizm)
 - Cross-model reviews: one model writes, another critiques (Osmani)
-- Complementary human+LLM review: LLMs for systematic validity, humans for nuanced judgment (arxiv:2502.17086)
+- Complementary human+LLM review: LLMs for systematic validity, humans for nuanced judgment (arxiv:2502.17086 — note: this paper studies LLMs reviewing academic papers; the blind-spot pattern is directionally relevant to code/config review but domain transfer is unvalidated)
 - Adversarial, user-perspective, and security-focused review perspectives reduce blindspots
 
 **Implication for rule:** Review step should mandate different perspectives, especially in autonomous mode where human review is absent.
@@ -86,7 +86,7 @@ Sources:
 ## Evidence Gaps
 
 - No quantitative studies on optimal number of review perspectives for LLM self-review
-- "35-40% bug density increase" claim from AI Code Quality Guide 2026 — Tier 2 source, no primary study linked
+- "35-40% bug density increase" claim from AI Code Quality Guide 2026 — Tier 3 source (consultant blog, anecdotal "I've seen this across three organizations," no primary study linked; no methodology)
 - Kim/Yegge "4x commit frequency" is a recommendation, not a measured outcome
 - No controlled studies comparing plan-review-implement-review-commit sequences vs simpler workflows for LLM agents specifically
 
