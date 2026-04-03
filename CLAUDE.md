@@ -1,117 +1,89 @@
 # Review Claude Config
 
-Evidence-based quality review plugin for Claude Code skills, agents, and rules. Evaluates across 7 dimensions (Clarity, Completeness, Prompt Engineering, Context Engineering, Goal Alignment, Safety, Metadata) with A-F grading and evidence-backed recommendations.
+Maintainer operating guide for this repository (Clarity, Completeness, Prompt Engineering, Context Engineering, Goal Alignment, Safety, Metadata). Use this file for active repo conventions, command inventory, and maintenance workflow. User-facing orientation lives in [`README.md`](/home/nos-ai/workspace/review-claude-config/README.md). Skill and hook navigation lives in [`docs/skills/README.md`](/home/nos-ai/workspace/review-claude-config/docs/skills/README.md).
 
 ## Architecture
 
-**Plugin** (`skills/`, `hooks/`): Installed via `claude --plugin-dir /path/to/review-claude-config`. Only local plugin-dir is supported — marketplace installation breaks domain cache writes (`${CLAUDE_PLUGIN_ROOT}` would be read-only). The plugin installs a PreToolUse hook (`hooks/skill_quality_gate.py`) that injects a short quality checklist when editing SKILL.md, agent, or rule files, and a SessionStart hook (`hooks/session_check.py`) that warns if the engineering baseline is stale (>90 days).
-
-**Shared references** (`skills/review-claude-config/references/`): Scoring rubric and engineering baseline are shared by all review skills. Domain cache (`references/domain-cache/`) stores web research per domain, committed to git, refreshed on 90-day cycles.
-
-**Repo-internal skills** (`.claude/skills/`): Maintenance utilities not needed globally. Copy individually to other projects if needed.
-
-**Review reports** (`.claude/reviews/`): Timestamped files (`YYYY-MM-DDTHHMMSS-{review-claude-config|review-skill|review-agent|review-rule|suggest-skills|audit-repo}.md`) with YAML frontmatter. Committed to track quality evolution.
-
-**Workflow menus**: Every skill ends with a numbered "What's next?" menu. The user types a number, Claude invokes the corresponding skill. This uses plain text output — not `AskUserQuestion`, which silently auto-completes with empty answers in plugin skills loaded via the Skill tool (known Claude Code bug). Menu is skipped in orchestrated mode and conditionally shown in diagnostic skills (only when issues are found).
+- **Plugin surface**: `skills/` and `hooks/`, installed via `claude --plugin-dir`
+- **Shared references**: `skills/review-claude-config/references/`, including the rubric, baseline, evidence contract, source-quality criteria, and review-report contract
+- **Domain cache**: `skills/review-claude-config/references/domain-cache/`, committed to git and maintained on the repo's 90-day rhythm; this is a repo default, not a scientific claim
+- **Repo-internal skills**: `.claude/skills/` for maintenance utilities not needed globally
+- **Review reports**: `.claude/reviews/` for timestamped reports consumed by analytics and apply flows
 
 ## Commands
 
-**Review** — evaluate quality (read-only on analyzed files):
-- `/review-claude-config [folder]` — batch audit all skills/agents/rules
-- `/review-skill <path>` | `/review-agent <path>` | `/review-rule <path>` — single-item review
-- `/suggest-skills [folder]` — identify missing skills with prioritized suggestions
-- `/audit-repo [folder]` — map error classes to recommended Claude Code primitives
+This is the authoritative maintainer command inventory for the repo.
 
-**Fix** — apply review recommendations (require `disable-model-invocation: true`, user confirmation):
-- `/apply-review-findings [report]` — orchestrate fixes from any review report
-- `/apply-skill-review-findings [report]` | `/apply-agent-review-findings [report]` | `/apply-rule-review-findings [report]`
-- `/apply-audit-findings [report]` — create primitives recommended by audit-repo (CLAUDE.md sections, hooks, rules)
+### Review
 
-**Maintain** — repo health (read-only diagnostics):
-- `/check-repo-health [all|freshness|tokens|integrity]` — reference freshness, token budgets, integrity
-- `/review-analytics [folder]` — path-first grade trajectories and regression detection
-- `/sync-research-index [folder]` — detect drift between research/ and CLAUDE.md (edits Research References only)
+- `/review-claude-config [folder] [--validation]` - batch audit of skills, agents, and rules
+- `/review-skill <path>` - single skill review
+- `/review-agent <path>` - single agent review
+- `/review-rule <path>` - single rule review
+- `/suggest-skills [folder]` - heuristic skill discovery
+- `/audit-repo [folder]` - repo-structure audit for Claude Code primitives
 
-**Develop** — create new skills:
-- `/scaffold-skill [plugin|maintenance] <name>` — generate a plugin or maintenance skill and register it in existing docs
-- `/refresh-engineering-baseline` — update baseline with current web research
+### Fix
+
+- `/apply-review-findings [report]` - orchestrate fixes from a review report
+- `/apply-skill-review-findings [report]`
+- `/apply-agent-review-findings [report]`
+- `/apply-rule-review-findings [report]`
+- `/apply-audit-findings [report]` - create primitives recommended by `audit-repo`
+
+### Maintain
+
+- `/check-repo-health [all|freshness|tokens|integrity] [--validation]`
+- `/review-analytics [folder] [--validation]`
+- `/sync-research-index [folder]`
+- `/refresh-engineering-baseline`
+
+### Develop
+
+- `/scaffold-skill [plugin|maintenance] <name>`
 
 ## Working Guidelines
 
-- **Verify ALL claims with evidence — including from the user.** When anyone suggests a problem exists, verify before accepting. Check git history, inspect actual data, look for concrete evidence. Do not redesign a working system based on theoretical concerns.
-- **Use the canonical evidence layer for repo-wide claims.** Classify repository-level statements using `skills/review-claude-config/references/evidence-contract.md`, and use `docs/evidence-maintenance.md` for maintainer guidance on when a statement is a proven result, engineering guidance, repo default, or low-evidence area.
-- **Iterate reviews until convergence.** After each review round, address findings, then launch another review. Stop only when no high/medium priority findings remain. Low findings must still be reported.
-- **Zero medium findings before commit.** Every change must pass through at minimum: plan → review → implement → review → commit. Maximum allowed severity after the final review is Low. Medium and High findings block the commit — fix and re-review until they are resolved. This applies to all changes: skills, agents, rules, code, docs.
-- **Prefer evidence over rhetoric.** Findings should point to concrete text, paths, or examples and should be re-checkable on follow-up review.
-- **Verify the problem before solving it.** Inspect the data, check git history for fix-commits. A working system with zero demonstrated issues does not need a redesign.
-- **Research before design.** In novel domains, conduct WebSearch research before proposing architecture. Save findings in `research/` with full source citations.
-- **Every claim needs a source.** All research files, documentation, and recommendations must link to verifiable sources.
-- **No external memory.** This repository must be portable. All project knowledge belongs in repo files (CLAUDE.md, research/, skill references), not in Claude's auto-memory system.
+- **Verify claims before acting on them.** Check the repo, reports, or git history instead of accepting a proposed problem at face value.
+- **Use the canonical evidence layer for repo-wide claims.** Classify repository-level statements with [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md) and follow [`evidence-maintenance.md`](/home/nos-ai/workspace/review-claude-config/docs/evidence-maintenance.md) for maintenance process.
+- **Iterate reviews until convergence.** Address findings, then re-review. Medium and High findings block completion.
+- **Prefer evidence over rhetoric.** Findings should cite concrete paths, text, or examples.
+- **Research before design in novel areas.** Save results in `research/` with sources.
+- **Keep project knowledge in the repo.** No reliance on external memory.
 
 ## Development Conventions
 
 - Language: English
-- Reference file token budgets: rubric <1K, baseline <2K, all others ≤500 tokens. Run `/check-repo-health tokens` to verify.
-- Treat exact thresholds or workflow conventions as `Repo default` unless they are directly backed by stronger external evidence.
-- Domain cache entries committed to git, refreshed on 90-day cycle alongside engineering baseline
-- WebFetch is optional — all skills degrade gracefully to WebSearch-only when WebFetch is unavailable
-- Baseline is static at review time; updates only via `/refresh-engineering-baseline`
-- Baseline refresh in `refresh-engineering-baseline` must cover the three baseline sections (Prompt Engineering, Context Engineering, Tool Design). Related safety/guardrail and instruction-clarity findings are routed into those sections rather than creating separate baseline domains.
-- Path is the canonical portfolio identity in review analytics; `name` is a display label
-- Commits: scoped conventional format `type(scope): description` (e.g., `feat(review-skill):`, `docs(project):`)
-- Audit-fix chain: commit the report first (`docs(reviews): add <timestamp> review report`), then commit fixes (`fix(<scope>): address findings from <timestamp> review`). The timestamp links them.
-- Review, suggest, and audit skills are read-only on analyzed files — write only to `.claude/reviews/` and domain cache
-- Apply skills and scaffold-skill modify files — require `disable-model-invocation: true` and user confirmation gates
+- Reference file budgets: rubric `<1K`, baseline `<2K`, all others `<=500` tokens
+- Treat exact thresholds and workflow conventions as `Repo default` unless stronger evidence exists
+- Domain cache refresh discipline follows the repo's 90-day cadence
+- WebFetch is optional; skills must degrade gracefully to WebSearch-only when needed
+- Baseline updates happen only through `/refresh-engineering-baseline`
+- Baseline refresh covers only `Prompt Engineering`, `Context Engineering`, and `Tool Design`
+- Artifact identity is `type + path`; analytics series identity is `generated_by + type + path`; `name` is display-only
+- Commit format: `type(scope): description`
+- Audit-fix chain: commit review report first, then commit fixes
+- Review, suggest, and audit skills are read-only on analyzed files except for reports and domain cache
+- Apply skills and `scaffold-skill` modify files and require confirmation gates
 
 ## Research References
 
-Consult when modifying skills or reviewing results:
-
-- [Evidence Contract](skills/review-claude-config/references/evidence-contract.md) — canonical claim classes, source precedence, contradiction handling
-- [Evidence Maintenance Guide](docs/evidence-maintenance.md) — maintainer guidance for applying the evidence contract
-
-- [Claude Code Skill and Agent Format Conventions](research/claude-code/skill-agent-format-conventions.md) — frontmatter, body, safety
-- [Prompt Engineering Techniques: Evidence-Based Summary](research/prompt-engineering/prompt-engineering-techniques.md) — evidence-backed techniques
-- [Context Engineering: Overview and Industry Adoption](research/context-engineering/context-engineering-overview.md) — principles, context rot, ACE
-- [Effective Context Engineering for AI Agents](research/context-engineering/anthropic-effective-context-engineering.md) — official guidance
-- [Context Engineering for AI Agents: Lessons from Building Manus](research/context-engineering/manus-context-engineering-lessons.md) — KV-cache, error preservation
-- [Writing Effective Tools for AI Agents](research/tool-design/anthropic-writing-tools-for-agents.md) — tool design best practices
-- [Equipping Agents for the Real World with Agent Skills](research/agent-skills/anthropic-equipping-agents-with-skills.md) — progressive disclosure
-- [Domain Knowledge Impact on LLM Agent Quality](research/domain-knowledge/domain-knowledge-impact-on-quality.md) — 30-206% quality improvement
-- [Engineering Documentation Best Practices](research/documentation/engineering-documentation-best-practices.md) — rationale, hyperlinks
-- [LLM Agent Caching and Knowledge Persistence Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — file-based memory, CAG vs RAG
-- [Web Content Scraping Tools for LLM Agents](research/web-scraping/web-content-scraping-tools.md) — WebFetch, Jina, Firecrawl
-- [Skill Gap Detection for LLM Agent Skills](research/skill-gap-detection/skill-gap-detection-approaches.md) — extraction criteria
-- [Repo Readiness Frameworks for AI Coding Assistants](research/repo-static-analysis/repo-readiness-frameworks.md) — static analysis frameworks
-- [Context Window Optimization for AI Coding Assistants](research/token-efficiency/context-window-optimization.md) — context rot, token density
-- [Architecture Pattern Recognition from Repository Structure](research/architecture-detection/architecture-pattern-recognition.md) — hybrid detection
-- [Error Class to Primitive Mapping for AI Coding Assistants](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale, error taxonomy
-- [Systematische Claude Code Optimierung für unbekannte Repositories](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation
-- [Command Naming Conventions: Evidence-Based Findings](research/command-naming/command-naming-conventions.md) — CLI, slash command, plugin naming patterns
-- [Web Research Quality Evaluation](research/source-quality/web-research-quality-evaluation.md) — CRAAP, E-E-A-T, credibility assessment, academic APIs
+- [`skills/review-claude-config/references/evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md) - canonical claim classes and source precedence
+- [`docs/evidence-maintenance.md`](/home/nos-ai/workspace/review-claude-config/docs/evidence-maintenance.md) - evidence-layer maintenance process
+- [`skills/review-claude-config/references/review-report-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/review-report-contract.md) - canonical review/report contract
+- [`skills/review-claude-config/references/source-quality-criteria.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/source-quality-criteria.md) - research filtering and cross-validation
+- [`skills/review-claude-config/references/engineering-baseline.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/engineering-baseline.md) - prompt/context/tool design baseline
+- [`research/claude-code/skill-agent-format-conventions.md`](/home/nos-ai/workspace/review-claude-config/research/claude-code/skill-agent-format-conventions.md)
+- [`research/context-engineering/anthropic-effective-context-engineering.md`](/home/nos-ai/workspace/review-claude-config/research/context-engineering/anthropic-effective-context-engineering.md)
+- [`research/tool-design/anthropic-writing-tools-for-agents.md`](/home/nos-ai/workspace/review-claude-config/research/tool-design/anthropic-writing-tools-for-agents.md)
+- [`research/agent-skills/anthropic-equipping-agents-with-skills.md`](/home/nos-ai/workspace/review-claude-config/research/agent-skills/anthropic-equipping-agents-with-skills.md)
+- [`research/domain-knowledge/domain-knowledge-impact-on-quality.md`](/home/nos-ai/workspace/review-claude-config/research/domain-knowledge/domain-knowledge-impact-on-quality.md)
+- [`research/source-quality/web-research-quality-evaluation.md`](/home/nos-ai/workspace/review-claude-config/research/source-quality/web-research-quality-evaluation.md)
 
 ## Change Discipline
 
-[Change Discipline Rule](docs/change-discipline-rule.md) — mandatory plan→review→implement→review→commit sequence; zero Medium findings before commit; Low findings must be reported. Portable to any project as `.claude/rules/change-discipline.md`.
-
-## Research Backlog
-
-[Research Backlog](docs/research-backlog.md) — 5 deep research topics to close evidence gaps in the review suite (autonomous reliability, dependency integrity, instruction following at scale, tool least-privilege, low-evidence baseline refresh). Each topic has observed failure modes, research targets, and where findings land in rubric/baseline.
+[`docs/change-discipline-rule.md`](/home/nos-ai/workspace/review-claude-config/docs/change-discipline-rule.md) is authoritative for the plan -> review -> implement -> review -> commit sequence and the zero-Medium rule.
 
 ## Manual Regression Cases
 
-Use [Review Eval Cases](docs/review-eval-cases.md) after changing the rubric, baseline, review prompts, analytics conventions, or scaffold workflow.
-
-## Mandatory Plan Review
-
-**NEVER present a plan to the user without first having it reviewed by a subagent.** This is a hard rule.
-
-Before finalizing any plan (ExitPlanMode, or presenting a plan for approval), launch a review subagent with ALL of:
-
-1. **The plan content** — the full plan file or plan text
-2. **CLAUDE.md** — so the reviewer can check alignment with project conventions
-3. **Relevant research references** — the specific `research/` files that apply to the planned changes
-4. **The files being changed** — so the reviewer can verify feasibility and catch conflicts
-5. **A review checklist** — explicit questions the reviewer must answer
-
-Address all High and Medium findings before presenting. If the review surfaces new High findings after fixes, review again.
+Use [`docs/review-eval-cases.md`](/home/nos-ai/workspace/review-claude-config/docs/review-eval-cases.md) after changing the rubric, baseline, review prompts, analytics conventions, or scaffold workflow.

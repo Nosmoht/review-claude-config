@@ -1,6 +1,6 @@
 # apply-agent-review-findings
 
-Apply High and Medium priority recommendations from a `review-agent` report to the reviewed agent file. Includes agent-specific validation for single-file constraint, model selection, description keywords, and tools array consistency.
+Apply High and Medium priority recommendations from a `review-agent` report to the reviewed agent file, then optionally offer dispatchable Low findings. Includes agent-specific validation for single-file constraint, model selection, description keywords, and tools array consistency.
 
 ## Overview
 
@@ -17,7 +17,7 @@ Apply High and Medium priority recommendations from a `review-agent` report to t
 
 ## Purpose
 
-The skill reads a `review-agent` report, extracts all High and Medium priority findings, and applies the recommended fixes to the reviewed agent file. Low priority findings are intentionally skipped.
+The skill reads a `review-agent` report, extracts dispatchable High and Medium priority findings, and applies the recommended fixes to the reviewed agent file. Dispatchable Low findings are deferred to an optional follow-up pass rather than discarded. Findings without both `Current` and `Recommended` anchors remain visible as manual follow-up items rather than being silently dropped.
 
 Because agents are single-file primitives, the skill enforces constraints that differ from skill-level fixes: no external reference directories, no multi-file sprawl, and strict validation that the agent file remains self-contained after edits.
 
@@ -67,13 +67,11 @@ flowchart TD
 
 If `$ARGUMENTS` provides a report path, use it directly. Otherwise, locate the most recent `review-agent` report in `.claude/reviews/` by timestamp.
 
-Read the report and parse the findings list from the review body. Each finding includes priority (High/Medium/Low), the recommendation text, and evidence.
+Read the report and parse the findings list from the review body using consumer compatibility rules derived from the canonical review contract. Historical reports may vary in heading depth or omit some modern fields, but only findings with both `Current` and `Recommended` are dispatchable to edits; anchorless findings are manual-only. The edit target comes only from `summary.path`; body `**Path:**` text is not an alternate authority.
 
-### Step 2: Filter to High and Medium priority
+### Step 2: Filter by dispatchability and priority
 
-Discard all Low priority findings. Build a work list of High and Medium findings ordered by priority (High first).
-
-If no High or Medium findings exist, output a summary ("No actionable findings") and exit.
+Separate findings into dispatchable and manual-only groups. Build a work list of dispatchable High and Medium findings ordered by priority (High first). If no dispatchable High or Medium findings exist but dispatchable Low findings remain, show any manual-only findings first and then offer the Low-impact pass. If only manual-only findings remain, output a manual follow-up summary and exit.
 
 ### Step 3: Read the agent file
 
@@ -99,12 +97,12 @@ Warn if the model seems mismatched for the agent's described purpose but do not 
 
 **Tools array consistency.** If a finding adds entries to the `tools` array, verify that the agent body references those tools. Warn on tools listed but never mentioned in the instructions.
 
-### Step 5: Preview changes and request confirmation
+### Step 5: Present actionable findings
 
-Present a summary of all changes that will be applied:
+Present a summary of all dispatchable High/Medium changes that can be applied:
 
 ```
-## Planned Edits
+## Actionable Findings
 
 ### Finding 1 (High): <title>
 - Current: <relevant excerpt>
@@ -117,14 +115,25 @@ Present a summary of all changes that will be applied:
 Blocked findings: <count, if any>
 Warnings: <list, if any>
 
-Proceed? (confirm to apply)
+Proceed with applying these findings? (yes/no)
 ```
 
-Wait for user confirmation before applying any edits. In orchestrated mode, the orchestrator provides confirmation.
+If manual-only findings are present, show them in a separate `## Manual Follow-Up` table with the reason `Missing Current/Recommended anchors`.
 
-### Step 6: Apply edits
+Wait for user confirmation before entering the per-finding edit loop.
 
-Use the Edit tool to apply each approved change to the agent file. Apply changes in document order (top to bottom) to avoid offset drift.
+### Step 6: Apply edits per finding
+
+For each dispatchable recommendation, show:
+- canonical target path from `summary.path`
+- Evidence / Why it matters / Validation
+- Current text from the actual file
+- Recommended replacement
+- any validation warnings
+
+Then ask: `Apply this change? (yes/skip/stop)`.
+
+Use the Edit tool only for findings the user approves. Apply changes in document order (top to bottom) to avoid offset drift.
 
 No new files are created. All changes are edits to the single agent file.
 
@@ -147,18 +156,19 @@ If any validation fails, report the issues and suggest manual corrections. Do no
 Follow the audit-fix chain convention:
 
 1. The review report should already be committed (by the review skill). If not, note this.
-2. Commit the agent file changes with: `fix(agents): address findings from <timestamp> review`
+2. Commit the agent file changes with: `fix(<scope>): address findings from <timestamp> review`
 
-The timestamp in the commit message links the fix to the originating report.
+The timestamp in the commit message links the fix to the originating report. Determine `<scope>` from the agent name.
 
 ## Hard Rules
 
 - **Edit-only.** Never create new files. Agents are single-file primitives.
 - **Single-file constraint.** Never create reference directories, include files, or any external dependencies for agents.
 - **Scope restriction.** Only modify the file identified in the review report.
-- **Preview before edit.** Always show planned changes and wait for confirmation.
+- **Canonical target path.** Use `summary.path` as the sole canonical target identity for edits.
+- **Preview before edit.** Always show a batch summary first, then preview each individual change and wait for confirmation.
 - **Audit-fix chain.** Commit message must reference the review report timestamp.
-- **No Low impact changes.** Only apply High and Medium priority findings.
+- **High/Medium first.** Apply High and Medium findings first. Offer dispatchable Low findings afterward instead of discarding them.
 - **disable-model-invocation: true.** This skill modifies files and requires explicit user confirmation.
 
 ## Reference Files

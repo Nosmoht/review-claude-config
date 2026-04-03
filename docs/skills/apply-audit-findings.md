@@ -106,7 +106,9 @@ Read the report file. Parse the YAML frontmatter. Validate two fields:
 
 ### Step 2: Parse the intervention matrix
 
-Extract the `summary` array from the frontmatter. Each entry has: `error_class`, `gap`, `primitive`, `priority`, `token_impact`.
+Extract the `summary` array from the frontmatter. Each entry must include the core fields `error_class`, `gap`, `primitive`, `priority`, and `token_impact`.
+
+Ignore additive metadata fields the applier does not need (for example `evidence_class` or `confidence`). They are valid schema extensions and should not break parsing.
 
 Parse the report body for **Recommendations** sections (organized by P0/P1/P2). Each recommendation has a numbered heading matching the intervention matrix row, a description, and one or more fenced code blocks with concrete content.
 

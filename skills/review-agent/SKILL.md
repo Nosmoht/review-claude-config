@@ -125,6 +125,8 @@ Calculate overall grade:
 
 ### Recommendations
 
+Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`. Prefer the `skills/` copy when present; otherwise use the sibling `.claude/skills/` copy. Use that contract's shared recommendation schema below. Keep the agent-specific category vocabulary below.
+
 #### 1. [Title] (Impact: [High/Medium/Low], Category: [Trigger|Examples|Prompt|Context|Safety|Metadata|Model])
 **Evidence:** [Quote or summarize the exact text that caused the issue, with path or section reference]
 
@@ -154,32 +156,10 @@ In orchestrated mode, skip this phase entirely — return only the structured ce
 In standalone mode:
 1. Present the certificate to the user.
 2. Confirm before writing: "Save review report to `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-agent.md`?"
-3. If confirmed, assemble report with YAML frontmatter:
-
-```yaml
----
-generated_by: review-agent
-schema_version: 1
-date: YYYY-MM-DD
-target: /absolute/path/to/agent
-baseline_version: YYYY-MM-DD
-items_reviewed: 1
-summary:
-  - name: agent-name                    # display label; analytics should track by path first
-    type: Agent
-    path: relative/path/to/agent.md
-    overall: B
-    score: 85.0
-    clarity: B
-    completeness: A
-    prompt_engineering: B
-    context_engineering: B
-    goal_alignment: B
-    safety: A
-    metadata: B
----
-```
-
+3. If confirmed, assemble the report using the canonical frontmatter contract located in Step 1 with:
+   - `generated_by: review-agent`
+   - one `summary` item of type `Agent`
+   - `type + path` as the canonical identity and `name` as display-only
 4. Write the report file. Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS review report`
 5. **What's Next?** (standalone mode only — skip in orchestrated mode)
 

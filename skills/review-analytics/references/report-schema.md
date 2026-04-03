@@ -1,38 +1,24 @@
 ---
 name: report-schema
-description: Expected YAML frontmatter fields and grade values from review-claude-config reports
+description: Analytics compatibility notes for the canonical review report contract
 ---
 
-## Frontmatter Fields
+## Canonical Source
 
-```yaml
----
-generated_by: review-claude-config       # Identifies report type
-schema_version: 1                        # Schema version for compatibility
-date: YYYY-MM-DD                         # Report date
-target: /absolute/path                   # Reviewed directory
-baseline_version: YYYY-MM-DD            # Engineering baseline version used
-items_reviewed: N                        # Count of items
-summary:                                 # Array of reviewed items
-  - name: item-name                      # Display label for the item
-    type: Skill                          # Skill, Agent, or Rule
-    path: relative/path/to/SKILL.md      # Canonical tracking key within a report series
-    overall: B                           # A-F composite grade
-    score: 85.0                          # Weighted numeric score (0-100)
-    clarity: B                           # Per-dimension grades (A-F)
-    completeness: A
-    prompt_engineering: B                # null for Rules
-    context_engineering: B               # null for Rules
-    goal_alignment: B
-    safety: A                            # null for Rules
-    metadata: B                          # null for Rules
----
-```
+The canonical review/report schema is defined in:
 
-Tracking guidance:
-- Use `type + path` as the primary portfolio identity across multiple reports.
-- Treat `name` as a display label only.
-- If a path disappears and a new path appears, report a rename/move candidate instead of silently merging by name.
+- `skills/review-claude-config/references/review-report-contract.md`
+
+This file is not an independent schema authority. It exists only to document analytics-specific expectations for consumers of that contract.
+
+## Analytics Expectations
+
+- `review-analytics` reads the frontmatter fields from the canonical contract.
+- `type + path` identifies the reviewed artifact.
+- `generated_by + type + path` identifies the analytics series so batch and standalone reviews are not merged blindly.
+- `name` is display-only.
+- If a path disappears and a new path appears, analytics should flag a rename/move candidate instead of silently merging by name.
+- Legacy reports may use older heading depth or recommendation shapes. Analytics compatibility is limited to what can be derived from frontmatter plus supported historical layouts.
 
 ## Grade Values
 

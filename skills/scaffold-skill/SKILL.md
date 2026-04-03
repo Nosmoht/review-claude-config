@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 # Skill Scaffolding
 
-You are a skill builder creating correctly structured Claude Code skills. Your job is to generate valid skill files that follow project conventions and the skill format specification.
+You are a skill builder creating correctly structured Claude Code skills. Your job is to generate valid skill files that follow project conventions and the skill format specification. Naming guidance in this repo is intentionally lightweight: it is a repo convention and usability heuristic, not a claim of settled command-naming science.
 
 ## Workflow
 
@@ -24,7 +24,7 @@ Parse `$ARGUMENTS` as `[mode] <skill-name>`.
 - If the skill name is empty after parsing, ask the user for it.
 
 Validate:
-- Name must be kebab-case (lowercase, hyphens only, no spaces or underscores).
+- Name must be kebab-case (lowercase, hyphens only, no spaces or underscores). Treat this as a repo naming convention for consistency and CLI usability, not a scientific claim.
 - Name must not conflict with an existing skill. Glob both `skills/*/SKILL.md` and `.claude/skills/*/SKILL.md` to check.
 
 If validation fails, report the issue and ask for a corrected name.
@@ -100,12 +100,19 @@ If any write fails, report which files were successfully created and which faile
 
 ### 6. Register in repository docs
 
-Use only existing documentation sections. Do not invent `## Skills`, `## File Structure`, or `## Installation`.
+Use only the stable surviving headings. Do not invent new top-level sections.
 
-- **Plugin mode:** Update the relevant command subsection in `README.md`, the matching command subsection in `CLAUDE.md`, and the existing architecture/inventory prose where plugin skills are described.
-- **Maintenance mode:** Update only `CLAUDE.md` where repo-internal maintenance skills and their commands are described.
+- **Plugin mode:**
+  - update `README.md` under the user-facing `## Command Families` section
+  - update `CLAUDE.md` under `## Commands`
+  - update `docs/skills/README.md` under `## Quick Reference` and, if needed, `## By Function`
+  - if the new skill changes workflow composition or the compact mode/research comparison, also update `## Workflow Chains` or `## Mode and Research Summary`
+- **Maintenance mode:**
+  - update `CLAUDE.md` under `## Commands`
+  - update `docs/skills/README.md` under `## Quick Reference` and `## By Function` when the new skill belongs in the maintained component inventory
+  - if the new skill changes workflow composition or the compact mode/research comparison, also update `## Workflow Chains` or `## Mode and Research Summary`
 
-Use Edit to make targeted additions. Never rewrite unrelated sections.
+Use Edit to make targeted additions. Never rewrite unrelated sections or depend on prose outside those headings.
 
 ### 7. Suggest commit and next steps
 
@@ -134,6 +141,6 @@ When the user responds: **1** → invoke `/review-skill` with the new skill's pa
 - **Never overwrite existing skills.** If a skill directory already exists with the given name, refuse and ask for a different name.
 - **Preview before writing.** Always show the full generated SKILL.md content before creating any files.
 - **Frontmatter must be valid.** Only use fields documented in the skill format conventions: `name`, `description`, `argument-hint`, `disable-model-invocation`, `user-invocable`, `allowed-tools`, `context`, `agent`.
-- **CLAUDE.md edits are additive.** Append to existing sections. Never modify or remove existing entries.
+- **Documentation edits are additive.** Append concise entries under the stable headings in `README.md`, `CLAUDE.md`, and `docs/skills/README.md`. Never modify or remove unrelated entries.
 - **Reference files have token budgets.** Note in each reference file stub: "Keep under 500 tokens."
-- **Kebab-case names only.** Reject names that are not valid kebab-case.
+- **Kebab-case names only.** Reject names that are not valid kebab-case. This is a repo convention, not a claim of universal naming optimality.

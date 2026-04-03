@@ -1,5 +1,11 @@
 # Writing Effective Tools for AI Agents
 
+## Provenance Metadata
+
+- Strongest source tier: Tier 1
+- Source basis: Single source - Anthropic Engineering Blog, "Writing tools for agents"
+- Last reviewed: 2026-04-03
+
 **Source:** [Anthropic Engineering Blog](https://www.anthropic.com/engineering/writing-tools-for-agents)
 **Fetched:** 2026-03-24
 

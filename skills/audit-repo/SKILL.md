@@ -14,7 +14,7 @@ disable-model-invocation: true
 
 # Audit Repo
 
-Analyze a target repository's structure, toolchain, conventions, architecture, and token efficiency to produce a prioritized intervention matrix of recommended Claude Code primitives.
+Analyze a target repository's structure, toolchain, conventions, architecture, and token efficiency to produce a prioritized intervention matrix of recommended Claude Code primitives. This skill uses a mix of deterministic scan signals, evidence-informed guidance, and repo-policy heuristics; it is diagnostic support, not a scientifically closed primitive-derivation engine.
 
 ## Argument Handling
 
@@ -250,7 +250,7 @@ If the analyzer agent fails, report partial results and continue.
 
 ## Phase 4 — Primitives Derivation
 
-The orchestrator synthesizes Phase 2 + Phase 3 results using error-class-taxonomy.md and primitive-decision-matrix.md as decision guides. This runs inline (not as a sub-agent) because it requires judgment that benefits from the full conversation context.
+The orchestrator synthesizes Phase 2 + Phase 3 results using error-class-taxonomy.md and primitive-decision-matrix.md as decision guides. This runs inline (not as a sub-agent) because it requires judgment that benefits from the full conversation context. The synthesis is evidence-informed, but several mappings remain repo-policy or heuristic decisions rather than benchmark-settled science.
 
 ### 4A: CLAUDE.md Gaps
 
@@ -262,7 +262,7 @@ Review Phase 2 results against CLAUDE.md requirements:
 - **Navigation**: Is sprawl score >100? → CLAUDE.md P0 architecture map with entry points
 - **Large files**: Any files >500 LOC? → CLAUDE.md hints for relevant sections
 
-For each gap, include: specific evidence from Phase 2, concrete content suggestion (not just "add toolchain commands" but "add these specific commands found in package.json: [list]").
+For each gap, include: specific evidence from Phase 2, concrete content suggestion (not just "add toolchain commands" but "add these specific commands found in package.json: [list]"), plus an `evidence_class` and `confidence` assignment for the recommendation.
 
 ### 4B: Skill Candidates
 
@@ -292,6 +292,8 @@ Each candidate (from either source) must pass 3/4 extraction criteria:
 
 Do NOT recommend skills for single-command operations, simple aliases, or workflows with fewer than 3 distinct steps.
 
+This gate is a repo-level heuristic filter. Treat it as a decision aid, not as a universal law of skill design.
+
 In the intervention matrix, include a `signal_source` for each Skill row: "repetition" for structural checks, or the signal name from the catalog (e.g., "Database migrations", "Test config without test skill").
 
 ### 4C: Agent Candidates
@@ -304,6 +306,8 @@ From Phase 2 concern topology:
 
 Decision: only recommend Agent if concern has BOTH its own toolchain AND its own evaluation criteria. Otherwise recommend Skill.
 
+This is an intentionally conservative repo policy to avoid inflating agent count.
+
 ### 4D: Hook/Rule Candidates
 
 From Phase 2 constraint extraction:
@@ -315,6 +319,8 @@ From Phase 2 constraint extraction:
 
 Decision: if check is a single command with boolean output → Hook. If judgment needed → Rule.
 
+Treat this as an evidence-informed heuristic split, not a benchmark-settled primitive-selection theorem.
+
 ## Phase 5 — Needs Matrix and Report
 
 ### Step 1: Assemble the Intervention Matrix
@@ -324,7 +330,12 @@ For each identified gap from Phase 4:
 2. Assign **primitive type** (CLAUDE.md, Skill, Agent, Hook, Rule)
 3. Assign **priority**: P0 (CLAUDE.md basics + critical navigation), P1 (hooks + skills + security), P2 (agents + domain)
 4. Assign **token impact**: High/Medium/Low from Phase 3 metrics
-5. Cite **evidence**: specific file paths, metrics, or absence evidence
+5. Assign **evidence_class** using the canonical classes from `skills/review-claude-config/references/evidence-contract.md`
+6. Assign **confidence**:
+   - High: strong deterministic repo evidence and/or explicit external validation
+   - Medium: solid repo evidence with meaningful interpretation or repo-policy mapping
+   - Low: inference-heavy or thinly corroborated recommendation
+7. Cite **evidence**: specific file paths, metrics, or absence evidence
 
 Sort by priority (P0 first), then by token impact (High first).
 
@@ -332,7 +343,7 @@ Sort by priority (P0 first), then by token impact (High first).
 
 If `websearch_available = true`, validate the top 3 P0 recommendations:
 - 1-2 WebSearch queries to check if the recommended primitives align with best practices for the detected tech stack
-- Apply source quality criteria from `references/source-quality-criteria.md`: discard marketing/opinion/outdated content, prefer Tier 1-2 sources
+- Apply source quality criteria from `skills/review-claude-config/references/source-quality-criteria.md`: discard marketing/opinion/outdated content, prefer Tier 1-2 sources
 - Mark validated recommendations accordingly
 
 ### Step 3: Build Report
@@ -401,11 +412,12 @@ Breakdown: depth [N] × files/dir [N] × collisions [N]
 
 ## Intervention Matrix
 
-| # | Error Class | Gap | Primitive | Priority | Token Impact | Signal Source | Evidence |
-|---|-------------|-----|-----------|----------|-------------|--------------|----------|
-| 1 | [class] | [description] | [type] | [P0-P2] | [H/M/L] | [source*] | [cite] |
+| # | Error Class | Gap | Primitive | Priority | Token Impact | Evidence Class | Confidence | Signal Source | Evidence |
+|---|-------------|-----|-----------|----------|-------------|----------------|------------|--------------|----------|
+| 1 | [class] | [description] | [type] | [P0-P2] | [H/M/L] | [class] | [H/M/L] | [source*] | [cite] |
 
 *Signal Source: For Skill primitives, include "repetition" or the catalog signal name (e.g., "Database migrations"). For other primitives, use "—".
+*Evidence Class: Use the canonical vocabulary from `skills/review-claude-config/references/evidence-contract.md`.
 
 ## Recommendations
 
@@ -459,6 +471,7 @@ When the user responds: **1** → invoke `/apply-audit-findings` with the report
 - **Bash only in sub-agents.** Bash is intentionally excluded from top-level allowed-tools and only granted to Phase 2/3 sub-agents. Sub-agent instructions explicitly prohibit write commands.
 - **Scan limits enforced.** Max 50 lines per file read, max 4 directory levels, max 500 files per listing. For very large repos (>5000 files), focus on root configs and first-level subdirectories.
 - **Every recommendation needs evidence.** Cite specific file paths, metrics, or absence evidence. Never recommend a primitive without explaining what analysis data supports it.
+- **Expose uncertainty honestly.** Every intervention must include `evidence_class` and `confidence`; do not present heuristic or repo-policy mappings as settled science.
 - **No generation.** This skill produces a diagnostic matrix, not actual primitives. Recommend `/scaffold-skill`, manual CLAUDE.md creation, or hook setup — don't create them.
 - **Present all findings before asking** about persistence or follow-up actions.
 - **Error handling.** If Phase 2 scan agent fails entirely, report the error and stop. If Phase 3 analyzer fails, report partial results and continue to Phase 4 with available data. Never silently skip.

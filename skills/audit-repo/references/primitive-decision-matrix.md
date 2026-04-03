@@ -1,6 +1,6 @@
 ---
 name: primitive-decision-matrix
-description: Decision rules for recommending each Claude Code primitive type
+description: Evidence-informed decision aids for recommending each Claude Code primitive type
 ---
 
 ## CLAUDE.md (P0)
@@ -13,6 +13,7 @@ Recommend when: information is universally needed every session.
 - Large file hints (>500 LOC: "relevant logic in lines X-Y")
 
 Budget: <200 lines. Use progressive disclosure — point to docs, don't inline.
+Classification: `Engineering guidance` for progressive disclosure, `Repo default` for the exact line-budget target.
 
 ## Hook (P1)
 
@@ -22,6 +23,7 @@ Recommend when: constraint is mechanical and verifiable after tool use.
 - Branch protection → simpler as a Rule ("Never commit to main")
 
 Decision: single command with boolean output → Hook. Judgment needed → Rule or CLAUDE.md.
+Classification: `Engineering guidance` for separating mechanical checks from judgment, `Repo default` for the exact branching rule used here.
 
 ## Skill (P1)
 
@@ -31,6 +33,7 @@ Recommend when: workflow is repeated, multi-step, parameterizable.
 - Existing codegen templates (plop, hygen) → wrapper skill
 
 Must pass 3/4 extraction criteria: recurrence, verification, non-obviousness, generalizability.
+Classification: `Repo default`. The extraction gate is a repo-level decision aid, not a benchmark-settled law.
 
 ## Agent (P2)
 
@@ -40,7 +43,9 @@ Recommend when: concern has BOTH its own toolchain AND own evaluation criteria.
 - Separate deployment targets → infra-architect agent
 
 Decision: own files but same toolchain → Skill, not Agent.
+Classification: `Repo default`. This threshold is intentionally conservative to avoid overproducing agents.
 
 ## Instruction Budget
 
 IFScale benchmark: reasoning models handle 100-250 simple instructions before cliff decay. Claude Code system prompt uses ~50. Effective budget: ~100-150 across all primitives. Keep CLAUDE.md lean — remove instructions Claude already follows without being told.
+Classification: `Engineering guidance` for keeping the prompt lean, `Repo default` for the exact budget interpretation used here.

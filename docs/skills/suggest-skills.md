@@ -1,6 +1,6 @@
 # suggest-skills
 
-Analyze a repository's structure, workflows, and documentation to identify missing Claude Code skills. Produces a prioritized report with rationale and skeleton SKILL.md for each suggestion. Uses two-layer analysis: deterministic table-based signal matching plus open reasoning with web-validated extraction criteria.
+Analyze a repository's structure, workflows, and documentation to identify missing Claude Code skills. Produces a prioritized report with rationale and skeleton SKILL.md for each suggestion. Uses two-layer analysis: deterministic table-based signal matching plus heuristic open reasoning with validation gates and explicit uncertainty labels.
 
 ## Overview
 
@@ -16,7 +16,7 @@ Analyze a repository's structure, workflows, and documentation to identify missi
 
 ## Purpose
 
-The skill answers the question: "What Claude Code skills should this repository have but doesn't?" It takes a target folder, scans its structure, classifies the repository type, and runs two complementary analysis layers -- one deterministic (table matching) and one open-ended (reasoning with web validation). The result is a prioritized list of skill suggestions, each backed by concrete evidence and accompanied by a skeleton SKILL.md.
+The skill answers the question: "What Claude Code skills should this repository have but doesn't?" It takes a target folder, scans its structure, classifies the repository type, and runs two complementary analysis layers -- one deterministic (table matching) and one heuristic (open reasoning with web validation). The result is a prioritized list of skill suggestions, each backed by concrete evidence, labeled with `evidence_class` and `confidence`, and accompanied by a skeleton SKILL.md.
 
 The skill is strictly read-only on the target repository. It writes only to `.claude/reviews/` when persisting a report.
 
@@ -136,9 +136,9 @@ The agent returns a structured table:
 | Existing Coverage | Which existing skill (if any) already covers this |
 | Suggestion | The recommended skill name and brief description |
 
-Layer 1 performs no web research. It is purely deterministic, matching repository signals against known patterns.
+Layer 1 performs no web research. It is purely deterministic, matching repository signals against known patterns from the repo-maintained signal catalog.
 
-**Step 2: Layer 2 -- Open Reasoning.** An Agent subagent (allowed tools: Agent, WebSearch, WebFetch, Read) reasons freely about gaps that the signal table cannot catch. It looks for four types of gaps:
+**Step 2: Layer 2 -- Open Reasoning.** An Agent subagent (allowed tools: Agent, WebSearch, WebFetch, Read) reasons heuristically about gaps that the signal table cannot catch. It looks for four types of gaps:
 
 - **Workflow gaps** -- multi-step processes described in documentation but not automated by any skill
 - **Domain gaps** -- domain-specific best practices that the repository's tech stack would benefit from
@@ -158,7 +158,7 @@ For each identified opportunity:
 | **Non-obviousness** | Does it require domain knowledge that is not immediately available? |
 | **Generalizability** | Would this skill be useful beyond just this repository? |
 
-A suggestion must pass at least 3 of 4 criteria to proceed.
+A suggestion must pass at least 3 of 4 criteria to proceed. This is a repo-level decision rule, not a universal science of skill-gap detection.
 
 4. Generate a skeleton SKILL.md for each suggestion that passes the criteria gate.
 
@@ -198,6 +198,7 @@ Priority is the sum of all three scores:
 - **Repo Overview** -- repository type classification, tech stack summary, existing skill count
 - **Suggestions** -- each suggestion includes:
   - Signal Sources (which categories and signals contributed)
+  - Evidence Class and Confidence
   - Extraction Criteria results (which of the 4 criteria passed)
   - Rationale (why this skill would be valuable)
   - Skeleton SKILL.md (explicitly marked as a starting point)
@@ -216,7 +217,7 @@ Priority is the sum of all three scores:
 ## Research Behavior
 
 - **Layer 1:** No web research. Signal matching is deterministic and uses only the signal catalog and scan results.
-- **Layer 2:** 1-2 WebSearch queries per suggestion to validate that the identified domain has established practices worth encoding as a skill. If WebFetch is available, it fetches 1-2 full articles for deeper content. If neither web tool is available, suggestions are generated from model knowledge and marked `[no web verification]`.
+- **Layer 2:** 1-2 WebSearch queries per suggestion to validate that the identified domain has established practices worth encoding as a skill. If WebFetch is available, it fetches 1-2 full articles for deeper content. If neither web tool is available, suggestions are generated from model knowledge and marked `[no web verification]`. Layer 2 remains heuristic even when web-validated.
 
 ## Reference Files
 
@@ -240,8 +241,9 @@ Priority is the sum of all three scores:
 2. **Every suggestion needs evidence.** Each suggestion must cite a concrete signal (file path, configuration entry, documentation excerpt) and be web-validated or explicitly marked `[no web verification]`.
 3. **No duplicates.** Cross-check every suggestion against the existing skill inventory (Category B). Overlapping coverage (>60%) becomes an enhancement note, not a new suggestion.
 4. **Extraction criteria gate.** Layer 2 suggestions must pass at least 3 of 4 extraction criteria (Recurrence, Verification, Non-obviousness, Generalizability).
-5. **Skeletons are starting points.** Every skeleton SKILL.md in the report is explicitly marked as a draft that requires customization.
-6. **Present all before follow-up.** The full report is shown to the user before any "What's next?" actions are offered.
+5. **Expose uncertainty honestly.** Every suggestion must carry `evidence_class` and `confidence`, and inference-heavy suggestions must stay labeled as heuristic or repo policy where appropriate.
+6. **Skeletons are starting points.** Every skeleton SKILL.md in the report is explicitly marked as a draft that requires customization.
+7. **Present all before follow-up.** The full report is shown to the user before any "What's next?" actions are offered.
 
 ## Output Format
 
@@ -257,6 +259,8 @@ The skill produces a report in this structure:
 
 ### 1. [Skill Name] (Priority: [High/Medium/Low], Score: [N])
 
+**Evidence Class:** [Proven result | Engineering guidance | Repo default | Low-evidence area]
+**Confidence:** [High/Medium/Low]
 **Signal Sources:** [category codes and signal names]
 **Extraction Criteria:** Recurrence [pass/fail], Verification [pass/fail], Non-obviousness [pass/fail], Generalizability [pass/fail]
 **Rationale:** [Why this skill would be valuable]

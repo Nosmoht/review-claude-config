@@ -1,11 +1,11 @@
 ---
 name: review-analytics
 description: >
-  Parse accumulated review-claude-config reports, compute grade trajectories
-  per item and dimension, and detect regressions. Produces a portfolio health
-  dashboard showing quality evolution over time. Use to track skill quality
+  Parse accumulated review-* reports, compute grade trajectories per artifact
+  and producer context, and detect regressions. Produces a portfolio health
+  dashboard showing quality evolution over time. Use to track review results
   across review cycles.
-argument-hint: "[folder]"
+argument-hint: "[folder] [--validation]"
 allowed-tools: Read, Glob
 ---
 
@@ -17,39 +17,54 @@ You are a quality analyst tracking skill grades over time. Your job is to surfac
 
 ### 1. Discover review reports
 
-If `$ARGUMENTS` contains a folder path, use it as the target. Otherwise, use the current working directory.
+If `$ARGUMENTS` contains the standalone token `--validation`, set `validation_mode = true` and remove that token from the argument string. Use the remaining argument text as the target folder.
 
-Glob `<target>/.claude/reviews/*-review-claude-config.md` to find all review reports. Sort by filename (timestamps sort lexicographically).
+If no target folder remains, use the current working directory.
+
+Glob `<target>/.claude/reviews/*-review-*.md` to find all review reports. Sort by filename (timestamps sort lexicographically).
 
 If no reports are found, tell the user: "No review reports found in `<target>/.claude/reviews/`." Stop.
 
-If only one report is found, present a single-report summary (item grades table) and note: "Trend analysis requires at least 2 reports." Stop.
-
 ### 2. Parse report frontmatter
 
-Read `references/report-schema.md` for the expected frontmatter structure.
+Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`.
+- Prefer `skills/review-claude-config/references/review-report-contract.md` when present.
+- Otherwise use the sibling `.claude/skills/review-claude-config/references/review-report-contract.md` copy.
+
+Read that file for the forward-looking frontmatter and identity contract. Use `references/report-schema.md` for analytics-specific compatibility notes and producer partition rules.
 
 For each report, read the YAML frontmatter and extract:
 - `date` — report date
+- `generated_by` — report producer (`review-claude-config`, `review-skill`, `review-agent`, `review-rule`)
 - `items_reviewed` — count
 - `summary` — array of items with: `name`, `type`, `path`, `overall`, `score`, `clarity`, `completeness`, `prompt_engineering`, `context_engineering`, `goal_alignment`, `safety`, `metadata`
 
-Treat `path` as the canonical tracking key inside a report series. Treat `name` as a display label only.
+Skip any report whose `generated_by` is not one of the supported review producers above.
+
+Treat `type + path` as the artifact key and `generated_by + type + path` as the series key. Treat `name` as a display label only.
 
 If a report has malformed or missing frontmatter, skip it with a warning: "Skipped report `<filename>`: could not parse frontmatter."
 
 Extract the timestamp from each filename for display (e.g., `2026-03-24T161200`).
 
+If `validation_mode = true`, after filtering unsupported or malformed reports, keep only the 10 most recent supported, parseable reports.
+
+After filtering (and validation-mode capping, if active):
+- If no supported, parseable reports remain, tell the user: "No supported review reports found in `<target>/.claude/reviews/`." Stop.
+- If exactly one supported, parseable report remains, present the single-report summary path and note: "Trend analysis requires at least 2 supported review reports." Stop.
+
 ### 3. Build time series
 
-For each unique `type + path` combination across all reports, build a time series:
+For each unique `generated_by + type + path` combination across all reports, build a time series:
 - Track the `overall` grade and `score` at each report timestamp.
 - Track per-dimension grades: clarity, completeness, prompt_engineering, context_engineering, goal_alignment, safety, metadata.
+
+For Rule reports, `prompt_engineering`, `context_engineering`, `safety`, and `metadata` are `null`. Exclude `null` values from all dimension averages, lowest-item selection, and systemic-regression logic.
 
 Handle items that appear or disappear across reports:
 - **New item:** First appearance marked as "New" (no prior data point).
 - **Removed item:** Last seen in an older report but absent in the most recent. Marked as "Removed."
-- **Rename/move candidate:** A path disappears and a new path appears for the same type in the next report. Flag it as a candidate instead of silently merging by `name`.
+- **Rename/move candidate:** A path disappears and a new path appears for the same producer and type in the next report. Flag it as a candidate instead of silently merging by `name`.
 
 ### 4. Compute trajectories
 
@@ -60,9 +75,39 @@ For each item, classify its overall trajectory:
 
 Example: B(82) → B(86) → B(81) is Stable (grade unchanged, variation < 5). B(82) → A(90) → B(85) is Regressing (latest grade lower than previous).
 
-For each dimension, compute the average grade across all items in the most recent report and compare against the earliest report to determine dimension-level trends.
+For each dimension, compute the average grade across only the items where that dimension is non-null in the most recent report and compare against the earliest report to determine dimension-level trends.
 
 ### 5. Present analysis
+
+If `validation_mode = true`, present only:
+
+```markdown
+## Validation Summary
+
+- Mode: validation
+- Reports analyzed: M
+- Series analyzed: N
+- Latest regressions: X
+- New items: Y
+- Removed items: Z
+
+### Regressions
+- ...
+
+### New Items
+- ...
+
+### Removed Items
+- ...
+```
+
+In validation mode:
+- do not render the full timestamp-wide trajectory matrix
+- do not render the full dimension heatmap table
+- keep producer partitioning and path-first identity exactly the same
+- omit the follow-up menu
+
+Otherwise present the normal three views below.
 
 Present three views:
 
@@ -70,10 +115,10 @@ Present three views:
 ```
 ## Grade Trajectories
 
-| Item Path | Display Name | [timestamp 1] | [timestamp 2] | ... | Trend |
-|-----------|--------------|---------------|---------------|-----|-------|
-| skills/review-claude-config/SKILL.md | review-claude-config | B (85.0) | A (93.5) | ... | Improving |
-| .claude/skills/refresh-engineering-baseline/SKILL.md | refresh-engineering-baseline | B (82.0) | A (93.1) | ... | Improving |
+| Producer | Item Path | Display Name | [timestamp 1] | [timestamp 2] | ... | Trend |
+|----------|-----------|--------------|---------------|---------------|-----|-------|
+| review-claude-config | skills/review-claude-config/SKILL.md | review-claude-config | B (85.0) | A (93.5) | ... | Improving |
+| review-skill | .claude/skills/refresh-engineering-baseline/SKILL.md | refresh-engineering-baseline | B (82.0) | A (93.1) | ... | Improving |
 
 Items tracked: N | Reports analyzed: M
 ```
@@ -143,5 +188,5 @@ If no regressions (classification is "Improving" or "Stable"), skip the menu —
 - **Handle malformed reports gracefully.** Skip with a warning, never error out.
 - **Present all data before conclusions.** Show the three views before the summary.
 - **Timestamp sorting is lexicographic.** YYYY-MM-DDTHHMMSS format sorts correctly as strings.
-- **Track by path first.** `type + path` is the canonical identity; `name` is only a label.
+- **Track by path first, partition by producer.** `type + path` identifies the artifact; `generated_by + type + path` identifies the analytics series. `name` is only a label.
 - **Grade comparison order.** A > B > C > D > F for trend computation.

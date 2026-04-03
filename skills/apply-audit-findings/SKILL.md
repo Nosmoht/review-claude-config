@@ -31,7 +31,9 @@ If `schema_version` is not `2`: "This skill requires schema v2 audit reports (fr
 
 ### 2. Parse the intervention matrix
 
-From the frontmatter, extract the `summary` array. Each entry has: `error_class`, `gap`, `primitive`, `priority`, `token_impact`.
+From the frontmatter, extract the `summary` array. Each entry must include the core fields `error_class`, `gap`, `primitive`, `priority`, and `token_impact`.
+
+Ignore additive metadata fields you do not need for application (for example `evidence_class` or `confidence`). They are valid extensions of the audit report and must not cause parse failure.
 
 From the report body, parse the **Recommendations** sections (P0/P1/P2). Each recommendation has:
 - A numbered heading matching the intervention matrix row (e.g., "**1. Add repository.py section map to CLAUDE.md**")

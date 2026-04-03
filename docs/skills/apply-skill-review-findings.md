@@ -1,6 +1,6 @@
 # apply-skill-review-findings
 
-> Apply High/Medium recommendations from a review-skill report to the reviewed SKILL.md. Previews each change with user confirmation and commits with audit-fix chain convention.
+> Apply review-skill recommendations to the reviewed SKILL.md. Process dispatchable High/Medium findings first, optionally offer dispatchable Low findings, and keep anchorless findings visible as manual follow-up items.
 
 **Command:** `/apply-skill-review-findings [report-path]`
 **Location:** `skills/apply-skill-review-findings/SKILL.md`
@@ -13,7 +13,7 @@
 
 The apply-skill-review-findings skill translates structured review recommendations into targeted file edits on SKILL.md files. It bridges the gap between review output (from `/review-skill`) and actual code changes by providing a guided, confirmation-gated editing workflow with skill-specific validation at every step.
 
-The skill operates in two modes. In standalone mode, it locates and parses a review-skill report, filters to actionable (High/Medium) findings, and walks the user through each edit. In orchestrated mode, it receives pre-parsed recommendations from `/apply-review-findings` and returns structured results without the report-parsing or commit phases.
+The skill operates in two modes. In standalone mode, it locates and parses a review-skill report, separates dispatchable findings from manual-only follow-up items, and walks the user through each edit. In orchestrated mode, it receives pre-parsed recommendations from `/apply-review-findings` and returns structured results without the report-parsing or commit phases.
 
 Every edit follows a strict cycle: read the target file, locate the text to change, run pre-edit validation, show a preview with full review context, wait for user confirmation, apply the edit, and run post-edit validation. This ensures no change is made without explicit approval and that each edit preserves file integrity.
 
@@ -32,9 +32,13 @@ flowchart TD
     %% Standalone setup
     S1 --> S1Check{"Report found and<br/>generated_by =<br/>review-skill?"}
     S1Check -- No --> S1Err["Report error. STOP"]
-    S1Check -- Yes --> S2["Step 2: Parse frontmatter<br/>(date, target, summary)<br/>Parse recommendations<br/>Filter High+Medium only"]
-    S2 --> S2Check{"Any actionable<br/>findings?"}
-    S2Check -- No --> S2None["No actionable findings.<br/>STOP"]
+    S1Check -- Yes --> S2["Step 2: Parse frontmatter<br/>(date, target, summary)<br/>Classify dispatchable,<br/>manual-only, and Low"]
+    S2 --> S2Check{"Dispatchable<br/>High/Medium findings?"}
+    S2Check -- No --> S2Low{"Dispatchable<br/>Low findings?"}
+    S2Low -- No --> S2None["Show manual-only<br/>follow-up. STOP"]
+    S2Low -- Yes --> S2Offer["Show manual-only if present,<br/>then offer optional<br/>Low-impact pass"]
+    S2Offer -->|No| ConfStop
+    S2Offer -->|Yes| S3
     S2Check -- Yes --> S3["Step 3: Load references<br/>- skill-fix-guide.md (own)<br/>- commit-conventions.md (shared)"]
     S3 --> Summary
 
@@ -105,25 +109,15 @@ The skill checks whether the prompt contains an orchestration metadata block wit
 
 **Step 1: Locate report.** If `$ARGUMENTS` contains a file path, the skill uses it directly. Otherwise, it globs `.claude/reviews/*-review-skill.md` and selects the most recent report by filename timestamp. The skill reads the report file and verifies that `generated_by` in the frontmatter equals `review-skill`. If the file does not exist or validation fails, the skill reports the error and stops.
 
-**Step 2: Parse and filter.** The skill extracts the YAML frontmatter to get `date`, `target`, and `summary` (a list of items with paths and grades). It then parses the report body for recommendation sections matching the pattern:
+**Step 2: Parse and classify.** The skill locates the canonical review contract, extracts the YAML frontmatter to get `date`, `target`, and `summary`, and parses recommendation sections using consumer compatibility rules. Historical reports may use `###` headings or omit some modern fields, but only findings with both `Current` and `Recommended` are dispatchable to edits. Anchorless findings remain visible as manual-only follow-up items. Low findings are deferred, not discarded.
 
-```
-#### N. Title (Impact: High/Medium/Low[, Category: ...])
-
-**Evidence:** [text]
-**Why it matters:** [text]
-**Validation:** [text]
-**Current:** [code block]
-**Recommended:** [code block]
-```
-
-Only High and Medium impact recommendations are retained. Low impact recommendations are discarded. If no actionable recommendations remain after filtering, the skill reports "No actionable findings -- all recommendations are Low impact" and stops.
+Dispatchable High and Medium impact recommendations are handled first. Dispatchable Low impact recommendations are deferred to an optional follow-up pass rather than discarded. If only Low dispatchable findings remain, any manual-only findings must still be shown before the Low-impact offer. If only manual-only findings remain, the skill reports them as manual follow-up and stops.
 
 **Step 3: Load references.** The skill reads its own `references/skill-fix-guide.md` for skill-specific validation rules. It also locates the shared commit conventions file via Glob (`**/apply-review-findings/references/commit-conventions.md`). If the shared file is not found, the skill warns but continues -- commit message guidance will use defaults.
 
 ### Phase 2 -- Present Summary
 
-The skill displays a summary table of all actionable findings:
+The skill displays a summary table of all dispatchable findings:
 
 ```
 ## Actionable Findings
@@ -133,6 +127,8 @@ The skill displays a summary table of all actionable findings:
 | 1 | Add confirmation gate | High | skills/foo/SKILL.md |
 | 2 | Extract reference file | Medium | skills/foo/SKILL.md |
 ```
+
+If manual-only findings are present, it also shows a separate `## Manual Follow-Up` table with the reason `Missing Current/Recommended anchors`.
 
 It then asks: "Proceed with applying these findings? (yes/no)". If the user declines, the skill stops.
 
@@ -216,7 +212,7 @@ The "What's next?" menu follows the final status:
 5. **User confirmation at every stage.** Confirm before starting, before each edit, and before committing.
 6. **Audit-fix chain.** Always commit the report before committing fixes. The report timestamp links the two commits.
 7. **Preserve file structure.** Edits replace text blocks only. Never rewrite entire files.
-8. **No Low impact changes.** Only apply High and Medium recommendations.
+8. **High/Medium first.** Only apply High and Medium recommendations in the first pass. Offer dispatchable Low findings afterward instead of discarding them.
 
 ## Research Behavior
 

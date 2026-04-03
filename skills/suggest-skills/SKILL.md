@@ -12,7 +12,7 @@ disable-model-invocation: true
 
 # Suggest Skills
 
-Analyze a target repository and recommend Claude Code skills that should be created, based on repository signals and domain best practices.
+Analyze a target repository and recommend Claude Code skills that should be created, based on repository signals and domain best practices. This skill combines deterministic signal matching with heuristic open reasoning; it is a discovery aid, not a scientifically closed method for skill-gap detection.
 
 ## Argument Handling
 
@@ -212,9 +212,11 @@ Example rows (for calibration):
 | Test config without test skill | NO | — | — | — |
 ```
 
+Layer 1 is deterministic pattern matching against a repo-maintained signal catalog, not a general theory of skill-gap detection.
+
 ### Step 2: Layer 2 — Open Reasoning
 
-Launch a second analysis Agent that reasons freely about the repository — this catches opportunities the table cannot anticipate. The agent receives the full scan results, existing skill inventory, AND the Layer 1 table matches (to avoid duplicating those).
+Launch a second analysis Agent that reasons about the repository — this catches opportunities the table cannot anticipate. The agent receives the full scan results, existing skill inventory, AND the Layer 1 table matches (to avoid duplicating those). This layer is intentionally heuristic, but constrained by evidence and extraction gates.
 
 Allowed-tools: WebSearch, WebFetch, Read. If `webfetch_available = false`, omit WebFetch. If `websearch_available = false`, omit WebSearch.
 
@@ -265,7 +267,7 @@ For each opportunity you identify:
 1. **Validate with WebSearch.** Perform 1-2 WebSearch queries to confirm
    the domain benefits from skill-based automation. If WebSearch is
    unavailable, use model knowledge and mark [no web verification].
-   Apply source quality criteria from `references/source-quality-criteria.md`:
+   Apply source quality criteria from `skills/review-claude-config/references/source-quality-criteria.md`:
    discard marketing/opinion/outdated content, prefer Tier 1-2 sources.
 
 2. **Apply extraction criteria.** Each suggestion MUST pass at least 3 of 4:
@@ -277,7 +279,11 @@ For each opportunity you identify:
 3. **Check for duplicates** against both the Existing Skills Inventory
    AND the Layer 1 results.
 
-4. **Generate output** for each valid suggestion:
+4. **Assign output signals** for each valid suggestion:
+   - `evidence_class`: canonical class from `skills/review-claude-config/references/evidence-contract.md`
+   - `confidence`: High / Medium / Low
+
+5. **Generate output** for each valid suggestion:
 
 **Example suggestions (for calibration — show decision logic, not full skeletons):**
 
@@ -305,6 +311,8 @@ For each opportunity you identify:
 ### Suggestion: [skill-name]
 
 **Discovery Method:** Open reasoning (not table-matched)
+**Evidence Class:** [Proven result / Engineering guidance / Repo default / Low-evidence area]
+**Confidence:** [High/Medium/Low]
 **Signal Sources:** [what you observed that triggered this]
 **Signal Strength:** [Strong/Moderate] with justification
 **Extraction Criteria:**
@@ -366,6 +374,8 @@ Score each suggestion on three axes (1-3 each):
 - 4-6 = **Medium** priority
 - 1-3 = **Low** priority
 
+These scores are repo-level prioritization heuristics. Use them for ordering, not as evidence or certainty signals.
+
 ### Step 3: Filter
 
 - Cap total suggestions at 10 after deduplication. If more than 10 remain, keep only the top 10 by priority score.
@@ -396,6 +406,8 @@ Present the full report to the user:
 
 ### 1. [skill-name] (Priority: [High/Medium], Score: [N]/9)
 
+**Evidence Class:** [Proven result / Engineering guidance / Repo default / Low-evidence area]
+**Confidence:** [High/Medium/Low]
 **Signal Sources:**
 - [signal 1 with category reference]
 - [signal 2 with category reference]
@@ -450,6 +462,8 @@ suggestions:
   - name: skill-name
     priority: High
     score: 8
+    evidence_class: Engineering guidance
+    confidence: Medium
     signal_sources: ["Documentation", "CI/CD"]
     criteria_passed: 4
 ---
@@ -483,6 +497,7 @@ When the user responds: **1** → ask which skill from the suggestions, then inv
 
 - **Read-only on target repository.** Never modify any existing file in the analyzed repository. The only file this skill writes is the suggestions report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md`.
 - **Every suggestion needs evidence.** Concrete repository signal + web-validated rationale (or `[no web verification]` if WebSearch unavailable).
+- **Expose uncertainty honestly.** Every suggestion must include `evidence_class` and `confidence` using the canonical evidence vocabulary plus an explicit certainty signal.
 - **No duplicates.** Cross-check every suggestion against existing skills/agents inventory.
 - **Extraction criteria gate.** Every suggestion must pass at least 3 of 4 criteria (Recurrence, Verification, Non-obviousness, Generalizability).
 - **Skeletons are starting points.** Every skeleton must include the note: "This is a starting-point skeleton, not a production-ready skill." Skeletons conform to the [Agent Skills Specification](https://agentskills.io/specification): `name` + `description` required.

@@ -5,7 +5,7 @@ description: >
   and cross-skill reference integrity. Produces a health dashboard with
   pass/warn/fail status per check. Use for routine monitoring of a skills
   repository or before running reviews.
-argument-hint: "[all|freshness|tokens|integrity]"
+argument-hint: "[all|freshness|tokens|integrity] [--validation]"
 allowed-tools: Read, Glob
 ---
 
@@ -17,7 +17,11 @@ You are a repository health monitor checking for staleness, budget violations, a
 
 ### 1. Parse arguments and load thresholds
 
-Parse `$ARGUMENTS` for which checks to run. Valid values: `all` (default), `freshness`, `tokens`, `integrity`. If the argument is not recognized, default to `all`.
+Parse `$ARGUMENTS` for:
+- `validation_mode = true` if the standalone token `--validation` is present
+- the check selector among `all`, `freshness`, `tokens`, `integrity`
+
+Remove `--validation` before interpreting the selector. If the remaining selector is not recognized or empty, default to `all`.
 
 Read `references/health-thresholds.md` for configurable thresholds. If the file cannot be read, use built-in defaults (freshness: 60/90 days, token budgets: rubric 1000, baseline 2000, others 500, usage tiers: 80%/100%) and note the fallback in the dashboard header.
 
@@ -56,7 +60,7 @@ Record results as rows in the tokens table.
 
 ### 5. Check reference integrity (if `all` or `integrity`)
 
-Perform four integrity sub-checks:
+Perform four integrity sub-checks in normal mode and three deterministic sub-checks in validation mode.
 
 **5a. CLAUDE.md Research References**
 Read the `## Research References` section of CLAUDE.md. For each linked path (e.g., `research/prompt-engineering/prompt-engineering-techniques.md`), Glob to verify the file exists. Record PASS or FAIL per link.
@@ -81,26 +85,79 @@ If the registry file cannot be read, note the fallback in the dashboard header a
 2. Check whether this source→target pair already appears in the registry.
 3. Record: **PASS** (exists, registered), **FAIL** (missing), or **UNREGISTERED** (exists but not in registry — add it to `references/cross-skill-dependencies.md`).
 
-**5d. Rubric-dimension consistency**
-Read `skills/review-claude-config/references/scoring-rubric.md` and extract the canonical dimension list from the `## Dimensions` section — each `### N. Name` heading defines one dimension. This produces the full set and the rule subset defined in `## Rule-Specific Scoring`.
+If `validation_mode = true`, skip 5c-ii entirely. Validation mode is the deterministic release gate and must not emit exploratory `UNREGISTERED` findings from the heuristic scan.
+
+**5d. Review-contract consistency**
+Locate the canonical review contract and rubric via Glob:
+- `**/review-claude-config/references/review-report-contract.md`
+- `**/review-claude-config/references/scoring-rubric.md`
+
+Prefer the `skills/review-claude-config/references/` copies when present. Otherwise use the sibling `.claude/skills/review-claude-config/references/` copies.
+
+Read those files as the canonical review/report contract and rubric. Extract the full set of summary dimensions from the contract and the rule subset from `## Rule-Specific Scoring`.
 
 Then read each consumer file and verify its dimensions match the expected set:
 
 | Consumer file | Expected set | How dimensions appear |
 |---|---|---|
-| `skills/review-analytics/references/report-schema.md` | Full (snake_case: `clarity`, `completeness`, `prompt_engineering`, `context_engineering`, `goal_alignment`, `safety`, `metadata`) | YAML field names in the frontmatter example |
+| `skills/review-analytics/references/report-schema.md` | Canonical contract reference present | Pointer to `review-report-contract.md` |
 | `skills/review-skill/SKILL.md` | Full | Dimension column values in the certificate table template (exclude the "Overall" row — it is a computed aggregate, not a dimension) |
 | `skills/review-agent/SKILL.md` | Full | Same as review-skill |
 | `skills/review-rule/SKILL.md` | Rule subset | Same format, fewer dimensions |
 | `skills/review-analytics/SKILL.md` | Full (snake_case) | Dimension field names referenced in the report parsing instructions |
 | `skills/review-claude-config/SKILL.md` | Full (with abbreviations: PE=Prompt Engineering, CE=Context Engineering, Goal=Goal Alignment, Meta=Metadata) | Column headers in the summary table template |
 | `CLAUDE.md` | Full | Parenthetical list in the opening paragraph |
+| `skills/apply-review-findings/SKILL.md` | Canonical contract reference present | Parse instructions reference `review-report-contract.md` |
+| `skills/apply-skill-review-findings/SKILL.md` | Canonical contract reference present | Parse instructions reference `review-report-contract.md` |
+| `skills/apply-agent-review-findings/SKILL.md` | Canonical contract reference present | Parse instructions reference `review-report-contract.md` |
+| `skills/apply-rule-review-findings/SKILL.md` | Canonical contract reference present | Parse instructions reference `review-report-contract.md` |
+| `docs/skills/apply-review-findings.md` | Runtime/doc alignment | Low-impact handling and contract-reference behavior match runtime |
+| `docs/skills/apply-skill-review-findings.md` | Runtime/doc alignment | Dispatchable/manual-only and Low-impact behavior match runtime |
+| `docs/skills/apply-agent-review-findings.md` | Runtime/doc alignment | Dispatchable/manual-only and canonical path authority match runtime |
+| `docs/skills/apply-rule-review-findings.md` | Runtime/doc alignment | Dispatchable/manual-only and Low-impact behavior match runtime |
+| `docs/skills/review-analytics.md` | Runtime/doc alignment | Discovery scope and series identity rules match runtime |
+| `docs/skills/review-skill.md` | Canonical contract reference present | Review contract wording matches runtime |
+| `docs/skills/review-agent.md` | Canonical contract reference present | Review contract wording matches runtime |
+| `docs/skills/review-rule.md` | Canonical contract reference present | Review contract wording matches runtime |
+| `docs/skills/review-claude-config.md` | Canonical contract reference present | Review contract wording matches runtime |
 
-For each consumer: PASS if all expected dimensions are present and no unexpected dimensions appear. FAIL if any dimension is missing or extra, noting which ones.
+For dimension-based consumers: PASS if all expected dimensions are present and no unexpected dimensions appear. FAIL if any dimension is missing or extra, noting which ones.
 
-Record results in the Reference Integrity table with Source = consumer file path, Reference = `scoring-rubric.md`, Status = PASS or FAIL (with mismatch details if FAIL).
+For contract-reference consumers: PASS if they explicitly reference `review-report-contract.md` as the canonical source. FAIL if they still present themselves as an independent schema authority or omit the contract reference.
+
+For runtime/doc alignment consumers:
+- `docs/skills/apply-review-findings.md` must match runtime on Low-impact behavior and manual-only/dispatchable distinction.
+- `docs/skills/apply-skill-review-findings.md`, `docs/skills/apply-agent-review-findings.md`, and `docs/skills/apply-rule-review-findings.md` must match runtime on dispatchable/manual-only behavior. The agent doc must also match runtime on canonical `summary.path` authority.
+- `docs/skills/review-analytics.md` must match runtime on report discovery scope, validation-mode truncation order, producer-scoped rename/move logic, and the distinction between artifact identity (`type + path`) and analytics series identity (`generated_by + type + path`).
+- Record FAIL if docs describe narrower discovery, different low-impact handling, or omit manual-only behavior now present in runtime.
+
+Record results in the Reference Integrity table with Source = consumer file path, Reference = `review-report-contract.md` or `scoring-rubric.md`, Status = PASS or FAIL (with mismatch details if FAIL).
 
 ### 6. Present dashboard
+
+If `validation_mode = true`, present a bounded dashboard:
+
+```markdown
+## Repository Health Dashboard
+
+**Date:** YYYY-MM-DD
+**Checks run:** [list]
+**Mode:** validation
+
+**Counts:** X PASS | Y WARN | Z FAIL
+
+### Non-PASS Findings
+| Source | Reference | Status |
+|--------|-----------|--------|
+| ... | ... | WARN/FAIL |
+```
+
+In validation mode:
+- include only non-PASS rows
+- omit the heuristic-scan `UNREGISTERED` class entirely
+- omit the follow-up menu
+
+Otherwise present the normal full dashboard below.
 
 Present all results in a consolidated dashboard:
 
@@ -136,7 +193,8 @@ If any FAIL or WARN results exist, add a **Remediation** section:
 - For stale files: "Run `/refresh-engineering-baseline`" or "Domain cache entry X is N days old — will be refreshed on next review run."
 - For token budget violations: "File X is ~N tokens over the N-token budget. Consider trimming."
 - For broken references: "Path X referenced in Y does not exist. Update the reference or create the file."
-- For dimension mismatches: "Consumer X has [missing/extra] dimensions vs scoring-rubric.md. Update the consumer to match."
+- For dimension mismatches: "Consumer X has [missing/extra] dimensions vs the canonical review contract/rubric. Update the consumer to match."
+- For contract-reference mismatches: "Consumer X does not point to `review-report-contract.md` as the canonical schema. Remove duplicated schema authority."
 
 Then end your response with this menu:
 
