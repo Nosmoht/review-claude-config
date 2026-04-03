@@ -23,3 +23,7 @@
 | talos | 2026-03-24 | A/B boot, etcd quorum, upgrade |
 | context-engineering | 2026-04-02 | ACE +10.6%, JIT, context rot |
 | research-sourcing | 2026-04-02 | Citation bias, tier framework |
+| service-governance-assessment | 2026-04-03 | COBIT, sovereignty zones, NYDFS triggers |
+| assumption-framework | 2026-04-03 | FINOS, epistemic typing, falsifiability |
+| backlog-task-quality | 2026-04-03 | INVEST, AC quality, compound criteria |
+| autonomous-review-workflow | 2026-04-03 | HITL 74%, confirmation gates, decision surface |
