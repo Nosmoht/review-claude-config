@@ -38,3 +38,14 @@ Expected scaffold behavior:
 - Plugin mode writes under `skills/` and updates only existing command/architecture sections in `README.md` and `CLAUDE.md`.
 - Maintenance mode writes under `.claude/skills/` and updates only `CLAUDE.md`.
 - Neither mode refers to `## Skills`, `## File Structure`, or `## Installation` as registration targets.
+
+## Case 5 — Reliability Pattern Detection
+
+Artifact: an agent that spawns subagents or calls external dependencies (MCP tools, WebFetch, subprocess tools) with no failure path defined, no stop condition for recursion/retries, and continues execution even when dependencies return stub data or fail silently.
+
+Expected review behavior:
+- Surfaces at least one High or Medium finding from Safety dimension citing missing "failure path defined for every external dependency" or missing "stop condition prevents infinite recursion."
+- Surfaces at least one High or Medium finding from Completeness dimension citing missing "chain-level completeness" (failure to propagate [INCOMPLETE] or stub-dependency states).
+- Includes `Evidence:` tied to exact workflow text showing unchecked dependency calls.
+- Includes `Validation:` that can be checked by inspecting failure scenarios or recursion bounds.
+- Recommends concrete reliability patterns in `Current:`/`Recommended:` format (circuit breakers, progressive fallback, bounded execution with thresholds/timeouts).
