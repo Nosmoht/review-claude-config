@@ -4,12 +4,9 @@ last_refreshed: 2026-04-02
 queries:
   - "LLM citation bias web research quality 2025 academic"
   - "deep search agent source credibility evaluation 2025"
-  - "source quality tiering AI agent research academic"
 sources:
-  - url: https://arxiv.org/abs/2512.09483
-    title: "Source Coverage and Citation Bias in LLM-Based Search — arXiv 2512.09483"
-  - url: https://arxiv.org/abs/2508.05668
-    title: "A Survey of Deep Search Agents — arXiv 2508.05668"
+  - arXiv:2512.09483 (Source Coverage and Citation Bias in LLM-Based Search)
+  - arXiv:2508.05668 (A Survey of Deep Search Agents)
 ---
 
 # Research Sourcing — Domain Best Practices
@@ -27,8 +24,5 @@ sources:
 - Agents without source quality gates produce outputs that are superficially plausible but factually inconsistent
 - Verification step (checking source against official docs or primary data) should be mandatory for Tier 2 claims
 
-## Tier Framework (from engineering baseline + papers)
-- Tier 1 (require for factual claims): Official vendor docs, peer-reviewed papers (arXiv/ACM/IEEE), RFCs, foundation docs (CNCF/OWASP)
-- Tier 2 (acceptable with corroboration): Production case studies with metrics, engineering blogs with benchmarks, conference talks
-- Tier 3 (flag explicitly, do not treat as authoritative): Tutorials, blog posts, Stack Overflow answers
-- Discard without exception: marketing content, opinion without evidence, sources >18 months old (unless foundational), SEO-farm content without original analysis
+## Tier Framework
+See [source-quality-criteria.md](../source-quality-criteria.md) for canonical tier definitions and discard rules.
