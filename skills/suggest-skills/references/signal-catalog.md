@@ -5,72 +5,51 @@ description: Baseline signal patterns for detecting missing skill opportunities 
 
 # Signal Catalog
 
-This catalog is the **deterministic baseline** (Layer 1). It catches known patterns reliably. Layer 2 (open reasoning) catches everything else — opportunities that no static table can anticipate. The catalog itself is a repo-maintained decision aid, not a canonical scientific taxonomy of skill gaps.
+**S**=Strong **M**=Moderate **W**=Weak (strength labels are repo heuristics, not external evidence classes)
 
 ## Repository Type Classification
 
-Before applying signals, classify the repository:
-- **Application**: Has source code (package.json, go.mod, etc.), CI/CD, build tools. Use Application Signal Table.
-- **Skills/Config**: Primarily `.claude/skills/`, `research/`, reference material. No source code markers. Use Skills Repository Signal Table.
-- **Mixed**: Both source code AND ≥2 skills. Apply both tables.
+- **Application**: package.json, go.mod, CI/CD, build tools → Application Signal Table
+- **Skills/Config**: `.claude/skills/` is primary content, no source code markers → Skills Repository Signal Table
+- **Mixed**: both → apply both tables
 
 ## Application Signal Table
 
-| Signal | File Pattern | Skill Opportunity | Min Strength |
-|--------|-------------|-------------------|-------------|
-| Repeated CLAUDE.md workflow | "always", "before X do Y", numbered steps in CLAUDE.md | Extract workflow as dedicated skill | Strong |
-| Multi-step rules file | `.claude/rules/*.md` with >3 sequential steps | Elevate rule to full skill with references | Moderate |
-| CI workflow complexity | `.github/workflows/*.yml` with >50 lines or 5+ steps | CI helper/debug skill | Moderate |
-| Docker + compose | `Dockerfile` + `docker-compose.yml` present | Container management skill | Moderate |
-| Test config without test skill | `jest.config*`, `pytest.ini` etc. but no test-related skill | Test orchestration skill | Strong |
-| IaC files | `*.tf`, `kustomization.yaml`, `helm/Chart.yaml` | IaC validation/planning skill | Strong |
-| Deploy scripts | `scripts/deploy*`, `scripts/release*` | Deployment skill | Strong |
-| PR template | `.github/pull_request_template.md` | PR review skill | Moderate |
-| Monorepo markers | `lerna.json`, `pnpm-workspace.yaml`, `nx.json` | Cross-package orchestration skill | Strong |
-| Build targets >5 | `Makefile`/`Justfile` with >5 targets | Build orchestration skill | Weak |
-| Database migrations | `migrations/`, `alembic/`, `prisma/migrations/` | Migration validation skill | Strong |
-| API spec files | `openapi.yaml`, `swagger.json`, `*.graphql` | API development skill | Moderate |
+| Signal | Pattern | Skill Opportunity | S |
+|--------|---------|-------------------|---|
+| Repeated CLAUDE.md workflow | "always"/"before X do Y"/numbered steps in CLAUDE.md | Extract as skill | S |
+| Multi-step rules file | `.claude/rules/*.md` >3 sequential steps | Elevate to skill | M |
+| CI workflow complexity | `.github/workflows/*.yml` >50 lines or 5+ steps | CI debug skill | M |
+| Docker + compose | `Dockerfile` + `docker-compose.yml` | Container skill | M |
+| Test config without test skill | `jest.config*`, `pytest.ini` — no test skill exists | Test skill | S |
+| IaC files | `*.tf`, `kustomization.yaml`, `helm/Chart.yaml` | IaC skill | S |
+| Deploy scripts | `scripts/deploy*`, `scripts/release*` | Deploy skill | S |
+| PR template | `.github/pull_request_template.md` | PR review skill | M |
+| Monorepo markers | `lerna.json`, `pnpm-workspace.yaml`, `nx.json` | Cross-package skill | S |
+| Build targets >5 | `Makefile`/`Justfile` >5 targets | Build skill | W |
+| Database migrations | `migrations/`, `alembic/`, `prisma/migrations/` | Migration skill | S |
+| API spec files | `openapi.yaml`, `swagger.json`, `*.graphql` | API skill | M |
 
 ## Skills Repository Signal Table
 
-For repositories where `.claude/skills/` is the primary content:
-
-| Signal | Detection Pattern | Skill Opportunity | Min Strength |
-|--------|------------------|-------------------|-------------|
-| Multiple skills, no review/audit skill | ≥2 skills but none with "review", "audit", "quality" in description | Quality audit skill | Strong |
-| References without refresh mechanism | `references/*.md` with dates but no skill manages staleness | Reference refresh skill | Strong |
-| Skills share infrastructure without docs | Multiple skills read from same `references/` dir | Shared infrastructure documentation skill | Moderate |
-| Review reports without trend analysis | `.claude/reviews/` has ≥3 reports but no analysis skill | Review analytics / portfolio health skill | Moderate |
-| Skills with web research but no cache | Skills use WebSearch but no `domain-cache/` exists | Domain cache infrastructure skill | Strong |
-| CLAUDE.md workflows not formalized | CLAUDE.md has multi-step processes not covered by any skill | Extract workflow as dedicated skill | Strong |
-| No skill creation/scaffolding tool | ≥3 skills but no skill for creating new skills | Skill scaffolding skill | Moderate |
-| Skills without cross-skill dependency map | Skills reference each other (read sibling `references/`) but relationships aren't documented | Dependency documentation or validation skill | Weak |
-| Research files without index | `research/` dir has ≥5 files but no generated index | Research index/discovery skill | Weak |
-
-## Strength Classification
-
-These strength labels are repo-level signal heuristics for prioritization, not external evidence classes.
-
-- **Strong**: Signal appears in 2+ categories OR represents a high-risk workflow (deploy, migrations, IaC)
-- **Moderate**: Single clear signal with well-defined workflow boundaries
-- **Weak**: Single signal with ambiguous workflow scope — requires corroboration
+| Signal | Detection Pattern | Skill Opportunity | S |
+|--------|-----------------|-------------------|---|
+| Multiple skills, no review/audit | ≥2 skills, none with review/audit/quality in description | Quality audit skill | S |
+| References without refresh | `references/*.md` with dates, no refresh skill | Reference refresh skill | S |
+| Skills share infrastructure | Multiple skills read same `references/` dir | Shared infra docs skill | M |
+| Review reports, no analytics | `.claude/reviews/` ≥3 reports, no analytics skill | Review analytics skill | M |
+| Web research, no cache | Skills use WebSearch, no `domain-cache/` | Domain cache skill | S |
+| CLAUDE.md workflows not formalized | Multi-step CLAUDE.md processes with no covering skill | Extract as skill | S |
+| No scaffolding tool | ≥3 skills, no skill-creation skill | Scaffolding skill | M |
+| No cross-skill dependency map | Skills cross-read sibling `references/`, undocumented | Dependency skill | W |
+| Research files without index | `research/` ≥5 files, no generated index | Research index skill | W |
 
 ## Extraction Criteria
 
-Every suggestion must pass at least 3 of these 4 criteria ([source](https://arxiv.org/html/2603.11808v1)):
+Every suggestion must pass 3/4 ([source](https://arxiv.org/html/2603.11808v1)):
+- **Recurrence**: 2+ files/contexts (fail: one-off)
+- **Verification**: expressible as 5-10 steps (fail: too vague)
+- **Non-obviousness**: requires domain expertise or multi-step logic (fail: single command or trivial alias)
+- **Generalizability**: works across inputs/projects (fail: hardcoded to one case)
 
-| Criterion | Pass | Fail |
-|-----------|------|------|
-| **Recurrence** | Pattern appears in 2+ files/contexts | One-off occurrence only |
-| **Verification** | Workflow expressible as 5-10 clear steps | Too vague to define steps |
-| **Non-obviousness** | Requires domain expertise or multi-step logic | Single command or trivial alias |
-| **Generalizability** | Works across different inputs/projects | Hardcoded to one specific case |
-
-## Complexity Threshold
-
-Do NOT suggest skills for:
-- Single-command operations (e.g., "run prettier", "npm test")
-- Simple aliases that add no decision logic
-- Workflows with fewer than 3 distinct steps
-
-The exact 3-of-4 gate and complexity cutoffs are `Repo default` filtering rules for this repository.
+Do NOT suggest: single-command ops, trivial aliases, <3 distinct steps. The 3/4 gate and cutoffs are `Repo default`.
