@@ -10,7 +10,7 @@
 
 ## Key Finding
 
-Agent reliability requires multi-dimensional evaluation beyond accuracy, with systematic failure taxonomies, circuit breaker patterns, and fault tolerance mechanisms essential for production deployment. Academic research establishes frameworks decomposing reliability into measurable dimensions and identifies specific failure modes, while industry sources provide concrete implementation patterns including three-state circuit breakers (closed/open/half-open), mandatory idempotency keys for write operations, exponential backoff with jitter (60-80% retry storm reduction), two-phase execution, state validation at checkpoints, and multi-layer human oversight.
+Production agent reliability requires multi-dimensional evaluation beyond accuracy, incorporating systematic failure taxonomies and four critical architectural patterns: **circuit breakers** (three-state machines preventing cascade failures), **idempotency** (ensuring safe retries for 15-30% of tool calls), **progressive fallback** (degrading gracefully through self-correction → fallback → escalation), and **bounded execution** (stop conditions via failure thresholds, timeouts, and human oversight). Academic research identifies 12-15 distinct failure modes and establishes that reliability metrics are independent of raw accuracy, while industry implementations demonstrate 60-80% retry storm reduction through exponential backoff with jitter.
 
 ## Evidence
 
