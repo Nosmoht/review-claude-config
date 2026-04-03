@@ -15,7 +15,7 @@ description: Repo token-efficiency heuristics and evidence-informed thresholds f
 
 ## File Size Thresholds
 
-These thresholds are `Repo default` operating cutoffs informed by context-efficiency guidance. They are useful decision aids, not universal scientific constants.
+`Repo default` cutoffs informed by context-efficiency guidance — useful decision aids, not universal constants.
 
 | Lines | Classification | Intervention |
 |-------|---------------|-------------|
@@ -27,8 +27,6 @@ These thresholds are `Repo default` operating cutoffs informed by context-effici
 
 Formula: `max_depth × max_files_per_dir × naming_collision_score`
 
-This score is a repo heuristic for navigation risk, not a benchmark-backed universal metric.
-
 | Score | Action |
 |-------|--------|
 | >100 | Architecture map with entry points needed (P0) |
@@ -37,18 +35,7 @@ This score is a repo heuristic for navigation risk, not a benchmark-backed unive
 
 Naming collision: count identical class/function names across packages. Score = count of names appearing in 2+ locations.
 
-## Build Error Verbosity
-
-| Toolchain | Verbosity | Typical Output |
-|-----------|-----------|---------------|
-| Webpack/Vite/Turbopack | Extreme | >500 lines per error |
-| Rust compiler | Verbose | Informative but long spans |
-| TypeScript tsc | Medium | Cascading type errors |
-| Go compiler | Compact | One line per error |
-
 ## Context Burn Rate
-
-These burn-rate bands are heuristic operating ranges synthesized from context-engineering guidance and local repo policy.
 
 | Task Type | Estimated Tokens |
 |-----------|-----------------|
@@ -57,4 +44,3 @@ These burn-rate bands are heuristic operating ranges synthesized from context-en
 | Multi-file refactor | 100-300K |
 
 Effective context capacity: 60-70% of nominal window. Lost-in-the-middle: 30%+ accuracy drop for middle-positioned information.
-Treat the exact percentages as evidence-informed guidance rather than fixed guarantees for every model/runtime combination.

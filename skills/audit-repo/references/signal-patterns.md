@@ -5,8 +5,8 @@ description: File patterns and Glob/Grep queries for each audit analysis step
 
 ## Toolchain Detection
 
-| Signal | Glob Pattern | Extract |
-|--------|-------------|---------|
+| Signal | Pattern | Extract |
+|--------|---------|---------|
 | Package scripts | `package.json` | `scripts` section |
 | Build targets | `Makefile`, `Justfile`, `Taskfile.yml` | target names |
 | Python config | `pyproject.toml`, `setup.cfg`, `tox.ini` | scripts/commands |
@@ -20,7 +20,7 @@ description: File patterns and Glob/Grep queries for each audit analysis step
 
 | Tier | Detection Files |
 |------|----------------|
-| Deterministic (linter+autofix) | `.eslintrc*`, `biome.json`, `ruff.toml`, `.prettierrc*`, `rustfmt.toml`, `.clang-format`, `.editorconfig` |
+| Deterministic | `.eslintrc*`, `biome.json`, `ruff.toml`, `.prettierrc*`, `rustfmt.toml`, `.editorconfig` |
 | CI-enforced | `.github/workflows/*.yml` steps running lint/format |
 | AI-instructed | `CLAUDE.md`, `.claude/rules/*.md`, `.cursorrules`, `.github/copilot-instructions.md` |
 | Undocumented | (inferred from code patterns only) |
@@ -31,15 +31,12 @@ description: File patterns and Glob/Grep queries for each audit analysis step
 |---------|----------------|
 | Hexagonal | `adapters/`, `ports/`, `domain/`, `infrastructure/`, `core/` |
 | MVC | `models/`, `views/`, `controllers/`, `routes/`, `templates/` |
-| CQRS/ES | `events/`, `commands/`, `queries/`, `projections/`, `handlers/` |
 | Layered | `controller/`, `service/`, `repository/`, `presentation/`, `business/`, `data/` |
 | Clean | `entities/`, `usecases/`, `interfaces/`, `frameworks/` |
 | Microservices | multiple `Dockerfile` per service, separate `go.mod`/`package.json` |
 
-## Domain Knowledge Sources
+## Domain Knowledge and Monorepo Markers
 
-Glob: `openapi.yaml`, `swagger.json`, `*.proto`, `*.graphql`, `schema.graphql`, `GLOSSARY.md`, `docs/adr/`, `docs/decisions/`, `migrations/`, `prisma/schema.prisma`, `*.dbml`, `*.avsc`
+**Domain:** `openapi.yaml`, `swagger.json`, `*.proto`, `*.graphql`, `schema.graphql`, `GLOSSARY.md`, `docs/adr/`, `docs/decisions/`, `migrations/`, `prisma/schema.prisma`, `*.dbml`, `*.avsc`
 
-## Monorepo Markers
-
-Glob: `lerna.json`, `pnpm-workspace.yaml`, `nx.json`, `turbo.json`, package.json `workspaces`, multiple `go.mod`/`Cargo.toml`
+**Monorepo:** `lerna.json`, `pnpm-workspace.yaml`, `nx.json`, `turbo.json`, package.json `workspaces`, multiple `go.mod`/`Cargo.toml`

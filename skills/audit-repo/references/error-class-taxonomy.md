@@ -5,8 +5,6 @@ description: Seven error classes with diagnostic indicators and evidence-informe
 
 ## Error Classes
 
-The error classes are deterministic labels for common repo failure modes. The primitive mappings are evidence-informed recommendations and sometimes rely on repo-policy or heuristic interpretation.
-
 | # | Class | What Goes Wrong | Diagnostic Signal | Primary Primitive | Token Impact |
 |---|-------|----------------|-------------------|-------------------|-------------|
 | 1 | Toolchain | Guesses build/test/lint commands | No explicit command list discoverable | CLAUDE.md | HIGH |

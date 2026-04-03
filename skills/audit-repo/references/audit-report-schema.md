@@ -5,28 +5,30 @@ description: YAML frontmatter schema and body structure for audit-repo reports
 
 ## Frontmatter Fields
 
+All fields required unless marked Optional.
+
 ```yaml
 ---
-generated_by: audit-repo                # Required. Always "audit-repo"
-schema_version: 2                       # Required. Distinguishes from review reports (v1)
-date: YYYY-MM-DD                        # Required. Report generation date
-target: /absolute/path                  # Required. Audited directory
-existing_claude_config: true|false      # Required. Whether .claude/ exists
-languages: [python, typescript]         # Required. Detected languages
-repo_type: Application|Skills-Config|Mixed  # Required. Repository classification
-intervention_count: N                   # Required. Total interventions
-p0_count: N                             # Required. P0 intervention count
-p1_count: N                             # Required. P1 intervention count
-p2_count: N                             # Required. P2 intervention count
-summary:                                # Required. Array of interventions
-  - error_class: Toolchain              # Enum: Toolchain|Navigation|Convention|Architecture|Repetition|Domain|Security
-    gap: "Build commands not explicit"  # Free text description
-    primitive: CLAUDE.md                # Enum: CLAUDE.md|Skill|Agent|Hook|Rule
-    priority: P0                        # Enum: P0|P1|P2
-    token_impact: High                  # Enum: High|Medium|Low
-    evidence_class: Engineering guidance # Enum: Proven result|Engineering guidance|Repo default|Low-evidence area
-    confidence: High                    # Enum: High|Medium|Low
-    signal_source: "—"                  # Optional. For Skill primitives: "repetition" or catalog signal name
+generated_by: audit-repo               # always "audit-repo"
+schema_version: 2                      # v1=review, v2=audit
+date: YYYY-MM-DD
+target: /absolute/path
+existing_claude_config: true|false
+languages: [python, typescript]
+repo_type: Application|Skills-Config|Mixed
+intervention_count: N
+p0_count: N
+p1_count: N
+p2_count: N
+summary:
+  - error_class: Toolchain             # Toolchain|Navigation|Convention|Architecture|Repetition|Domain|Security
+    gap: "Build commands not explicit"
+    primitive: CLAUDE.md               # CLAUDE.md|Skill|Agent|Hook|Rule
+    priority: P0                       # P0|P1|P2
+    token_impact: High                 # High|Medium|Low
+    evidence_class: Engineering guidance  # Proven result|Engineering guidance|Repo default|Low-evidence area
+    confidence: High                   # High|Medium|Low
+    signal_source: "—"                 # Optional. Skill: "repetition" or catalog signal name
 ---
 ```
 
