@@ -66,3 +66,7 @@ Maintenance Chain:
 | `audit-repo`, `suggest-skills` | Standalone discovery | Heuristic analysis with optional validation |
 | `refresh-engineering-baseline` | Standalone maintenance | Heavy structured research |
 | All other skills/hooks | Standalone or automatic | No web research |
+
+## Conventions
+
+**Workflow menus:** Every skill ends with a numbered "What's next?" menu. The user types a number, Claude invokes the corresponding skill. This uses plain text output — not `AskUserQuestion`, which silently auto-completes with empty answers in plugin skills loaded via the Skill tool (known Claude Code bug). Menu is skipped in orchestrated mode and conditionally shown in diagnostic skills (only when issues are found).

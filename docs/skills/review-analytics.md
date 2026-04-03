@@ -24,39 +24,6 @@ The skill answers three questions about a portfolio's quality evolution over tim
 
 It operates exclusively on the structured YAML frontmatter defined by `review-claude-config/references/review-report-contract.md` for review reports already written to `.claude/reviews/`. The skill never modifies any file.
 
-## Workflow
-
-```mermaid
-flowchart TD
-    A["1. Discover review reports<br/>Glob .claude/reviews/*-review-*.md<br/>Filter supported generators<br/>Sort lexicographically"] --> B{Reports found?}
-    B -- None --> Stop["Stop: No review reports found"]
-    B -- ">=1 report" --> C["2. Parse report frontmatter<br/>Read references/report-schema.md<br/>Filter to supported, parseable<br/>reports before validation cap"]
-    C --> D{Malformed reports?}
-    D -- Yes --> Warn["Skip with warning,<br/>continue with valid reports"]
-    D -- No --> E1
-    Warn --> E1
-
-    E1{"0 or 1 supported,<br/>parseable reports?"}
-    E1 -- "0" --> Stop2["Stop: No supported review reports found"]
-    E1 -- "1" --> SingleSummary["Single-report summary<br/>+ note: Trend analysis<br/>requires >=2 supported reports"]
-    E1 -- ">=2" --> E
-
-    E["3. Build time series<br/>Artifact key: type + path<br/>Series key: generated_by + type + path<br/>Track grades + scores"] --> F["4. Compute trajectories<br/>Per-item: Improving / Stable / Regressing<br/>Per-dimension: avg grade trend"]
-
-    F --> G["5. Present analysis"]
-    G --> V1["View 1: Grade Trajectories<br/>(Item Path, Name,<br/>timestamps, Trend)"]
-    G --> V2["View 2: Dimension Heatmap<br/>(Dimension, Avg Grade,<br/>Lowest Item, Trend)"]
-    G --> V3["View 3: Alerts<br/>(Regressions, New, Removed,<br/>Rename Candidates, Systemic)"]
-
-    V1 --> H["6. Summary<br/>Portfolio quality: X<br/>N items, M reports,<br/>X regressions"]
-    V2 --> H
-    V3 --> H
-
-    H --> MenuCheck{Regressions<br/>detected?}
-    MenuCheck -- Yes --> Menu["What's next?<br/>1. Run full review<br/>2. Done"]
-    MenuCheck -- No --> Done["Summary only<br/>(no menu)"]
-```
-
 ### Step 1: Discover review reports
 
 Glob for `<target>/.claude/reviews/*-review-*.md` where `<target>` is the folder argument (defaults to the current project root). Sort results by filename -- because filenames are ISO-timestamped (`YYYY-MM-DDTHHMMSS-...`), lexicographic order equals chronological order. Then keep only reports whose `generated_by` is one of `review-claude-config`, `review-skill`, `review-agent`, or `review-rule`.

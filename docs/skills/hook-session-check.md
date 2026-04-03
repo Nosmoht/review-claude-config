@@ -14,27 +14,6 @@ The session check hook fires once at the beginning of every Claude Code session 
 
 This ensures that review skills always operate against reasonably current best practices. Without this hook, a stale baseline could silently degrade review quality — the hook makes staleness visible to the user at session start rather than waiting until a review produces outdated recommendations.
 
-## Process Flow Diagram
-
-```mermaid
-flowchart TD
-    Start([SessionStart Event]) --> CheckEnv{CLAUDE_PLUGIN_ROOT<br/>set?}
-    CheckEnv -->|no| Silent1[Return empty JSON]
-    CheckEnv -->|yes| ReadBaseline[Read engineering-baseline.md<br/>line by line]
-    ReadBaseline --> FindDate{Found<br/>last_refreshed<br/>line?}
-    FindDate -->|no| Silent2[Return empty JSON]
-    FindDate -->|yes| ParseDate[Parse ISO date string]
-    ParseDate --> ComputeAge[Compute days since<br/>last_refreshed]
-    ComputeAge --> CheckAge{Age > 90<br/>days?}
-    CheckAge -->|no| Fresh[Return empty JSON<br/>— baseline is fresh]
-    CheckAge -->|yes| Warn[Return warning:<br/>baseline stale, suggest<br/>/refresh-engineering-baseline]
-
-    style Silent1 fill:#f0f0f0,stroke:#999
-    style Silent2 fill:#f0f0f0,stroke:#999
-    style Fresh fill:#d4edda,stroke:#28a745
-    style Warn fill:#fff3cd,stroke:#ffc107
-```
-
 ## Process Steps
 
 ### Step 1: Environment Check

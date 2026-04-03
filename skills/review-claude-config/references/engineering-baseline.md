@@ -10,7 +10,7 @@ last_refreshed: 2026-04-02
 
 **Structured Output** `[Proven result]` — Define exact output structure when the task depends on reliable formatting. Check: is the expected output shape explicit?
 
-**Role Priming** `[Engineering guidance]` — Use a role or operating stance when domain context materially changes judgment or vocabulary. Check: does the role add real behavioral context rather than decoration?
+**Role Priming** `[Engineering guidance]` — Use a role or operating stance when domain context materially changes judgment or vocabulary. Check: does the role add real behavioral context rather than decoration? Most effective when domain-specific; generic personas show no factual accuracy improvement (Zheng et al., EMNLP 2024 Findings, ACL Anthology 2024.findings-emnlp.888).
 
 **Stepwise Decision Flow** `[Engineering guidance]` — Break fragile reasoning into explicit ordered steps for analysis, validation, or branching work. Check: are complex decisions sequenced instead of left implicit?
 

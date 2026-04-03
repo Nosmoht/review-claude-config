@@ -10,7 +10,7 @@ Evaluate a single Claude Code skill across the shared review rubric and produce 
 
 ## Purpose
 
-This page documents the behavior that is specific to `review-skill`. Canonical certificate, recommendation, and frontmatter structure live in [`review-report-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/review-report-contract.md). Shared evidence classes and source rules live in the review references.
+This page documents the behavior that is specific to `review-skill`. Canonical certificate, recommendation, and frontmatter structure live in [`review-report-contract.md`](../../skills/review-claude-config/references/review-report-contract.md). Shared evidence classes and source rules live in the review references.
 
 `review-skill` evaluates one `SKILL.md`, optionally enriches Goal Alignment with light domain research, and returns a structured certificate. In standalone mode it also handles report persistence and the follow-up menu. In orchestrated mode it returns only the structured certificate for `/review-claude-config`.
 

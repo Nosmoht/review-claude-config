@@ -17,7 +17,7 @@ Orchestrate fixes from a review report by parsing findings, separating dispatcha
 
 ## Purpose
 
-`apply-review-findings` owns report discovery, report parsing, dispatchability classification, delegation to the type-specific appliers, and the commit workflow. Canonical report structure lives in [`review-report-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/review-report-contract.md); this page documents only the orchestrator behavior that is specific to the apply flow.
+`apply-review-findings` owns report discovery, report parsing, dispatchability classification, delegation to the type-specific appliers, and the commit workflow. Canonical report structure lives in [`review-report-contract.md`](../../skills/review-claude-config/references/review-report-contract.md); this page documents only the orchestrator behavior that is specific to the apply flow.
 
 ## Major Phases
 

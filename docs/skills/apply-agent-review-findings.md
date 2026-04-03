@@ -21,48 +21,6 @@ The skill reads a `review-agent` report, extracts dispatchable High and Medium p
 
 Because agents are single-file primitives, the skill enforces constraints that differ from skill-level fixes: no external reference directories, no multi-file sprawl, and strict validation that the agent file remains self-contained after edits.
 
-## Workflow
-
-```mermaid
-flowchart TD
-    A["1. Load report<br/>& extract findings"] --> B["2. Filter High/Medium<br/>priority findings"]
-    B --> C["3. Read agent file"]
-    C --> D{"4. Pre-edit validation"}
-
-    D --> D1["Single-file constraint<br/>Block if fix references<br/>external files"]
-    D --> D2["Model field validation<br/>haiku/sonnet/opus<br/>task-complexity match"]
-    D --> D3["Description keywords<br/>Check trigger relevance<br/>warn if too broad/narrow"]
-    D --> D4["Tools array check<br/>Warn if new tools not<br/>referenced in body"]
-
-    D1 -- "Block" --> STOP["STOP<br/>Report: agents are<br/>single-file"]
-    D1 -- "Pass" --> E
-    D2 --> E["5. Preview changes<br/>& request confirmation"]
-    D3 --> E
-    D4 --> E
-
-    E --> F["6. Apply edits<br/>(Edit tool)"]
-    F --> G{"7. Post-edit validation"}
-
-    G --> G1["File self-contained?<br/>No external refs"]
-    G --> G2["Description has specific<br/>trigger keywords?"]
-    G --> G3["Example blocks cover<br/>primary use case?"]
-    G --> G4["Tools array matches<br/>body usage?"]
-
-    G1 -- Fail --> H["Report issues<br/>& suggest manual fix"]
-    G2 -- Fail --> H
-    G3 -- Fail --> H
-    G4 -- Fail --> H
-
-    G1 -- Pass --> I["8. Commit with<br/>audit-fix chain"]
-    G2 -- Pass --> I
-    G3 -- Pass --> I
-    G4 -- Pass --> I
-
-    I --> J{"Orchestrated mode?"}
-    J -- Yes --> K["Return status<br/>to orchestrator"]
-    J -- No --> L["What's next? menu"]
-```
-
 ### Step 1: Load report and extract findings
 
 If `$ARGUMENTS` provides a report path, use it directly. Otherwise, locate the most recent `review-agent` report in `.claude/reviews/` by timestamp.

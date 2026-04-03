@@ -10,7 +10,7 @@ Evaluate a single Claude Code rule across the reduced 3-dimension rule rubric an
 
 ## Purpose
 
-Rules are plain Markdown directives, so they do not use the full 7-dimension review surface. This page documents the rule-specific behavior only. Shared report structure still lives in [`review-report-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/review-report-contract.md).
+Rules are plain Markdown directives, so they do not use the full 7-dimension review surface. This page documents the rule-specific behavior only. Shared report structure still lives in [`review-report-contract.md`](../../skills/review-claude-config/references/review-report-contract.md).
 
 ## Major Phases
 

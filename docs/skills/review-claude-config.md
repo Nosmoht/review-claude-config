@@ -10,7 +10,7 @@ Batch-audit all Claude Code skills, agents, and rules in a target repo and assem
 
 ## Purpose
 
-`review-claude-config` is the batch orchestrator. It discovers items under `.claude/`, coordinates shared references and domain cache usage, dispatches the type-specific review workers, and persists the combined report. Canonical report structure lives in [`review-report-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/review-report-contract.md). Evidence classes and source policy live in the shared evidence references.
+`review-claude-config` is the batch orchestrator. It discovers items under `.claude/`, coordinates shared references and domain cache usage, dispatches the type-specific review workers, and persists the combined report. Canonical report structure lives in [`review-report-contract.md`](../../skills/review-claude-config/references/review-report-contract.md). Evidence classes and source policy live in the shared evidence references.
 
 ## Major Phases
 

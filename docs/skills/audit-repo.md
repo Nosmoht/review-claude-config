@@ -20,66 +20,6 @@ The skill performs a comprehensive static analysis of any repository to answer: 
 
 The skill is strictly read-only on the target repository. It writes only the final audit report to `.claude/reviews/`. It does not generate any primitives -- it produces a diagnostic matrix that other skills (`/scaffold-skill`, `/suggest-skills`) can act on.
 
-## Process Flow Diagram
-
-```mermaid
-flowchart TD
-    Start["Start: /audit-repo [folder]"] --> P1
-
-    subgraph P1["Phase 1 -- Setup"]
-        S0["Step 0: Tool checks<br/>(WebSearch, WebFetch)"]
-        S0 --> S1["Step 1: Load references<br/>- signal-patterns.md<br/>- error-class-taxonomy.md<br/>- primitive-decision-matrix.md<br/>- token-heuristics.md<br/>- audit-report-schema.md<br/>- signal-catalog.md (from suggest-skills)"]
-        S1 --> S2["Step 2: Initial assessment<br/>- Existing CLAUDE.md?<br/>- .claude/skills?<br/>- Agents, rules, hooks?"]
-    end
-
-    P1 --> P2
-
-    subgraph P2["Phase 2 -- Static Repo Analysis (Repo Scanner Agent)"]
-        direction TB
-        ScanNote["Agent: Glob, Grep, Read, Bash<br/>SCAN LIMITS: 50 lines/file,<br/>4 levels deep, 500 files/dir,<br/>read-only Bash only"]
-        ScanNote --> CatA["A: Toolchain Detection<br/>package.json scripts,<br/>Makefile targets,<br/>CI step commands"]
-        ScanNote --> CatB["B: Ambiguity Measurement<br/>max depth, files/dir,<br/>naming collisions,<br/>sprawl score"]
-        ScanNote --> CatC["C: Linter/Formatter Coverage<br/>Deterministic / CI-enforced /<br/>AI-instructed / Undocumented"]
-        ScanNote --> CatD["D: Architecture Pattern Extraction<br/>directory signatures,<br/>DI markers, ADRs,<br/>import direction"]
-        ScanNote --> CatE["E: Domain Knowledge Inventory<br/>OpenAPI, protobuf, GraphQL,<br/>glossary, ADRs, migrations,<br/>schemas"]
-    end
-
-    P2 --> P3
-
-    subgraph P3["Phase 3 -- Token Efficiency Analysis (Token Analyzer Agent)"]
-        direction TB
-        TokenNote["Agent: Glob, Bash, Read<br/>Same scan limits"]
-        TokenNote --> MetA["A: File Size Distribution<br/>>2000 severe, >1000 critical,<br/>>500 token sink"]
-        TokenNote --> MetB["B: Navigation Sprawl Score<br/>depth x max_files x collisions<br/>>100 P0, 30-100 selective,<br/><30 no intervention"]
-        TokenNote --> MetC["C: Build Error Verbosity<br/>toolchain -> expected verbosity<br/>-> token cost"]
-        TokenNote --> MetD["D: Monorepo Scope Isolation<br/>workspace count,<br/>cross-package imports"]
-        TokenNote --> MetE["E: Context Burn Rate<br/>estimated tokens<br/>per task type"]
-    end
-
-    P3 --> P4
-
-    subgraph P4["Phase 4 -- Primitives Derivation (inline)"]
-        direction TB
-        D4A["4A: CLAUDE.md Gaps<br/>Toolchain, Architecture,<br/>Scope, Domain,<br/>Navigation, Large files"]
-        D4B["4B: Skill Candidates<br/>Structural repetition +<br/>signal catalog matching +<br/>validation gate (3/4 criteria:<br/>Recurrence, Verification,<br/>Non-obviousness,<br/>Generalizability)"]
-        D4C["4C: Agent Candidates<br/>Only if concern has BOTH<br/>own toolchain AND<br/>own evaluation criteria"]
-        D4D["4D: Hook/Rule Candidates<br/>Single command boolean -> Hook<br/>Judgment needed -> Rule"]
-    end
-
-    P4 --> P5
-
-    subgraph P5["Phase 5 -- Needs Matrix and Report"]
-        direction TB
-        M1["Step 1: Assemble intervention matrix<br/>(error class, gap, primitive,<br/>priority P0/P1/P2, token impact,<br/>signal source, evidence)"]
-        M1 --> M2{"WebSearch<br/>available?"}
-        M2 -- Yes --> M2a["Step 2: Validate top 3 P0<br/>recs against best practices<br/>for detected tech stack"]
-        M2 -- No --> M3
-        M2a --> M3["Step 3: Build report<br/>frontmatter + body:<br/>Repository Profile,<br/>Static Analysis,<br/>Token Efficiency,<br/>Intervention Matrix,<br/>Recommendations"]
-        M3 --> M4["Step 4: Present and persist<br/>.claude/reviews/<br/>YYYY-MM-DDTHHMMSS-audit-repo.md"]
-        M4 --> M5["Step 5: What's next?<br/>1. Scaffold a skill<br/>2. Run suggest-skills<br/>3. Apply audit findings<br/>4. Done"]
-    end
-```
-
 ## Process Steps
 
 ### Phase 1 -- Setup

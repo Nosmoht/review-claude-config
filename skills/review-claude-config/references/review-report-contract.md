@@ -73,6 +73,8 @@ Canonical structure:
 
 `Current` and `Recommended` are optional in review output. Mutation-oriented apply consumers may require both fields before they can safely dispatch an edit. Legacy parsing tolerance is defined by each consumer, not by this contract.
 
+**Terminology note:** This repo uses "dispatchable" for recommendations that include both `Current` and `Recommended` rewrite anchors, and "manual-only" for valid findings that lack rewrite anchors. "Dispatchable" is equivalent to "auto-fixable" or "fixable" in ESLint (`meta.fixable`), LSP (`CodeActionKind.QuickFix`), SonarQube, and Roslyn (`CodeFixProvider`).
+
 ## Report Frontmatter
 
 All review report producers use the same frontmatter contract:

@@ -20,59 +20,6 @@ The engineering baseline (`skills/review-claude-config/references/engineering-ba
 
 The skill is the only writer of the engineering baseline. All other skills treat the baseline as read-only at review time. The 90-day refresh cycle is enforced by a freshness gate: if the baseline was refreshed recently, the skill asks before proceeding, preventing unnecessary churn.
 
-## Workflow
-
-```mermaid
-flowchart TD
-    A["1. Locate baseline<br/>Read engineering-baseline.md<br/>Extract last_refreshed date<br/>Test WebFetch availability"] --> B{"2. Freshness gate<br/>last_refreshed < 90 days?"}
-
-    B -- "Yes (fresh)" --> C["Tell user baseline is fresh<br/>Ask: Force refresh?"]
-    C -- "No" --> STOP1["STOP<br/>(no changes)"]
-    C -- "Yes" --> D
-
-    B -- "No (stale)" --> D["3. Research current best practices<br/>6 named WebSearch queries"]
-
-    D --> Q1["Query 1: Agentic workflow<br/>patterns multi-agent orchestration"]
-    D --> Q2["Query 2: Prompt engineering<br/>techniques evidence research"]
-    D --> Q3["Query 3: Context engineering<br/>LLM agents best practices"]
-    D --> Q4["Query 4: AI agent tool<br/>design best practices"]
-    D --> Q5["Query 5: AI agent safety<br/>guardrails best practices"]
-    D --> Q6["Query 6: LLM instruction<br/>following clarity research"]
-
-    Q1 --> FILTER["Source quality filter<br/>+ deduplication"]
-    Q2 --> FILTER
-    Q3 --> FILTER
-    Q4 --> FILTER
-    Q5 --> FILTER
-    Q6 --> FILTER
-
-    FILTER --> EARLY{"Early termination:<br/>2 consecutive queries<br/>yield no new techniques?"}
-    EARLY -- "Yes" --> SKIP["Skip remaining queries"]
-    EARLY -- "No" --> CONT["Continue all queries"]
-
-    SKIP --> FETCH
-    CONT --> FETCH
-
-    FETCH{"3.5. WebFetch available?"}
-    FETCH -- "Yes" --> WF["Tier 1: 1 fetch per query<br/>Tier 2: 2-3 best remaining URLs<br/>Total: 6-9 fetches"]
-    FETCH -- "No" --> MERGE
-
-    WF --> MERGE["4. Merge findings<br/>Per section: add / update / remove<br/>Spot-check 2-3 existing techniques"]
-
-    MERGE --> PREVIEW["5. Preview and confirm<br/>Show ADD / UPDATE / REMOVE<br/>with sources + token projection"]
-    PREVIEW --> CONFIRM{"User: Apply?"}
-
-    CONFIRM -- "No" --> STOP2["STOP<br/>(no changes)"]
-    CONFIRM -- "Yes" --> WRITE["6. Write updated file<br/>Set last_refreshed = today<br/>Enforce <= 2K tokens"]
-
-    WRITE --> REPORT["7. Report changes<br/>Added / Updated / Removed<br/>Unchanged / Token count"]
-
-    style STOP1 fill:#f9f,stroke:#333
-    style STOP2 fill:#f9f,stroke:#333
-    style FILTER fill:#ffd,stroke:#333
-    style REPORT fill:#dfd,stroke:#333
-```
-
 ## Process Steps
 
 ### Step 1: Locate baseline

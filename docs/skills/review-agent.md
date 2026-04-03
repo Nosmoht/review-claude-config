@@ -10,7 +10,7 @@ Evaluate a single Claude Code agent across the shared review rubric with agent-s
 
 ## Purpose
 
-This page keeps the agent-specific behavior that is not obvious from the shared contracts. Canonical review output lives in [`review-report-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/review-report-contract.md).
+This page keeps the agent-specific behavior that is not obvious from the shared contracts. Canonical review output lives in [`review-report-contract.md`](../../skills/review-claude-config/references/review-report-contract.md).
 
 `review-agent` treats agents as single-file primitives. That means Context Engineering focuses on activation precision, Completeness checks `<example>` coverage, and Metadata validates model/tool selection against the task.
 

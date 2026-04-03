@@ -20,63 +20,6 @@ The skill answers the question: "What Claude Code skills should this repository 
 
 The skill is strictly read-only on the target repository. It writes only to `.claude/reviews/` when persisting a report.
 
-## Workflow
-
-```mermaid
-flowchart TD
-    Start["Start: /suggest-skills [folder]"] --> Validate{"Folder exists<br/>with files?"}
-    Validate -- No --> ErrStop["Report error. STOP"]
-    Validate -- Yes --> ToolCheck["Step 0: Tool Checks<br/>WebSearch + WebFetch"]
-
-    ToolCheck --> Par1["Steps 1-2: Parallel"]
-
-    Par1 --> LoadRefs["Step 1: Load References<br/>- signal-catalog.md (own)<br/>- domain-cache INDEX.md<br/>  (from review-claude-config)"]
-    Par1 --> ScanAgent["Step 2: Repo Scan Agent<br/>(Glob, Grep, Read)<br/>Collect facts A-F"]
-
-    ScanAgent --> ScanA["A: Documentation<br/>CLAUDE.md, rules, README"]
-    ScanAgent --> ScanB["B: Existing Skill/Agent<br/>Inventory"]
-    ScanAgent --> ScanC["C: Tech Stack<br/>languages, frameworks"]
-    ScanAgent --> ScanD["D: CI/CD & Automation<br/>pipelines, scripts"]
-    ScanAgent --> ScanE["E: Git Conventions<br/>.gitignore, CODEOWNERS"]
-    ScanAgent --> ScanF["F: Quality & Config<br/>linting, testing, formatting"]
-
-    LoadRefs --> Classify
-    ScanA --> Classify
-    ScanB --> Classify
-    ScanC --> Classify
-    ScanD --> Classify
-    ScanE --> Classify
-    ScanF --> Classify
-
-    Classify["Step 3: Classify Repo Type"] --> ClassBranch{Repo Type?}
-    ClassBranch -- Application --> AppTable["Use Application<br/>signal table"]
-    ClassBranch -- Skills-Config --> SkillsTable["Use Skills Repository<br/>signal table"]
-    ClassBranch -- Mixed --> BothTables["Use both<br/>signal tables"]
-
-    AppTable --> Phase2
-    SkillsTable --> Phase2
-    BothTables --> Phase2
-
-    Phase2["Phase 2: Signal Analysis"]
-    Phase2 --> CoverageMap["Step 0: Build Coverage Map<br/>Map existing skills to domains<br/>Filter duplicates (>60% overlap)"]
-
-    CoverageMap --> Layer1["Step 1: Layer 1<br/>Table-Based Signal Matching<br/>(Agent: Read only)<br/>Deterministic"]
-    CoverageMap --> Layer2["Step 2: Layer 2<br/>Open Reasoning<br/>(Agent: WebSearch, WebFetch, Read)<br/>Creative gap detection"]
-
-    Layer1 --> Consolidation
-    Layer2 --> Consolidation
-
-    Consolidation["Phase 3: Consolidation"]
-    Consolidation --> Dedup["Step 1: Deduplicate<br/>Merge overlapping suggestions"]
-    Dedup --> Score["Step 2: Score<br/>Signal (1-3) + Impact (1-3)<br/>+ Feasibility (1-3)<br/>Priority = sum"]
-    Score --> Filter["Step 3: Filter<br/>Cap at 10, drop below 4<br/>False positive gates"]
-
-    Filter --> Report["Phase 4: Presentation"]
-    Report --> Present["Step 1: Full Report<br/>Overview + Suggestions<br/>+ Signal Summary"]
-    Present --> Persist["Step 2: Persist to<br/>.claude/reviews/<br/>YYYY-MM-DDTHHMMSS-suggest-skills.md"]
-    Persist --> Commit["Step 3: Suggest commit<br/>+ What's next? menu"]
-```
-
 ## Process Steps
 
 ### Phase 1 -- Setup and Discovery
