@@ -75,10 +75,10 @@ last_refreshed: 2026-04-02
 **Typed Schemas** `[Engineering guidance]` — Use explicit types and validation at tool boundaries so invalid inputs fail early. Check: do the tool parameters have an enforceable schema?
 
 ## Sources
-- Anthropic: "Effective context engineering for AI agents" — https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
-- Anthropic: "Writing tools for agents" — https://www.anthropic.com/engineering/writing-tools-for-agents
-- Claude Code docs: "Best practices" — https://code.claude.com/docs/en/best-practices
-- Schulhoff et al.: "The Prompt Report" — https://arxiv.org/abs/2406.06608
-- Mei et al.: "A Survey of Context Engineering for Large Language Models" — https://arxiv.org/abs/2507.13334
-- Qi et al.: "AGENTIF: Benchmarking Instruction Following of Large Language Models in Agentic Scenarios" — https://arxiv.org/abs/2505.16944
-- Anthropic: "Building Effective Agents" — https://www.anthropic.com/research/building-effective-agents
+- Anthropic (2025): "Effective context engineering for AI agents"
+- Anthropic (2025): "Writing tools for agents"
+- Claude Code docs (2025): "Best practices"
+- Schulhoff et al. (2024): "The Prompt Report" (arXiv:2406.06608)
+- Mei et al. (2025): "A Survey of Context Engineering for LLMs" (arXiv:2507.13334)
+- Qi et al. (2025): "AGENTIF" (arXiv:2505.16944)
+- Anthropic (2025): "Building Effective Agents"

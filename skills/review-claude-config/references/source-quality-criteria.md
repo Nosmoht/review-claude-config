@@ -5,7 +5,7 @@ description: Shared source credibility criteria for all skills performing web re
 
 # Source Quality Criteria
 
-Repo-level claim classification is defined in [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md). This file governs source filtering and cross-validation for research inputs; the evidence contract governs how repository claims are labeled once sources have been evaluated.
+Repo-level claim classification is defined in [evidence-contract.md](evidence-contract.md). This file governs source filtering and cross-validation for research inputs; the evidence contract governs how repository claims are labeled once sources have been evaluated.
 
 ## Discard Rules (hard filter)
 
@@ -31,8 +31,3 @@ Prefer higher-tier sources when multiple sources cover the same topic.
 Claims used in Goal Alignment scoring must meet one of:
 - Appear in 2+ independent sources (any tier), OR
 - Come from 1 Tier 1 source with concrete evidence (benchmarks, A/B tests, production metrics)
-
-## Notes
-
-- Consumer-specific workflows may add task filters after applying this shared source filter. Example: `refresh-engineering-baseline` also requires techniques to be specific and implementable before they are eligible for the baseline.
-- Existing domain cache entries without `tier` fields are valid (grandfathered).
