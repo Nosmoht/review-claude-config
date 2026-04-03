@@ -1,18 +1,18 @@
 ---
 name: cross-skill-dependencies
-description: Registry of known cross-skill file dependencies for deterministic integrity checking
+description: Cross-skill dependency registry
 ---
 
 **Base:** `skills/review-claude-config/references/`
 
-Path resolution: targets starting with `skills/` are full paths; others prepend Base.
+`skills/` prefix = full path; else prepend Base.
 Severity: `!`=fatal `?`=warn `-`=skip
 
 | Source | Target | S |
 |--------|--------|---|
-| review-skill,review-agent,review-rule | scoring-rubric.md | ! |
+| review-skill,review-agent,review-rule,check-repo-health | scoring-rubric.md | ! |
 | review-skill,review-agent,review-rule,review-claude-config,refresh-engineering-baseline | engineering-baseline.md | ! |
-| review-skill,review-agent,review-rule,review-claude-config,apply-review-findings,apply-skill-review-findings,apply-agent-review-findings,apply-rule-review-findings,review-analytics | review-report-contract.md | ! |
+| review-skill,review-agent,review-rule,review-claude-config,apply-review-findings,apply-skill-review-findings,apply-agent-review-findings,apply-rule-review-findings,review-analytics,check-repo-health | review-report-contract.md | ! |
 | review-claude-config | skills/review-skill/SKILL.md | ? |
 | review-claude-config | skills/review-skill/references/skill-evaluation-guide.md | ? |
 | review-claude-config | skills/review-agent/SKILL.md | ? |
@@ -28,3 +28,4 @@ Severity: `!`=fatal `?`=warn `-`=skip
 | apply-skill-review-findings,apply-agent-review-findings,apply-rule-review-findings | skills/apply-review-findings/references/commit-conventions.md | ? |
 | apply-audit-findings | skills/apply-review-findings/references/commit-conventions.md | ! |
 | review-analytics | skills/review-analytics/references/report-schema.md | ? |
+| apply-review-findings | skills/apply-*-review-findings/SKILL.md | ? |
