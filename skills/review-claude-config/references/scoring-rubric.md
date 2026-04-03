@@ -12,42 +12,42 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 
 ## Dimensions
 
-### 1. Clarity (15%) — Can a model follow this unambiguously?
+### 1. Clarity (15%)
 - **A**: Explicit sequential workflow, no ambiguous conditionals, deterministic behavior across runs.
 - **C**: Mostly followable but some steps require interpretation. *if two models would likely produce different workflows from the instructions, it's C or below.*
 - **F**: Vague instructions like "handle appropriately" or "use best judgment" with no criteria.
 
-### 2. Completeness (15%) — Are all cases handled?
+### 2. Completeness (15%)
 - **A**: Edge cases addressed, output format defined, input validation present, failure modes documented.
 - **C**: Happy path works but error handling or output format is incomplete. *If a common real-world scenario would cause undefined behavior, it's C or below.*
 - **F**: Only describes the goal, not how to achieve it. No output specification.
 
-### 3. Prompt Engineering (15%) — Does it use proven techniques?
-- **A**: Uses structured output templates, role priming, few-shot examples where appropriate, explicit constraints, verification criteria, and evidence-first wording for review tasks.
+### 3. Prompt Engineering (15%)
+- **A**: Uses structured output, role priming, few-shot examples, explicit constraints, verification criteria, and evidence-first wording.
 - **C**: Uses 1-2 techniques or uses them ineffectively. *if the item relies entirely on implicit model behavior without any explicit technique, it's C or below.*
 - **F**: Raw instructions with no prompting techniques. No output format, no examples, no constraints.
 
-### 4. Context Engineering (15%) — Is context managed efficiently?
-- **A**: Minimal tool set, JIT retrieval, reference files for stable knowledge, concise output format, subagent isolation where appropriate, and activation precision that avoids false triggering.
+### 4. Context Engineering (15%)
+- **A**: Minimal tool set, JIT retrieval, reference files for stable knowledge, subagent isolation where appropriate, activation precision.
 - **C**: Functional but loads unnecessary context or has bloated tool set. *If a human engineer can't immediately say which tool to use for a given situation, it's C or below.*
 - **F**: Kitchen-sink tool list, all information pre-loaded, no concern for context budget.
 
-### 5. Goal Alignment (20%) — Will it actually achieve its stated goal?
-- **A**: Has the right domain knowledge, tools, and structure. Domain best practices are reflected in workflow and checks, and a reviewer would not need to guess why a finding exists.
+### 5. Goal Alignment (20%)
+- **A**: Has right domain knowledge, tools, and structure; best practices reflected in workflow; findings self-evident to reviewers.
 - **C**: Addresses the goal superficially but misses domain-critical aspects. *if a domain expert would identify obvious missing steps or checks, it's C or below.*
 - **F**: Goal stated in description but body doesn't support achieving it.
 
-### 6. Safety (10%, or 15% if item has Write/Bash/Edit tools)
+### 6. Safety (10%; 15% with Write/Bash/Edit)
 - **A**: Least-privilege tool scoping, explicit guardrails for destructive actions, stop conditions, confirmation gates.
 - **C**: Tools are broader than needed or guardrails are implicit. *if the item could modify/delete user data without explicit confirmation, it's C or below.*
 - **F**: Unrestricted tools with no guardrails. No stop conditions.
 
-### 7. Metadata (10%, or 5% if Safety is 15%)
-- **A**: Complete frontmatter, description accurately matches body, tool list matches actual usage, argument-hint present if applicable, and the description states what the item does plus when it should trigger.
+### 7. Metadata (10%; 5% if Safety is 15%)
+- **A**: Complete frontmatter, description matches body, tool list matches usage, argument-hint present, trigger conditions explicit.
 - **C**: Required fields present but description is vague or tool list doesn't match usage. *If the description would cause incorrect skill/agent selection, it's C or below.*
 - **F**: Missing required fields or description is misleading.
 
-For agent-specific criteria (example blocks, activation precision, model selection), see `agent-evaluation-guide.md`.
+For agent-specific criteria, see `agent-evaluation-guide.md`.
 
 ## Reviewer Output Expectations
 

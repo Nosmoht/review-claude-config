@@ -8,8 +8,6 @@ description: Registry of known cross-skill file dependencies for deterministic i
 Path resolution: targets starting with `skills/` are full paths; others prepend Base.
 Severity: `!`=fatal `?`=warn `-`=skip
 
-Update when adding skills with cross-skill dependencies. Heuristic scan (5c-ii) flags undocumented references.
-
 | Source | Target | S |
 |--------|--------|---|
 | review-skill,review-agent,review-rule | scoring-rubric.md | ! |

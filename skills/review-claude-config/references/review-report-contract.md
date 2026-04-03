@@ -45,11 +45,9 @@ summary:
 ---
 ```
 
-Rules: non-applicable dimensions (`prompt_engineering`, `context_engineering`, `safety`, `metadata`) → `null`.
-
 ## Identity and Tracking
 
-`type + path` is the canonical identity; `name` is display-only. A disappearing path plus a new path is a rename/move candidate, not a silent merge by name.
+`type + path` is the canonical identity; `name` is display-only. A disappearing path + new path is a rename/move candidate, not a silent merge by name.
 
 ## Producer Compatibility
 
