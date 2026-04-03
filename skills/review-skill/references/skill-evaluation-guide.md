@@ -10,7 +10,7 @@ description: Type-specific evaluation criteria for Claude Code skills (SKILL.md 
 - Is main SKILL.md under 500 lines?
 - Are supplementary files loaded on-demand (Read) rather than pre-loaded?
 - Does the skill use subagent isolation for complex subtasks?
-- Does the description make activation boundaries clear without matching unrelated requests?
+- Are activation boundaries clear without matching unrelated requests?
 
 ## Workflow Structure
 - Are steps numbered with explicit sequential dependencies?
@@ -19,7 +19,7 @@ description: Type-specific evaluation criteria for Claude Code skills (SKILL.md 
 - Are stop conditions and recovery actions defined?
 
 ## Reference File Quality
-- Does each reference file stay within token budgets (≤500 tokens for domain refs, ≤1K/2K for rubric/baseline)?
+- Does each reference file stay within token budgets? (See `check-repo-health` thresholds.)
 - Is each reference single-purpose?
 - Could any reference content be eliminated without losing capability?
 
@@ -33,17 +33,15 @@ description: Type-specific evaluation criteria for Claude Code skills (SKILL.md 
 - Is the output format specified with a literal template or example?
 - Are all sections/fields defined?
 - Does the output format prevent downstream context bloat?
-- For review skills: do findings include `Evidence:` and `Validation:` so another reviewer could confirm them?
+- For review skills: do findings include `Evidence:` and `Validation:`?
 
 ## Safety Patterns (for skills with Write/Bash/Edit)
 - Confirmation gates before destructive or irreversible operations?
 - Least-privilege tool set (`allowed-tools` matches actual usage)?
 - Stop conditions defined for loops or recursive operations?
-- `disable-model-invocation: true` for side-effect-heavy skills?
 
 ## Common Skill Anti-Patterns
 - Inline embedding of content that belongs in reference files
 - Tool list includes tools never referenced in the workflow
 - Missing output format specification (relying on implicit model behavior)
 - No error handling for tool failures or unavailable tools
-- Time-sensitive wording in reusable prompt assets

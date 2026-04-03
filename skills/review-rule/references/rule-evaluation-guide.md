@@ -5,7 +5,7 @@ description: Type-specific evaluation criteria for Claude Code rules (plain .md 
 
 # Rule Evaluation Guide
 
-Rules are always-active constraints applied to all conversations. They have no tools, no standardized frontmatter, and are directives — not workflows. Only 3 dimensions apply.
+Rules are always-active constraints with no tools, frontmatter, or prompt structure — so PE, CE, Safety, and Metadata are structurally inapplicable. Only Clarity (30%), Completeness (30%), and Goal Alignment (40%) apply.
 
 ## Clarity Assessment (30%)
 - Could two different models interpret this rule differently?
@@ -27,9 +27,6 @@ Rules are always-active constraints applied to all conversations. They have no t
 - Would the rule prevent the specific behavior it targets?
 - Are there obvious workarounds the rule doesn't address?
 - Does domain knowledge reveal missing constraints?
-
-## Why Only 3 Dimensions
-Rules lack tools (→ Safety irrelevant), frontmatter (→ Metadata irrelevant), and are directives not prompts (→ PE, CE irrelevant). This is structural, not a quality judgment.
 
 ## Common Rule Anti-Patterns
 - Vague directives ("write good code") without measurable criteria
