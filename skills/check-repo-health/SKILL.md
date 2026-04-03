@@ -70,12 +70,14 @@ Read the `## Architecture` section of CLAUDE.md. If `## Architecture` is missing
 
 **5c. Cross-skill references**
 
-**5c-i. Registry check.** Read `references/cross-skill-dependencies.md`. For each row in the dependency table:
-1. Glob for the Target path as-is (paths are relative to the repo root).
-2. Record the result with the row's Severity value:
-   - `fatal` target missing → **FAIL**
-   - `warn` target missing → **WARN**
-   - `skip` target missing → **PASS** (informational only)
+**5c-i. Registry check.** Read `references/cross-skill-dependencies.md`. Extract the `**Base:**` prefix value. For each row in the dependency table:
+1. Expand comma-separated Source values into individual source entries.
+2. Resolve Target path: if it starts with `skills/`, use as-is; otherwise prepend Base.
+3. Glob for the resolved Target path.
+4. Record the result using the row's Severity symbol:
+   - `!` target missing → **FAIL**
+   - `?` target missing → **WARN**
+   - `-` target missing → **PASS** (informational only)
    - Target exists → **PASS**
 
 If the registry file cannot be read, note the fallback in the dashboard header and skip to 5c-ii.
