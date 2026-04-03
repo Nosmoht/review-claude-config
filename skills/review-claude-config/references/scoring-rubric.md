@@ -38,7 +38,7 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 - **F**: Goal stated in description but body doesn't support achieving it.
 
 ### 6. Safety (10%; 15% with Write/Bash/Edit)
-- **A**: Least-privilege tool scoping, explicit guardrails for destructive actions, stop conditions, confirmation gates.
+- **A**: Least-privilege tool scoping, explicit guardrails for destructive actions, stop conditions, confirmation gates; failure path defined for every external dependency (circuit breakers, progressive fallback); stop condition prevents infinite recursion (bounded execution via failure thresholds, timeouts, or iteration limits).
 - **C**: Tools are broader than needed or guardrails are implicit. *if the item could modify/delete user data without explicit confirmation, it's C or below.*
 - **F**: Unrestricted tools with no guardrails. No stop conditions.
 
