@@ -29,6 +29,9 @@ Stop if the name is invalid or conflicts with an existing rule.
 
 Read `references/rule-template.md` for the canonical rule structure.
 
+If the file cannot be read (missing or unreadable), stop and report:
+"rule-template.md not found — cannot scaffold without format conventions. Verify the file exists at skills/scaffold-rule/references/rule-template.md."
+
 Optionally read `research/claude-code/skill-agent-format-conventions.md` (Glob for `**/research/claude-code/skill-agent-format-conventions.md`) — specifically the Rules section — for additional format guidance. If not found, proceed with the template defaults.
 
 ### 3. Gather requirements
@@ -59,6 +62,13 @@ Build the rule content as plain Markdown with no frontmatter:
 - <Exception or boundary condition>
 - <Another exception, or "None" if truly universal>
 ```
+
+Before presenting, run these validation checks against the generated content:
+- The rule file must NOT start with `---` (YAML frontmatter is not allowed in rule files)
+- The first non-blank line must be a Markdown heading (`# ...`)
+- The directive section must contain at least one enforcement verb: `always`, `never`, `before`, `do not`, `must`
+
+If any check fails, report the specific violation and correct it before presenting.
 
 Present the full generated content to the user. Ask: "Does this look correct? (yes/edit/cancel)"
 

@@ -33,6 +33,9 @@ If validation fails, report the specific issue and ask for a corrected name. Sto
 
 Read `references/agent-template.md` for the canonical agent .md structure and model selection guidance.
 
+If the file cannot be read (missing or unreadable), stop and report:
+"agent-template.md not found — cannot scaffold without format conventions. Verify the file exists at skills/scaffold-agent/references/agent-template.md."
+
 Optionally, if the file exists, read `research/claude-code/skill-agent-format-conventions.md` (Glob for `**/research/claude-code/skill-agent-format-conventions.md`) for additional valid frontmatter fields. If not found, use the template defaults.
 
 ### 3. Gather requirements
@@ -48,7 +51,7 @@ Ask the user for the following. Collect all answers before proceeding:
 
 If any required field is missing after asking, prompt again. Do not generate the agent .md with empty required fields.
 
-### 4. Generate agent .md
+### 4. Generate and validate agent .md
 
 Build the content from `references/agent-template.md`:
 
@@ -84,6 +87,14 @@ Example generated output:
     ## Hard Rules
 
     - Never approve or merge PRs; analysis only.
+
+Before presenting, run these validation checks against the generated content:
+- Name length ≤ 64 characters (count characters in the `name` field)
+- Description length ≤ 1024 characters (count characters in the full `description` value, excluding YAML key and quotes)
+- No XML tags (`<`, `>`) appear in the description field (XML tags are not allowed in description)
+- Only documented frontmatter keys are present: `name`, `description`, `model`, `color`, `tools`, `allowed-tools`
+
+If any check fails, report the specific violation and correct it before presenting.
 
 Present the full generated content to the user for review. Ask: "Does this look correct? (yes/edit/cancel)"
 - **yes** — Proceed to writing the file.

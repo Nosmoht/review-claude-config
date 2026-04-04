@@ -22,7 +22,36 @@ Parse `$ARGUMENTS` as `[hook-type] <hook-name>`.
 - `hook-name` must be kebab-case; it becomes the filename `hooks/<hook-name>.py`.
 - If `hook-name` is empty after parsing, ask the user for it.
 
-Valid hook types: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `SessionStart`, `Stop`, `SubagentStart`, `SubagentStop`, `PreCompact`, `PermissionRequest`, `Notification`.
+Valid hook types (26 events):
+
+| Event | When it fires |
+|-------|--------------|
+| `PreToolUse` | Before a tool call — can allow/deny/rewrite input |
+| `PostToolUse` | After a successful tool call |
+| `PostToolUseFailure` | After a tool call that returned an error |
+| `UserPromptSubmit` | When the user submits a prompt |
+| `Stop` | When the agent stops |
+| `StopFailure` | When the agent stops with an error |
+| `SubagentStart` | When a subagent is spawned |
+| `SubagentStop` | When a subagent completes |
+| `PreCompact` | Before context compaction |
+| `PostCompact` | After context compaction |
+| `PermissionRequest` | When the agent requests a permission |
+| `PermissionDenied` | When a permission is denied |
+| `Notification` | When the agent sends a notification |
+| `SessionStart` | At the start of a session |
+| `SessionEnd` | At the end of a session |
+| `TaskCreated` | When a task is created |
+| `TaskCompleted` | When a task is completed |
+| `TeammateIdle` | When a teammate agent is idle |
+| `InstructionsLoaded` | When instructions are loaded |
+| `ConfigChange` | When the configuration changes |
+| `CwdChanged` | When the working directory changes |
+| `FileChanged` | When a file changes |
+| `WorktreeCreate` | When a git worktree is created |
+| `WorktreeRemove` | When a git worktree is removed |
+| `Elicitation` | When the agent requests user input |
+| `ElicitationResult` | When elicitation returns a result |
 
 ## Workflow
 
@@ -50,7 +79,7 @@ Ask the user for:
    - `updatedInput` — rewrite tool input fields before execution (PreToolUse)
    - `additionalContext` — inject session context (SessionStart)
    - `{}` — no-op or async logging only
-5. **Timeout** — default 10 seconds; max 30 seconds. Async hooks (`{"async": true}`) do not block.
+5. **Timeout** — command handlers default to 600 seconds (10 minutes). Async hooks (`{"async": true}`) return immediately and do not block the agent. Set a shorter timeout only if the hook needs a hard ceiling.
 6. **External dependencies** — file reads, environment variables, subprocess calls?
 
 Note: subagents do not inherit parent hook permissions. If the hook targets subagent contexts, use `SubagentStart` or `SubagentStop` rather than `SessionStart`.
@@ -65,6 +94,9 @@ Build from `references/hook-template.py`:
   - `PreToolUse` (inject): `json.dumps({"systemMessage": <text>})`
   - `PreToolUse` (deny): `json.dumps({"permissionDecision": "deny", "userMessage": <reason>})`
   - `PreToolUse` (rewrite): `json.dumps({"permissionDecision": "allow", "updatedInput": {...}})`
+  - `PostToolUse`: `json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": <text>}})` — cannot block or modify; use for logging/side effects only
+  - `UserPromptSubmit`: `json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": <text>}})` — inject additional context before the prompt is processed
+  - `Stop`: `json.dumps({"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": <text>}})` — for cleanup or audit logging at session end
   - `SessionStart`: `json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": <text>}})`
   - Async logging: `json.dumps({"async": true})`
   - No-op: `print("{}")`

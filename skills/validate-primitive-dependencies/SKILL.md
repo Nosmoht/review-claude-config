@@ -93,6 +93,23 @@ For each SKILL.md in the inventory:
    → each match is a forward reference of type "subagent-delegation"
    → note: subagent tool grants do not inherit parent — record for context only
 
+## Task D: Scan each agent .md file
+
+For each agent .md file in the inventory:
+1. Read the file content.
+2. Grep for slash command invocations:
+   pattern: `/[a-z][a-z0-9-]+`
+   → each match is a forward reference of type "slash-command"
+   → ignore inline code examples (surrounded by backtick pairs on same line)
+
+3. Grep for reference file Read patterns:
+   pattern: Read.*references/[^\s"']+
+   → each match is a forward reference of type "reference-file"
+
+4. Grep for WebFetch and WebSearch calls that reference local paths (rare but possible):
+   pattern: Read.*\.md
+   → if the path resolves under the repo, record as "sibling-read"
+
 ## Task B: Scan hooks configuration
 
 For each hooks config file found (hooks.json, settings.json with hooks key):
@@ -127,15 +144,23 @@ are returned, continue with what is available and note the gap.
 
 ### Step 1: Forward reference check
 
-For each row in the dependency map:
+For each row in the dependency map, resolve paths as follows. All path resolution is
+anchored at the **target folder** root (the `$ARGUMENTS` path, not the skill's own
+directory). Reference-file paths are relative to their **source file's parent directory**
+— this applies to both SKILL.md files and agent .md files:
+- `Read references/foo.md` in `skills/bar/SKILL.md` → `<target>/skills/bar/references/foo.md`
+- `Read references/foo.md` in `.claude/agents/baz.md` → `<target>/.claude/agents/references/foo.md`
 
-- **reference-file**: Glob for the exact path. If not found, status = MISSING.
-- **sibling-skill**: Glob for the path. If not found, status = MISSING.
-- **slash-command**: Derive expected skill path (`skills/<name>/SKILL.md` and
-  `.claude/skills/<name>/SKILL.md`). Glob both. If neither exists, status = MISSING.
-- **hook-script**: Glob for the script path relative to the target folder.
-  If not found, status = MISSING.
-- **research-ref**: Glob for the path. If not found, status = MISSING.
+- **reference-file**: Resolve relative to the source SKILL.md's parent directory.
+  Glob for the resolved path. If not found, status = MISSING.
+- **sibling-skill**: Resolve relative to the target folder root.
+  Glob for the path. If not found, status = MISSING.
+- **slash-command**: Derive expected skill path (`<target>/skills/<name>/SKILL.md` and
+  `<target>/.claude/skills/<name>/SKILL.md`). Glob both. If neither exists, status = MISSING.
+- **hook-script**: Resolve relative to the target folder root.
+  Glob for the script path. If not found, status = MISSING.
+- **research-ref**: Resolve relative to the target folder root.
+  Glob for the path. If not found, status = MISSING.
 - **subagent-delegation**: Record as informational (subagent permissions do not
   inherit — no file existence to check).
 
@@ -163,9 +188,26 @@ Build an adjacency map from slash-command references only:
 skill A → skill B  (A's SKILL.md contains /skill-b invocation)
 ```
 
-For each skill A: check if any of A's targets (B) in turn references A.
-This is depth-2 cycle detection (A→B→A). If a cycle is found, record both
-directions: `A → B → A`.
+Perform a transitive DFS (depth-first search) to detect cycles of any length.
+Use only the current `path` for cycle detection — no separate `visited` set,
+since a visited set without backtracking would suppress valid cycle branches:
+
+```
+cycles = []
+
+For each skill node A (as starting point):
+  DFS(node, path):
+    for each neighbor B of node (from adjacency map):
+      if B in path → cycle found: cycles.append(path + [B]); continue
+      else: DFS(B, path + [B])
+
+  DFS(A, [A])
+```
+
+Record each cycle as the full chain: `A → B → C → A`. If multiple cycles share
+edges, record each independently. Depth-2 cycles (A→B→A) are a special case of this.
+To avoid redundant reporting, skip starting nodes that already appear mid-chain in a
+previously recorded cycle.
 
 ### Step 4: Registration check
 

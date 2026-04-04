@@ -49,8 +49,12 @@ exists at skills/review-claude-config/references/evidence-contract.md."
 ### Step 2: Check trigger conditions
 
 Glob `.claude/reviews/*-evidence-layer.md` to find the most recent run.
-Extract the date from the filename (format `YYYY-MM-DDTHHMMSS`).
-Compute days since that run.
+
+For each result, extract the date from the filename (format `YYYY-MM-DDTHHMMSS`).
+If a filename does not match this format, skip it with a note: "Skipped unrecognized
+filename: [path]" — do not error out.
+
+Select the file with the most recent valid timestamp and compute days since that run.
 
 If the last run was fewer than 90 days ago AND no `--scope` flag was provided:
 Inform the user: "Last evidence-layer maintenance run was N days ago — scheduled
@@ -93,6 +97,11 @@ recommended replacement.
 ### Step 4: Source freshness check [scope: freshness]
 
 Glob `research/**/*.md` to get all research files.
+
+If the glob returns zero files, report: "No research files found under research/ —
+verify the path is correct and the directory exists. Freshness check skipped."
+Do not continue with this step if zero files are found (an empty result produces a
+false-healthy signal with no actionable output).
 
 For each file, grep for date markers: `last_refreshed:`, `Fetched:`, `**Fetched:**`.
 Parse the date found (ISO format YYYY-MM-DD or similar).
