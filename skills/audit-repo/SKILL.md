@@ -429,14 +429,37 @@ Breakdown: depth [N] × files/dir [N] × collisions [N]
 
 ### P2 — Medium-term (Agents + Domain)
 [detailed recommendations]
-
-## Next Steps
-- Create or update CLAUDE.md with P0 items first
-- Use `/scaffold-skill plugin <name>` for identified skill candidates
-- Run `/suggest-skills [folder]` for Layer 2 open reasoning about skill opportunities beyond the signal catalog
-- Re-run `/audit-repo [folder]` after changes to verify coverage
-- Run `/review-claude-config [folder]` to evaluate quality after creating primitives
 ```
+
+#### Action Plan Generation
+
+After completing the Recommendations section, append a `## Action Plan` section to the report. Generate one checkbox per row in the Intervention Matrix, sorted P0→P2 then Token Impact High→Low.
+
+Command mapping:
+
+| Primitive | Command |
+|-----------|---------|
+| CLAUDE.md | `/apply-audit-findings <report-path>` |
+| Hook      | `/apply-audit-findings <report-path>` |
+| Rule      | `/apply-audit-findings <report-path>` |
+| Skill     | `/scaffold-skill plugin <kebab-name>` |
+| Agent     | `manual setup` |
+
+Format per item: `- [ ] **#<row>** [<error_class>] <gap> → <command>`
+
+Group under priority headers (`### P0 — Immediate`, `### P1 — Short-term`, `### P2 — Medium-term`). Omit empty tiers. For >10 interventions, list P0 items individually; collapse P1/P2 to a single line: `- [ ] Apply remaining P[N] findings (N items) → /apply-audit-findings <report-path>`.
+
+Always append a Verification group:
+- `- [ ] Re-run /audit-repo <target> to verify coverage`
+- `- [ ] Run /review-claude-config <target> to evaluate created primitives`
+
+**Example** (3-row matrix: row 1=CLAUDE.md/P0, row 2=Skill/P1, row 3=Hook/P1):
+
+| Row | Checkbox output |
+|-----|----------------|
+| 1 | `- [ ] **#1** [Toolchain] Add build/test/lint commands to CLAUDE.md → /apply-audit-findings .../2026-04-04T120000-audit-repo.md` |
+| 2 | `- [ ] **#2** [Repetition] Scaffold deploy-validator skill → /scaffold-skill plugin deploy-validator` |
+| 3 | `- [ ] **#3** [Convention] Add pre-commit hook config → /apply-audit-findings .../2026-04-04T120000-audit-repo.md` |
 
 ### Step 4: Present and Persist
 
@@ -450,12 +473,22 @@ Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS audit-repo report
 
 ### Step 5: What's Next?
 
-After all output is complete, end your response with this menu (substitute `<report-path>` with the actual report path, `<target>` with the analyzed folder):
+After all output is complete, end your response with this menu. Substitute actual values: `<report-path>` with the saved report path (or the path that would have been used), `<target>` with the analyzed folder, `N` with the total intervention count from the frontmatter, `M` with the p0_count, and `<top-skill-name>` with the highest-priority Skill primitive from the intervention matrix (kebab-case). Omit item 2 entirely if no Skill primitives exist. If the report was not saved, replace item 1's command with "Save the report first, then `/apply-audit-findings`".
+
+If intervention_count is 0, end the response with:
+```
+---
+No interventions found — the repository is well-configured.
+Run `/suggest-skills <target>` to explore skill opportunities beyond the audit scope.
+---
+```
+
+Otherwise:
 
 ---
 **What's next?**
-1. Apply audit findings → `/apply-audit-findings <report-path>`
-2. Scaffold a recommended skill → `/scaffold-skill plugin <name>`
+1. Apply audit findings (N interventions, M× P0) → `/apply-audit-findings <report-path>`
+2. Scaffold recommended skill (`<top-skill-name>`) → `/scaffold-skill plugin <top-skill-name>`
 3. Explore skill opportunities → `/suggest-skills <target>`
 4. Done
 
@@ -463,7 +496,7 @@ _Type a number to continue._
 
 ---
 
-When the user responds: **1** → invoke `/apply-audit-findings` with the report path. **2** → ask which skill from the intervention matrix, then invoke `/scaffold-skill`. **3** → invoke `/suggest-skills` with the target folder. **4** → acknowledge and stop.
+When the user responds: **1** → invoke `/apply-audit-findings` with the report path. **2** → invoke `/scaffold-skill plugin <top-skill-name>` directly. **3** → invoke `/suggest-skills` with the target folder. **4** → acknowledge and stop.
 
 ## Hard Rules
 

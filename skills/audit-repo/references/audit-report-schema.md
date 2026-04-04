@@ -39,4 +39,4 @@ summary:
 3. **Token Efficiency Findings** — file sizes, sprawl score, build verbosity, monorepo isolation, burn rate
 4. **Intervention Matrix** — prioritized table (all interventions with evidence)
 5. **Recommendations** — grouped by P0/P1/P2 with concrete content suggestions
-6. **Next Steps** — which primitives to create first, suggest related skills
+6. **Action Plan** — prioritized checkbox list derived from intervention matrix; one item per matrix row with row #, error class, gap, and resolution command; grouped by P0/P1/P2; verification steps appended
