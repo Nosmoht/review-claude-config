@@ -37,10 +37,16 @@ This is the authoritative maintainer command inventory for the repo.
 - `/review-analytics [folder] [--validation]`
 - `/sync-research-index [folder]`
 - `/refresh-engineering-baseline`
+- `/run-eval-cases [case-number|all]`
+- `/validate-primitive-dependencies [folder]`
+- `/maintain-evidence-layer [--scope all|labels|freshness|contradictions|tiers]`
 
 ### Develop
 
 - `/scaffold-skill [plugin|maintenance] <name>`
+- `/scaffold-agent <agent-name>`
+- `/scaffold-rule <rule-name>`
+- `/develop-hooks [hook-type] <hook-name>`
 
 ## Working Guidelines
 

@@ -65,10 +65,15 @@ cp -r .claude/skills/sync-research-index <target>/.claude/skills/
 
 - Health and analytics: `/check-repo-health`, `/review-analytics`
 - Research maintenance: `/sync-research-index`, `/refresh-engineering-baseline`
+- Regression testing: `/run-eval-cases [case-number|all]`
+- Dependency integrity: `/validate-primitive-dependencies [folder]`
 
 ### Develop
 
 - Skill creation: `/scaffold-skill [plugin|maintenance] <name>`
+- Agent creation: `/scaffold-agent <agent-name>`
+- Rule creation: `/scaffold-rule <rule-name>`
+- Hook development: `/develop-hooks [hook-type] <hook-name>`
 
 ## Where To Look Next
 

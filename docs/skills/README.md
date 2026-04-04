@@ -22,6 +22,12 @@ System map for the plugin's skills and hooks. Use this page for component invent
 | [check-repo-health](check-repo-health.md) | Maintenance | `/check-repo-health [all\|freshness\|tokens\|integrity]` | Standalone |
 | [refresh-engineering-baseline](refresh-engineering-baseline.md) | Maintenance | `/refresh-engineering-baseline` | Standalone |
 | [sync-research-index](sync-research-index.md) | Maintenance | `/sync-research-index [folder]` | Standalone |
+| [scaffold-agent](scaffold-agent.md) | Development | `/scaffold-agent <agent-name>` | Standalone |
+| [scaffold-rule](scaffold-rule.md) | Development | `/scaffold-rule <rule-name>` | Standalone |
+| [run-eval-cases](run-eval-cases.md) | Maintenance | `/run-eval-cases [all\|N]` | Standalone |
+| [validate-primitive-dependencies](validate-primitive-dependencies.md) | Maintenance | `/validate-primitive-dependencies [folder]` | Standalone |
+| [develop-hooks](develop-hooks.md) | Development | `/develop-hooks [type] <name>` | Standalone |
+| [maintain-evidence-layer](maintain-evidence-layer.md) | Maintenance | `/maintain-evidence-layer [--scope ...]` | Standalone |
 | [hook-skill-quality-gate](hook-skill-quality-gate.md) | Hook | `PreToolUse` | Automatic |
 | [hook-session-check](hook-session-check.md) | Hook | `SessionStart` | Automatic |
 
@@ -30,8 +36,8 @@ System map for the plugin's skills and hooks. Use this page for component invent
 - **Review:** `review-claude-config`, `review-skill`, `review-agent`, `review-rule`, `review-analytics`
 - **Fix/Apply:** `apply-review-findings`, `apply-skill-review-findings`, `apply-agent-review-findings`, `apply-rule-review-findings`, `apply-audit-findings`
 - **Discovery:** `audit-repo`, `suggest-skills`
-- **Development:** `scaffold-skill`
-- **Maintenance:** `check-repo-health`, `refresh-engineering-baseline`, `sync-research-index`
+- **Development:** `scaffold-skill`, `scaffold-agent`, `scaffold-rule`, `develop-hooks`
+- **Maintenance:** `check-repo-health`, `refresh-engineering-baseline`, `sync-research-index`, `run-eval-cases`, `validate-primitive-dependencies`, `maintain-evidence-layer`
 - **Hooks:** `hook-skill-quality-gate`, `hook-session-check`
 
 ## Workflow Chains
@@ -54,6 +60,17 @@ Maintenance Chain:
   hook-session-check -> /refresh-engineering-baseline
   /check-repo-health -> /refresh-engineering-baseline
                      -> /review-claude-config
+
+Development Chain:
+  /scaffold-skill, /scaffold-agent, /scaffold-rule -> /review-skill, /review-agent, /review-rule
+  /develop-hooks
+
+Validation Chain:
+  /audit-repo -> /validate-primitive-dependencies
+  /run-eval-cases -> /review-claude-config
+
+Maintenance Chain (additions):
+  /maintain-evidence-layer -> /refresh-engineering-baseline
 ```
 
 ## Mode and Research Summary
