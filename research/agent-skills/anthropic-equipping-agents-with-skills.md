@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-04-04
+---
+
 # Equipping Agents for the Real World with Agent Skills
 
 ## Provenance Metadata
@@ -5,7 +9,6 @@
 - Strongest source tier: Tier 1
 - Source basis: Single source - Claude Blog, "Equipping agents for the real world with agent skills"
 - Last reviewed: 2026-04-03
-- last_refreshed: 2026-04-04
 
 **Source:** [Claude Blog](https://claude.com/blog/equipping-agents-for-the-real-world-with-agent-skills)
 **Fetched:** 2026-03-24

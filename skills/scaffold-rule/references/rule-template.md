@@ -1,6 +1,7 @@
 ---
 name: rule-template
 description: Canonical structure for Claude Code rule files. Plain Markdown, no frontmatter. Keep under 500 tokens.
+last_refreshed: 2026-04-04
 ---
 
 ## Location Convention

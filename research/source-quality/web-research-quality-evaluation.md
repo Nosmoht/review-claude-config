@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-04-03
+---
+
 # Web Research Quality Evaluation
 
 ## Provenance Metadata

@@ -1,6 +1,7 @@
 ---
 name: evidence-contract
 description: Canonical claim-classification contract for repository-level evidence, source precedence, and contradiction handling
+last_refreshed: 2026-04-03
 ---
 
 # Evidence Contract

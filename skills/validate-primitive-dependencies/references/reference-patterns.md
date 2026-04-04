@@ -1,6 +1,7 @@
 ---
 name: reference-patterns
 description: Dependency detection patterns for Claude Code skills, agents, rules, and hooks. Used by validate-primitive-dependencies.
+last_refreshed: 2026-04-04
 ---
 
 # Reference Patterns

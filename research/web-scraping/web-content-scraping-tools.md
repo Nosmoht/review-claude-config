@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-24
+---
+
 # Web Content Scraping Tools for LLM Agents
 
 **Sources:**

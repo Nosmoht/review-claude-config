@@ -1,6 +1,7 @@
 ---
 name: rule-evaluation-guide
 description: Type-specific evaluation criteria for Claude Code rules (plain .md files in rules/ directory)
+last_refreshed: 2026-04-03
 ---
 
 # Rule Evaluation Guide

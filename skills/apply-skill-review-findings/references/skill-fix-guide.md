@@ -1,6 +1,7 @@
 ---
 name: skill-fix-guide
 description: Type-specific validation rules for applying fixes to Claude Code skills
+last_refreshed: 2026-03-25
 ---
 
 # Skill Fix Guide

@@ -1,6 +1,7 @@
 ---
 name: signal-patterns
 description: File patterns and Glob/Grep queries for each audit analysis step
+last_refreshed: 2026-04-03
 ---
 
 ## Toolchain Detection

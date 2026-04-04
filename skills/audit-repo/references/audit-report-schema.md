@@ -1,6 +1,7 @@
 ---
 name: audit-report-schema
 description: YAML frontmatter schema and body structure for audit-repo reports
+last_refreshed: 2026-04-04
 ---
 
 ## Frontmatter Fields

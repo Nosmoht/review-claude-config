@@ -1,6 +1,7 @@
 ---
 name: skill-evaluation-guide
 description: Type-specific evaluation criteria for Claude Code skills (SKILL.md files)
+last_refreshed: 2026-04-03
 ---
 
 # Skill Evaluation Guide

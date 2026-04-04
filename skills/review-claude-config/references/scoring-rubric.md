@@ -1,6 +1,7 @@
 ---
 name: scoring-rubric
 description: A-F grading criteria for evaluating Claude Code skills, agents, and rules across type-appropriate dimensions
+last_refreshed: 2026-04-03
 ---
 
 # Scoring Rubric

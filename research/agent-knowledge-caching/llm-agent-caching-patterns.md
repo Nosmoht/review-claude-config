@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-24
+---
+
 # LLM Agent Caching and Knowledge Persistence Patterns
 
 **Sources:**

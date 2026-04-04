@@ -1,6 +1,7 @@
 ---
 name: agent-evaluation-guide
 description: Type-specific evaluation criteria for Claude Code agents (single-file .md in agents/ directory)
+last_refreshed: 2026-04-03
 ---
 
 # Agent Evaluation Guide

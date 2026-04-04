@@ -1,6 +1,7 @@
 ---
 name: health-thresholds
 description: Configurable thresholds for repository health checks — freshness, token budgets, integrity
+last_refreshed: 2026-03-26
 ---
 
 ## Freshness Thresholds

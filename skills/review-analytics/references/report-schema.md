@@ -1,6 +1,7 @@
 ---
 name: report-schema
 description: Analytics compatibility notes for the canonical review report contract
+last_refreshed: 2026-04-03
 ---
 
 ## Canonical Source

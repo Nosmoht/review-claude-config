@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-24
+---
+
 # Context Engineering for AI Agents: Lessons from Building Manus
 
 **Source:** [Manus Blog](https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus)

@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-04-03
+---
+
 # Writing Effective Tools for AI Agents
 
 ## Provenance Metadata

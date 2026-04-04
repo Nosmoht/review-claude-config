@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-26
+---
+
 # Command Naming Conventions: Evidence-Based Findings
 
 Research compiled 2026-03-26. Covers CLI commands, slash commands, and plugin/skill naming across authoritative sources.

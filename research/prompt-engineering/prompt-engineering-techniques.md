@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-04-04
+---
+
 # Prompt Engineering Techniques: Evidence-Based Summary
 
 **Sources:**
@@ -7,7 +11,6 @@
 - [Comprehensive taxonomy of prompt engineering techniques](https://jamesthez.github.io/files/liu-fcs26.pdf) (technique categorization)
 
 **Fetched:** 2026-03-24
-**Last refreshed:** 2026-04-04
 
 ## Relationship to Context Engineering
 

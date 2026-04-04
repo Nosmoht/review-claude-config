@@ -1,6 +1,7 @@
 ---
 name: rule-fix-guide
 description: Type-specific validation rules for applying fixes to Claude Code rules
+last_refreshed: 2026-03-25
 ---
 
 # Rule Fix Guide

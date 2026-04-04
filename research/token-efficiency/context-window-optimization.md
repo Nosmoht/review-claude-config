@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-26
+---
+
 # Context Window Optimization for AI Coding Assistants
 
 Sources:

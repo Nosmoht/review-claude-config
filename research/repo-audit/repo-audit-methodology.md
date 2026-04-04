@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-26
+---
+
 # Systematische Claude Code Optimierung für unbekannte Repositories
 
 ## Zielsetzung

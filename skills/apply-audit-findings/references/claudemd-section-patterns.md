@@ -1,6 +1,7 @@
 ---
 name: claudemd-section-patterns
 description: Rules for matching audit interventions to CLAUDE.md sections and determining placement
+last_refreshed: 2026-03-26
 ---
 
 ## Section Matching

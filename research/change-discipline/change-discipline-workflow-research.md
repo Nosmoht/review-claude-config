@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-04-03
+---
+
 # Change Discipline Workflow Research
 
 Research supporting the global change discipline rule for Claude Code sessions.

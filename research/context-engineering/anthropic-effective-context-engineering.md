@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-04-03
+---
+
 # Effective Context Engineering for AI Agents
 
 ## Provenance Metadata

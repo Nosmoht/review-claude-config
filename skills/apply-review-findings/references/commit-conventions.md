@@ -1,6 +1,7 @@
 ---
 name: commit-conventions
 description: Scoped conventional commit format and audit-fix chain linking rules for review finding application
+last_refreshed: 2026-03-25
 ---
 
 ## Commit Format

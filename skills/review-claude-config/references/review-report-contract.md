@@ -1,6 +1,7 @@
 ---
 name: review-report-contract
 description: Canonical review/report contract for all producers and consumers
+last_refreshed: 2026-04-03
 ---
 
 # Review Report Contract

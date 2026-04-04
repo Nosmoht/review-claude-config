@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-04-03
+---
+
 # Autonomous Agent Reliability: Frameworks and Failure Taxonomies
 
 ## Provenance Metadata

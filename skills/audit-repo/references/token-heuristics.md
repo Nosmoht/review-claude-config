@@ -1,6 +1,7 @@
 ---
 name: token-heuristics
 description: Repo token-efficiency heuristics and evidence-informed thresholds for audit-repo
+last_refreshed: 2026-04-03
 ---
 
 ## Token Density by Language

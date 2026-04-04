@@ -39,7 +39,7 @@ Use Glob to build a file inventory:
 
 ### 3. Check freshness (if `all` or `freshness`)
 
-For each reference file with a `last_refreshed` field in its YAML frontmatter:
+For each reference or research file with a `last_refreshed` field in its YAML frontmatter:
 1. Read the file and extract the `last_refreshed` date.
 2. Compute the number of days since refresh (from today's date).
 3. Classify: **PASS** (<60 days), **WARN** (60-89 days), **FAIL** (≥90 days).

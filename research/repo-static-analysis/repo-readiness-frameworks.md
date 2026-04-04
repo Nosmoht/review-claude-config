@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-26
+---
+
 # Repo Readiness Frameworks for AI Coding Assistants
 
 Sources:

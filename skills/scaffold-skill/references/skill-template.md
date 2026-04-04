@@ -1,6 +1,7 @@
 ---
 name: skill-template
 description: Default SKILL.md template with valid frontmatter fields and body structure for plugin or maintenance skills
+last_refreshed: 2026-04-04
 ---
 
 ## Frontmatter Template
@@ -43,11 +44,25 @@ user-invocable: false                     # Optional: set if Claude-only (rare)
 - <Error handling guarantee>
 ```
 
+## Reference File Frontmatter
+
+Reference files in `references/` use minimal YAML frontmatter:
+
+```yaml
+---
+name: <reference-name>            # Required: kebab-case, matches filename
+description: <one-line summary>   # Required: what this reference contains
+last_refreshed: YYYY-MM-DD        # Required: ISO date; participates in check-repo-health freshness
+---
+```
+
+Set `last_refreshed` to today's date on creation and update it on any substantive content change.
+
 ## Conventions
 
 - Read-only skills: omit `disable-model-invocation`
 - Write-capable skills: set `disable-model-invocation: true` and add confirmation gates
-- Reference files: create in `references/` subdirectory, keep ≤500 tokens each
+- Reference files: create in `references/` subdirectory, keep ≤500 tokens each, include `last_refreshed` in frontmatter
 - Workflow steps: sequential numbering, explicit conditionals, stop conditions
 - Hard Rules: negative constraints at the end of the file
 - Registration must target existing `README.md`/`CLAUDE.md` sections only; never assume `## Skills`, `## File Structure`, or `## Installation` exist

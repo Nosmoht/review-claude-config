@@ -1,6 +1,7 @@
 ---
 name: agent-fix-guide
 description: Type-specific validation rules for applying fixes to Claude Code agents
+last_refreshed: 2026-03-25
 ---
 
 # Agent Fix Guide

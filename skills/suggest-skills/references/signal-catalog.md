@@ -1,6 +1,7 @@
 ---
 name: signal-catalog
 description: Baseline signal patterns for detecting missing skill opportunities — deterministic Layer 1 signals plus repo-level decision aids
+last_refreshed: 2026-04-03
 ---
 
 # Signal Catalog

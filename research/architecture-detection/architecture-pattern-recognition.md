@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-26
+---
+
 # Architecture Pattern Recognition from Repository Structure
 
 Sources:

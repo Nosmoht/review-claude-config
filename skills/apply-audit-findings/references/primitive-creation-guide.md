@@ -1,6 +1,7 @@
 ---
 name: primitive-creation-guide
 description: Validation rules and conventions for creating each Claude Code primitive type from audit recommendations
+last_refreshed: 2026-03-26
 ---
 
 ## CLAUDE.md Sections

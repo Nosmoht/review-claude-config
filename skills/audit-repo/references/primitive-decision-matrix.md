@@ -1,6 +1,7 @@
 ---
 name: primitive-decision-matrix
 description: Evidence-informed decision aids for recommending each Claude Code primitive type
+last_refreshed: 2026-04-03
 ---
 
 ## CLAUDE.md (P0) `[Engineering guidance + Repo default]`

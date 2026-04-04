@@ -1,6 +1,7 @@
 ---
 name: source-quality-criteria
 description: Shared source credibility criteria for all skills performing web research — discard rules, tier classification, cross-validation
+last_refreshed: 2026-04-03
 ---
 
 # Source Quality Criteria

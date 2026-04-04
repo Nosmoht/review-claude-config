@@ -1,7 +1,10 @@
+---
+last_refreshed: 2026-04-04
+---
+
 # Context Engineering: Overview and Industry Adoption
 
 **Sources:** Multiple (WebSearch results from 2026-03-24)
-**last_refreshed:** 2026-04-04
 
 ## Definition and Evolution
 

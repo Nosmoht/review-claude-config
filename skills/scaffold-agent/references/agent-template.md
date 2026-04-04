@@ -1,6 +1,7 @@
 ---
 name: agent-template
 description: Canonical structure for Claude Code agent files (.md format). Keep under 500 tokens.
+last_refreshed: 2026-04-04
 ---
 
 ## Frontmatter Template

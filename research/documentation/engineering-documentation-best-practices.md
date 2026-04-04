@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-24
+---
+
 # Engineering Documentation Best Practices
 
 **Sources:**

@@ -1,6 +1,7 @@
 ---
 name: error-class-taxonomy
 description: Seven error classes with diagnostic indicators and evidence-informed primitive mappings
+last_refreshed: 2026-04-03
 ---
 
 ## Error Classes

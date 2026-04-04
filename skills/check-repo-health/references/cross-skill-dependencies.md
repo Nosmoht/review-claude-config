@@ -1,6 +1,7 @@
 ---
 name: cross-skill-dependencies
 description: Cross-skill dependency registry
+last_refreshed: 2026-04-03
 ---
 
 **Base:** `skills/review-claude-config/references/`

@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-03-24
+---
+
 # Skill Gap Detection for LLM Agent Skills
 
 How to identify missing skills in a repository — approaches, criteria, and prior art.

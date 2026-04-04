@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-04-04
+---
+
 # Claude Code Skill and Agent Format Conventions
 
 **Sources:**

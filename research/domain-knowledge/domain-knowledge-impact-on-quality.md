@@ -1,3 +1,7 @@
+---
+last_refreshed: 2026-04-03
+---
+
 # Domain Knowledge Impact on LLM Agent Quality
 
 ## Provenance Metadata
