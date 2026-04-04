@@ -9,6 +9,7 @@ Maintainer operating guide for this repository (Clarity, Completeness, Prompt En
 - **Domain cache**: `skills/review-claude-config/references/domain-cache/`, committed to git and maintained on the repo's 90-day rhythm; this is a repo default, not a scientific claim
 - **Repo-internal skills**: `.claude/skills/` for maintenance utilities not needed globally
 - **Review reports**: `.claude/reviews/` for timestamped reports consumed by analytics and apply flows
+- **Self-contained knowledge**: The plugin carries all knowledge needed for quality in its own files. External services (KB server, web research) are optional enhancements — skills degrade gracefully without them. The distillation path is: `research/ → engineering-baseline.md + skill-agent-format-conventions.md → skill decisions`. Research findings must be distilled into these operational surfaces to affect plugin behavior in any repo.
 
 ## Commands
 

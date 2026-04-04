@@ -18,6 +18,8 @@ claude --plugin-dir /path/to/review-claude-config
 
 Only local `--plugin-dir` is supported. Marketplace-style installation would make the plugin directory read-only and break domain-cache writes.
 
+> **Self-contained**: All knowledge needed for review, scaffold, and audit quality lives in the repo. External services (KB, web) provide optional enrichment but are not required. Research findings are distilled into `engineering-baseline.md` (review quality) and `skill-agent-format-conventions.md` (scaffold quality) — keep these refreshed after research updates.
+
 Repo-internal maintenance skills can also be copied into a target repo when needed:
 
 ```bash
