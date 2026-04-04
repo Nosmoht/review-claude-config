@@ -1,0 +1,268 @@
+---
+name: maintain-evidence-layer
+description: >
+  Audit the evidence layer of the review-claude-config repository: label normalization,
+  source freshness, contradiction recording, and source tier compliance. Use on 90-day
+  cycles or when evidence sources change (dossier edited, source added/replaced, stronger
+  source contradicts a local summary).
+argument-hint: "[--scope all|labels|freshness|contradictions|tiers]"
+allowed-tools: Read, Write, Glob, Grep
+disable-model-invocation: true
+---
+
+# Maintain Evidence Layer
+
+You are an evidence layer auditor for the review-claude-config repository. Your job is
+to verify that repository-level claims are correctly classified, source files remain
+fresh, contradictions are recorded canonically, and claim classifications have the tier
+of source backing they require. You audit for **provenance** — source traceability from
+claim to primary evidence — as defined by the five formal context quality criteria
+(Relevance, Sufficiency, Isolation, Economy, Provenance; arXiv 2603.09619v2).
+
+This is a repo-internal maintenance skill (`.claude/skills/`), not part of the plugin
+surface. It modifies only `.claude/reviews/` output files.
+
+## Argument Handling
+
+Parse `$ARGUMENTS` for `--scope` followed by one of: `all`, `labels`, `freshness`,
+`contradictions`, `tiers`. If not provided or `all`, run all four checks.
+
+## Phase 1 — Setup
+
+### Step 1: Load canonical contracts
+
+Read `skills/review-claude-config/references/evidence-contract.md`.
+Read `docs/evidence-maintenance.md`.
+
+From these files, confirm:
+- Canonical class names: "Proven result", "Engineering guidance", "Repo default",
+  "Low-evidence area"
+- Non-canonical → canonical mapping:
+  - "Local design preference" → "Repo default"
+  - "local policy" → "Repo default"
+  - "heuristic" / "novel contribution" / "limited evidence" → "Low-evidence area"
+
+If `evidence-contract.md` cannot be read, stop immediately and report:
+"evidence-contract.md not found — cannot run evidence layer audit. Verify the file
+exists at skills/review-claude-config/references/evidence-contract.md."
+
+### Step 2: Check trigger conditions
+
+Glob `.claude/reviews/*-evidence-layer.md` to find the most recent run.
+Extract the date from the filename (format `YYYY-MM-DDTHHMMSS`).
+Compute days since that run.
+
+If the last run was fewer than 90 days ago AND no `--scope` flag was provided:
+Inform the user: "Last evidence-layer maintenance run was N days ago — scheduled
+refresh (90-day cycle) is not yet due." Ask: "Proceed anyway? (yes/no)"
+If the user says no, stop. If yes, continue with all checks.
+
+If no previous run exists, proceed without prompting.
+
+## Phase 2 — Checks
+
+### Step 3: Label normalization check [scope: labels]
+
+Search the following scope for claim-class labels:
+- `docs/` (all .md files)
+- `research/` (all .md files)
+- `skills/review-claude-config/references/` (all .md files)
+
+Grep for each canonical and non-canonical label:
+
+Canonical (count occurrences):
+- `Proven result`
+- `Engineering guidance`
+- `Repo default`
+- `Low-evidence area`
+
+Non-canonical (record each occurrence):
+- `Local design preference`
+- `local policy`
+- `novel contribution`
+- `limited evidence`
+
+For "heuristic": grep for the word but apply context judgment — flag only occurrences
+that appear to be classifying a claim (e.g., "[heuristic]", "heuristic approach" as a
+label), not occurrences in prose where it describes a technical method. Record ambiguous
+cases as "review needed".
+
+For each non-canonical occurrence: record file path, line number, found label, and
+recommended replacement.
+
+### Step 4: Source freshness check [scope: freshness]
+
+Glob `research/**/*.md` to get all research files.
+
+For each file, grep for date markers: `last_refreshed:`, `Fetched:`, `**Fetched:**`.
+Parse the date found (ISO format YYYY-MM-DD or similar).
+Today's date is 2026-04-04. The 90-day cutoff is 2026-01-04.
+
+Classify:
+- Date after 2026-01-04: within window
+- Date on or before 2026-01-04: stale (flag with days-stale count)
+- No date found: flag as "undated"
+
+For each stale or undated file: note which canonical claims in `docs/` cite that file
+(grep for the filename in `docs/scientific-research-dossier.md` and `docs/evidence-backed-refactor-plan.md`).
+
+### Step 5: Contradiction recording check [scope: contradictions]
+
+Read `docs/scientific-research-dossier.md`. If the file cannot be read, skip this check
+and note: "Dossier not found — contradiction check skipped."
+
+In the dossier, search for contradiction markers: "contradicts", "conflicts with",
+"inconsistent with", "vs.", "but see".
+
+Also grep `research/**/*.md` for the same markers.
+
+For each contradiction marker found in a research file:
+- Check whether a corresponding entry appears in `docs/scientific-research-dossier.md`.
+- Flag contradictions present in research files but absent from the dossier as
+  "unrecorded".
+
+Record each unrecorded contradiction with: file path, line, excerpt.
+
+### Step 6: Source tier compliance check [scope: tiers]
+
+Tier 1 sources: arXiv, ACM, IEEE, official vendor documentation (anthropic.com,
+docs.anthropic.com), RFCs, OWASP, CNCF foundation docs.
+Tier 2 sources: production case studies with metrics, engineering blogs with benchmarks,
+conference talks.
+Tier 3: tutorials, blog posts without metrics, Stack Overflow, marketing content.
+Local summary: any `research/*.md` file treated as a derived summary, not a primary
+source.
+
+Search `docs/` and `skills/review-claude-config/references/` for occurrences of
+`[Proven result]`.
+
+For each "Proven result" claim:
+- Look at the surrounding text (±5 lines) for a citation or source link.
+- Flag the claim if the only cited source is a local `research/*.md` summary with no
+  Tier 1 primary source traceable from it, or if no source is cited at all.
+
+Search the same scope for `[Engineering guidance]`.
+
+For each "Engineering guidance" claim:
+- Look at surrounding text for a citation.
+- Flag the claim if the only traceable source appears to be Tier 3 (blog post without
+  metrics, tutorial) or is uncited.
+
+Record each violation with: file path, line, claim excerpt, source issue.
+
+## Phase 3 — Report
+
+### Step 7: Assemble maintenance report
+
+Format the report as follows. Present the Overall verdict and Summary first, then the
+detail tables, so the reader can fold the detail if they only need the status.
+
+```
+## Evidence Layer Maintenance Report
+Date: YYYY-MM-DD
+Scope: [checks run]
+
+### Overall: [HEALTHY] or [ISSUES FOUND — N items need attention]
+
+### Summary
+Non-canonical labels: N
+Stale or undated sources: N
+Unrecorded contradictions: N
+Tier violations: N
+
+---
+
+### Label Normalization
+
+Canonical label coverage: N "Proven result", N "Engineering guidance",
+N "Repo default", N "Low-evidence area"
+
+Non-canonical occurrences:
+| File | Line | Found | Replace With |
+|------|------|-------|-------------|
+[rows, or "No non-canonical labels found"]
+
+---
+
+### Stale Sources
+
+Freshness cutoff: 2026-01-04 (90 days before 2026-04-04)
+
+| Research File | Last Refreshed | Days Stale | Cited In |
+|--------------|---------------|------------|---------|
+[rows, or "All sources within 90-day freshness window"]
+
+---
+
+### Contradiction Recording
+
+| Location | Excerpt | Recorded in Dossier? |
+|----------|---------|---------------------|
+[rows, or "No unrecorded contradictions found"]
+
+---
+
+### Source Tier Compliance
+
+| File | Line | Claim Classification | Source Issue |
+|------|------|---------------------|-------------|
+[rows, or "All claims have appropriate source tier backing"]
+
+---
+
+### Recommended Actions
+
+Immediate (non-canonical labels):
+[list, or "None"]
+
+Soon (stale sources):
+[list, or "None"]
+
+Review (unrecorded contradictions, tier violations):
+[list, or "None"]
+```
+
+### Step 8: Present and persist
+
+Present the report in the conversation.
+
+Ask: "Save this report to .claude/reviews/YYYY-MM-DDTHHMMSS-evidence-layer.md? (yes/no)"
+Use the current timestamp for the filename (format 2026-04-04T120000 with hours, minutes,
+seconds as HHMMSS).
+
+If the user confirms, write the file to `.claude/reviews/YYYY-MM-DDTHHMMSS-evidence-layer.md`.
+
+Suggest a commit message:
+`docs(reviews): add YYYY-MM-DDTHHMMSS evidence-layer maintenance report`
+
+### Step 9: What's Next menu
+
+Present the following options:
+
+---
+**What's next?**
+1. Fix non-canonical labels — edit files directly or use `/apply-rule-review-findings`
+2. Refresh stale sources — run `/refresh-engineering-baseline`
+3. Check overall repo health — run `/check-repo-health`
+4. Done
+
+_Type a number to continue._
+
+---
+
+When the user responds: **1** → remind the user that label edits are direct file edits;
+offer to list the specific files and replacements again. **2** → invoke
+`/refresh-engineering-baseline`. **3** → invoke `/check-repo-health`. **4** →
+acknowledge and stop.
+
+If all checks passed with zero findings, skip the menu and confirm the healthy state.
+
+## Hard Rules
+
+- Read-only on all scanned files. Write is only for `.claude/reviews/` report output.
+- If `evidence-contract.md` is missing, stop at Step 1.
+- If the dossier is missing, skip Step 5 with a note — do not error out.
+- If a research file has no date marker, record it as "undated" — do not skip it.
+- Always present the full report even when all checks pass.
+- Provenance is the primary audit goal: every "Proven result" claim must have a traceable
+  primary source; flag any that do not.
