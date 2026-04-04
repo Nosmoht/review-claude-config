@@ -102,6 +102,7 @@ This is the authoritative maintainer command inventory for the repo.
 - [Command Naming Conventions: Evidence-Based Findings](research/command-naming/command-naming-conventions.md) — CLI, slash command, plugin naming patterns
 - [Web Research Quality Evaluation](research/source-quality/web-research-quality-evaluation.md) — CRAAP, E-E-A-T, credibility assessment
 - [Change Discipline Workflow Research](research/change-discipline/change-discipline-workflow-research.md) — multi-perspective review, LLM self-review blindspots
+- [Autonomous Agent Reliability: Frameworks and Failure Taxonomies](research/autonomous-agent-reliability/autonomous-agent-reliability.md) — circuit breakers, idempotency, progressive fallback, bounded execution
 
 ## Change Discipline
 

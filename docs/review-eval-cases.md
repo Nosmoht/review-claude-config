@@ -14,7 +14,7 @@ Expected review behavior:
 
 ## Case 2 — Cosmetic Difference, Should Not Be Overstated
 
-Artifact: a skill with solid workflow and safety, but slightly awkward wording in one sentence.
+Artifact: a skill with solid workflow, correct argument handling, correct tool set, and a clear output format — with only one slightly awkward (but functionally correct) sentence in the workflow body.
 
 Expected review behavior:
 - Does not invent structural defects.
@@ -45,7 +45,7 @@ Artifact: an agent that spawns subagents or calls external dependencies (MCP too
 
 Expected review behavior:
 - Surfaces at least one High or Medium finding from Safety dimension citing missing "failure path defined for every external dependency" or missing "stop condition prevents infinite recursion."
-- Surfaces at least one High or Medium finding from Completeness dimension citing missing "chain-level completeness" (failure to propagate [INCOMPLETE] or stub-dependency states).
+- Surfaces at least one High or Medium finding citing missing chain-level completeness (failure to propagate [INCOMPLETE] or stub-dependency states) — dimension label may be Safety, Completeness, or Workflow.
 - Includes `Evidence:` tied to exact workflow text showing unchecked dependency calls.
 - Includes `Validation:` that can be checked by inspecting failure scenarios or recursion bounds.
 - Recommends concrete reliability patterns in `Current:`/`Recommended:` format (circuit breakers, progressive fallback, bounded execution with thresholds/timeouts).

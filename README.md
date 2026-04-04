@@ -69,6 +69,7 @@ cp -r .claude/skills/sync-research-index <target>/.claude/skills/
 - Research maintenance: `/sync-research-index`, `/refresh-engineering-baseline`
 - Regression testing: `/run-eval-cases [case-number|all]`
 - Dependency integrity: `/validate-primitive-dependencies [folder]`
+- Evidence maintenance: `/maintain-evidence-layer [--scope all|labels|freshness|contradictions|tiers]`
 
 ### Develop
 
