@@ -1,11 +1,10 @@
 ---
 name: review-agent
 description: >
-  Evaluate a single Claude Code agent (.md file) across 7 dimensions with
-  agent-specific checks: model selection appropriateness, description/example
-  block activation precision, and trigger pattern coverage. Produces a quality
-  certificate with concrete optimization recommendations. Use when reviewing
-  an individual agent or when delegated by /review-claude-config.
+  Evaluates a single agent .md across 7 dimensions including activation
+  precision and trigger coverage. Use when asked to 'review agent' or
+  dispatched by /review-claude-config. Do NOT use for skills or rules — use
+  /review-skill or /review-rule.
 argument-hint: <path-to-agent.md>
 allowed-tools: Read, Write, Glob, WebSearch, WebFetch
 ---

@@ -1,11 +1,10 @@
 ---
 name: review-claude-config
 description: >
-  Analyze and evaluate all Claude Code skills, agents, and rules in a project's
-  .claude/ directory. Applies evidence-based prompt and context engineering
-  evaluation with type-appropriate scoring dimensions, produces per-item quality
-  certificates with evidence-backed optimization recommendations. Use when you want to
-  audit skill/agent/rule quality or before shipping new skills.
+  Audits all skills, agents, and rules in a folder and produces quality
+  certificates. Use when asked to 'audit quality', 'review skills', or before
+  shipping new skills. Do NOT use for a single item — use /review-skill,
+  /review-agent, or /review-rule.
 argument-hint: "[folder] [--validation]"
 allowed-tools: Agent, Read, Write, Glob, WebSearch, WebFetch
 ---

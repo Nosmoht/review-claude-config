@@ -1,10 +1,10 @@
 ---
 name: review-analytics
 description: >
-  Parse accumulated review-* reports, compute grade trajectories per artifact
-  and producer context, and detect regressions. Produces a portfolio health
-  dashboard showing quality evolution over time. Use to track review results
-  across review cycles.
+  Parses accumulated review reports, computes grade trajectories, and detects
+  regressions. Use to 'track review results', 'show quality trends', or
+  'analyze review history'. Do NOT use for freshness or integrity — use
+  /check-repo-health.
 argument-hint: "[folder] [--validation]"
 allowed-tools: Read, Glob
 ---

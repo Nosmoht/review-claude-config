@@ -1,11 +1,10 @@
 ---
 name: review-skill
 description: >
-  Evaluate a single Claude Code skill (SKILL.md) across 7 dimensions: Clarity,
-  Completeness, Prompt Engineering, Context Engineering, Goal Alignment, Safety,
-  and Metadata. Produces a quality certificate with concrete optimization
-  recommendations. Use when reviewing an individual skill or when delegated by
-  /review-claude-config.
+  Evaluates a single SKILL.md across 7 quality dimensions and produces an
+  optimization certificate. Use when asked to 'review skill' or dispatched by
+  /review-claude-config. Do NOT use for agents or rules — use /review-agent or
+  /review-rule.
 argument-hint: <path-to-SKILL.md>
 allowed-tools: Read, Write, Glob, WebSearch, WebFetch
 ---

@@ -1,12 +1,10 @@
 ---
 name: review-rule
 description: >
-  Evaluate a single Claude Code rule (.md file) across 3 dimensions: Clarity (30%),
-  Completeness (30%), and Goal Alignment (40%). Rules are directives without tools
-  or frontmatter, so Prompt Engineering, Context Engineering, Safety, and Metadata
-  do not apply. Produces a quality certificate with concrete optimization
-  recommendations. Use when reviewing an individual rule or when delegated by
-  /review-claude-config.
+  Evaluates a single rule .md across 3 dimensions (Clarity, Completeness, Goal
+  Alignment). Use when asked to 'review rule' or dispatched by
+  /review-claude-config. Do NOT use for skills or agents — use /review-skill or
+  /review-agent.
 argument-hint: <path-to-rule.md>
 allowed-tools: Read, Write, Glob, WebSearch, WebFetch
 ---

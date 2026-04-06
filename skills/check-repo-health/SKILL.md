@@ -1,10 +1,10 @@
 ---
 name: check-repo-health
 description: >
-  Verify reference file freshness (90-day cycles), token budget compliance,
-  and cross-skill reference integrity. Produces a health dashboard with
-  pass/warn/fail status per check. Use for routine monitoring of a skills
-  repository or before running reviews.
+  Verifies reference freshness, token budgets, and cross-skill reference
+  integrity. Use for 'check health', routine monitoring, or before running
+  reviews. Do NOT use for skill quality or trends — use /review-claude-config
+  or /review-analytics.
 argument-hint: "[all|freshness|tokens|integrity] [--validation]"
 allowed-tools: Read, Glob
 ---
