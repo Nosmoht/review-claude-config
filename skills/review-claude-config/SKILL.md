@@ -180,7 +180,7 @@ domain_cache: |
   [If STALE + consumer: insert cached content + "Use as-is, another agent
   is refreshing."]
 
-  [If MISS + researcher: "No cache. 1-2 WebSearch queries. Apply discard rules
+  [If MISS + researcher: "No cache. 1 WebSearch query. Apply discard rules
   from source-quality-criteria.md. Tag each source with tier (1/2/3). Return
   Domain Cache Update section."]
 
