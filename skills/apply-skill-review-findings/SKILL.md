@@ -1,11 +1,9 @@
 ---
 name: apply-skill-review-findings
 description: >
-  Apply recommendations from a review-skill report to the reviewed SKILL.md.
-  Processes High/Medium findings first, then optionally offers Low findings
-  for A-grade convergence. Previews each change with user confirmation and
-  commits with audit-fix chain convention. Use after running /review-skill
-  or when delegated by /apply-review-findings.
+  Applies findings from a /review-skill report to the reviewed SKILL.md. Use
+  after /review-skill on a single skill or when delegated by
+  /apply-review-findings. Do NOT use for agent or rule reports.
 argument-hint: "[report-path]"
 allowed-tools: Read, Edit, Glob, Bash
 disable-model-invocation: true

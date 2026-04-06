@@ -1,10 +1,9 @@
 ---
 name: suggest-skills
 description: >
-  Analyze a repository's structure, workflows, and documentation to identify
-  missing Claude Code skills. Produces a prioritized report with rationale and
-  skeleton SKILL.md for each suggestion. Use when setting up Claude Code in a
-  new project or expanding skill coverage in an existing one.
+  Analyzes a repository to identify missing Claude Code skills with skeleton
+  SKILL.md per suggestion. Use when setting up Claude Code or expanding skill
+  coverage. Do NOT use to audit existing skill quality — use /review-claude-config.
 argument-hint: [folder]
 allowed-tools: Agent, Read, Write, Glob, Grep, WebSearch, WebFetch
 disable-model-invocation: true

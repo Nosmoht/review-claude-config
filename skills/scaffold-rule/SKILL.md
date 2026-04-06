@@ -1,9 +1,10 @@
 ---
 name: scaffold-rule
 description: >
-  Create a new Claude Code rule file at .claude/rules/<rule-name>.md with the
-  canonical plain-Markdown structure: title, directive statement, scope, and
-  edge cases. Use when adding a new always-active constraint to a project.
+  Creates a plain-Markdown rule at .claude/rules/<name>.md with directive,
+  scope, and edge cases. Use when adding an always-active constraint to a
+  project. Do NOT use for skills or agents — use /scaffold-skill or
+  /scaffold-agent.
 argument-hint: "<rule-name>"
 allowed-tools: Read, Write, Edit, Glob
 disable-model-invocation: true

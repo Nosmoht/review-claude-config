@@ -1,11 +1,9 @@
 ---
 name: apply-review-findings
 description: >
-  Apply recommendations from any review report (review-claude-config,
-  review-skill, review-agent, or review-rule) to the reviewed files. Processes
-  High/Medium findings first, then optionally offers Low findings for A-grade
-  convergence. Delegates to specialized type-specific appliers, then commits
-  with audit-fix chain convention. Use after running any /review-* skill.
+  Applies findings from a /review-claude-config batch report to all reviewed
+  files. Use after /review-claude-config on a folder. Do NOT use for
+  single-item reports — use the type-specific /apply-*-review-findings skills.
 argument-hint: "[report-path]"
 allowed-tools: Agent, Read, Edit, Glob, Bash
 disable-model-invocation: true

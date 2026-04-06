@@ -1,10 +1,9 @@
 ---
 name: maintain-evidence-layer
 description: >
-  Audit the evidence layer of the review-claude-config repository: label normalization,
-  source freshness, contradiction recording, and source tier compliance. Use on 90-day
-  cycles or when evidence sources change (dossier edited, source added/replaced, stronger
-  source contradicts a local summary).
+  Audits the evidence layer: label normalization, source freshness,
+  contradictions, and tier compliance. Use every 90 days or when evidence
+  sources change. Do NOT use to check skill quality — use /review-claude-config.
 argument-hint: "[--scope all|labels|freshness|contradictions|tiers]"
 allowed-tools: Read, Write, Glob, Grep
 disable-model-invocation: true

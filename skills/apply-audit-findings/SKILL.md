@@ -1,11 +1,10 @@
 ---
 name: apply-audit-findings
 description: >
-  Apply recommended primitives from an audit-repo report to the target
-  repository. Creates CLAUDE.md sections, rules, and hook configurations.
-  Delegates skill creation to /scaffold-skill. Previews every change with
-  user confirmation and commits with audit-fix chain convention.
-  Use after running /audit-repo to act on the intervention matrix.
+  Creates primitives recommended by an /audit-repo report — CLAUDE.md
+  sections, rules, hooks; delegates skills to /scaffold-skill. Use after
+  /audit-repo to act on the intervention matrix. Do NOT use for review
+  findings — use /apply-review-findings.
 argument-hint: "[report-path]"
 allowed-tools: Read, Write, Edit, Glob, Bash
 disable-model-invocation: true

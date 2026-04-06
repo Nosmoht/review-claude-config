@@ -1,11 +1,10 @@
 ---
 name: validate-primitive-dependencies
 description: >
-  Map cross-primitive references in a repository and flag integrity problems:
-  broken forward references, orphaned reference files, circular slash-command
-  cycles, and registration gaps. Produces a Dependency Health Report with
-  HEALTHY / ISSUES FOUND verdict. Use before committing a new skill, after
-  renaming primitives, or as a pre-release gate.
+  Maps cross-primitive references and flags integrity problems: broken refs,
+  orphaned files, cycles. Use before committing a skill, after renaming
+  primitives, or as a pre-release gate. Do NOT use for quality review — use
+  /review-claude-config.
 argument-hint: "[folder]"
 allowed-tools: Agent, Read, Glob, Grep, Write
 disable-model-invocation: true

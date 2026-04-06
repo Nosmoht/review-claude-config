@@ -1,9 +1,9 @@
 ---
 name: scaffold-agent
 description: >
-  Create a new Claude Code agent (.md file) with valid frontmatter, example blocks,
-  and a numbered workflow body, then register it in repository docs. Use when adding
-  a new subagent to this repository or to any project's .claude/agents/ directory.
+  Creates a Claude Code agent with valid frontmatter and numbered workflow
+  body. Use when adding a subagent to any project's .claude/agents/. Do NOT
+  use for skills or rules — use /scaffold-skill or /scaffold-rule.
 argument-hint: "<agent-name>"
 allowed-tools: Read, Write, Edit, Glob
 disable-model-invocation: true

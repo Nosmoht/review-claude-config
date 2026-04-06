@@ -1,9 +1,9 @@
 ---
 name: scaffold-skill
 description: >
-  Create a new Claude Code skill in either plugin or maintenance mode, generate
-  a valid SKILL.md plus optional references/, and register it in the existing
-  repository docs. Use when adding a new skill to this repository.
+  Creates a new skill: SKILL.md, optional references/, and doc registration.
+  Use when adding a new skill to this repository. Do NOT use to create agents
+  or rules — use /scaffold-agent or /scaffold-rule.
 argument-hint: "[plugin|maintenance] <skill-name>"
 allowed-tools: Read, Write, Edit, Glob
 disable-model-invocation: true

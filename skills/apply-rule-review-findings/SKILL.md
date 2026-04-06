@@ -1,11 +1,9 @@
 ---
 name: apply-rule-review-findings
 description: >
-  Apply recommendations from a review-rule report to the reviewed rule file.
-  Processes High/Medium findings first, then optionally offers Low findings
-  for A-grade convergence. Previews each change with user confirmation and
-  commits with audit-fix chain convention. Use after running /review-rule
-  or when delegated by /apply-review-findings.
+  Applies findings from a /review-rule report to the reviewed rule file. Use
+  after /review-rule on a single rule or when delegated by
+  /apply-review-findings. Do NOT use for skill or agent reports.
 argument-hint: "[report-path]"
 allowed-tools: Read, Edit, Glob, Bash
 disable-model-invocation: true

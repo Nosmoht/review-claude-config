@@ -1,12 +1,9 @@
 ---
 name: audit-repo
 description: >
-  Analyze any repository to identify what Claude Code primitives (CLAUDE.md,
-  skills, agents, hooks/rules) it needs. Performs static analysis across
-  toolchain, ambiguity, conventions, architecture, domain knowledge, and token
-  efficiency. Produces a prioritized intervention matrix mapping error classes
-  to recommended primitives. Use when setting up Claude Code in a new project
-  or optimizing an existing configuration.
+  Analyzes a repo for needed Claude Code primitives and produces a prioritized
+  intervention matrix. Use when setting up or diagnosing a Claude Code
+  configuration. Do NOT use to suggest skills only — use /suggest-skills.
 argument-hint: [folder]
 allowed-tools: Agent, Read, Write, Glob, Grep, WebSearch, WebFetch
 disable-model-invocation: true

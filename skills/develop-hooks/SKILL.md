@@ -1,9 +1,9 @@
 ---
 name: develop-hooks
 description: >
-  Create a new Claude Code hook script and register it in hooks.json.
-  Use when adding automation hooks to enforce quality gates, inject context,
-  control permissions, or log agent activity.
+  Creates a hook script and registers it in hooks.json. Use when adding
+  automation to enforce quality gates, inject context, or control permissions.
+  Do NOT use for always-on rules — use /scaffold-rule.
 argument-hint: "[hook-type] <hook-name>"
 allowed-tools: Read, Write, Edit, Glob, Bash
 disable-model-invocation: true

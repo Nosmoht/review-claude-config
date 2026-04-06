@@ -1,11 +1,10 @@
 ---
 name: run-eval-cases
 description: >
-  Run regression test cases against the review system to verify correctness
-  after changing the rubric, shared baseline, reviewer prompts, analytics
-  logic, or scaffold workflow. Executes up to 5 synthetic eval cases and
-  produces a PASS/FAIL verdict per criterion. Use after changing rubric,
-  baseline, reviewer prompts, analytics logic, or scaffold workflow.
+  Runs regression test cases to verify review system correctness after changes.
+  Use after changing the rubric, baseline, reviewer prompts, analytics, or
+  scaffold workflow. Do NOT use to review actual skills — use
+  /review-claude-config.
 argument-hint: "[1-5|all|case1,case3]"
 allowed-tools: Agent, Read, Write, Glob, Edit, Bash
 disable-model-invocation: true

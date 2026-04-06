@@ -1,11 +1,10 @@
 ---
 name: refresh-engineering-baseline
 description: >
-  Update the engineering baseline reference file with current best practices
-  from web research. Searches for current prompt engineering, context
-  engineering, and tool design guidance, then routes related safety and
-  instruction-clarity findings into those sections before merging them into the
-  baseline. Use when the baseline's last_refreshed date is older than 3 months.
+  Updates the engineering baseline with current prompt, context, and tool-
+  design best practices from web research. Use when the baseline's
+  last_refreshed is older than 3 months. Do NOT use for other reference
+  files — each has its own update path.
 disable-model-invocation: true
 allowed-tools: WebSearch, WebFetch, Read, Write
 ---
