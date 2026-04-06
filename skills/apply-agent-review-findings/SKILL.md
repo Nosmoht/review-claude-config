@@ -183,6 +183,16 @@ If no, note: "N Low impact findings were not applied."
 In orchestrated mode, do not prompt — process whatever recommendations the orchestrator sends.
 The orchestrator must send only dispatchable recommendations with both `Current` and `Recommended`.
 
+**Regression check (after all edits applied):**
+
+For each modified file, verify that applied changes did not:
+1. Remove or weaken guardrails for destructive actions or confirmation gates.
+2. Add tools to the `tools` array not referenced in the agent body.
+3. Remove output format specifications or validation criteria.
+4. Downgrade the `model` field without documented justification.
+
+If any regression is detected, warn: "Potential regression in [file]: [description]. Review before committing? (yes/no)"
+
 **Commit with audit-fix chain:**
 
 Read the shared commit conventions (loaded in Phase 1 Step 3).
@@ -213,7 +223,7 @@ Then end your response with this menu (substitute `<path>` with the target agent
 
 ---
 **What's next?**
-1. Verify improvements → `/review-agent <path>`
+1. Verify improvements (recommended — detects cross-dimension regressions) → `/review-agent <path>`
 2. Apply findings from another report
 3. Done
 

@@ -1,42 +1,26 @@
 ---
 name: agent-evaluation-guide
 description: Type-specific evaluation criteria for Claude Code agents (single-file .md in agents/ directory)
-last_refreshed: 2026-04-03
+last_refreshed: 2026-04-06
 ---
 
-# Agent Evaluation Guide
+# Agent Evaluation Checklist
 
-## Model Selection
-- **haiku**: Simple checks, fast routing, low-stakes decisions
-- **sonnet**: Analysis, review, code generation (recommended default)
-- **opus**: Complex reasoning, architecture decisions, deep analysis
-- If `model` is specified, verify it matches task complexity; if clearly mismatched, Metadata is C or below
-- If `model` is omitted, it inherits the parent's model
+Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 
-## Description and Activation Precision
-- Description must contain natural trigger keywords matching intended use
-- Specific enough to avoid false activation; broad enough to catch all legitimate triggers
-- Check for `<example>` blocks — these significantly improve activation precision
-- If description is generic enough to match unrelated requests, Context Engineering is C or below
-
-## Trigger Pattern Coverage
-- Do `<example>` blocks cover the primary use cases?
-- Are edge-case triggers represented (both positive and negative)?
-- If no examples and description is ambiguous → Completeness is C or below
-
-## Tool Array Validation
-- `tools:` array and `allowed-tools:` string are both valid
-- Tool set must match what the agent body actually references; no unused tools
-- Is the tool set minimal (least-privilege)?
-- `color`: visual indicator only, no quality impact
-
-## Single-File Constraint
-- Agents are single-file (no `references/` directory)
-- All context must be self-contained; evaluate information density, not progressive disclosure
-- Long agents should use clear section structure (headings, not prose)
-
-## Common Agent Anti-Patterns
-- `model: opus` for simple routing/checks (over-provisioned)
-- Generic description matching too many unrelated requests
-- Missing `<example>` blocks when trigger conditions are non-obvious
-- Tool list copied from another agent without pruning unused tools
+| ID | Check | Dim |
+|----|-------|-----|
+| MS-1 | Model matches task complexity (haiku=routing, sonnet=analysis, opus=complex reasoning)? | Meta |
+| DA-1 | Description has specific trigger keywords — not generic? | Meta |
+| DA-2 | Description narrow enough to avoid false activation on unrelated requests? | CE |
+| DA-3 | Description broad enough to catch all legitimate triggers? | CE |
+| DA-4 | `<example>` blocks present when trigger conditions are non-obvious? | Compl |
+| TC-1 | `<example>` blocks cover all primary use cases? | Compl |
+| TC-2 | Negative examples present (when NOT to trigger)? | Compl |
+| TV-1 | Tool array matches tools actually referenced in the body? | Meta |
+| TV-2 | No unused tools — tool set is minimal (least-privilege)? | Safety |
+| SF-1 | All context self-contained — no external files assumed? | CE |
+| SF-2 | Long body uses headings for structure (not dense prose)? | Clarity |
+| AP-1 | No model over-provisioned for task complexity (e.g., opus for simple routing)? | Meta |
+| AP-2 | No tools copied from another agent without pruning unused ones? | Safety |
+| AP-3 | `disable-model-invocation: true` present if user-only invocation is appropriate? | Meta |

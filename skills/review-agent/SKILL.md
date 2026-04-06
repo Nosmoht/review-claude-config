@@ -64,9 +64,10 @@ Read the type-specific evaluation guide from this skill's own directory:
 
 1. Read the agent file and infer its primary goal/domain in one sentence.
 2. Domain research (follow orchestration flags if in orchestrated mode):
-   - If `websearch_available`: perform 1-2 WebSearch queries for domain best practices.
-   - If `webfetch_available`: fetch 1-2 most relevant URLs with WebFetch using prompt: "Extract domain best practices, benchmarks, and configuration patterns relevant to [domain]. Max 500 words."
-   - If neither available: use model knowledge only.
+   - First, check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the agent's domain to a cache entry.
+   - If `CACHED` (entry exists, ≤90 days old): read the cache file and use as primary domain knowledge. At most 1 supplemental WebSearch query if the cache lacks coverage for this agent's specific area.
+   - If `STALE` (≥90 days) or `MISS` (no entry): perform 1 WebSearch query for domain best practices. If `webfetch_available`, fetch the most relevant URL.
+   - If neither cache nor WebSearch available: use model knowledge only, marked `[no external verification]`.
    - Apply source quality criteria from `references/source-quality-criteria.md`: discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
 3. Synthesize: what should a high-quality agent in this domain include?
 
@@ -74,14 +75,15 @@ Read the type-specific evaluation guide from this skill's own directory:
 
 Score using the rubric as the PRIMARY basis. The agent evaluation guide provides type-specific criteria. Domain research informs Goal Alignment and enriches recommendations but does NOT alter scoring criteria for other dimensions.
 
-**Agent-specific evaluation criteria** (from evaluation guide):
-- **Clarity**: Check that instructions are unambiguous within the single-file constraint. Section structure for longer agents.
-- **Completeness**: Check `<example>` blocks for trigger pattern coverage. If no examples and description is ambiguous → C or below.
-- **Prompt Engineering**: Check for role priming, structured output, constraints, few-shot via `<example>` blocks.
-- **Context Engineering**: Evaluate description and example blocks for **activation precision**, not progressive disclosure (agents are single-file). If description is generic enough to match unrelated requests → C or below.
-- **Goal Alignment**: Check domain knowledge, tool/structure fit. Does the agent body support achieving the goal described in the description?
-- **Safety**: Check least-privilege tools, guardrails for destructive actions if Write/Bash/Edit are available.
-- **Metadata**: Check `model` field appropriateness (haiku/sonnet/opus vs task complexity). Check `tools`/`allowed-tools` matches actual usage. Check description accuracy.
+**Scoring procedure:**
+
+1. Work through the full checklist in `references/agent-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item (ID MS-1 through AP-3).
+2. **Completeness gate:** Before producing the certificate, verify:
+   - Every checklist item has a verdict (no blanks).
+   - Every dimension has at least one non-NA item.
+   - If any item was not yet evaluated, evaluate it now before continuing.
+3. Score each dimension using the rubric, referencing checklist results as evidence. Justification lines in the certificate must cite at least one checklist ID (e.g., "DA-2 FAIL: description matches unrelated requests").
+4. The completed checklist is an internal working artifact — do not include it verbatim in the output certificate.
 
 ## Phase 3 — Output
 
