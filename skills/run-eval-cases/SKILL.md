@@ -87,7 +87,16 @@ Report the result.
 **Execution:**
 
 1. Write the synthetic artifact above to `.claude/eval-temp/eval-test-real-issue/SKILL.md`
-2. Launch an Agent (allowed-tools: Read, Glob, Write, Bash) to run `/review-skill .claude/eval-temp/eval-test-real-issue/SKILL.md`. If the agent does not return within a reasonable time or errors out, mark all C1-* criteria as FAIL with note "agent timeout or crash" and proceed to the next case. Do not retry.
+2. Launch an Agent (allowed-tools: Read, Glob, Write, Bash) with this prompt:
+   ```
+   ---orchestration---
+   websearch_available: false
+   webfetch_available: false
+   ---
+
+   /review-skill .claude/eval-temp/eval-test-real-issue/SKILL.md
+   ```
+   If the agent produces no tool calls for 60 seconds or returns an error, mark all C1-* criteria as FAIL with note "agent timeout or crash" and proceed to the next case. Do not retry.
 3. Capture the full output
 4. Check each criterion against the output and record PASS/FAIL with a one-sentence excerpt
 
@@ -161,7 +170,16 @@ Output the summary to the user.
 **Execution:**
 
 1. Write the synthetic artifact above to `.claude/eval-temp/eval-test-cosmetic/SKILL.md`
-2. Launch an Agent (allowed-tools: Read, Glob, Write, Bash) to run `/review-skill .claude/eval-temp/eval-test-cosmetic/SKILL.md`. If the agent does not return or errors out, mark all C2-* criteria as FAIL with note "agent timeout or crash" and proceed.
+2. Launch an Agent (allowed-tools: Read, Glob, Write, Bash) with this prompt:
+   ```
+   ---orchestration---
+   websearch_available: false
+   webfetch_available: false
+   ---
+
+   /review-skill .claude/eval-temp/eval-test-cosmetic/SKILL.md
+   ```
+   If the agent produces no tool calls for 60 seconds or returns an error, mark all C2-* criteria as FAIL with note "agent timeout or crash" and proceed.
 3. Capture the full output
 4. Check each criterion against the output and record PASS/FAIL with a one-sentence excerpt
 
@@ -226,7 +244,7 @@ findings: []
 **Execution:**
 
 1. Write both synthetic reports to `.claude/eval-temp/`
-2. Launch an Agent (allowed-tools: Read, Glob, Write, Bash) to run `/review-analytics .claude/eval-temp/`. If the agent does not return or errors out, mark all C3-* criteria as FAIL with note "agent timeout or crash" and proceed.
+2. Launch an Agent (allowed-tools: Read, Glob, Write, Bash) to run `/review-analytics .claude/eval-temp/`. If the agent produces no tool calls for 60 seconds or returns an error, mark all C3-* criteria as FAIL with note "agent timeout or crash" and proceed.
 3. Capture the full output
 4. Check each criterion against the output and record PASS/FAIL with a one-sentence excerpt
 
@@ -249,7 +267,7 @@ findings: []
 
 1. Read the full content of `README.md` and store it as `readme_before`
 2. Read the full content of `CLAUDE.md` and store it as `claude_before`
-3. Launch an Agent (allowed-tools: Read, Glob, Write, Edit, Bash) to run `/scaffold-skill plugin eval-test-scaffold` and answer "yes" to all confirmation prompts. If the agent does not return or errors out, mark all C4-P* criteria as FAIL with note "agent timeout or crash" and skip to cleanup.
+3. Launch an Agent (allowed-tools: Read, Glob, Write, Edit, Bash) to run `/scaffold-skill plugin eval-test-scaffold` and answer "yes" to all confirmation prompts. If the agent produces no tool calls for 60 seconds or returns an error, mark all C4-P* criteria as FAIL with note "agent timeout or crash" and skip to cleanup.
 4. Check that `skills/eval-test-scaffold/SKILL.md` exists (C4-P1)
 5. Read README.md again; diff against `readme_before` — verify the new entry appears under `## Command Families` (C4-P2)
 6. Read CLAUDE.md again; diff against `claude_before` — verify the new entry appears under `## Commands` (C4-P3)
@@ -259,7 +277,7 @@ findings: []
 
 1. Read the full content of `CLAUDE.md` and store it as `claude_before_maint`
 2. Read the full content of `README.md` and store it as `readme_before_maint`
-3. Launch an Agent (allowed-tools: Read, Glob, Write, Edit, Bash) to run `/scaffold-skill maintenance eval-test-scaffold-maint` and answer "yes" to all confirmation prompts. If the agent does not return or errors out, mark all C4-M* criteria as FAIL with note "agent timeout or crash" and skip to cleanup.
+3. Launch an Agent (allowed-tools: Read, Glob, Write, Edit, Bash) to run `/scaffold-skill maintenance eval-test-scaffold-maint` and answer "yes" to all confirmation prompts. If the agent produces no tool calls for 60 seconds or returns an error, mark all C4-M* criteria as FAIL with note "agent timeout or crash" and skip to cleanup.
 4. Check that `.claude/skills/eval-test-scaffold-maint/SKILL.md` exists (C4-M1)
 5. Read CLAUDE.md again; diff against `claude_before_maint` — verify the new entry appears under `## Commands` (C4-M2)
 6. Read README.md again; compare to `readme_before_maint` — confirm no new entries were added (C4-M2 corollary)
@@ -329,7 +347,16 @@ Output a summary of the processed records.
 **Execution:**
 
 1. Write the synthetic artifact above to `.claude/eval-temp/agents/eval-test-reliability-agent.md`
-2. Launch an Agent (allowed-tools: Read, Glob, Write, Bash) to run `/review-agent .claude/eval-temp/agents/eval-test-reliability-agent.md`. If the agent does not return or errors out, mark all C5-* criteria as FAIL with note "agent timeout or crash" and proceed to cleanup.
+2. Launch an Agent (allowed-tools: Read, Glob, Write, Bash) with this prompt:
+   ```
+   ---orchestration---
+   websearch_available: false
+   webfetch_available: false
+   ---
+
+   /review-agent .claude/eval-temp/agents/eval-test-reliability-agent.md
+   ```
+   If the agent produces no tool calls for 60 seconds or returns an error, mark all C5-* criteria as FAIL with note "agent timeout or crash" and proceed to cleanup.
 3. Capture the full output
 4. Check each criterion against the output and record PASS/FAIL with a one-sentence excerpt
 
