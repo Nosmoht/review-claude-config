@@ -39,6 +39,16 @@ Expected scaffold behavior:
 - Maintenance mode writes under `.claude/skills/` and updates only `CLAUDE.md`.
 - Neither mode refers to `## Skills`, `## File Structure`, or `## Installation` as registration targets.
 
+## Case 6 — Cross-Run Consistency
+
+Artifact: a skill with exactly 3 known defects (one each in Clarity, Safety, and Completeness) and 2 clear strengths.
+
+Expected review behavior:
+- Two consecutive runs on the same unchanged file produce the same set of findings: same dimensions flagged, same defects identified.
+- All 27 checklist items (PD-1 through AP-4) have a PASS/FAIL/NA verdict in every run.
+- Grade variance across runs is zero for all dimensions.
+- If Goal Alignment uses the domain cache, justifications reference the same cached evidence in both runs.
+
 ## Case 5 — Reliability Pattern Detection
 
 Artifact: an agent that spawns subagents or calls external dependencies (MCP tools, WebFetch, subprocess tools) with no failure path defined, no stop condition for recursion/retries, and continues execution even when dependencies return stub data or fail silently.
