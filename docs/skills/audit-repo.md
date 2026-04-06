@@ -128,6 +128,7 @@ Web research is optional and limited to Phase 5, Step 2. If WebSearch is availab
 | `references/primitive-decision-matrix.md` | Own skill directory | Decision rules for primitive type selection |
 | `references/token-heuristics.md` | Own skill directory | Thresholds and scoring formulas |
 | `references/audit-report-schema.md` | Own skill directory | Report frontmatter and body structure |
+| `references/report-template.md` | Own skill directory | Report body template used in Step 3 |
 | `references/signal-catalog.md` | `suggest-skills/references/` (sibling) | Signal tables for skill gap detection |
 
 ## Interactions

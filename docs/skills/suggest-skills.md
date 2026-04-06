@@ -167,6 +167,7 @@ Priority is the sum of all three scores:
 | File | Location | Purpose |
 |------|----------|---------|
 | `references/signal-catalog.md` | Own skill directory | Application + Skills Repository signal tables, extraction criteria |
+| `references/report-template.md` | Own skill directory | Report body and frontmatter template used in Phase 4 |
 | `references/domain-cache/INDEX.md` | `review-claude-config/references/` (shared) | Cached domain research for reuse across skills |
 
 ## Interactions

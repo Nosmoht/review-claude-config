@@ -389,58 +389,7 @@ These scores are repo-level prioritization heuristics. Use them for ordering, no
 
 ### Step 1: Present Report
 
-Present the full report to the user:
-
-```
-# Skill Suggestions Report
-
-## Repository Overview
-
-- **Target:** [absolute path]
-- **Repository Type:** [Application / Skills-Config / Mixed]
-- **Tech Stack:** [detected languages, frameworks, infrastructure — or "N/A (skills/config repository)" if no source code]
-- **Existing Skills:** [count] ([list names])
-- **Suggestions Generated:** [count]
-
-## Suggestions
-
-### 1. [skill-name] (Priority: [High/Medium], Score: [N]/9)
-
-**Evidence Class:** [Proven result / Engineering guidance / Repo default / Low-evidence area]
-**Confidence:** [High/Medium/Low]
-**Signal Sources:**
-- [signal 1 with category reference]
-- [signal 2 with category reference]
-
-**Extraction Criteria:** [N/4 passed] — [list which passed]
-
-**Rationale:** [why this skill adds value, with web evidence]
-
-**Skeleton SKILL.md:**
-```yaml
-[skeleton — explicitly marked as starting point, not production-ready]
-```
-
-**Recommended Reference Files:**
-- references/[file].md — [purpose]
-
----
-
-[Repeat for each suggestion, ordered by priority score descending]
-
-## Signal Summary
-
-| Discovery Method | Suggestions |
-|-----------------|-------------|
-| Layer 1: Table matches | [N] |
-| Layer 2: Open reasoning | [N] |
-| **Total (after dedup)** | **[N]** |
-
-## Integration Notes
-
-- Suggestions that complement existing skills: [list relationships]
-- Suggested implementation order: [highest impact first, with rationale]
-```
+Read `references/report-template.md` for the report body structure (see `## Report Body` section). Present the full report to the user, substituting actual values for all placeholder fields.
 
 ### Step 2: Persist Report
 
@@ -449,25 +398,7 @@ After presenting all suggestions, confirm before writing:
 
 If the user declines, skip report writing but still display the report path that would have been used.
 
-**Frontmatter:**
-```yaml
----
-generated_by: suggest-skills
-schema_version: 1
-date: YYYY-MM-DD
-target: /absolute/path/to/target
-repo_type: Application | Skills-Config | Mixed
-existing_skills: N
-suggestions:
-  - name: skill-name
-    priority: High
-    score: 8
-    evidence_class: Engineering guidance
-    confidence: Medium
-    signal_sources: ["Documentation", "CI/CD"]
-    criteria_passed: 4
----
-```
+**Frontmatter:** Use the frontmatter structure from `references/report-template.md` (see `## Frontmatter` section).
 
 **Body:** Full report content as presented.
 
