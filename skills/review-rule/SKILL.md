@@ -65,21 +65,26 @@ Read the type-specific evaluation guide from this skill's own directory:
 
 1. Read the rule file and infer its primary constraint/goal in one sentence.
 2. Domain research (follow orchestration flags if in orchestrated mode):
-   - If `websearch_available`: perform 1-2 WebSearch queries for domain best practices related to the rule's constraint.
-   - If `webfetch_available`: fetch 1-2 most relevant URLs with WebFetch using prompt: "Extract domain best practices, benchmarks, and configuration patterns relevant to [domain]. Max 500 words."
-   - If neither available: use model knowledge only.
+   - First, check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the rule's domain to a cache entry.
+   - If `CACHED` (entry exists, ≤90 days old): read the cache file and use as primary domain knowledge. At most 1 supplemental WebSearch query if the cache lacks coverage for this rule's specific area.
+   - If `STALE` (≥90 days) or `MISS` (no entry): perform 1 WebSearch query for domain best practices. If `webfetch_available`, fetch the most relevant URL.
+   - If neither cache nor WebSearch available: use model knowledge only, marked `[no external verification]`.
    - Apply source quality criteria from `references/source-quality-criteria.md`: discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
 3. Synthesize: what should a high-quality rule in this domain enforce?
 
 ### Step B: Scoring + Recommendations
 
-Score using the rubric as the PRIMARY basis. Rules use only 3 dimensions (renormalized to 100%):
+Score using the rubric as the PRIMARY basis. Rules use only 3 dimensions (renormalized to 100%): Clarity 30%, Completeness 30%, Goal Alignment 40%. Skip PE, CE, Safety, Metadata.
 
-- **Clarity (30%)**: Is the rule unambiguous? Could two models interpret it differently? Are terms precise? Is scope explicit?
-- **Completeness (30%)**: Are edge cases and exceptions addressed? Are scope boundaries defined? Are rule interactions considered?
-- **Goal Alignment (40%)**: Does the rule achieve its stated constraint? Is it proportional? Does domain knowledge reveal missing constraints?
+**Scoring procedure:**
 
-Skip: Prompt Engineering, Context Engineering, Safety, Metadata — these do not apply to rules (no tools, no frontmatter, directives not prompts).
+1. Work through the full checklist in `references/rule-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item (ID CL-1 through GA-5).
+2. **Completeness gate:** Before producing the certificate, verify:
+   - Every checklist item has a verdict (no blanks).
+   - Every dimension has at least one non-NA item.
+   - If any item was not yet evaluated, evaluate it now before continuing.
+3. Score each dimension using the rubric, referencing checklist results as evidence. Justification lines in the certificate must cite at least one checklist ID (e.g., "CL-4 FAIL: uses 'should' instead of 'must'").
+4. The completed checklist is an internal working artifact — do not include it verbatim in the output certificate.
 
 ## Phase 3 — Output
 

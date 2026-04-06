@@ -1,38 +1,29 @@
 ---
 name: rule-evaluation-guide
 description: Type-specific evaluation criteria for Claude Code rules (plain .md files in rules/ directory)
-last_refreshed: 2026-04-03
+last_refreshed: 2026-04-06
 ---
 
-# Rule Evaluation Guide
+# Rule Evaluation Checklist
 
-Rules are always-active constraints with no tools, frontmatter, or prompt structure — so PE, CE, Safety, and Metadata are structurally inapplicable. Only Clarity (30%), Completeness (30%), and Goal Alignment (40%) apply.
+Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 
-## Clarity Assessment (30%)
-- Could two different models interpret this rule differently?
-- Are terms precisely defined (not "appropriate", "good", "reasonable")?
-- Is scope explicit (which files, which operations, which contexts)?
-- Are action verbs unambiguous ("must", "never" vs "should", "try to")?
-- Can a reviewer point to concrete text as evidence for each claimed problem?
+Rules use only Clarity (30%), Completeness (30%), Goal Alignment (40%). PE, CE, Safety, Metadata are structurally inapplicable.
 
-## Completeness Assessment (30%)
-- Are edge cases addressed?
-- Are exceptions explicitly stated (when does the rule NOT apply)?
-- Are scope boundaries defined?
-- Does the rule interact with other rules? Are conflicts addressed?
-- For rules referencing external tools/commands: are version or format assumptions explicit?
-
-## Goal Alignment Assessment (40%)
-- Does the rule achieve its stated constraint?
-- Is the constraint proportional (not overly broad or narrow)?
-- Would the rule prevent the specific behavior it targets?
-- Are there obvious workarounds the rule doesn't address?
-- Does domain knowledge reveal missing constraints?
-
-## Common Rule Anti-Patterns
-- Vague directives ("write good code") without measurable criteria
-- Rules that conflict with tool capabilities or other rules
-- Overly broad scope (applies to everything, enforces nothing specific)
-- No scope boundaries (no indication of when the rule doesn't apply)
-- Aspirational language ("try to", "when possible") instead of constraints
-- Recommendations that cannot be re-checked on a follow-up review
+| ID | Check | Dim |
+|----|-------|-----|
+| CL-1 | Two models would interpret this rule the same way? | Clarity |
+| CL-2 | Terms precisely defined (no "appropriate", "good", "reasonable")? | Clarity |
+| CL-3 | Scope explicit (which files, operations, contexts)? | Clarity |
+| CL-4 | Action verbs unambiguous ("must"/"never", not "should"/"try to")? | Clarity |
+| CL-5 | Concrete text evidence available for each claimed problem? | Clarity |
+| CO-1 | Edge cases addressed? | Compl |
+| CO-2 | Exceptions explicitly stated (when rule does NOT apply)? | Compl |
+| CO-3 | Scope boundaries defined? | Compl |
+| CO-4 | Rule interactions and conflicts with sibling rules addressed? | Compl |
+| CO-5 | External tool/command references: version/format assumptions explicit? | Compl |
+| GA-1 | Rule achieves its stated constraint? | GA |
+| GA-2 | Constraint proportional (not overly broad or narrow)? | GA |
+| GA-3 | Rule prevents the specific behavior it targets? | GA |
+| GA-4 | No obvious workarounds the rule doesn't address? | GA |
+| GA-5 | Domain knowledge reveals no missing constraints? | GA |
