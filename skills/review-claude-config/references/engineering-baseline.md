@@ -24,7 +24,7 @@ last_refreshed: 2026-04-04
 
 **Evidence-First Critique** `[Engineering guidance]` — In review tasks, ground findings in quotes, paths, or specific examples rather than generic quality language. Check: could another reviewer verify the claim from the artifact?
 
-**Constraint Load** `[Engineering guidance]` — When a step carries many simultaneous constraints, split it into smaller steps. Performance collapses beyond ~100 simultaneous instances; instance count matters more than raw token count — batch large workloads (arXiv:2603.22608; arXiv:2510.05381; ScaledIF arXiv:2510.14842; arXiv:2512.14754). Check: would breaking the step reduce ambiguity?
+**Constraint Load** `[Engineering guidance]` — When a step carries many simultaneous constraints, split it into smaller steps. Performance collapses beyond ~100 simultaneous instances; instance count matters more than raw token count — batch large workloads (arXiv:2603.22608; arXiv:2510.05381; ScaledIF arXiv:2510.14842; arXiv:2512.14754). For agent definitions specifically, dense per-section constraint packing risks the same degradation at smaller scale `[Repo default]`. Check: would breaking the step reduce ambiguity?
 
 **Deterministic Conditionals** `[Proven result]` — Write branch conditions as observable tests, not vague phrases like "if needed" or "as appropriate". Check: would two models take the same branch from the same input?
 
@@ -44,7 +44,7 @@ last_refreshed: 2026-04-04
 
 **Tool Set Curation** `[Engineering guidance]` — Give agents the smallest tool set that still lets them complete the task. Least-privilege enforcement is practical: MiniScope achieves it with only 1-6% latency overhead vs. standard tool-calling agents (arXiv:2512.11147). Check: could any tool be removed without reducing required capability?
 
-**Activation Precision** `[Engineering guidance]` — Describe clearly when a skill or agent should trigger and when it should not. Check: would unrelated requests accidentally match this wording?
+**Activation Precision** `[Engineering guidance]` — Describe clearly when a skill or agent should trigger and when it should not. The description is the sole activation signal for auto-dispatch — trigger logic that appears only in the body is invisible to the dispatcher (Anthropic Tier 1, April 2026). Check: would unrelated requests accidentally match this wording? Does the body contradict what the description says about when to activate?
 
 **Error Preservation** `[Engineering guidance]` — Preserve failed attempts or error traces when they help the system avoid repeating the same mistake. Check: does the workflow retain useful failure context for correction?
 

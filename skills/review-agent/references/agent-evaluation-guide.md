@@ -15,8 +15,10 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | DA-2 | Description narrow enough to avoid false activation on unrelated requests? | CE |
 | DA-3 | Description broad enough to catch all legitimate triggers? | CE |
 | DA-4 | `<example>` blocks present when trigger conditions are non-obvious? | Compl |
+| DA-5 | Body instructions do not redefine or contradict the description's trigger logic? | Meta |
 | TC-1 | `<example>` blocks cover all primary use cases? | Compl |
 | TC-2 | Negative examples present (when NOT to trigger)? | Compl |
+| TC-3 | Agent includes verification criteria or success conditions for its primary output? | Compl |
 | TV-1 | Tool array matches tools actually referenced in the body? | Meta |
 | TV-2 | No unused tools — tool set is minimal (least-privilege)? | Safety |
 | SF-1 | All context self-contained — no external files assumed? | CE |
@@ -24,3 +26,4 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | AP-1 | No model over-provisioned for task complexity (e.g., opus for simple routing)? | Meta |
 | AP-2 | No tools copied from another agent without pruning unused ones? | Safety |
 | AP-3 | `disable-model-invocation: true` present if user-only invocation is appropriate? | Meta |
+| AP-4 | Agent avoids aggressive imperative language (MUST/CRITICAL/ALWAYS) where natural phrasing suffices? Safety/guardrail sections exempted. | PE |

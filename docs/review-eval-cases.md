@@ -49,6 +49,20 @@ Expected review behavior:
 - Grade variance across runs is zero for all dimensions.
 - If Goal Alignment uses the domain cache, justifications reference the same cached evidence in both runs.
 
+## Case 7 — New Checklist Item Discrimination
+
+Artifact: a synthetic agent with these specific properties:
+- Description says "Use when user asks to audit dependencies" but body says "Activate when the user wants to check code quality" — a description-body contradiction.
+- No verification criteria or success conditions for its primary output anywhere in the body.
+- One MUST in a safety-critical guardrail section: "You MUST NOT modify files outside the target directory."
+
+Expected review behavior:
+- **DA-5 FAIL**: Surfaces a Medium or High finding in Metadata citing the contradiction between description trigger logic ("audit dependencies") and body activation framing ("check code quality").
+- **TC-3 FAIL**: Surfaces a finding in Completeness citing absent verification criteria or success conditions.
+- **AP-4 PASS**: Does NOT flag the MUST in the safety guardrail section — the safety/guardrail exemption applies.
+- **Existing items unaffected**: DA-1 through DA-4, TC-1, TC-2, AP-1 through AP-3 and all other existing checks do not regress.
+- Overall grade reflects new FAIL findings without dropping more than one letter grade below what the structural quality alone would produce.
+
 ## Case 5 — Reliability Pattern Detection
 
 Artifact: an agent that spawns subagents or calls external dependencies (MCP tools, WebFetch, subprocess tools) with no failure path defined, no stop condition for recursion/retries, and continues execution even when dependencies return stub data or fail silently.

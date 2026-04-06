@@ -75,9 +75,11 @@ Read the type-specific evaluation guide from this skill's own directory:
 
 Score using the rubric as the PRIMARY basis. The agent evaluation guide provides type-specific criteria. Domain research informs Goal Alignment and enriches recommendations but does NOT alter scoring criteria for other dimensions.
 
+**Definition-runtime separation:** When scoring, distinguish definition defects (ambiguous instructions, missing constraints, weak trigger logic) from runtime capability limitations (model cannot perform the task). IRT research (arXiv:2604.00594, ICLR 2026 Workshop) shows these are independent dimensions with heterogeneous failure profiles — conflating them leads to incorrect remediation. A definition defect needs a rewrite; a capability limitation needs a different model or approach.
+
 **Scoring procedure:**
 
-1. Work through the full checklist in `references/agent-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item (ID MS-1 through AP-3).
+1. Work through the full checklist in `references/agent-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item (ID MS-1 through DA-5).
 2. **Completeness gate:** Before producing the certificate, verify:
    - Every checklist item has a verdict (no blanks).
    - Every dimension has at least one non-NA item.

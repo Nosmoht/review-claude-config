@@ -106,6 +106,7 @@ This is the authoritative maintainer command inventory for the repo.
 - [Web Research Quality Evaluation](research/source-quality/web-research-quality-evaluation.md) — CRAAP, E-E-A-T, credibility assessment
 - [Change Discipline Workflow Research](research/change-discipline/change-discipline-workflow-research.md) — multi-perspective review, LLM self-review blindspots
 - [Autonomous Agent Reliability: Frameworks and Failure Taxonomies](research/autonomous-agent-reliability/autonomous-agent-reliability.md) — circuit breakers, idempotency, progressive fallback, bounded execution
+- [Agent Definition Quality Benchmarks](research/agent-definition-quality/agent-definition-quality-benchmarks.md) — proxy evaluation dimensions for design-time agent quality
 
 ## Change Discipline
 
@@ -113,7 +114,7 @@ Change Discipline Rule ([docs/change-discipline-rule.md](docs/change-discipline-
 
 ## Research Backlog
 
-[Research Backlog](docs/research-backlog.md) — 5 deep research topics for review suite quality gaps (autonomous reliability, dependency integrity, instruction following at scale, tool least-privilege, low-evidence baseline refresh).
+[Research Backlog](docs/research-backlog.md) — 6 deep research topics for review suite quality gaps (autonomous reliability, dependency integrity, instruction following at scale, tool least-privilege, low-evidence baseline refresh, agent definition quality benchmarks).
 
 ## Manual Regression Cases
 

@@ -13,6 +13,7 @@ Each item includes: the gap, why it matters (observed failure mode), what to res
 | 3 | Instruction following under rule load | TODO | `research/instruction-following-at-scale/` | Rule-specific scoring |
 | 4 | Least-privilege tool grants | TODO | `research/agent-tool-least-privilege/` | Safety dimension |
 | 5 | Low-evidence baseline refresh | PARTIAL | (updates existing research files) | Baseline evidence classes |
+| 6 | Agent definition quality benchmarks | DONE | `research/agent-definition-quality/` | Agent checklist (+3 items), baseline (2 updates), review-agent SKILL.md |
 
 ---
 
@@ -103,6 +104,29 @@ Each item includes: the gap, why it matters (observed failure mode), what to res
 **Where findings land:**
 - Baseline: upgrade evidence class if research supports, or add specific caveats/thresholds
 - This is incremental — do after topics 1-4
+
+---
+
+---
+
+## 6. Agent definition quality benchmarks
+
+**Gap:** The repo evaluates agent definitions using a 14-item structural checklist but no research basis existed for whether these checks predict actual agent quality. No academic benchmark evaluates agent definition quality at design time.
+
+**Observed failure mode:** Not from aegis-runtime work. Identified 2026-04-06 during dedicated research into quality benchmarks for agent definitions — a proactive gap-filling exercise rather than a reactive remediation.
+
+**Research targets explored:**
+- KDD 2025 survey (arXiv:2507.21504) — confirmed no design-time benchmark exists
+- ICLR 2026 Workshop (arXiv:2604.00594) — IRT decomposition separating definition quality from runtime quality
+- arXiv:2602.16666 — prompt robustness and heterogeneous failure profiles
+- Adjacent fields: requirements engineering quality (IEEE 830, ISO/IEC/IEEE 29148) — relevant conceptually but not adapted to LLM agents
+
+**Where findings landed:**
+- New research file: `research/agent-definition-quality/agent-definition-quality-benchmarks.md`
+- Agent evaluation guide: +3 items (TC-3 verification criteria, DA-5 description-body consistency, AP-4 language calibration)
+- Engineering baseline: 2 inline updates (Activation Precision, Constraint Load)
+- Review-agent SKILL.md: definition-runtime separation reviewer guidance
+- Eval cases: Case 7 for new item discrimination testing
 
 ---
 
