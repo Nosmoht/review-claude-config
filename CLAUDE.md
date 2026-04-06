@@ -65,6 +65,9 @@ This is the authoritative maintainer command inventory for the repo.
 - Reference file budgets: rubric `<1K`, baseline `<2K`, all others `<=500` tokens
 - Treat exact thresholds and workflow conventions as `Repo default` unless stronger evidence exists
 - Domain cache refresh discipline follows the repo's 90-day cadence
+- `last_refreshed` belongs in YAML frontmatter only — body markers (`**Fetched:**`, `Last reviewed:`) are distinct fields with different meanings and must not be converted; absence of `last_refreshed` causes silent skip by `check-repo-health` (not FAIL)
+- Reference files carry `name` + `description` + `last_refreshed`; research files carry `last_refreshed` only — these shapes are intentionally different
+- `last_refreshed` is hard-enforced only for `engineering-baseline.md`; `session_check.py` also provides opportunistic freshness warnings for all other `*.md` files in `skills/review-claude-config/references/`, reporting only the single oldest stale file (>90 days)
 - WebFetch is optional; skills must degrade gracefully to WebSearch-only when needed
 - Baseline updates happen only through `/refresh-engineering-baseline`
 - Baseline refresh covers only `Prompt Engineering`, `Context Engineering`, and `Tool Design`
