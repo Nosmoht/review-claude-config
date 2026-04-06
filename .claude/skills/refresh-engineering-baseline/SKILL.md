@@ -21,6 +21,7 @@ Update `references/engineering-baseline.md` with current research findings.
 
 Read `skills/review-claude-config/references/engineering-baseline.md`. If the file is not found, report the error and stop.
 Read `skills/review-claude-config/references/evidence-contract.md` to load the canonical evidence classes and source precedence rules.
+Read `skills/review-claude-config/references/source-quality-criteria.md` to load the source filtering criteria used in Step 3.
 
 Read the current file content and extract the `last_refreshed` date from frontmatter. If `last_refreshed` is missing or unparseable, treat the baseline as stale and proceed directly to Step 3.
 
