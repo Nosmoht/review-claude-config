@@ -44,7 +44,8 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
+    except Exception as e:
+        print(f"Hook error: {e}", file=sys.stderr)
         print("{}")
     finally:
         sys.exit(0)

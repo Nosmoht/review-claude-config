@@ -22,7 +22,8 @@ def main():
     input_data = json.load(sys.stdin)
     file_path = input_data.get("tool_input", {}).get("file_path", "")
 
-    if not any(fnmatch(file_path, p) for p in SKILL_PATTERNS):
+    abs_path = os.path.abspath(file_path) if file_path else ""
+    if not any(fnmatch(abs_path, p) for p in SKILL_PATTERNS):
         print("{}")
         return
 
@@ -36,7 +37,8 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
+    except Exception as e:
+        print(f"Hook error: {e}", file=sys.stderr)
         print("{}")
     finally:
         sys.exit(0)
