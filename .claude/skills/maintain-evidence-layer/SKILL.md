@@ -104,11 +104,11 @@ false-healthy signal with no actionable output).
 
 For each file, grep for date markers: `last_refreshed:`, `Fetched:`, `**Fetched:**`.
 Parse the date found (ISO format YYYY-MM-DD or similar).
-Today's date is 2026-04-04. The 90-day cutoff is 2026-01-04.
+Use today's date (available from the `# currentDate` session context) to compute the 90-day cutoff dynamically (today minus 90 days). Do not hardcode dates.
 
 Classify:
-- Date after 2026-01-04: within window
-- Date on or before 2026-01-04: stale (flag with days-stale count)
+- Date after the computed cutoff: within window
+- Date on or before the computed cutoff: stale (flag with days-stale count)
 - No date found: flag as "undated"
 
 For each stale or undated file: note which canonical claims in `docs/` cite that file
@@ -194,7 +194,7 @@ Non-canonical occurrences:
 
 ### Stale Sources
 
-Freshness cutoff: 2026-01-04 (90 days before 2026-04-04)
+Freshness cutoff: [today minus 90 days — computed at runtime]
 
 | Research File | Last Refreshed | Days Stale | Cited In |
 |--------------|---------------|------------|---------|
@@ -235,7 +235,7 @@ Review (unrecorded contradictions, tier violations):
 Present the report in the conversation.
 
 Ask: "Save this report to .claude/reviews/YYYY-MM-DDTHHMMSS-evidence-layer.md? (yes/no)"
-Use the current timestamp for the filename (format 2026-04-04T120000 with hours, minutes,
+Use the current timestamp for the filename (format YYYY-MM-DDTHHMMSS with hours, minutes,
 seconds as HHMMSS).
 
 If the user confirms, write the file to `.claude/reviews/YYYY-MM-DDTHHMMSS-evidence-layer.md`.
