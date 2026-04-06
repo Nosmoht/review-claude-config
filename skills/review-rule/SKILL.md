@@ -51,10 +51,11 @@ Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fai
 Locate the `review-claude-config` skill directory (sibling skill in the same plugin). Read these shared references from it:
 - `references/scoring-rubric.md` — the grading criteria
 - `references/engineering-baseline.md` — prompt, context, and tool design techniques
+- `references/source-quality-criteria.md` — source credibility and filtering criteria for web research
 
 Use Glob to find the files if the path is not immediately known: `**/review-claude-config/references/scoring-rubric.md`
 
-**If either file is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
+**If any of these files is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
 
 Read the type-specific evaluation guide from this skill's own directory:
 - `references/rule-evaluation-guide.md`
@@ -69,7 +70,7 @@ Read the type-specific evaluation guide from this skill's own directory:
    - If `CACHED` (entry exists, ≤90 days old): read the cache file and use as primary domain knowledge. At most 1 supplemental WebSearch query if the cache lacks coverage for this rule's specific area.
    - If `STALE` (≥90 days) or `MISS` (no entry): perform 1 WebSearch query for domain best practices. If `webfetch_available`, fetch the most relevant URL.
    - If neither cache nor WebSearch available: use model knowledge only, marked `[no external verification]`.
-   - Apply source quality criteria from `references/source-quality-criteria.md`: discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
+   - Apply source quality criteria (loaded above or from shared reference materials in orchestrated mode): discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
 3. Synthesize: what should a high-quality rule in this domain enforce?
 
 ### Step B: Scoring + Recommendations
