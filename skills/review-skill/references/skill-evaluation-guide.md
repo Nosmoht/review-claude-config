@@ -1,48 +1,39 @@
 ---
 name: skill-evaluation-guide
 description: Type-specific evaluation criteria for Claude Code skills (SKILL.md files)
-last_refreshed: 2026-04-03
+last_refreshed: 2026-04-06
 ---
 
-# Skill Evaluation Guide
+# Skill Evaluation Checklist
 
-## Progressive Disclosure
-- Is stable knowledge in `references/` files, not inline?
-- Is main SKILL.md under 500 lines?
-- Are supplementary files loaded on-demand (Read) rather than pre-loaded?
-- Does the skill use subagent isolation for complex subtasks?
-- Are activation boundaries clear without matching unrelated requests?
+Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 
-## Workflow Structure
-- Are steps numbered with explicit sequential dependencies?
-- Are conditional branches defined with measurable criteria (not "if needed")?
-- Are parallel vs sequential steps explicitly marked?
-- Are stop conditions and recovery actions defined?
-
-## Reference File Quality
-- Does each reference file stay within token budgets? (See `check-repo-health` thresholds.)
-- Is each reference single-purpose?
-- Could any reference content be eliminated without losing capability?
-
-## Argument Handling
-- Is `$ARGUMENTS` parsed with validation?
-- Are defaults specified for missing arguments?
-- Is error handling for invalid arguments present?
-- Does `argument-hint` accurately describe the expected input?
-
-## Output Format
-- Is the output format specified with a literal template or example?
-- Are all sections/fields defined?
-- Does the output format prevent downstream context bloat?
-- For review skills: do findings include `Evidence:` and `Validation:`?
-
-## Safety Patterns (for skills with Write/Bash/Edit)
-- Confirmation gates before destructive or irreversible operations?
-- Least-privilege tool set (`allowed-tools` matches actual usage)?
-- Stop conditions defined for loops or recursive operations?
-
-## Common Skill Anti-Patterns
-- Inline embedding of content that belongs in reference files
-- Tool list includes tools never referenced in the workflow
-- Missing output format specification (relying on implicit model behavior)
-- No error handling for tool failures or unavailable tools
+| ID | Check | Dim |
+|----|-------|-----|
+| PD-1 | Stable knowledge in `references/`, not inline? | CE |
+| PD-2 | SKILL.md under 500 lines? | CE |
+| PD-3 | Supplementary files loaded on-demand (Read), not pre-loaded? | CE |
+| PD-4 | Subagent isolation used for complex subtasks? | CE |
+| PD-5 | Activation boundaries clear — no unrelated request matching? | Meta |
+| WS-1 | Steps numbered with explicit sequential dependencies? | Clarity |
+| WS-2 | Conditional branches have measurable criteria (not "if needed")? | Clarity |
+| WS-3 | Parallel vs sequential steps explicitly marked? | Clarity |
+| WS-4 | Stop conditions and recovery actions defined? | Safety |
+| RF-1 | Reference files within token budgets? | CE |
+| RF-2 | Each reference file is single-purpose? | CE |
+| RF-3 | No reference content that could be eliminated without capability loss? | CE |
+| AH-1 | `$ARGUMENTS` parsed with validation? | Compl |
+| AH-2 | Defaults defined for missing arguments? | Compl |
+| AH-3 | Error handling for invalid arguments present? | Compl |
+| AH-4 | `argument-hint` accurately describes expected input? | Meta |
+| OF-1 | Output format specified with a literal template or example? | PE |
+| OF-2 | All output sections/fields defined? | Compl |
+| OF-3 | Output format prevents downstream context bloat? | CE |
+| OF-4 | Review skills: findings include `Evidence:` and `Validation:`? | PE |
+| SP-1 | Confirmation gates before destructive/irreversible operations? | Safety |
+| SP-2 | `allowed-tools` matches actual tool usage (least-privilege)? | Safety/Meta |
+| SP-3 | Stop conditions defined for loops or recursive operations? | Safety |
+| AP-1 | No content inlined that belongs in a `references/` file? | CE |
+| AP-2 | No tools in `allowed-tools` unreferenced in the workflow body? | Meta |
+| AP-3 | Output format explicitly specified (not relying on implicit model behavior)? | PE |
+| AP-4 | Error handling present for tool failures or unavailable tools? | Compl |
