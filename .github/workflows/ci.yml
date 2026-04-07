@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Ruff Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: check hooks/
+
+  hooks-validate:
+    name: Validate Hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Python hook scripts
+        run: |
+          failed=0
+          for f in hooks/*.py; do
+            echo "Compiling $f..."
+            python3 -m py_compile "$f" || failed=1
+          done
+          exit $failed
+
+      - name: Validate hooks.json syntax
+        run: python3 -c "import json, pathlib; json.loads(pathlib.Path('hooks/hooks.json').read_text())"
+
+      - name: Verify hooks.json script references exist
+        run: |
+          python3 -c "
+          import json, pathlib, re, sys
+
+          data = json.loads(pathlib.Path('hooks/hooks.json').read_text())
+          errors = []
+          for event, entries in data.get('hooks', {}).items():
+              for entry in entries:
+                  for hook in entry.get('hooks', []):
+                      cmd = hook.get('command', '')
+                      # Extract path after CLAUDE_PLUGIN_ROOT substitution
+                      match = re.search(r'\$\{CLAUDE_PLUGIN_ROOT\}/(.+)', cmd)
+                      if match:
+                          rel_path = match.group(1).split()[0]
+                          if not pathlib.Path(rel_path).exists():
+                              errors.append(f'{event}: referenced file {rel_path!r} not found')
+          if errors:
+              for e in errors:
+                  print(f'ERROR: {e}', file=sys.stderr)
+              sys.exit(1)
+          print('All hook script references valid.')
+          "
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    if: hashFiles('tests/**/*.py') != ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependencies
+        run: pip install pytest pytest-cov
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
