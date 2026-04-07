@@ -64,6 +64,17 @@ jobs:
           print('All hook script references valid.')
           "
 
+  schema-validate:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate frontmatter and hooks.json
+        run: python3 scripts/validate_schema.py
+
   test:
     name: Tests
     runs-on: ubuntu-latest

@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-03
+last_refreshed: 2026-04-07
 ---
 
 # Autonomous Agent Reliability: Frameworks and Failure Taxonomies
@@ -40,11 +40,47 @@ Production agent reliability requires multi-dimensional evaluation beyond accura
 ### Failure Taxonomies
 
 #### Multi-Agent System Failure Taxonomy (MAST)
-**Source:** [arXiv 2503.13657](https://arxiv.org/abs/2503.13657) — "Why Do Multi-Agent LLM Systems Fail?"
+**Source:** [arXiv 2503.13657](https://arxiv.org/abs/2503.13657) — "Why Do Multi-Agent LLM Systems Fail?" (March 2025)
 
 - Introduces **first empirically grounded taxonomy of multi-agent system failures**, providing structured framework for defining, understanding, and annotating failures
-- Analysis of **1600+ annotated traces across 7 popular MAS frameworks** identifies **14 distinct failure modes clustered into 3 categories**
-- Developed through rigorous analysis of 150 traces with **high inter-annotator agreement (kappa = 0.88)**
+- Analysis of **1600+ annotated traces across 7 popular MAS frameworks** (MetaGPT, ChatDev, HyperAgent, AppWorld, AG2) identifies **14 distinct failure modes clustered into 3 categories**
+- Developed through rigorous analysis of 150 traces with **high inter-annotator agreement (kappa = 0.88)**; LLM-as-judge validation achieves 94% accuracy (kappa = 0.77)
+- **State-of-the-art systems show failure rates exceeding 60–75%** across tested frameworks; no single category dominates, indicating diverse failure patterns
+
+**MAST 14 Failure Modes:**
+
+FC1 — Specification and System Design Failures:
+- FM-1.1: Disobey task specification — agents fail to adhere to stated constraints
+- FM-1.2: Disobey role specification — agents overstep defined boundaries
+- FM-1.3: Step repetition — unnecessary reiteration without forward progress
+- FM-1.4: Loss of conversation history — unexpected context truncation reverting to earlier state
+- FM-1.5: Unaware of termination conditions — failure to recognize when interaction should end
+
+FC2 — Inter-Agent Misalignment:
+- FM-2.1: Conversation reset — unwarranted dialogue restart abandoning prior context
+- FM-2.2: Fail to ask for clarification — proceeding without requesting needed information
+- FM-2.3: Task derailment — deviation from intended objective toward unproductive actions
+- FM-2.4: Information withholding — agent possesses relevant data but fails to communicate it
+- FM-2.5: Ignored other agent's input — disregarding peer recommendations
+- FM-2.6: Reasoning-action mismatch — discrepancy between stated reasoning and actual execution
+
+FC3 — Task Verification and Termination:
+- FM-3.1: Premature termination — ending before objectives are achieved
+- FM-3.2: No or incomplete verification — omitting proper outcome validation
+- FM-3.3: Incorrect verification — inadequate cross-checking of critical information
+
+#### AgentCompass Production Error Taxonomy
+**Source:** [arXiv 2509.14647](https://arxiv.org/abs/2509.14647) — "AgentCompass: Towards Reliable Evaluation of Agentic Workflows in Production" (Sept 2025)
+
+- Formal hierarchical taxonomy providing structured ontology for classifying failures in agentic systems; evaluates traces via a four-stage pipeline (error identification → thematic clustering → quantitative scoring → synthesis)
+- Validates framework quality via localization accuracy, categorization F1-scores, and Pearson correlation with human judgments
+
+**AgentCompass 5-Category Error Taxonomy:**
+1. Thinking & Response Issues — hallucinations, misinterpretation of retrieved information, flawed decision-making, output formatting violations
+2. Safety & Security Risks — PII leakage, credential exposure, biased or unsafe content generation
+3. Tool & System Failures — API failures, misconfigurations, rate limits, runtime exceptions
+4. Workflow & Task Gaps — loss of conversational context, goal drift, redundant actions, task orchestration failures
+5. Reflection Gaps — lack of self-correction after error, action without evidence of reasoning (most actionable for rubric checks)
 
 #### Tool Invocation Reliability Framework
 **Source:** [arXiv 2601.16280](https://arxiv.org/abs/2601.16280) — "When Agents Fail to Act: A Diagnostic Framework for Tool Invocation Reliability in Multi-Agent LLM Systems"
@@ -56,14 +92,26 @@ Production agent reliability requires multi-dimensional evaluation beyond accura
 **Source:** [arXiv 2509.25370](https://arxiv.org/abs/2509.25370) — "Where LLM Agents Fail and How They can Learn From Failures"
 
 - Introduces **AgentErrorTaxonomy providing modular classification** spanning memory, reflection, planning, action, and system-level operations
-- Constructs AgentErrorBench dataset of systematically annotated failure trajectories
-- Proposes AgentDebug framework that **isolates root-cause failures and enables agents to recover**
+- Constructs AgentErrorBench dataset of systematically annotated failure trajectories from ALFWorld, GAIA, and WebShop
+- Proposes AgentDebug framework that **isolates root-cause failures and provides corrective feedback**
+
+#### System-Level Failure Mode Taxonomy
+**Source:** [arXiv 2511.19933](https://arxiv.org/abs/2511.19933) — "Failure Modes in LLM Systems: A System-Level Taxonomy for Reliable AI Applications" (Nov 2025)
+
+- Presents **taxonomy of fifteen hidden failure modes** arising in real-world LLM applications, framing them as distinct from traditional ML model failures
+- Named modes include: multi-step reasoning drift, latent inconsistency, context-boundary degradation, incorrect tool invocation, version drift, cost-driven performance collapse (plus 9 additional)
 
 #### Framework-Level Fault Taxonomy
 **Source:** [arXiv 2602.19843](https://arxiv.org/abs/2602.19843) — "MAS-FIRE: Fault Injection and Reliability Evaluation for LLM-Based Multi-Agent Systems"
 
 - Establishes **taxonomy of 15 distinct fault types**, categorized into intra-agent faults and inter-agent faults
 - Provides systematic fault injection methodology for reliability evaluation
+
+#### 11-Layer Failure Stack
+**Source:** [arXiv 2511.05511](https://arxiv.org/abs/2511.05511) — "From Failure Modes to Reliability Awareness in Generative and Agentic AI Systems" (Nov 2025)
+
+- Introduces structured framework for identifying vulnerabilities from hardware/power foundations up through adaptive learning and agentic reasoning
+- Spans infrastructure failures through emergent reasoning failures — relevant for rubric checks that must cover the full stack, not just prompt-level issues
 
 ### Circuit Breakers and Cascade Prevention
 
@@ -239,6 +287,75 @@ Production agent reliability requires multi-dimensional evaluation beyond accura
 **Source:** [Anthropic - Framework for Safe and Trustworthy Agents](https://www.anthropic.com/news/our-framework-for-developing-safe-and-trustworthy-agents)
 
 - **Do not deploy unlogged agents to production**—comprehensive logging is prerequisite for production deployment
+
+## Quality Rubric Checks for Agent Reliability
+
+These checks are derived from the taxonomies and production patterns above. Each maps to at least one empirically-grounded source.
+
+### R1 — Termination Conditions Defined
+Does the agent/skill definition specify explicit stop conditions (step limit, failure threshold, timeout, or success criteria)?
+- Maps to: MAST FM-1.5 (unaware of termination conditions), FM-3.1 (premature termination)
+- Signal: absence of any `max_steps`, timeout, or convergence criterion is a High finding
+- Source: arXiv 2503.13657; arXiv 2512.09458
+
+### R2 — Failure Path Specified (Not Just Happy Path)
+Does the definition address what happens on tool error, model failure, or unexpected output?
+- Maps to: AgentCompass Category 3 (Tool & System Failures); production pattern "every tool must have dedicated error handling"
+- Signal: definitions with only success-case flows score Low on this check
+- Source: arXiv 2509.14647; n8n production guide
+
+### R3 — Retry / Backoff Strategy Present
+Is retry behavior explicitly bounded (max retries, backoff interval)? Unbounded retry = retry storm risk.
+- Maps to: circuit breaker pattern; exponential backoff with jitter reduces retry storms 60–80%
+- Signal: missing retry bounds or infinite loop risk is a Medium finding
+- Source: Fast.io retry patterns (Tier 2); Google Cloud Vertex AI retry strategy (Tier 1)
+
+### R4 — Escalation / Human-in-the-Loop Defined
+Does the definition specify what triggers human escalation or agent halt?
+- Maps to: MAST FM-3.1/3.2; AgentCompass Reflection Gaps; production pattern HITL for high-privilege ops
+- Signal: high-autonomy agents with no escalation path are a High finding for safety-adjacent work
+- Source: arXiv 2602.16666; Partnership on AI real-time failure detection (Tier 2); Anthropic framework
+
+### R5 — State Validation / Checkpointing Mentioned
+Does the definition include state consistency checks between steps, or specify checkpointing?
+- Maps to: UiPath "state corruption is a silent killer" pattern; ReliabilityBench chaos engineering results
+- Signal: multi-step agents (>3 steps) with no state validation are a Medium finding
+- Source: arXiv 2601.06112; UiPath Agent Builder Best Practices (Tier 2)
+
+### R6 — Verification Step Included
+Does the agent verify task outcomes before declaring completion (not just check for absence of error)?
+- Maps to: MAST FM-3.2 (no or incomplete verification), FM-3.3 (incorrect verification)
+- Signal: agents that self-report success without output validation are a Medium finding
+- Source: arXiv 2503.13657
+
+### R7 — Reasoning-Action Consistency Required
+Does the definition require or enforce that the agent's stated plan matches its executed actions?
+- Maps to: MAST FM-2.6 (reasoning-action mismatch); AgentCompass Reflection Gaps
+- Signal: agents with no reflection or self-review step are weaker on this dimension
+- Source: arXiv 2503.13657; arXiv 2509.14647
+
+### R8 — Scope / Role Boundaries Stated
+Are the agent's responsibilities and authority limits explicitly defined?
+- Maps to: MAST FM-1.2 (disobey role specification); MAST FM-2.3 (task derailment)
+- Signal: agents with open-ended "do whatever is needed" instructions lack boundary definition
+- Source: arXiv 2503.13657
+
+### R9 — Safety / PII / Credential Scope Addressed
+Does the definition explicitly exclude unsafe outputs, credential handling, or data leakage paths?
+- Maps to: AgentCompass Category 2 (Safety & Security Risks); adversarial robustness benchmarks
+- Signal: agents with tool access to secrets/credentials that lack explicit safety constraints are a High finding
+- Source: arXiv 2509.14647; arXiv 2508.16481 (adversarial robustness)
+
+### R10 — Observability Hooks Specified
+Does the definition require logging of inputs, tool calls, and outputs (not just final result)?
+- Maps to: production pattern "do not deploy unlogged agents"; Azure Agent Observability Best Practices
+- Signal: no mention of tracing, logging, or audit trail is a Low-Medium finding for production-facing agents
+- Source: Microsoft Azure observability guidance (Tier 2); Anthropic framework (Tier 1)
+
+**Severity mapping (for rubric grading):**
+- High findings: R1 (missing termination), R4 (no escalation on high-autonomy), R9 (unsafe scope)
+- Medium findings: R2 (no failure path), R3 (unbounded retry), R5 (no state validation), R6 (no verification), R8 (no role bounds)
+- Low findings: R7 (no reflection), R10 (no observability hooks)
 
 ## Research-Level Implication
 
