@@ -22,6 +22,7 @@ This is the authoritative maintainer command inventory for the repo.
 - `/review-agent <path>` - single agent review
 - `/review-rule <path>` - single rule review
 - `/review-hook <path>` - single hook review (hooks.json + Python scripts)
+- `/review-claude-md <path>` - single CLAUDE.md quality review
 - `/suggest-skills [folder]` - heuristic skill discovery
 - `/audit-repo [folder]` - repo-structure audit for Claude Code primitives
 
@@ -31,6 +32,7 @@ This is the authoritative maintainer command inventory for the repo.
 - `/apply-skill-review-findings [report]`
 - `/apply-agent-review-findings [report]`
 - `/apply-rule-review-findings [report]`
+- `/apply-claude-md-review-findings [report]`
 - `/apply-audit-findings [report]` - create primitives recommended by `audit-repo`
 
 ### Maintain
