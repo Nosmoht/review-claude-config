@@ -21,6 +21,7 @@ This is the authoritative maintainer command inventory for the repo.
 - `/review-skill <path>` - single skill review
 - `/review-agent <path>` - single agent review
 - `/review-rule <path>` - single rule review
+- `/review-hook <path>` - single hook review (hooks.json + Python scripts)
 - `/suggest-skills [folder]` - heuristic skill discovery
 - `/audit-repo [folder]` - repo-structure audit for Claude Code primitives
 
