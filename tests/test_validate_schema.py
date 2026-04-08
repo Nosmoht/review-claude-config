@@ -104,6 +104,11 @@ class TestParseFrontmatter:
         assert "last_refreshed" in fm
         assert "description" not in fm
 
+    def test_dashes_with_extra_chars(self, md_file):
+        # starts with "---" but first line is not exactly "---" (e.g. "---yaml")
+        p = md_file("---yaml\nname: test\n---\n")
+        assert parse_frontmatter(p) is None
+
     def test_nonexistent_file(self, tmp_path):
         assert parse_frontmatter(tmp_path / "nope.md") is None
 
@@ -146,6 +151,13 @@ class TestValidateSkillFiles:
         monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
         assert validate_skill_files() == []
 
+    def test_missing_frontmatter_error(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        (tmp_path / "skills" / "x").mkdir(parents=True)
+        (tmp_path / "skills" / "x" / "SKILL.md").write_text("# No frontmatter\n")
+        errors = validate_skill_files()
+        assert any("missing YAML frontmatter" in e for e in errors)
+
     def test_block_scalar_description_accepted(self, tmp_path, monkeypatch):
         """SKILL.md with description: > block scalar passes validation."""
         monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
@@ -179,6 +191,14 @@ class TestValidateReferenceFiles:
         errors = validate_reference_files()
         assert len(errors) == 1
         assert "No reference files found" in errors[0]
+
+    def test_missing_frontmatter_error(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        d = tmp_path / "skills" / "review-claude-config" / "references"
+        d.mkdir(parents=True)
+        (d / "no-fm.md").write_text("# No frontmatter\n")
+        errors = validate_reference_files()
+        assert any("missing YAML frontmatter" in e for e in errors)
 
     def test_does_not_recurse_into_domain_cache(self, tmp_path, monkeypatch):
         """domain-cache/*.md files are not picked up by validate_reference_files."""
@@ -252,6 +272,23 @@ class TestValidateDomainCacheFiles:
     def test_no_cache_dir(self, tmp_path, monkeypatch):
         monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
         assert validate_domain_cache_files() == []
+
+    def test_missing_frontmatter_error(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        cache = tmp_path / "skills" / "review-claude-config" / "references" / "domain-cache"
+        cache.mkdir(parents=True)
+        (cache / "no-fm.md").write_text("# No frontmatter\n")
+        errors = validate_domain_cache_files()
+        assert any("missing YAML frontmatter" in e for e in errors)
+
+    def test_missing_last_refreshed_only(self, tmp_path, monkeypatch):
+        """domain field present but last_refreshed missing — covers L143."""
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        cache = tmp_path / "skills" / "review-claude-config" / "references" / "domain-cache"
+        cache.mkdir(parents=True)
+        (cache / "no-date.md").write_text("---\ndomain: cilium\n---\n")
+        errors = validate_domain_cache_files()
+        assert any("last_refreshed" in e for e in errors)
 
 
 class TestValidateHooksJson:
