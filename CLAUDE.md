@@ -52,6 +52,14 @@ This is the authoritative maintainer command inventory for the repo.
 - `/scaffold-rule <rule-name>`
 - `/develop-hooks [hook-type] <hook-name>`
 
+## Issue Tracking
+
+This repo is managed on GitHub at **Nosmoht/review-claude-config**.
+
+- All open issues and tasks are tracked at https://github.com/Nosmoht/review-claude-config/issues
+- When a bug, improvement, or open question is found during work, create a GitHub issue immediately (use `gh issue create` or the `mcp__github__issue_write` tool)
+- Before starting new work, check open issues first to avoid duplicates and to pick up pending items
+
 ## Working Guidelines
 
 - **Every claim needs a source.** All research files, documentation, and recommendations must link to verifiable sources.
@@ -110,6 +118,9 @@ This is the authoritative maintainer command inventory for the repo.
 - [Change Discipline Workflow Research](research/change-discipline/change-discipline-workflow-research.md) — multi-perspective review, LLM self-review blindspots
 - [Autonomous Agent Reliability: Frameworks and Failure Taxonomies](research/autonomous-agent-reliability/autonomous-agent-reliability.md) — circuit breakers, idempotency, progressive fallback, bounded execution
 - [Agent Definition Quality Benchmarks](research/agent-definition-quality/agent-definition-quality-benchmarks.md) — proxy evaluation dimensions for design-time agent quality
+- [Multi-Primitive Dependency Integrity](research/multi-primitive-dependencies/multi-primitive-dependency-integrity.md) — skill→skill, hook→script, agent→tool dependency types and silent failure modes
+- [Instruction Following at Scale](research/instruction-following/instruction-following-at-scale.md) — constraint density thresholds, <30% ISR at high load, rubric guidance
+- [Least-Privilege Tool Grants for LLM Agents](research/tool-least-privilege/tool-least-privilege-agents.md) — OWASP LLM06, high-risk tool combinations, Safety dimension upgrade
 
 ## Change Discipline
 
