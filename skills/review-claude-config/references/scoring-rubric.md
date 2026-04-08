@@ -41,6 +41,8 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 - **D**: Multiple tools too broad; stable content inlined; noticeable bloat; OR unmitigated density >6,000 words (near-zero ISR across all models).
 - **F**: Kitchen-sink tool list, all information pre-loaded, no concern for context budget.
 
+> **Model taxonomy note** (IFScale, arXiv:2507.11538): Thresholds above are calibrated for **linear-decay models** (Claude Sonnet class — steady accuracy loss from early density increases). **Reasoning models** (o3, Gemini-2.5-Pro) follow threshold decay and sustain near-perfect adherence through ~150+ instructions — apply a higher B/C boundary when explicitly reviewing skills targeting those models.
+
 ### 5. Goal Alignment (20%)
 - **A**: Has right domain knowledge, tools, and structure; best practices reflected in workflow; findings self-evident to reviewers.
 - **B**: Domain-appropriate structure; one aspect superficially covered.

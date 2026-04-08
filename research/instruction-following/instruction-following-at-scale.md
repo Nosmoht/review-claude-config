@@ -120,7 +120,7 @@ Apply these thresholds when reviewing CLAUDE.md files, rules, and skill bodies f
 |-------|-----------|--------|
 | CLAUDE.md line count | > 300 lines | Warn; recommend pruning to universally applicable rules only |
 | CLAUDE.md line count | > 500 lines | Flag as High finding; instruction density likely exceeds reliable adherence range |
-| Constraint count per rule file | > 15 constraints | Warn; approaching AgentIF's avg 11.9-constraint zone where ISR drops to <30% |
+| Constraint count per rule file | > 10 constraints | Warn; in AgentIF's avg 11.9-constraint zone where ISR drops to <30%; potential Grade C in scoring rubric if unmitigated |
 | Total stacked instruction count (CLAUDE.md + all rules + all skills active simultaneously) | > 100 net new instructions above base ~50 | Warn |
 | Total stacked instruction count | > 150 net new instructions above base ~50 | Flag as High finding; in exponential-decay territory for non-reasoning models |
 | Instruction length (single rule or skill body) | > 1,000 words | Warn; AgentIF shows ~40% success at this length |
