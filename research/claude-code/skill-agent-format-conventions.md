@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-04
+last_refreshed: 2026-04-08
 ---
 
 # Claude Code Skill and Agent Format Conventions
@@ -97,10 +97,21 @@ tools:                              # Optional: array form (prefer for multi-too
   - Read
   - Glob
 allowed-tools: Read, Glob           # Optional: inline form (use for 1-2 tools)
+maxTurns: 10                        # Optional: max conversation turns (runaway prevention)
+background: true                    # Optional: run as background agent
+isolation: worktree                 # Optional: worktree isolation for background agents
+memory: user                        # Optional: persistence scope (user/project/local)
+initialPrompt: "..."                # Optional: structured initial context injected at start
+mcpServers:                         # Optional: additional MCP server access
+  - server-name
+skills:                             # Optional: skills available to the agent
+  - skill-name
 ---
 ```
 
 Use `tools` (array) or `allowed-tools` (inline string) — not both. Omit to allow all tools.
+
+> **Agent-exclusive fields** ([source](https://docs.anthropic.com/en/docs/claude-code/sub-agents)): `maxTurns` prevents runaway agents. `background: true` + `isolation: worktree` recommended for long-running background tasks. `mcpServers` and `skills` expand attack surface — apply least-privilege. Plugin agents (installed via `--plugin-dir`) cannot use `mcpServers` or `permissionMode`. `skills` injects full skill content into subagent context at startup (token cost). Subagent nesting is prohibited.
 
 ### Example Block Placement
 

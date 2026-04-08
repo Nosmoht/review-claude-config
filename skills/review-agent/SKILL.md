@@ -16,7 +16,7 @@ Evaluate a single Claude Code agent for quality across 7 evidence-based dimensio
 ## Argument Handling
 
 - `$ARGUMENTS` is the path to an agent .md file.
-- Validate the file exists. Agents are single-file, typically in `.claude/agents/` or an `agents/` directory, with optional frontmatter containing `model`, `tools`, or `description`.
+- Validate the file exists. Agents are single-file, typically in `.claude/agents/` or an `agents/` directory, with optional frontmatter containing `model`, `tools`, `description`, and agent-exclusive fields (`maxTurns`, `background`, `isolation`, `memory`, `initialPrompt`, `mcpServers`, `skills`).
 - If the file does not look like an agent (e.g., it's a SKILL.md or rule), report the error and stop.
 
 ## Mode Detection
@@ -81,7 +81,7 @@ Score using the rubric as the PRIMARY basis. The agent evaluation guide provides
 
 **Scoring procedure:**
 
-1. Work through the full checklist in `references/agent-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item (ID MS-1 through DA-5).
+1. Work through the full checklist in `references/agent-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item in the checklist.
 2. **Completeness gate:** Before producing the certificate, verify:
    - Every checklist item has a verdict (no blanks).
    - Every dimension has at least one non-NA item.
