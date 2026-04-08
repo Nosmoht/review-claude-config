@@ -58,6 +58,8 @@ Use Glob to find the files if the path is not immediately known: `**/review-clau
 Read the type-specific evaluation guide from this skill's own directory:
 - `references/skill-evaluation-guide.md`
 
+When the skill declares Write, Bash, Edit, or MCP tools in `allowed-tools`: also read `**/review-claude-config/references/tool-grant-decision-tree.md` for archetype alignment and high-risk combination evaluation (SP-2, SP-4).
+
 ## Phase 2 — Evaluation
 
 ### Step A: Goal Inference + Domain Research

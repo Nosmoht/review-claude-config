@@ -20,7 +20,8 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | TC-2 | Negative examples present (when NOT to trigger)? | Compl |
 | TC-3 | Agent includes verification criteria or success conditions for its primary output? | Compl |
 | TV-1 | Tool array matches tools actually referenced in the body? | Meta |
-| TV-2 | No unused tools — tool set is minimal (least-privilege)? | Safety |
+| TV-2 | No unused tools — tool set matches task archetype per `tool-grant-decision-tree.md` (least-privilege)? | Safety |
+| TV-3 | High-risk tool combinations (Tier A/B per `tool-grant-decision-tree.md`) justified if present? | Safety |
 | SF-1 | All context self-contained — no external files assumed? | CE |
 | SF-2 | Long body uses headings for structure (not dense prose)? | Clarity |
 | AP-1 | No model over-provisioned for task complexity (e.g., opus for simple routing)? | Meta |

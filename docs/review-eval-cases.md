@@ -73,3 +73,21 @@ Expected review behavior:
 - Includes `Evidence:` tied to exact workflow text showing unchecked dependency calls.
 - Includes `Validation:` that can be checked by inspecting failure scenarios or recursion bounds.
 - Recommends concrete reliability patterns in `Current:`/`Recommended:` format (circuit breakers, progressive fallback, bounded execution with thresholds/timeouts).
+
+
+## Case 8 — Tool Grant Least-Privilege Detection
+
+Artifact: an agent with the following frontmatter:
+```yaml
+tools: [Read, Grep, Glob, Bash, Write, WebFetch]
+```
+And description: "Reads log files and summarizes recurring patterns."
+
+No justification for `Bash`, `Write`, or `WebFetch` anywhere in the body. No `disallowedTools` declared.
+
+Expected review behavior:
+- **TV-3 FAIL**: Surfaces a High finding citing Tier A combinations present without documented justification: `Bash`+`WebFetch` (A1), `Write`+`WebFetch` (A3).
+- **TV-2 FAIL**: Surfaces a Medium finding that the tool set does not match the read-only analyst archetype (`Read, Grep, Glob` expected for a log summarizer).
+- Safety dimension capped at C due to unmitigated Tier A combination.
+- Recommendation includes concrete `Current:`/`Recommended:` blocks reducing tools to `[Read, Grep, Glob]` with justification for what would re-admit each removed tool.
+- **No false positive on Bash** if the agent description explicitly states "runs shell commands to parse binary log formats" — justification present, Tier A flag should not appear.

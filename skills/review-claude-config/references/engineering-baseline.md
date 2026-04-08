@@ -42,7 +42,7 @@ last_refreshed: 2026-04-04
 
 **Reference File Separation** `[Engineering guidance]` — Move stable knowledge into `references/` files and keep the main instruction surface concise. Check: is reusable background knowledge separated from the workflow?
 
-**Tool Set Curation** `[Engineering guidance]` — Give agents the smallest tool set that still lets them complete the task. Least-privilege enforcement is practical: MiniScope achieves it with only 1-6% latency overhead vs. standard tool-calling agents (arXiv:2512.11147). Check: could any tool be removed without reducing required capability?
+**Tool Set Curation** `[Engineering guidance]` — Give agents the smallest tool set that still lets them complete the task. Least-privilege enforcement reduces agent attack success rates by orders of magnitude (Progent, arXiv:2504.11703) with only 1-6% latency overhead (MiniScope, arXiv:2512.11147). Match tools to agent archetype per `tool-grant-decision-tree.md`; Tier A high-risk combinations (Bash+network, Bash+Write, Write+WebFetch) require documented justification. Check: could any tool be removed without reducing required capability? Does any Tier A combination lack documented justification?
 
 **Activation Precision** `[Engineering guidance]` — Describe clearly when a skill or agent should trigger and when it should not. The description is the sole activation signal for auto-dispatch — trigger logic that appears only in the body is invisible to the dispatcher (Anthropic Tier 1, April 2026). Check: would unrelated requests accidentally match this wording? Does the body contradict what the description says about when to activate?
 

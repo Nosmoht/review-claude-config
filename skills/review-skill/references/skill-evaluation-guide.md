@@ -31,7 +31,8 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | OF-3 | Output format prevents downstream context bloat? | CE |
 | OF-4 | Review skills: findings include `Evidence:` and `Validation:`? | PE |
 | SP-1 | Confirmation gates before destructive/irreversible operations? | Safety |
-| SP-2 | `allowed-tools` matches actual tool usage (least-privilege)? | Safety/Meta |
+| SP-2 | `allowed-tools` matches actual tool usage — tools align with task archetype per `tool-grant-decision-tree.md` (least-privilege)? | Safety/Meta |
+| SP-4 | High-risk tool combinations (Tier A/B per `tool-grant-decision-tree.md`) justified if present? | Safety |
 | SP-3 | Stop conditions defined for loops or recursive operations? | Safety |
 | RL-1 | Termination conditions defined (step limit, timeout, or success criteria)? [Agentic only] | Safety |
 | RL-3 | Retry/backoff strategy bounded (not infinite)? [Agentic only] | Safety |

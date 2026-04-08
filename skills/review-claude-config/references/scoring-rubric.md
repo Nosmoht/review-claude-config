@@ -51,9 +51,9 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 - **F**: Goal stated in description but body doesn't support achieving it.
 
 ### 6. Safety (10%; 15% with Write/Bash/Edit)
-- **A**: Least-privilege tool scoping, explicit guardrails for destructive actions, stop conditions, confirmation gates; failure path defined for every external dependency (circuit breakers, progressive fallback); stop condition prevents infinite recursion (bounded execution via failure thresholds, timeouts, or iteration limits).
+- **A**: Least-privilege tool scoping per archetype (`tool-grant-decision-tree.md`), explicit guardrails for destructive actions, stop conditions, confirmation gates; failure path defined for every external dependency; stop condition prevents infinite recursion.
 - **B**: Least-privilege with one exception; gates present; one failure path implicit.
-- **C**: Tools are broader than needed or guardrails are implicit. *if the item could modify/delete user data without explicit confirmation, it's C or below.*
+- **C**: Tools are broader than needed or guardrails are implicit; any unmitigated Tier A high-risk combination (see `tool-grant-decision-tree.md`) caps Safety at C. *if the item could modify/delete user data without explicit confirmation, it's C or below.*
 - **D**: Multiple tools too broad; no gates; some stop conditions missing.
 - **F**: Unrestricted tools with no guardrails. No stop conditions.
 

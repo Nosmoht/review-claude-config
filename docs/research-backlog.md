@@ -11,7 +11,7 @@ Each item includes: the gap, why it matters (observed failure mode), what to res
 | 1 | Autonomous agent reliability | DONE | `research/autonomous-agent-reliability/` | Safety, Completeness |
 | 2 | Multi-primitive dependency integrity | TODO | `research/multi-primitive-dependencies/` | Completeness, audit-repo |
 | 3 | Instruction following under rule load | TODO | `research/instruction-following-at-scale/` | Rule-specific scoring |
-| 4 | Least-privilege tool grants | TODO | `research/agent-tool-least-privilege/` | Safety dimension |
+| 4 | Least-privilege tool grants | DONE | `research/tool-least-privilege/` | Safety dimension, baseline Tool Set Curation |
 | 5 | Low-evidence baseline refresh | PARTIAL | (updates existing research files) | Baseline evidence classes |
 | 6 | Agent definition quality benchmarks | DONE | `research/agent-definition-quality/` | Agent checklist (+3 items), baseline (2 updates), review-agent SKILL.md |
 
