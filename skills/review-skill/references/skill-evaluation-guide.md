@@ -1,7 +1,7 @@
 ---
 name: skill-evaluation-guide
 description: Type-specific evaluation criteria for Claude Code skills (SKILL.md files)
-last_refreshed: 2026-04-06
+last_refreshed: 2026-04-08
 ---
 
 # Skill Evaluation Checklist
@@ -33,6 +33,10 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | SP-1 | Confirmation gates before destructive/irreversible operations? | Safety |
 | SP-2 | `allowed-tools` matches actual tool usage (least-privilege)? | Safety/Meta |
 | SP-3 | Stop conditions defined for loops or recursive operations? | Safety |
+| RL-1 | Termination conditions defined (step limit, timeout, or success criteria)? [Agentic only] | Safety |
+| RL-3 | Retry/backoff strategy bounded (not infinite)? [Agentic only] | Safety |
+| RL-4 | Escalation / HITL trigger defined for high-autonomy operations? [Agentic only] | Safety |
+| RL-9 | Safety/PII/credential scope constraints present? [Agentic only] | Safety |
 | AP-1 | No content inlined that belongs in a `references/` file? | CE |
 | AP-2 | No tools in `allowed-tools` unreferenced in the workflow body? | Meta |
 | AP-3 | Output format explicitly specified (not relying on implicit model behavior)? | PE |

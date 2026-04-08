@@ -1,7 +1,7 @@
 ---
 name: agent-evaluation-guide
 description: Type-specific evaluation criteria for Claude Code agents (single-file .md in agents/ directory)
-last_refreshed: 2026-04-06
+last_refreshed: 2026-04-08
 ---
 
 # Agent Evaluation Checklist
@@ -27,3 +27,13 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | AP-2 | No tools copied from another agent without pruning unused ones? | Safety |
 | AP-3 | `disable-model-invocation: true` present if user-only invocation is appropriate? | Meta |
 | AP-4 | Agent avoids aggressive imperative language (MUST/CRITICAL/ALWAYS) where natural phrasing suffices? Safety/guardrail sections exempted. | PE |
+| RL-1 | Termination conditions defined (step limit, timeout, or success criteria)? | Safety |
+| RL-2 | Failure paths specified, not just happy path? | Compl |
+| RL-3 | Retry/backoff strategy bounded (not infinite)? | Safety |
+| RL-4 | Escalation / HITL trigger defined for high-autonomy operations? | Safety |
+| RL-5 | State validation or checkpointing for multi-step workflows? | Compl |
+| RL-6 | Verification step before declaring success? | Compl |
+| RL-7 | Reasoning-action consistency enforced in workflow? | Clarity |
+| RL-8 | Role/scope boundaries explicitly stated? | Safety |
+| RL-9 | Safety/PII/credential scope constraints present? | Safety |
+| RL-10 | Observability hooks or logging specified? | Compl |

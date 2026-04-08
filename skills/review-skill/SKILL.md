@@ -118,6 +118,8 @@ Calculate overall grade:
 
 **Safety B vs C:** B restricts tools to what's needed and includes a confirmation gate before writes. C has tools broader than needed (e.g., Bash when only Read is required) or could modify user files without explicit confirmation.
 
+**Safety B vs C (agentic skills):** B addresses all High reliability checks (R1 termination, R4 escalation, R9 safety scope). C is missing any High reliability check — regardless of other Safety criteria.
+
 [If WebSearch was unavailable, add: "Goal Alignment scored without web verification."]
 
 ### Strengths
