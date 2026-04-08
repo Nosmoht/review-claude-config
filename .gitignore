@@ -8,3 +8,13 @@
 .worktrees/
 .security-key
 logs/security/
+__pycache__
+*.pyc
+
+# Python project artifacts
+.venv/
+.coverage
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/

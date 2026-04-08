@@ -83,9 +83,7 @@ def main():
     messages = []
 
     # --- Stale reference file check ---
-    refs_dir = os.path.join(
-        plugin_root, "skills", "review-claude-config", "references"
-    )
+    refs_dir = os.path.join(plugin_root, "skills", "review-claude-config", "references")
     stale = _check_stale_references(refs_dir, today)
     if stale:
         path, date_str, age = stale
@@ -104,12 +102,16 @@ def main():
         messages.append(corpus_msg)
 
     if messages:
-        print(json.dumps({
-            "hookSpecificOutput": {
-                "hookEventName": "SessionStart",
-                "additionalContext": " | ".join(messages),
-            }
-        }))
+        print(
+            json.dumps(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": "SessionStart",
+                        "additionalContext": " | ".join(messages),
+                    }
+                }
+            )
+        )
         return
 
     print("{}")

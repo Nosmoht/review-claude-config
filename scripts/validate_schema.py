@@ -87,10 +87,7 @@ def validate_reference_files() -> list[str]:
 def validate_skill_files() -> list[str]:
     """Validate skills/*/SKILL.md and .claude/skills/*/SKILL.md files."""
     errors = []
-    paths = sorted(
-        list(REPO_ROOT.glob("skills/*/SKILL.md"))
-        + list(REPO_ROOT.glob(".claude/skills/*/SKILL.md"))
-    )
+    paths = sorted(list(REPO_ROOT.glob("skills/*/SKILL.md")) + list(REPO_ROOT.glob(".claude/skills/*/SKILL.md")))
     for path in paths:
         fm = parse_frontmatter(path)
         if fm is None:
