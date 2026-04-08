@@ -11,12 +11,16 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import validate_schema
 from validate_schema import (
+    DATE_RE,
     parse_frontmatter,
     validate_date,
+    validate_domain_cache_files,
+    validate_hooks_json,
     validate_reference_files,
+    validate_research_files,
     validate_skill_files,
-    DATE_RE,
 )
+from validate_schema import main as validate_main
 
 
 @pytest.fixture
@@ -92,6 +96,14 @@ class TestParseFrontmatter:
         # block scalar description is intentionally skipped (>) in simple parser
         assert "description" not in fm
 
+    def test_pipe_block_scalar_skipped(self, md_file):
+        p = md_file("---\nname: test\ndescription: |\n  literal\n  block\nlast_refreshed: 2026-01-01\n---\n")
+        fm = parse_frontmatter(p)
+        assert fm is not None
+        assert "name" in fm
+        assert "last_refreshed" in fm
+        assert "description" not in fm
+
     def test_nonexistent_file(self, tmp_path):
         assert parse_frontmatter(tmp_path / "nope.md") is None
 
@@ -134,6 +146,15 @@ class TestValidateSkillFiles:
         monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
         assert validate_skill_files() == []
 
+    def test_block_scalar_description_accepted(self, tmp_path, monkeypatch):
+        """SKILL.md with description: > block scalar passes validation."""
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        (tmp_path / "skills" / "x").mkdir(parents=True)
+        (tmp_path / "skills" / "x" / "SKILL.md").write_text(
+            "---\nname: x\ndescription: >\n  A multi-line description.\n---\n"
+        )
+        assert validate_skill_files() == []
+
 
 class TestValidateReferenceFiles:
     def test_covers_multiple_skill_dirs(self, tmp_path, monkeypatch):
@@ -173,3 +194,139 @@ class TestValidateReferenceFiles:
         (cache / "cilium.md").write_text("---\ndomain: cilium\nlast_refreshed: 2026-01-01\n---\n")
         errors = validate_reference_files()
         assert errors == []
+
+
+class TestValidateResearchFiles:
+    def test_valid_research_files(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        (tmp_path / "research" / "topic").mkdir(parents=True)
+        (tmp_path / "research" / "topic" / "paper.md").write_text(
+            "---\nlast_refreshed: 2026-01-01\n---\n# Content\n"
+        )
+        assert validate_research_files() == []
+
+    def test_missing_last_refreshed(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        (tmp_path / "research" / "topic").mkdir(parents=True)
+        (tmp_path / "research" / "topic" / "paper.md").write_text(
+            "---\nname: paper\n---\n# Content\n"
+        )
+        errors = validate_research_files()
+        assert any("last_refreshed" in e for e in errors)
+
+    def test_no_research_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        assert validate_research_files() == []
+
+    def test_missing_frontmatter(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        (tmp_path / "research" / "topic").mkdir(parents=True)
+        (tmp_path / "research" / "topic" / "no-fm.md").write_text("# No frontmatter\n")
+        errors = validate_research_files()
+        assert any("missing YAML frontmatter" in e for e in errors)
+
+
+class TestValidateDomainCacheFiles:
+    def test_valid_cache_files(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        cache = tmp_path / "skills" / "review-claude-config" / "references" / "domain-cache"
+        cache.mkdir(parents=True)
+        (cache / "cilium.md").write_text("---\ndomain: cilium\nlast_refreshed: 2026-01-01\n---\n")
+        assert validate_domain_cache_files() == []
+
+    def test_missing_domain_field(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        cache = tmp_path / "skills" / "review-claude-config" / "references" / "domain-cache"
+        cache.mkdir(parents=True)
+        (cache / "missing-domain.md").write_text("---\nlast_refreshed: 2026-01-01\n---\n")
+        errors = validate_domain_cache_files()
+        assert any("domain" in e for e in errors)
+
+    def test_index_md_skipped(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        cache = tmp_path / "skills" / "review-claude-config" / "references" / "domain-cache"
+        cache.mkdir(parents=True)
+        (cache / "INDEX.md").write_text("# Index — no frontmatter needed\n")
+        assert validate_domain_cache_files() == []
+
+    def test_no_cache_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        assert validate_domain_cache_files() == []
+
+
+class TestValidateHooksJson:
+    def test_valid_hooks_json(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        hooks_dir = tmp_path / "hooks"
+        hooks_dir.mkdir()
+        (hooks_dir / "my_script.py").write_text("# script\n")
+        data = {
+            "hooks": {
+                "SessionStart": [
+                    {"hooks": [{"command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/my_script.py"}]}
+                ]
+            }
+        }
+        (hooks_dir / "hooks.json").write_text(json.dumps(data))
+        assert validate_hooks_json() == []
+
+    def test_invalid_json(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        hooks_dir = tmp_path / "hooks"
+        hooks_dir.mkdir()
+        (hooks_dir / "hooks.json").write_text("not valid json{")
+        errors = validate_hooks_json()
+        assert any("invalid JSON" in e for e in errors)
+
+    def test_missing_script_reference(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        hooks_dir = tmp_path / "hooks"
+        hooks_dir.mkdir()
+        data = {
+            "hooks": {
+                "PreToolUse": [
+                    {"hooks": [{"command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/nonexistent.py"}]}
+                ]
+            }
+        }
+        (hooks_dir / "hooks.json").write_text(json.dumps(data))
+        errors = validate_hooks_json()
+        assert any("nonexistent.py" in e for e in errors)
+
+    def test_missing_hooks_json(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        errors = validate_hooks_json()
+        assert any("not found" in e or "file not found" in e.lower() for e in errors)
+
+
+class TestValidateMain:
+    def _setup_valid_repo(self, tmp_path):
+        """Create minimal valid structure for all validators to pass."""
+        # Reference files
+        refs = tmp_path / "skills" / "review-claude-config" / "references"
+        refs.mkdir(parents=True)
+        (refs / "ref.md").write_text(
+            "---\nname: r\ndescription: d\nlast_refreshed: 2026-01-01\n---\n"
+        )
+        # Hooks json (no script refs to resolve)
+        hooks_dir = tmp_path / "hooks"
+        hooks_dir.mkdir()
+        (hooks_dir / "hooks.json").write_text('{"hooks": {}}')
+
+    def test_all_valid_returns_zero(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        self._setup_valid_repo(tmp_path)
+        result = validate_main()
+        assert result == 0
+        assert "All validations passed" in capsys.readouterr().out
+
+    def test_errors_return_one(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        # No reference files → validate_reference_files returns an error
+        hooks_dir = tmp_path / "hooks"
+        hooks_dir.mkdir()
+        (hooks_dir / "hooks.json").write_text('{"hooks": {}}')
+        result = validate_main()
+        assert result == 1
+        output = capsys.readouterr().out
+        assert "error" in output.lower()

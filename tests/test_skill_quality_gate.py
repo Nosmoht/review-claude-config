@@ -123,3 +123,29 @@ class TestMain:
 
         main()
         assert capsys.readouterr().out.strip() == "{}"
+
+    def test_missing_tool_input_key(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+        input_data = json.dumps({"other": "data"})
+        monkeypatch.setattr("sys.stdin", __import__("io").StringIO(input_data))
+
+        main()
+        assert capsys.readouterr().out.strip() == "{}"
+
+    def test_missing_guidelines_file(self, tmp_path, monkeypatch):
+        # hooks/guidelines.md does not exist — main() raises FileNotFoundError
+        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+        input_data = json.dumps({
+            "tool_input": {"file_path": "/workspace/project/skills/my-skill/SKILL.md"}
+        })
+        monkeypatch.setattr("sys.stdin", __import__("io").StringIO(input_data))
+
+        with pytest.raises(FileNotFoundError):
+            main()
+
+    def test_malformed_json_stdin(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+        monkeypatch.setattr("sys.stdin", __import__("io").StringIO("not valid json{"))
+
+        with pytest.raises(json.JSONDecodeError):
+            main()

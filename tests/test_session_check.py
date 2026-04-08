@@ -11,7 +11,7 @@ import pytest
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hooks"))
-from session_check import _parse_last_refreshed, main
+from session_check import _check_research_corpus, _check_stale_references, _parse_last_refreshed, main
 
 
 @pytest.fixture
@@ -87,6 +87,61 @@ class TestParseLastRefreshed:
         date, date_str = _parse_last_refreshed(path)
         # fromisoformat may or may not handle trailing space; verify graceful behavior
         assert date is None or date == datetime.date(2026, 1, 10)
+
+
+class TestCheckStaleReferences:
+    def test_boundary_90_days_not_stale(self, tmp_path):
+        refs_dir = tmp_path / "refs"
+        refs_dir.mkdir()
+        date_90 = (datetime.date.today() - datetime.timedelta(days=90)).isoformat()
+        (refs_dir / "old.md").write_text(f"---\nlast_refreshed: {date_90}\n---\n")
+        result = _check_stale_references(str(refs_dir), datetime.date.today())
+        assert result is None
+
+    def test_boundary_91_days_stale(self, tmp_path):
+        refs_dir = tmp_path / "refs"
+        refs_dir.mkdir()
+        date_91 = (datetime.date.today() - datetime.timedelta(days=91)).isoformat()
+        (refs_dir / "stale.md").write_text(f"---\nlast_refreshed: {date_91}\n---\n")
+        result = _check_stale_references(str(refs_dir), datetime.date.today())
+        assert result is not None
+        path, date_str, age = result
+        assert "stale.md" in path
+        assert age == 91
+
+    def test_no_refs_dir(self, tmp_path):
+        nonexistent = str(tmp_path / "does-not-exist")
+        result = _check_stale_references(nonexistent, datetime.date.today())
+        assert result is None
+
+    def test_files_without_frontmatter(self, tmp_path):
+        refs_dir = tmp_path / "refs"
+        refs_dir.mkdir()
+        (refs_dir / "no-date.md").write_text("# No frontmatter here\n")
+        (refs_dir / "no-field.md").write_text("---\nname: test\n---\n")
+        result = _check_stale_references(str(refs_dir), datetime.date.today())
+        assert result is None
+
+
+class TestCheckResearchCorpus:
+    def test_corpus_with_nested_files(self, tmp_path):
+        (tmp_path / "research" / "topic-a").mkdir(parents=True)
+        (tmp_path / "research" / "topic-b").mkdir(parents=True)
+        (tmp_path / "research" / "topic-a" / "file1.md").write_text("# File 1\n")
+        (tmp_path / "research" / "topic-b" / "file2.md").write_text("# File 2\n")
+        result = _check_research_corpus(str(tmp_path))
+        assert result is not None
+        assert "2" in result
+        assert "Research corpus" in result
+
+    def test_no_research_dir(self, tmp_path):
+        result = _check_research_corpus(str(tmp_path))
+        assert result is None
+
+    def test_empty_research_dir(self, tmp_path):
+        (tmp_path / "research").mkdir()
+        result = _check_research_corpus(str(tmp_path))
+        assert result is None
 
 
 class TestMain:
@@ -168,3 +223,20 @@ class TestMain:
         monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
         main()
         assert capsys.readouterr().out.strip() == "{}"
+
+    def test_combined_stale_and_corpus(self, tmp_path, monkeypatch, capsys):
+        refs_dir = tmp_path / "skills" / "review-claude-config" / "references"
+        refs_dir.mkdir(parents=True)
+        stale_date = (datetime.date.today() - datetime.timedelta(days=120)).isoformat()
+        (refs_dir / "old-ref.md").write_text(f"---\nlast_refreshed: {stale_date}\n---\n")
+
+        (tmp_path / "research" / "topic").mkdir(parents=True)
+        (tmp_path / "research" / "topic" / "paper.md").write_text("# Paper\n")
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+        main()
+        output = json.loads(capsys.readouterr().out.strip())
+        ctx = output["hookSpecificOutput"]["additionalContext"]
+        assert " | " in ctx
+        assert "old-ref.md" in ctx
+        assert "Research corpus" in ctx

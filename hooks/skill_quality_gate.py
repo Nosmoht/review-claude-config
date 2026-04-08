@@ -34,7 +34,7 @@ def main():
     print(json.dumps({"systemMessage": guidelines}))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     try:
         main()
     except Exception as e:
