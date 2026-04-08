@@ -121,6 +121,7 @@ This repo is managed on GitHub at **Nosmoht/review-claude-config**.
 - [Multi-Primitive Dependency Integrity](research/multi-primitive-dependencies/multi-primitive-dependency-integrity.md) — skill→skill, hook→script, agent→tool dependency types and silent failure modes
 - [Instruction Following at Scale](research/instruction-following/instruction-following-at-scale.md) — constraint density thresholds, <30% ISR at high load, rubric guidance
 - [Least-Privilege Tool Grants for LLM Agents](research/tool-least-privilege/tool-least-privilege-agents.md) — OWASP LLM06, high-risk tool combinations, Safety dimension upgrade
+- [Selective Context Injection Patterns](research/selective-context-injection/selective-context-injection-patterns.md) — CAG vs RAG decision boundary, progressive disclosure convergence, description quality as routing bottleneck, LLMLingua-2 compression
 
 ## Change Discipline
 
