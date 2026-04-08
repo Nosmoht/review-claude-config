@@ -65,13 +65,13 @@ def validate_date(value: str, path: pathlib.Path, field: str) -> list[str]:
 
 
 def validate_reference_files() -> list[str]:
-    """Validate skills/review-claude-config/references/*.md files."""
+    """Validate skills/*/references/*.md files."""
     errors = []
-    refs_dir = REPO_ROOT / "skills" / "review-claude-config" / "references"
-    if not refs_dir.exists():
-        return [f"{refs_dir}: directory not found"]
+    paths = sorted(REPO_ROOT.glob("skills/*/references/*.md"))
+    if not paths:
+        return ["No reference files found under skills/*/references/"]
 
-    for path in sorted(refs_dir.glob("*.md")):
+    for path in paths:
         fm = parse_frontmatter(path)
         if fm is None:
             errors.append(f"{path}: missing YAML frontmatter")
@@ -85,9 +85,13 @@ def validate_reference_files() -> list[str]:
 
 
 def validate_skill_files() -> list[str]:
-    """Validate skills/*/SKILL.md files."""
+    """Validate skills/*/SKILL.md and .claude/skills/*/SKILL.md files."""
     errors = []
-    for path in sorted(REPO_ROOT.glob("skills/*/SKILL.md")):
+    paths = sorted(
+        list(REPO_ROOT.glob("skills/*/SKILL.md"))
+        + list(REPO_ROOT.glob(".claude/skills/*/SKILL.md"))
+    )
+    for path in paths:
         fm = parse_frontmatter(path)
         if fm is None:
             errors.append(f"{path}: missing YAML frontmatter")

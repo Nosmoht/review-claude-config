@@ -9,7 +9,14 @@ import sys
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
-from validate_schema import parse_frontmatter, validate_date, DATE_RE
+import validate_schema
+from validate_schema import (
+    parse_frontmatter,
+    validate_date,
+    validate_reference_files,
+    validate_skill_files,
+    DATE_RE,
+)
 
 
 @pytest.fixture
@@ -93,3 +100,76 @@ class TestParseFrontmatter:
         fm = parse_frontmatter(p)
         assert fm["domain"] == "cilium"
         assert fm["last_refreshed"] == "2026-03-24"
+
+
+class TestValidateSkillFiles:
+    def test_includes_dotclaude_skills(self, tmp_path, monkeypatch):
+        """Maintenance skills under .claude/skills/ are validated."""
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        (tmp_path / "skills" / "a").mkdir(parents=True)
+        (tmp_path / "skills" / "a" / "SKILL.md").write_text(
+            "---\nname: a\ndescription: desc\n---\n"
+        )
+        # Maintenance skill missing required 'name' field
+        (tmp_path / ".claude" / "skills" / "b").mkdir(parents=True)
+        (tmp_path / ".claude" / "skills" / "b" / "SKILL.md").write_text(
+            "---\ndescription: desc\n---\n"
+        )
+        errors = validate_skill_files()
+        assert any(".claude" in e and "name" in e for e in errors)
+
+    def test_valid_skills_no_errors(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        (tmp_path / "skills" / "x").mkdir(parents=True)
+        (tmp_path / "skills" / "x" / "SKILL.md").write_text(
+            "---\nname: x\ndescription: desc\n---\n"
+        )
+        (tmp_path / ".claude" / "skills" / "y").mkdir(parents=True)
+        (tmp_path / ".claude" / "skills" / "y" / "SKILL.md").write_text(
+            "---\nname: y\ndescription: desc\n---\n"
+        )
+        assert validate_skill_files() == []
+
+    def test_empty_repo_no_errors(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        assert validate_skill_files() == []
+
+
+class TestValidateReferenceFiles:
+    def test_covers_multiple_skill_dirs(self, tmp_path, monkeypatch):
+        """Reference files under any skills/*/references/ are validated."""
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        for skill in ("review-claude-config", "check-repo-health"):
+            d = tmp_path / "skills" / skill / "references"
+            d.mkdir(parents=True)
+            (d / "ref.md").write_text(
+                "---\nname: r\ndescription: d\nlast_refreshed: 2026-01-01\n---\n"
+            )
+        # One with missing required fields
+        bad = tmp_path / "skills" / "audit-repo" / "references"
+        bad.mkdir(parents=True)
+        (bad / "bad.md").write_text("---\nname: r\n---\n")
+        errors = validate_reference_files()
+        assert any("audit-repo" in e and "description" in e for e in errors)
+        assert any("audit-repo" in e and "last_refreshed" in e for e in errors)
+
+    def test_no_refs_returns_error(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        errors = validate_reference_files()
+        assert len(errors) == 1
+        assert "No reference files found" in errors[0]
+
+    def test_does_not_recurse_into_domain_cache(self, tmp_path, monkeypatch):
+        """domain-cache/*.md files are not picked up by validate_reference_files."""
+        monkeypatch.setattr(validate_schema, "REPO_ROOT", tmp_path)
+        d = tmp_path / "skills" / "review-claude-config" / "references"
+        d.mkdir(parents=True)
+        (d / "ref.md").write_text(
+            "---\nname: r\ndescription: d\nlast_refreshed: 2026-01-01\n---\n"
+        )
+        # domain-cache file lacks name/description — should NOT trigger reference validator
+        cache = d / "domain-cache"
+        cache.mkdir()
+        (cache / "cilium.md").write_text("---\ndomain: cilium\nlast_refreshed: 2026-01-01\n---\n")
+        errors = validate_reference_files()
+        assert errors == []
