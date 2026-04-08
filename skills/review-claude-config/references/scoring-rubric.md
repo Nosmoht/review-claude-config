@@ -1,7 +1,7 @@
 ---
 name: scoring-rubric
 description: A-F grading criteria for evaluating Claude Code skills, agents, and rules across type-appropriate dimensions
-last_refreshed: 2026-04-03
+last_refreshed: 2026-04-08
 ---
 
 # Scoring Rubric
@@ -35,10 +35,10 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 - **F**: Raw instructions with no prompting techniques. No output format, no examples, no constraints.
 
 ### 4. Context Engineering (15%)
-- **A**: Minimal tool set, JIT retrieval, reference files for stable knowledge, subagent isolation where appropriate, activation precision.
-- **B**: Appropriate tools with one exception; progressive disclosure mostly applied.
-- **C**: Functional but loads unnecessary context or has bloated tool set. *If a human engineer can't immediately say which tool to use for a given situation, it's C or below.*
-- **D**: Multiple tools too broad; stable content inlined; noticeable bloat.
+- **A**: Minimal tool set, JIT retrieval, reference files for stable knowledge, subagent isolation where appropriate, activation precision; instruction density within reliable-adherence range (≤10 distinct constraints, ≤2,000 words, ≤30% conditional constraints) OR high density mitigated via structured sections, priority ordering, or few-shot examples.
+- **B**: Appropriate tools with one exception; progressive disclosure mostly applied; OR instruction density exceeds range (>10 constraints or >2,000 words) but structural mitigations compensate.
+- **C**: Functional but loads unnecessary context or has bloated tool set; OR instruction density exceeds reliable-adherence range without mitigations (>10 distinct constraints or >2,000 words; conditional constraints >30% of body). *If a human engineer can't immediately say which tool to use for a given situation, it's C or below. AgentIF (arXiv:2505.16944): ISR drops to <30% at avg 11.9 constraints; condition constraints fail at 19.1% vs 66.8% for formatting constraints.*
+- **D**: Multiple tools too broad; stable content inlined; noticeable bloat; OR unmitigated density >6,000 words (near-zero ISR across all models).
 - **F**: Kitchen-sink tool list, all information pre-loaded, no concern for context budget.
 
 ### 5. Goal Alignment (20%)
