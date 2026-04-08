@@ -56,9 +56,38 @@ This is the authoritative maintainer command inventory for the repo.
 
 This repo is managed on GitHub at **Nosmoht/review-claude-config**.
 
-- All open issues and tasks are tracked at https://github.com/Nosmoht/review-claude-config/issues
-- When a bug, improvement, or open question is found during work, create a GitHub issue immediately (use `gh issue create` or the `mcp__github__issue_write` tool)
-- Before starting new work, check open issues first to avoid duplicates and to pick up pending items
+### Label Taxonomy
+
+| Prefix | Purpose | Examples |
+|--------|---------|---------|
+| *(none)* | GitHub defaults | `bug`, `enhancement`, `documentation`, `invalid`, `duplicate`, `wontfix`, `question`, `good first issue`, `help wanted` |
+| `priority:` | Urgency (P0=critical → P3=low) | `priority: P0` (#b60205), `priority: P1` (#d93f0b), `priority: P2` (#fbca04), `priority: P3` (#0e8a16) |
+| `status:` | Lifecycle state | `status: in-progress` (#1d76db), `status: in-review` (#5319e7), `status: blocked` (#d93f0b) |
+| `category:` | Domain area | `category: infrastructure`, `category: research`, `category: workflow`, `category: automation`, `category: utility-skills`, `category: primitive-coverage`, `category: eval-cases` |
+
+### Issue Lifecycle
+
+```
+OPEN (new issue)
+  → assign: priority: P*, category: *
+  ↓
+IN PROGRESS  — label: status: in-progress
+  → implement → make validate → commit
+  ↓                          ↓
+IN REVIEW    — label: status: in-review     BLOCKED — label: status: blocked
+  → feedback addressed                       → unblock, return to IN PROGRESS
+  ↓
+CLOSED — remove status label, close via mcp__github__issue_write (state_reason: completed)
+```
+
+### Workflow Rules
+
+- **Before starting work**: check open issues to avoid duplicates — `gh issue list --repo Nosmoht/review-claude-config`
+- **When a bug/improvement is found**: create issue immediately (`gh issue create` or `mcp__github__issue_write`)
+- **When starting work on an issue**: set `status: in-progress` via `mcp__github__issue_write` (method: update, labels: ["status: in-progress", ...existing labels])
+- **When blocked**: replace `status: in-progress` with `status: blocked`; document the blocker in an issue comment
+- **When ready for review** (PR or peer check): replace with `status: in-review`
+- **When closing**: only close when implemented, tested (`make validate`), committed, and docs updated — remove status label, close with state_reason: completed
 
 ## Working Guidelines
 
