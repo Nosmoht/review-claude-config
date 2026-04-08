@@ -70,7 +70,7 @@ Read the type-specific evaluation guide from this skill's own directory:
 2. Domain research (follow orchestration flags if in orchestrated mode):
    - Check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the project type.
    - If `CACHED` (≤90 days): read the cache file as primary domain knowledge.
-   - If `STALE` or `MISS`: perform 1 WebSearch for "Claude Code CLAUDE.md best practices" or the project domain. Fetch the top result if `webfetch_available`.
+   - If `STALE` or `MISS`: perform 1 WebSearch using "Claude Code CLAUDE.md best practices [project-type]" where [project-type] is the one-word project type identified in step 1 (e.g., "Kubernetes", "Python service", "TypeScript app"). Fetch the top result if `webfetch_available`.
    - If unavailable: use model knowledge only, marked `[no external verification]`.
    - Apply source quality criteria: prefer official Anthropic docs (Tier 1).
 3. Synthesize: what should a high-quality CLAUDE.md for this project type include?
@@ -78,9 +78,15 @@ Read the type-specific evaluation guide from this skill's own directory:
 ### Step B: Command Inventory Verification
 
 For every command listed in the CLAUDE.md:
-1. Extract the command path or skill name (e.g., `/review-skill` → `skills/review-skill/SKILL.md`).
-2. Use Glob to verify the file exists relative to the CLAUDE.md's directory.
-3. Mark each command as **VERIFIED** (file found) or **STALE** (file not found or path mismatch).
+1. Classify the command:
+   - **Slash command** (`/name`): resolve to `skills/name/SKILL.md` first,
+     then `.claude/skills/name/SKILL.md` as fallback.
+   - **Shell command** (`make`, `pytest`, `git`, `gh`, `uv`): mark as
+     SHELL — no file resolution; skip Glob check.
+   - **Inline path** (explicit file path): verify the path exists directly.
+2. For slash commands, use Glob to verify the resolved path exists.
+3. Mark each command as **VERIFIED** (file found), **STALE** (file not found
+   or path mismatch), or **SHELL** (non-resolvable shell command, not checked).
 
 Record the verification results — they are required evidence for Goal Alignment scoring.
 
@@ -152,7 +158,7 @@ List the verification results from Step B:
 
 ### Recommendations
 
-Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`. Prefer the `skills/` copy when present; otherwise use the sibling `.claude/skills/` copy. Use that contract's shared recommendation schema below. Keep the CLAUDE.md-specific category vocabulary below.
+Use the recommendation schema below directly (the contract is referenced in shared references loaded in Phase 1 if needed). Keep the CLAUDE.md-specific category vocabulary below.
 
 #### 1. [Title] (Impact: [High/Medium/Low], Category: [Structure|CommandInventory|InstructionQuality|TokenEfficiency|Completeness|Freshness])
 **Evidence:** [Quote or summarize the exact text that caused the issue, with section reference]
