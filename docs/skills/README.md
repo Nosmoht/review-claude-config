@@ -86,4 +86,6 @@ Maintenance Chain (additions):
 
 ## Conventions
 
-**Workflow menus:** Every skill ends with a numbered "What's next?" menu. The user types a number, Claude invokes the corresponding skill. This uses plain text output — not `AskUserQuestion`, which silently auto-completes with empty answers in plugin skills loaded via the Skill tool (known Claude Code bug). Menu is skipped in orchestrated mode and conditionally shown in diagnostic skills (only when issues are found).
+**Workflow menus:** Every skill ends with a "What's next?" menu presented via `AskUserQuestion` (header: `"What's next?"`) with action-oriented option labels. Menu is skipped in orchestrated mode and conditionally shown in diagnostic skills (only when issues are found).
+
+**Confirmation gates:** Write-capable skills confirm destructive or irreversible actions via `AskUserQuestion` before proceeding. Use a contextual header and action-oriented option labels. The recommended option is always listed first with a `(Recommended)` annotation.
