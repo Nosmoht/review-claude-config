@@ -1,6 +1,6 @@
-.PHONY: validate lint format schema-validate test test-cov
+.PHONY: validate lint format schema-validate token-budget test test-cov
 
-validate: lint format schema-validate test
+validate: lint format schema-validate token-budget test
 
 lint:
 	ruff check hooks/ scripts/
@@ -10,6 +10,9 @@ format:
 
 schema-validate:
 	python3 scripts/validate_schema.py
+
+token-budget:
+	python3 scripts/validate_token_budgets.py
 
 test:
 	pytest tests/ -v --tb=short
