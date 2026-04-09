@@ -73,7 +73,7 @@ cp -r .claude/skills/sync-research-index <target>/.claude/skills/
 
 ### Develop
 
-- Skill creation: `/scaffold-skill [plugin|maintenance] <name>`
+- Skill creation: `/scaffold-skill [plugin|maintenance|external <target-path>] <name>`
 - Agent creation: `/scaffold-agent <agent-name>`
 - Rule creation: `/scaffold-rule <rule-name>`
 - Hook development: `/develop-hooks [hook-type] <hook-name>`

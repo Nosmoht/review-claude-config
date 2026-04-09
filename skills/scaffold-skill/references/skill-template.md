@@ -10,7 +10,7 @@ last_refreshed: 2026-04-04
 ---
 name: <skill-name>                        # Required: kebab-case, max 64 chars, no "anthropic"/"claude"
 description: >                            # Required: what it does, trigger keywords; max 1024 chars, no XML tags
-  <multi-line description, max 1024 chars>
+  <verb-first; ≥1 trigger phrase; ≥1 counter-case; max 1024 chars>
 argument-hint: "<hint>"                   # Optional: e.g., [folder], <file-path>
 allowed-tools: Read, Glob                 # Optional: minimal tool set needed
 disable-model-invocation: true            # Optional: set if skill writes/edits/deletes
@@ -73,10 +73,10 @@ Set `last_refreshed` to today's date on creation and update it on any substantiv
 - Write-capable skills: set `disable-model-invocation: true` and add confirmation gates
 - Reference files: create in `references/` subdirectory, keep ≤500 tokens each, include `last_refreshed` in frontmatter
 - Workflow steps: sequential numbering, explicit conditionals, stop conditions
-- Hard Rules: negative constraints at the end of the file
+- Hard Rules: 5–7 unconditional statements at END; require ≥1 stop condition + ≥1 failure path
 - Registration must target existing `README.md`/`CLAUDE.md` sections only; never assume `## Skills`, `## File Structure`, or `## Installation` exist
 - Token budget: SKILL.md Level 2 target is <5,000 tokens; move stable content to `references/`
 - Role statement: use functional roles ("You are a [role] that [purpose]") — no demographic or expert personas
 - Instruction language: use natural phrasing; avoid MUST/CRITICAL/ALWAYS (overtrigger risk on Claude 4.6)
 
-For full format conventions and skill writing best practices, see `research/claude-code/skill-agent-format-conventions.md`.
+For full format spec, see `research/claude-code/skill-agent-format-conventions.md`. Quality directives: `references/quality-patterns.md`.

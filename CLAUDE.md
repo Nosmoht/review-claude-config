@@ -47,7 +47,7 @@ This is the authoritative maintainer command inventory for the repo.
 
 ### Develop
 
-- `/scaffold-skill [plugin|maintenance] <name>`
+- `/scaffold-skill [plugin|maintenance|external <target-path>] <name>`
 - `/scaffold-agent <agent-name>`
 - `/scaffold-rule <rule-name>`
 - `/develop-hooks [hook-type] <hook-name>`

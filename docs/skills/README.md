@@ -18,7 +18,7 @@ System map for the plugin's skills and hooks. Use this page for component invent
 | [apply-audit-findings](apply-audit-findings.md) | Fix/Apply | `/apply-audit-findings [report]` | Standalone |
 | [audit-repo](audit-repo.md) | Discovery | `/audit-repo [folder]` | Standalone |
 | [suggest-skills](suggest-skills.md) | Discovery | `/suggest-skills [folder]` | Standalone |
-| [scaffold-skill](scaffold-skill.md) | Development | `/scaffold-skill [plugin\|maintenance] <name>` | Standalone |
+| [scaffold-skill](scaffold-skill.md) | Development | `/scaffold-skill [plugin\|maintenance\|external <target-path>] <name>` | Standalone |
 | [check-repo-health](check-repo-health.md) | Maintenance | `/check-repo-health [all\|freshness\|tokens\|integrity]` | Standalone |
 | [refresh-engineering-baseline](refresh-engineering-baseline.md) | Maintenance | `/refresh-engineering-baseline` | Standalone |
 | [sync-research-index](sync-research-index.md) | Maintenance | `/sync-research-index [folder]` | Standalone |
