@@ -48,3 +48,5 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | RD-4 | Error handling covers tool unavailability AND unexpected tool output? | Compl |
 | RD-5 | Step dependencies explicit — upstream/downstream relationships stated, not just numbered? | Clarity |
 | RD-6 | Tool availability validated before first use (probe or conditional fallback, not assumed present)? | Safety |
+
+**Severity guidance:** Broken cross-primitive dependencies (missing referenced files, unavailable tools, dangling skill/agent references) are **High** severity findings.

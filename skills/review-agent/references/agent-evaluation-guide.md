@@ -36,6 +36,8 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | RL-9 | Safety/PII/credential scope constraints present? | Safety |
 | RL-10 | Observability hooks or logging specified? | Compl |
 
+**Severity guidance:** Broken tool grants or cross-primitive dependencies (missing referenced tools, dangling agent/skill references) are **High** severity findings.
+
 ## Agent Frontmatter (AF)
 
 Each AF item is NA unless its trigger field is present.
