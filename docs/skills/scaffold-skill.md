@@ -2,10 +2,10 @@
 
 Create a new Claude Code skill from a template and register it in the surviving documentation surfaces.
 
-**Command:** `/scaffold-skill [plugin|maintenance] <skill-name>`
+**Command:** `/scaffold-skill [plugin|maintenance|external <target-path>] <skill-name>`
 **Location:** `skills/scaffold-skill/SKILL.md`
 **Type:** Development
-**Allowed Tools:** Read, Write, Edit, Glob
+**Allowed Tools:** Read, Write, Edit, Glob, WebSearch, WebFetch
 **disable-model-invocation:** true
 **Mode Support:** Standalone only
 
@@ -17,7 +17,7 @@ Create a new Claude Code skill from a template and register it in the surviving 
 
 1. Parse mode and validate the skill name.
 2. Load the template and optional format-conventions reference.
-3. Gather the seven requirement inputs.
+3. Gather 2–3 core requirements via AskUserQuestion menus with contextual suggestions; auto-derive remaining parameters from description and domain context.
 4. Generate and preview the `SKILL.md`.
 5. Write the files after confirmation.
 6. Register the new skill in the surviving documentation sections.

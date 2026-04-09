@@ -74,30 +74,86 @@ Summarize findings as a compact domain briefing:
 - 3–5 domain-specific rules (cite source tier)
 - Any security or safety patterns specific to the domain
 
-Present to the user: "Here is the domain context I'll use to generate the skill. Correct or add anything before I proceed."
+Present the domain briefing and confirm via AskUserQuestion (header: "Domain context"):
+- Option 1 label: "Looks good — proceed" (Recommended) — description: `"Use this domain context for skill generation"`
+- Option 2 label: "Add/correct something" — description: `"Provide corrections or additions before continuing"`
 
-Wait for confirmation, correction, or approval before continuing to Step 3.
+On "Add/correct something": incorporate the user's input into the domain briefing, then proceed. On "Looks good": proceed to Step 3.
 
 ### 3. Gather requirements
 
-Ask the user for:
+#### 3a. Core questions via AskUserQuestion menus
 
-1. **Description** — What does the skill do? When should it trigger? What should users NOT use it for? (used for `description` field; quality-patterns.md Activation directive applies)
-2. **Allowed tools** — Which tools does the skill need? (each tool must map to a specific workflow step; default: Read, Glob)
-3. **Write side effects?** — Does the skill create, edit, or delete files? (yes → `disable-model-invocation: true`)
-4. **Argument hint** — What argument does the skill accept? (optional)
-5. **Reference files needed?** — Names and purposes of reference files to create in `references/`. (optional)
-6. **Workflow complexity** — How many steps? Brief description of each.
-7. **Registration summary** — One sentence describing where this skill belongs in docs. (external mode: skip — registration is manual)
-8. **Reasoning complexity?** — Does this skill require multi-step analysis or diagnosis? (yes → add CoT guidance step in workflow)
-9. **Expected turns?** — Roughly how many tool-call turns will a typical run take? (>10 → add compaction checkpoint)
+Using the skill name, target repo, and domain context from Step 2.5, generate **contextual options** for each question. Present all questions via `AskUserQuestion` with selectable options — no free text required. The "Other" option is always available for custom input. Include a `preview` field on description options to show the full proposed text.
+
+**Question 1 — Description** (header: "Description")
+
+Generate 2–3 description drafts based on the skill name + domain context. Apply quality-patterns.md Activation directive to each draft: verb-first, user-task terms, ≥1 trigger phrase, ≥1 counter-case.
+
+Option generation heuristics:
+- Skill name contains a known verb (review, scaffold, lint, code, test, apply, validate) → generate specific, domain-targeted drafts
+- Skill name is abstract (manager, helper, util) → generate broader drafts
+- Domain context from Step 2.5 is rich (manifest + source files read) → include framework-specific details in drafts
+- Domain context is thin (language only) → keep drafts generic
+
+Example for `go-coder` in a Go MCP server repo:
+- Option 1 label: "Generate and refactor Go code" — preview: `"Generates, refactors, and fixes Go code following project conventions and idiomatic Go patterns. Use when writing new MCP handlers, fixing bugs, or refactoring existing code. Do NOT use for non-Go files, infrastructure config, or documentation-only changes."`
+- Option 2 label: "Generate Go code with tests" — preview: `"Generates and tests Go code following project conventions. Use when implementing features, writing tests, or fixing bugs. Do NOT use for CI/CD config, documentation, or non-Go files."`
+
+**Question 2 — Reference files** (header: "References")
+
+Generate 2–3 options based on domain context + skill type.
+
+Option generation heuristics:
+- Coder/scaffolder skill → suggest conventions or patterns reference
+- Reviewer/validator skill → suggest rubric or criteria reference
+- Domain context has strong framework signal → name the reference after the framework
+
+Example for `go-coder`:
+- Option 1 label: "go-conventions.md" — description: `"Project-specific Go patterns: error handling, naming, MCP handler structure"`
+- Option 2 label: "No reference files" — description: `"Skill works directly from CLAUDE.md and codebase"`
+
+Bundle questions 1 and 2 in a single AskUserQuestion call (max 4 questions per call).
+
+**Question 3 — Workflow overview** (header: "Workflow") — conditional
+
+Only ask this if the description answer contains fewer than 3 distinct action verbs with clear sequencing. Generate 2 workflow skeletons as options with `preview`.
+
+Example for a coder skill:
+- Option 1 label: "Standard (3 steps)" — preview: `"1. Analyze context and requirements\n2. Implement/refactor code\n3. Verify and suggest tests"`
+- Option 2 label: "Extended (5 steps)" — preview: `"1. Analyze context\n2. Research patterns\n3. Implement\n4. Write tests\n5. Review and verify"`
+
+Tool constraint: AskUserQuestion allows max 4 questions per call and max 4 options per question. Use a second call for Question 3 only when the conditional triggers.
+
+#### 3b. Proposed spec (auto-derived)
+
+After the user answers 3a, derive all remaining parameters and present them as a compact table for confirmation.
+
+**Derivation heuristics:**
+
+| Parameter | Heuristic |
+|-----------|-----------|
+| **Allowed tools** | Verb analysis on description: "review/evaluate/check" → Read, Glob; "create/scaffold/generate" → Read, Write, Edit, Glob; "fix/apply/update" → Read, Edit, Glob; "research/search/fetch" → +WebSearch, WebFetch. Default floor: Read, Glob. Each tool must correspond to a named workflow step — derive tools and workflow steps together, never tools alone. |
+| **disable-model-invocation** | `true` if Write, Edit, or Bash is in the tool set (100% consistent pattern in this repo); omit otherwise |
+| **Argument hint** | Pattern match on skill name: review-X → `<file-path>`, scaffold-X → `<name>`, apply-X → `<report-path>`; otherwise infer from the primary noun in the description or omit |
+| **Workflow skeleton** | From description + skill type: input-validate → discover/gather → analyze/process → output/report → next-steps (3–6 steps). Refine using workflow answer from 3a if provided. |
+| **Registration** | External mode: skip (already handled in Step 6). Plugin/maintenance: derive a one-sentence summary from the description. |
+| **Reasoning / CoT step** | Yes if the workflow includes an "analyze", "diagnose", "evaluate", or "compare" step; no otherwise |
+| **Compaction checkpoint** | Add if (workflow step count × 2.5) > 10; omit otherwise |
+
+Present the derived spec as a table, then confirm via AskUserQuestion:
+- Option 1 label: "Looks good — generate" (Recommended) — description: `"Accept all derived values and generate SKILL.md"`
+- Option 2 label: "Adjust tools" — description: `"Correct the tool set, keep everything else"`
+- Option 3 label: "Adjust workflow" — description: `"Correct workflow steps, keep everything else"`
+
+On Option 2, 3, or Other: incorporate the correction, redisplay the updated table, confirm again. When confirmed, proceed to Step 4.
 
 ### 4. Generate SKILL.md
 
 Apply all directives from `references/quality-patterns.md` during generation.
 
 **Frontmatter:**
-- `name`, `description`, `allowed-tools`, `argument-hint`, `disable-model-invocation` from user answers.
+- `name`, `description`, `allowed-tools`, `argument-hint`, `disable-model-invocation` from user answers and auto-derived spec.
 - Description: verb-first, user-task terms, ≥1 trigger phrase, ≥1 counter-case.
 
 **Body structure (follow Context Layout directive from quality-patterns.md):**
@@ -145,10 +201,12 @@ Apply all directives from `references/quality-patterns.md` during generation.
     - Never modify application source files.
     - Report missing configs as findings, not errors.
 
-Present the full generated content to the user for review. Ask: "Does this look correct? (yes/edit/cancel)"
-- **yes** — Proceed to writing files.
-- **edit** — Ask what to change, regenerate, and preview again.
-- **cancel** — Stop without writing anything.
+Present the full generated content to the user for review via AskUserQuestion (header: "Preview"):
+- Option 1 label: "Correct — write files" (Recommended) — description: `"Accept the generated SKILL.md and write all files"`
+- Option 2 label: "Adjust" — description: `"Describe what to change; skill will regenerate and preview again"`
+- Option 3 label: "Cancel" — description: `"Stop without writing anything"`
+
+On "Adjust": ask what to change (free text via Other or follow-up), regenerate, and present the preview again. On "Cancel": stop and notify the user. On "Correct": proceed to Step 5.
 
 ### 5. Write files
 
@@ -207,20 +265,12 @@ Skill scaffolded. Suggested commit:
   feat(<skill-name>): add <skill-name> skill with <brief capability>
 ```
 
-Then end your response with this menu (substitute paths with the actual absolute path to the new SKILL.md):
+Then present next steps via AskUserQuestion (header: "Next steps"):
+- Option 1 label: "Review the new skill" — description: `"Runs /review-skill <absolute-path>. Note: review-skill works cross-repo — run from a review-claude-config session for full reference access."`
+- Option 2 label: "Scaffold another skill" — description: `"Starts /scaffold-skill again"`
+- Option 3 label: "Done" — description: `"End the workflow"`
 
----
-**What's next?**
-1. Review the new skill → `/review-skill <absolute-path>`
-   _(Note: review-skill works cross-repo — run from a review-claude-config session for full reference access)_
-2. Scaffold another skill
-3. Done
-
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke `/review-skill` with the absolute path. **2** → ask for the skill name, then invoke `/scaffold-skill`. **3** → acknowledge and stop.
+On Option 1: invoke `/review-skill` with the absolute path to the new SKILL.md. On Option 2: ask for the skill name and mode, then invoke `/scaffold-skill`. On Option 3: acknowledge and stop.
 
 ## Hard Rules
 
