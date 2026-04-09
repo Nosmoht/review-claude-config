@@ -16,6 +16,7 @@ Evaluate a single Claude Code skill for quality across 7 evidence-based dimensio
 ## Argument Handling
 
 - `$ARGUMENTS` is the path to a SKILL.md file.
+- If `$ARGUMENTS` is empty, prompt the user: "Provide the path to a SKILL.md file to review." and stop.
 - Validate the file exists and contains YAML frontmatter with a `name` field (required for skills).
 - If the file does not look like a skill, report the error and stop.
 
