@@ -303,25 +303,20 @@ Registration: N consistent, N issues
 
 Present the full report.
 
-Then ask: "Save report to `.claude/reviews/YYYY-MM-DDTHHMMSS-validate-deps.md`? (yes/no)"
+Confirm via AskUserQuestion (header: "Save report"):
+- Option 1 label: "Save report" (Recommended) — description: `"Write to .claude/reviews/YYYY-MM-DDTHHMMSS-validate-deps.md"`
+- Option 2 label: "Skip" — description: `"Display the path that would have been used"`
 
-If confirmed, write the report file. If declined, display the path that would
-have been used.
-
----
-
-**What's next?**
-1. Fix broken references manually, then re-run `/validate-primitive-dependencies`
-2. Check repo health → `/check-repo-health`
-3. Done
-
-_Type a number to continue._
+On "Save report": write the report file. On "Skip": display the path that would have been used.
 
 ---
 
-When the user responds: **1** → acknowledge and remind them to re-run this
-skill after fixing. **2** → invoke `/check-repo-health`. **3** → acknowledge
-and stop.
+If any dependencies are broken, present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Fix broken references" (Recommended) — description: `"Edit files manually to fix broken dependencies, then re-run /validate-primitive-dependencies"`
+- Option 2 label: "Check repo health" — description: `"Run /check-repo-health for a broader health overview"`
+- Option 3 label: "Done" — description: `"End the workflow"`
+
+On "Fix broken references": acknowledge and remind them to re-run this skill after fixing. On "Check repo health": invoke `/check-repo-health`. On "Done": acknowledge and stop.
 
 If the overall verdict is HEALTHY, skip the menu — just present the report.
 

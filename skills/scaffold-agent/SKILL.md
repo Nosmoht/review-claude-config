@@ -96,10 +96,12 @@ Before presenting, run these validation checks against the generated content:
 
 If any check fails, report the specific violation and correct it before presenting.
 
-Present the full generated content to the user for review. Ask: "Does this look correct? (yes/edit/cancel)"
-- **yes** — Proceed to writing the file.
-- **edit** — Ask what to change, regenerate, and preview again.
-- **cancel** — Stop without writing anything.
+Present the full generated content to the user for review. Confirm via AskUserQuestion (header: "Agent preview"):
+- Option 1 label: "Correct — write file" (Recommended) — description: `"Write the agent to .claude/agents/<agent-name>.md"`
+- Option 2 label: "Adjust" — description: `"Describe what to change; will regenerate and show again"`
+- Option 3 label: "Cancel" — description: `"Stop without writing anything"`
+
+On "Adjust": ask what to change, regenerate, and preview again. On "Cancel": stop without writing anything.
 
 ### 5. Write file
 
@@ -128,19 +130,12 @@ Agent scaffolded. Suggested commit:
   feat(<agent-name>): add <agent-name> agent
 ```
 
-Then end your response with this menu (substitute `<agent-path>` with the actual path):
+Then present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Review the new agent" (Recommended) — description: `"Run /review-agent <agent-path> to validate quality"`
+- Option 2 label: "Scaffold another agent" — description: `"Provide an agent name to scaffold another"`
+- Option 3 label: "Done" — description: `"End the workflow"`
 
----
-**What's next?**
-1. Review the new agent → `/review-agent <agent-path>`
-2. Scaffold another agent
-3. Done
-
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke `/review-agent` with the new agent's path. **2** → ask for the agent name, then invoke `/scaffold-agent`. **3** → acknowledge and stop.
+On "Review the new agent": invoke `/review-agent` with the new agent's path. On "Scaffold another agent": ask for the agent name, then invoke `/scaffold-agent`. On "Done": acknowledge and stop.
 
 ## Hard Rules
 

@@ -66,13 +66,11 @@ If all files are OK (no UNLINKED, BROKEN, or STALE entries), tell the user: "Res
 
 ### 5. Offer to sync
 
-Print the following and wait for the user's response:
+Confirm via AskUserQuestion (header: "Sync research index"):
+- Option 1 label: "Update CLAUDE.md to fix drift" (Recommended) — description: `"Add unlinked files, remove broken links, update stale titles"`
+- Option 2 label: "Cancel" — description: `"Stop without making changes"`
 
-"Update CLAUDE.md Research References section to fix drift? (yes/no)"
-
-If no, stop.
-
-If yes:
+On "Cancel": stop. On "Update CLAUDE.md to fix drift":
 - **For UNLINKED files:** Read each file to extract its title and a one-line summary. Add an entry to the Research References section following the existing format: `- [Title](relative/path) — Description`
 - **For BROKEN links:** Remove the entry from the Research References section.
 - **For STALE entries:** Update the title in the CLAUDE.md entry to match the file's current `# ` heading.

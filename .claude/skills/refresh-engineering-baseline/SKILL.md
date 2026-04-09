@@ -31,8 +31,10 @@ Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fai
 
 If `last_refreshed` is less than 90 days ago:
 - Tell the user: "Baseline was last refreshed on [date] ([N] days ago). Refresh is recommended after 90 days."
-- Ask: "Force refresh anyway? (yes/no)"
-- If no, stop. If yes, continue.
+- Confirm via AskUserQuestion (header: "Force refresh"):
+  - Option 1 label: "Force refresh anyway" — description: `"Proceed with the baseline refresh despite it being less than 90 days old"`
+  - Option 2 label: "Cancel" (Recommended) — description: `"Stop — refresh again when 90 days have passed"`
+- On "Cancel": stop. On "Force refresh anyway": continue.
 
 ### 3. Research current best practices
 
@@ -109,8 +111,11 @@ Present the proposed changes to the user using the report format from Step 7. In
 - Evidence-class changes for any rewritten techniques
 - Projected token count
 
-Ask: "Apply these changes to engineering-baseline.md? (yes/no)"
-If no, stop and preserve the current file.
+Confirm via AskUserQuestion (header: "Apply baseline changes"):
+- Option 1 label: "Apply these changes" (Recommended) — description: `"Update engineering-baseline.md with the proposed additions, updates, and removals"`
+- Option 2 label: "Cancel" — description: `"Stop and preserve the current file"`
+
+On "Cancel": stop and preserve the current file.
 
 ### 6. Write the updated file
 

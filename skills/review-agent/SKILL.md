@@ -171,19 +171,12 @@ In standalone mode:
 4. Write the report file. Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS review report`
 5. **What's Next?** (standalone mode only — skip in orchestrated mode)
 
-After all output is complete, end your response with this menu (substitute `<report-path>` with the actual report path from step 4):
+After all output is complete, present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Apply findings" (Recommended) — description: `"Run /apply-agent-review-findings <report-path> to address High/Medium findings"`
+- Option 2 label: "Review another agent" — description: `"Provide an agent path to review next"`
+- Option 3 label: "Done" — description: `"End the workflow"`
 
----
-**What's next?**
-1. Apply findings → `/apply-agent-review-findings <report-path>`
-2. Review another agent
-3. Done
-
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke `/apply-agent-review-findings` with the report path. **2** → ask for the agent path, then invoke `/review-agent`. **3** → acknowledge and stop.
+On "Apply findings": invoke `/apply-agent-review-findings` with the report path. On "Review another agent": ask for the agent path, then invoke `/review-agent`. On "Done": acknowledge and stop.
 
 ## Error Handling
 

@@ -55,9 +55,11 @@ If manual-only findings are present, show them before offering the Low-impact pa
 
 If dispatchable Low recommendations exist, tell the user:
 
-"No High or Medium findings. N Low impact recommendations remain. These are minor improvements that can help reach an A-grade. Address them? (yes/no)"
+Confirm via AskUserQuestion (header: "Low-impact findings only"):
+- Option 1 label: "Address N low-impact findings" — description: `"Process Low recommendations to reach A-grade"`
+- Option 2 label: "Skip" (Recommended) — description: `"Stop — preserve manual-only findings as follow-up items"`
 
-If no, stop after preserving the manual-only findings as follow-up items. If yes, promote the Low recommendations into the actionable set and continue to Step 3.
+On "Skip": stop after preserving the manual-only findings as follow-up items. On "Address N low-impact findings": promote the Low recommendations into the actionable set and continue to Step 3.
 
 Group dispatchable recommendations by item type using the `type` field in the `summary` array (Skill, Agent, or Rule). For single-item reports (`review-skill`, `review-agent`, `review-rule`), there is one group.
 
@@ -88,8 +90,11 @@ Then show a manual-only summary when applicable:
 
 If there are no dispatchable findings and at least one manual-only finding, stop after showing the manual follow-up section.
 
-Ask: "Proceed with applying these findings? (yes/no)"
-If no, stop.
+Confirm via AskUserQuestion (header: "Apply findings"):
+- Option 1 label: "Apply N findings" (Recommended) — description: `"Dispatch High/Medium recommendations to specialized appliers"`
+- Option 2 label: "Cancel" — description: `"Stop without making changes"`
+
+On "Cancel": stop.
 
 ### 4. Discover specialized appliers
 
@@ -160,13 +165,11 @@ If no changes were applied, stop here.
 
 ### 6a. Low Impact Pass
 
-If Low impact recommendations were set aside in Step 2 and at least one High/Medium change was applied, ask:
+If Low impact recommendations were set aside in Step 2 and at least one High/Medium change was applied, confirm via AskUserQuestion (header: "Low-impact findings"):
+- Option 1 label: "Address N low-impact findings" — description: `"Re-enter Step 5 with Low recommendations to reach A-grade"`
+- Option 2 label: "Skip" (Recommended) — description: `"Leave low-impact findings for later"`
 
-"N Low impact findings remain. Address them to reach A-grade? (yes/no)"
-
-If yes, re-enter Step 5 with the Low recommendations. Use the same orchestration payload format but with `(Impact: Low)` on each recommendation heading. Collect results and append to the change summary table.
-
-If no, note in the final report: "N Low impact findings were not applied."
+On "Address N low-impact findings": re-enter Step 5 with the Low recommendations. Use the same orchestration payload format but with `(Impact: Low)` on each recommendation heading. Collect results and append to the change summary table. On "Skip": note in the final report: "N Low impact findings were not applied."
 
 ### 7. Commit with audit-fix chain
 
@@ -174,19 +177,22 @@ Read `references/commit-conventions.md` for the commit format.
 
 Check whether the review report itself has been committed. Run `git log --oneline --all -- <report-path>` via Bash. If the report is not yet committed, tell the user:
 
-"The review report is not yet committed. The audit-fix chain convention requires committing the report first:
-`docs(reviews): add <timestamp> review report`
+Tell the user: "The review report is not yet committed. The audit-fix chain requires committing the report first: `docs(reviews): add <timestamp> review report`"
 
-Commit the report now? (yes/no)"
+Confirm via AskUserQuestion (header: "Commit report"):
+- Option 1 label: "Commit the report now" (Recommended) — description: `"Stage and commit the review report with docs(reviews): add <timestamp> review report"`
+- Option 2 label: "Skip" — description: `"Continue without committing the report"`
 
-If yes, stage and commit the report via Bash.
+On "Commit the report now": stage and commit the report via Bash.
 
 Then, for the fix commit:
 - Determine scope from the modified files. If all edits are within one skill/agent/rule, use that item's name. If multiple items were edited, use comma-separated scopes.
 - Compose the commit message: `fix(<scope>): address findings from <timestamp> review`
-- Show the commit message and ask: "Commit these changes? (yes/no)"
-- If yes, stage the modified files and commit via Bash. If the commit fails (non-zero exit), show the error and tell the user: "Commit failed. Changes are applied but uncommitted. Resolve the issue and commit manually."
-- If no, tell the user the changes are applied but uncommitted.
+- Show the commit message and confirm via AskUserQuestion (header: "Commit changes"):
+  - Option 1 label: "Commit these changes" (Recommended) — description: `"Stage and commit: fix(<scope>): address findings from <timestamp> review"`
+  - Option 2 label: "Skip" — description: `"Leave changes uncommitted"`
+- On "Commit these changes": stage the modified files and commit via Bash. If the commit fails (non-zero exit), show the error and tell the user: "Commit failed. Changes are applied but uncommitted. Resolve the issue and commit manually."
+- On "Skip": tell the user the changes are applied but uncommitted.
 
 ### 8. Report
 
@@ -197,17 +203,12 @@ Present the final status:
 - Manual-only findings not dispatched
 Then end your response with this menu. Determine the verify command from `generated_by`: if `review-skill` → `/review-skill <path>`, if `review-agent` → `/review-agent <path>`, if `review-rule` → `/review-rule <path>`, if `review-claude-config` → `/review-claude-config <target>`.
 
----
-**What's next?**
-1. Verify improvements → `<verify-command>`
-2. Review a specific item
-3. Done
+Present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Verify improvements" (Recommended) — description: `"Run <verify-command> to detect cross-dimension regressions"`
+- Option 2 label: "Review a specific item" — description: `"Invoke the matching /review-* command for a specific file"`
+- Option 3 label: "Done" — description: `"End the workflow"`
 
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke the verify command. **2** → ask which item, then invoke the matching `/review-*` command. **3** → acknowledge and stop.
+On "Verify improvements": invoke the verify command. On "Review a specific item": ask which item, then invoke the matching `/review-*` command. On "Done": acknowledge and stop.
 
 ## Hard Rules
 

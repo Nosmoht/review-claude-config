@@ -73,9 +73,11 @@ If manual-only findings are present, show them before offering the Low-impact pa
 
 If dispatchable Low recommendations exist, tell the user:
 
-"No High or Medium findings. N Low impact recommendations remain. These are minor improvements that can help reach an A-grade. Address them? (yes/no)"
+Confirm via AskUserQuestion (header: "Low-impact findings only"):
+- Option 1 label: "Address N low-impact findings" — description: `"Process Low recommendations to reach A-grade"`
+- Option 2 label: "Skip" (Recommended) — description: `"Stop — preserve manual-only findings as follow-up items"`
 
-If no, stop after preserving the manual-only findings as follow-up items. If yes, promote the Low recommendations into the actionable set and continue to Phase 2.
+On "Skip": stop after preserving the manual-only findings as follow-up items. On "Address N low-impact findings": promote the Low recommendations into the actionable set and continue to Phase 2.
 
 If there are no dispatchable recommendations but manual-only findings exist, present them as manual follow-up items and stop. Do not attempt file edits without rewrite anchors.
 
@@ -107,8 +109,11 @@ If manual-only findings are present, also show:
 | 1 | Clarify rubric language | Medium | Missing Current/Recommended anchors |
 ```
 
-Ask: "Proceed with applying these findings? (yes/no)"
-If no, stop.
+Confirm via AskUserQuestion (header: "Apply findings"):
+- Option 1 label: "Apply N findings" (Recommended) — description: `"Process High/Medium recommendations with preview for each"`
+- Option 2 label: "Cancel" — description: `"Stop without making changes"`
+
+On "Cancel": stop.
 
 ## Phase 3 -- Apply Recommendations
 
@@ -118,7 +123,10 @@ For each recommendation (High impact first, then Medium):
 
 1. Read the target SKILL.md file at the path from the report's `summary` section.
 2. Locate the **Current** text block in the actual file content.
-   - If the exact text is not found, show the user the Current text and ask: "This text was not found in the file. Skip this recommendation? (yes/no)" If yes, skip. If no, ask the user to identify the correct text.
+   - If the exact text is not found, show the user the Current text and confirm via AskUserQuestion (header: "Text not found"):
+     - Option 1 label: "Skip this recommendation" (Recommended) — description: `"Move to the next recommendation"`
+     - Option 2 label: "Identify correct text" — description: `"Describe where the text is so the edit can be applied"`
+     On "Skip this recommendation": skip. On "Identify correct text": ask the user to identify the correct text.
 3. **Pre-edit validation** (skill-specific):
    - Count current file lines. If applying the edit would push the file over 500 lines, warn: "This edit would make SKILL.md [N] lines. Consider extracting stable content to references/ as a manual follow-up."
    - If the recommended text inlines content that appears to be stable reference material (long lookup tables, static templates, extensive examples), flag: "This edit inlines content that may belong in a reference file. Proceed anyway, or skip and extract manually?"
@@ -129,10 +137,11 @@ For each recommendation (High impact first, then Medium):
    - Current text (from the actual file)
    - Recommended replacement (from the report)
    - Any validation warnings from step 3
-5. Ask: "Apply this change? (yes/skip/stop)"
-   - **yes** -- Apply the edit using the Edit tool.
-   - **skip** -- Move to the next recommendation.
-   - **stop** -- End processing.
+5. Confirm via AskUserQuestion (header: "Apply: <recommendation title>"):
+   - Option 1 label: "Apply this change" (Recommended) — description: `"Edit the file with the recommended replacement"`
+   - Option 2 label: "Skip" — description: `"Move to the next recommendation"`
+   - Option 3 label: "Stop" — description: `"End processing, keep changes applied so far"`
+   On "Apply this change": apply the edit using the Edit tool. On "Skip": move to next. On "Stop": end processing.
 6. **Post-edit validation** (skill-specific):
    - Check total line count of the modified file.
    - If any `references/` files were also modified, estimate token count (word count x 1.3). Warn if over 385 words (~500 tokens).
@@ -167,13 +176,11 @@ If no changes were applied, stop here.
 
 **Low Impact Pass (standalone mode only):**
 
-If Low impact recommendations were set aside in Step 2 and at least one High/Medium change was applied, ask:
+If Low impact recommendations were set aside in Step 2 and at least one High/Medium change was applied, confirm via AskUserQuestion (header: "Low-impact findings"):
+- Option 1 label: "Address N low-impact findings" — description: `"Process remaining Low recommendations to reach A-grade"`
+- Option 2 label: "Skip" (Recommended) — description: `"Leave low-impact findings for later"`
 
-"N Low impact findings remain. Address them to reach A-grade? (yes/no)"
-
-If yes, loop back to Phase 3 with the Low recommendations. Process through the same preview/confirm/validate pipeline. Append results to the change summary table.
-
-If no, note: "N Low impact findings were not applied."
+On "Address N low-impact findings": loop back to Phase 3 with the Low recommendations. Process through the same preview/confirm/validate pipeline. Append results to the change summary table. On "Skip": note: "N Low impact findings were not applied."
 
 In orchestrated mode, do not prompt — process whatever recommendations the orchestrator sends.
 The orchestrator must send only dispatchable recommendations with both `Current` and `Recommended`.
@@ -186,7 +193,9 @@ For each modified file, verify that applied changes did not:
 3. Remove output format specifications or validation criteria.
 4. Push total file line count over 500 lines.
 
-If any regression is detected, warn: "Potential regression in [file]: [description]. Review before committing? (yes/no)"
+If any regression is detected, confirm via AskUserQuestion (header: "Potential regression detected"):
+- Option 1 label: "Review before committing" (Recommended) — description: `"Inspect [file]: [description] before proceeding"`
+- Option 2 label: "Proceed anyway" — description: `"Continue to the commit step"`
 
 **Commit with audit-fix chain:**
 
@@ -196,18 +205,21 @@ Extract the timestamp from the report filename (e.g., `2026-03-24T161200` from `
 
 Check whether the review report has been committed: `git log --oneline --all -- <report-path>` via Bash. If the command fails (not a git repo, or other error), warn the user and skip the commit workflow -- edits are already applied. If not committed, tell the user:
 
-"The review report is not yet committed. The audit-fix chain requires committing the report first:
-`docs(reviews): add <timestamp> review report`
+Tell the user: "The review report is not yet committed. The audit-fix chain requires committing the report first: `docs(reviews): add <timestamp> review report`"
 
-Commit the report now? (yes/no)"
+Confirm via AskUserQuestion (header: "Commit report"):
+- Option 1 label: "Commit the report now" (Recommended) — description: `"Stage and commit the review report with docs(reviews): add <timestamp> review report"`
+- Option 2 label: "Skip" — description: `"Continue without committing the report"`
 
-If yes, stage and commit the report via Bash.
+On "Commit the report now": stage and commit the report via Bash.
 
 For the fix commit:
 - Determine scope from the modified skill name (e.g., `review-skill` if editing `skills/review-skill/SKILL.md`).
 - Compose: `fix(<scope>): address findings from <timestamp> review`
-- Show the commit message and ask: "Commit these changes? (yes/no)"
-- If yes, stage and commit via Bash.
+- Show the commit message and confirm via AskUserQuestion (header: "Commit changes"):
+  - Option 1 label: "Commit these changes" (Recommended) — description: `"Stage and commit: fix(<scope>): address findings from <timestamp> review"`
+  - Option 2 label: "Skip" — description: `"Leave changes uncommitted"`
+- On "Commit these changes": stage and commit via Bash.
 
 Present final status:
 - Files modified
@@ -215,17 +227,12 @@ Present final status:
 - Recommendations not applied (skipped or stopped)
 Then end your response with this menu (substitute `<path>` with the target skill path, `<report-path>` with any other report path if needed):
 
----
-**What's next?**
-1. Verify improvements (recommended — detects cross-dimension regressions) → `/review-skill <path>`
-2. Apply findings from another report
-3. Done
+Present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Verify improvements" (Recommended) — description: `"Run /review-skill <path> to detect cross-dimension regressions"`
+- Option 2 label: "Apply findings from another report" — description: `"Provide a report path to apply"`
+- Option 3 label: "Done" — description: `"End the workflow"`
 
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke `/review-skill` with the skill path. **2** → ask for the report path, then invoke `/apply-skill-review-findings`. **3** → acknowledge and stop.
+On "Verify improvements": invoke `/review-skill` with the skill path. On "Apply findings from another report": ask for the report path, then invoke `/apply-skill-review-findings`. On "Done": acknowledge and stop.
 
 ## Hard Rules
 

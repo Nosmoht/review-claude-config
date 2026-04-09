@@ -198,19 +198,12 @@ If any FAIL or WARN results exist, add a **Remediation** section:
 - For dimension mismatches: "Consumer X has [missing/extra] dimensions vs the canonical review contract/rubric. Update the consumer to match."
 - For contract-reference mismatches: "Consumer X does not point to `review-report-contract.md` as the canonical schema. Remove duplicated schema authority."
 
-Then end your response with this menu:
+If any checks have FAIL or WARN status, present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Refresh stale baseline" (Recommended) — description: `"Run /refresh-engineering-baseline to update the engineering baseline"`
+- Option 2 label: "Run a full review" — description: `"Run /review-claude-config to audit all skills and rules"`
+- Option 3 label: "Done" — description: `"End the workflow"`
 
----
-**What's next?**
-1. Refresh stale baseline → `/refresh-engineering-baseline`
-2. Run a full review → `/review-claude-config`
-3. Done
-
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke `/refresh-engineering-baseline`. **2** → invoke `/review-claude-config`. **3** → acknowledge and stop.
+On "Refresh stale baseline": invoke `/refresh-engineering-baseline`. On "Run a full review": invoke `/review-claude-config`. On "Done": acknowledge and stop.
 
 If all checks passed (no FAIL or WARN), skip the menu — just present the dashboard.
 

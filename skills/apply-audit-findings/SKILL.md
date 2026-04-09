@@ -66,8 +66,11 @@ Show all interventions with their planned action:
 Total: N interventions (N auto, N manual, N deferred)
 ```
 
-Ask: "Apply these interventions? (yes/no)"
-If no, stop.
+Confirm via AskUserQuestion (header: "Apply interventions"):
+- Option 1 label: "Apply N interventions" (Recommended) — description: `"Process auto interventions by priority (P0 first), defer Skill gaps to /scaffold-skill"`
+- Option 2 label: "Cancel" — description: `"Stop without making changes"`
+
+On "Cancel": stop.
 
 ### 5. Resolve the target repository
 
@@ -93,10 +96,11 @@ For each intervention, follow the type-specific procedure below.
    - If no match: plan to create a new `##` section, placed before trailing reference sections
 3. **Deduplication check:** Grep for 3+ consecutive key terms from the new content. If found, warn: "Similar content may already exist at line N" and show the existing text.
 4. **Preview:** Show the section header, the content to be added, and where it will be placed (after which existing section or heading).
-5. **Ask:** "Apply this CLAUDE.md change? (yes/skip/stop)"
-   - `yes` — apply the edit using Edit tool (append after matched section) or Write (if creating new CLAUDE.md)
-   - `skip` — record as Skipped, continue to next intervention
-   - `stop` — halt all further processing, go to Step 7
+5. **Confirm** via AskUserQuestion (header: "Apply CLAUDE.md change"):
+   - Option 1 label: "Apply this change" (Recommended) — description: `"Append content to CLAUDE.md at the planned position"`
+   - Option 2 label: "Skip" — description: `"Record as Skipped, continue to next intervention"`
+   - Option 3 label: "Stop" — description: `"Halt all further processing, go to Step 7"`
+   On "Apply this change": apply the edit using Edit tool or Write. On "Skip": record as Skipped. On "Stop": halt.
 6. **Post-edit validation:** Check total CLAUDE.md line count. If >200 lines, warn: "CLAUDE.md is now [N] lines (budget: <200). Consider extracting content to reference files."
 
 #### Hook Interventions
@@ -104,7 +108,11 @@ For each intervention, follow the type-specific procedure below.
 1. Check if `<target>/.claude/settings.local.json` exists. If yes, read it and check for existing hooks. If the recommended hook matcher already exists, warn: "A hook with matcher [pattern] already exists." Ask whether to skip or overwrite.
 2. If the recommendation includes a script, determine the script path: `<target>/hooks/<script-name>`. Create the `hooks/` directory if needed (`mkdir -p` via Bash).
 3. **Preview:** Show the hook configuration entry (type, matcher, command) and the script content (if any).
-4. **Ask:** "Create this hook? (yes/skip/stop)"
+4. **Confirm** via AskUserQuestion (header: "Create hook"):
+   - Option 1 label: "Create this hook" (Recommended) — description: `"Write the script file and add the hook entry to settings.local.json"`
+   - Option 2 label: "Skip" — description: `"Record as Skipped, continue to next intervention"`
+   - Option 3 label: "Stop" — description: `"Halt all further processing, go to Step 7"`
+   On "Create this hook": proceed. On "Skip": record as Skipped. On "Stop": halt.
 5. If yes:
    - Write the script file (if any) using Write tool. Set executable permission via Bash: `chmod +x <script-path>`.
    - Read or create `<target>/.claude/settings.local.json`. Add the hook entry under the `hooks` key. Write the updated file using Write or Edit.
@@ -117,7 +125,11 @@ For each intervention, follow the type-specific procedure below.
 3. Create the `.claude/rules/` directory if needed (`mkdir -p` via Bash).
 4. **Validate content:** The rule text must be plain Markdown with no YAML frontmatter. It must use strong action verbs ("must", "never", "always"). It must include scope qualifiers.
 5. **Preview:** Show the file path and the full rule content.
-6. **Ask:** "Create this rule? (yes/skip/stop)"
+6. **Confirm** via AskUserQuestion (header: "Create rule"):
+   - Option 1 label: "Create this rule" (Recommended) — description: `"Write the rule file to .claude/rules/<rule-name>.md"`
+   - Option 2 label: "Skip" — description: `"Record as Skipped, continue to next intervention"`
+   - Option 3 label: "Stop" — description: `"Halt all further processing, go to Step 7"`
+   On "Create this rule": proceed. On "Skip": record as Skipped. On "Stop": halt.
 7. If yes, write the file using Write tool.
 
 #### Skill Interventions
@@ -158,12 +170,13 @@ Read the shared `commit-conventions.md` reference.
 
 **Report commit:** Check if the audit report is already committed: `git -C <target> log --oneline --all -- <report-path>`. If not committed, offer:
 
-"The audit report is not yet committed. The audit-fix chain convention requires committing the report first:
-`docs(reviews): add <timestamp> audit-repo report`
+Tell the user: "The audit report is not yet committed. The audit-fix chain requires committing the report first: `docs(reviews): add <timestamp> audit-repo report`"
 
-Commit the report now? (yes/no)"
+Confirm via AskUserQuestion (header: "Commit report"):
+- Option 1 label: "Commit the report now" (Recommended) — description: `"Stage and commit the audit report with docs(reviews): add <timestamp> audit-repo report"`
+- Option 2 label: "Skip" — description: `"Continue without committing the report"`
 
-If yes, stage and commit via Bash.
+On "Commit the report now": stage and commit via Bash.
 
 **Fix commit:** Determine scope:
 - If all changes are CLAUDE.md only → scope is `project`
@@ -172,11 +185,11 @@ If yes, stage and commit via Bash.
 
 Compose: `fix(<scope>): apply interventions from <timestamp> audit`
 
-Show the commit message and list of files to be staged. Ask: "Commit these changes? (yes/no)"
+Show the commit message and list of files to be staged. Confirm via AskUserQuestion (header: "Commit changes"):
+- Option 1 label: "Commit these changes" (Recommended) — description: `"Stage and commit: fix(<scope>): apply interventions from <timestamp> audit"`
+- Option 2 label: "Skip" — description: `"Leave changes uncommitted"`
 
-If yes, stage the modified/created files and commit via Bash. If the commit fails, show the error: "Commit failed. Changes are applied but uncommitted. Resolve the issue and commit manually."
-
-If no, tell the user changes are applied but uncommitted.
+On "Commit these changes": stage the modified/created files and commit via Bash. If the commit fails, show the error: "Commit failed. Changes are applied but uncommitted. Resolve the issue and commit manually." On "Skip": tell the user changes are applied but uncommitted.
 
 ### 9. Report and next steps
 
@@ -189,18 +202,13 @@ Present final status:
 
 Then end your response with this menu (substitute `<target>` with the target repo path):
 
----
-**What's next?**
-1. Scaffold a deferred skill → `/scaffold-skill plugin <name>`
-2. Verify coverage → `/audit-repo <target>`
-3. Review created primitives → `/review-claude-config <target>`
-4. Done
+Present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Scaffold a deferred skill" (Recommended) — description: `"Run /scaffold-skill plugin <name> for a skill deferred from this session"`
+- Option 2 label: "Verify coverage" — description: `"Run /audit-repo <target> to confirm all gaps are resolved"`
+- Option 3 label: "Review created primitives" — description: `"Run /review-claude-config <target> to check quality of newly created files"`
+- Option 4 label: "Done" — description: `"End the workflow"`
 
-_Type a number to continue._
-
----
-
-When the user responds: **1** → show deferred skill list, ask which one, then invoke `/scaffold-skill`. **2** → invoke `/audit-repo` with the target. **3** → invoke `/review-claude-config` with the target. **4** → acknowledge and stop.
+On "Scaffold a deferred skill": show deferred skill list, ask which one, then invoke `/scaffold-skill`. On "Verify coverage": invoke `/audit-repo` with the target. On "Review created primitives": invoke `/review-claude-config` with the target. On "Done": acknowledge and stop.
 
 ## Hard Rules
 

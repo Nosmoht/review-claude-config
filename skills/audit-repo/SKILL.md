@@ -407,18 +407,13 @@ Run `/suggest-skills <target>` to explore skill opportunities beyond the audit s
 
 Otherwise:
 
----
-**What's next?**
-1. Apply audit findings (N interventions, M× P0) → `/apply-audit-findings <report-path>`
-2. Scaffold recommended skill (`<top-skill-name>`) → `/scaffold-skill plugin <top-skill-name>`
-3. Explore skill opportunities → `/suggest-skills <target>`
-4. Done
+Present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Apply audit findings" (Recommended) — description: `"Run /apply-audit-findings <report-path> to create N interventions (M× P0)"`
+- Option 2 label: "Scaffold recommended skill" — description: `"Run /scaffold-skill plugin <top-skill-name> to create the highest-priority skill"`
+- Option 3 label: "Explore skill opportunities" — description: `"Run /suggest-skills <target> to discover additional skill gaps"`
+- Option 4 label: "Done" — description: `"End the workflow"`
 
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke `/apply-audit-findings` with the report path. **2** → invoke `/scaffold-skill plugin <top-skill-name>` directly. **3** → invoke `/suggest-skills` with the target folder. **4** → acknowledge and stop.
+On "Apply audit findings": invoke `/apply-audit-findings` with the report path. On "Scaffold recommended skill": invoke `/scaffold-skill plugin <top-skill-name>` directly. On "Explore skill opportunities": invoke `/suggest-skills` with the target folder. On "Done": acknowledge and stop.
 
 ## Hard Rules
 

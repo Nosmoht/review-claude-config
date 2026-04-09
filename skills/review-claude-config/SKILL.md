@@ -354,19 +354,12 @@ Tell the user the report file path and suggest committing with: `docs(reviews): 
 
 ### Step 5: What's Next?
 
-After all output is complete, end your response with this menu (substitute `<report-path>` with the actual report path from step 2):
+After all output is complete, present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Apply review findings" (Recommended) — description: `"Run /apply-review-findings <report-path> to address High/Medium findings"`
+- Option 2 label: "View grade analytics" — description: `"Run /review-analytics to track quality trends over time"`
+- Option 3 label: "Done" — description: `"End the workflow"`
 
----
-**What's next?**
-1. Apply review findings → `/apply-review-findings <report-path>`
-2. View grade analytics → `/review-analytics`
-3. Done
-
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke `/apply-review-findings` with the report path. **2** → invoke `/review-analytics`. **3** → acknowledge and stop.
+On "Apply review findings": invoke `/apply-review-findings` with the report path. On "View grade analytics": invoke `/review-analytics`. On "Done": acknowledge and stop.
 
 ## Hard Rules
 

@@ -102,18 +102,24 @@ Build from `references/hook-template.py`:
   - No-op: `print("{}")`
 - Safety wrapper: `try: main() except Exception: print("{}") finally: sys.exit(0)`.
 
-Show the full script to the user. Ask: "Does this look correct? (yes/edit/cancel)"
+Show the full script to the user. Confirm via AskUserQuestion (header: "Script preview"):
+- Option 1 label: "Correct — proceed" (Recommended) — description: `"Accept this script and continue to Step 5"`
+- Option 2 label: "Adjust" — description: `"Describe what to change; will regenerate and show again"`
+- Option 3 label: "Cancel" — description: `"Stop without writing anything"`
 
-- **yes** — Proceed to Step 5.
-- **edit** — Ask what to change, regenerate, and show again.
-- **cancel** — Stop without writing anything.
+On "Adjust": ask what to change, regenerate, and show again. On "Cancel": stop without writing anything.
 
 ### 5. Generate hooks.json entry
 
 Build the JSON entry for the hook type. For `PreToolUse`, include the `matcher` field. For other types, omit it.
 
 Show the full updated `hooks.json` with the new entry merged in.
-Ask: "Does this look correct? (yes/edit/cancel)"
+Confirm via AskUserQuestion (header: "hooks.json preview"):
+- Option 1 label: "Correct — proceed" (Recommended) — description: `"Accept this hooks.json entry and continue"`
+- Option 2 label: "Adjust" — description: `"Describe what to change; will regenerate and show again"`
+- Option 3 label: "Cancel" — description: `"Stop without writing anything"`
+
+On "Adjust": ask what to change, regenerate, and show again. On "Cancel": stop without writing anything.
 
 ### 6. Test the hook
 
@@ -127,9 +133,11 @@ Report the result. If the test fails, show the error output and stop — do not 
 
 ### 7. Write files (confirmation gate)
 
-Ask: "Write `hooks/<hook-name>.py` and update `hooks/hooks.json`? (yes/no)"
+Confirm via AskUserQuestion (header: "Write files"):
+- Option 1 label: "Write hooks/<hook-name>.py and update hooks.json" (Recommended) — description: `"Create the script file and register the hook in hooks/hooks.json"`
+- Option 2 label: "Cancel" — description: `"Stop without writing anything"`
 
-If yes:
+On "Write hooks/<hook-name>.py and update hooks.json":
 - Write `hooks/<hook-name>.py`.
 - Edit `hooks/hooks.json` to add the new entry in the correct hook-type section, preserving all existing entries.
 - Verify the resulting `hooks.json` is valid JSON by running: `python3 -c "import json; json.load(open('hooks/hooks.json'))"`. If validation fails, report the error and ask the user how to proceed.
@@ -152,19 +160,12 @@ Hook scaffolded. Suggested commit:
   feat(hooks): add <hook-name> <hook-type> hook
 ```
 
-Then end your response with this menu:
+Then present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Test the hook" (Recommended) — description: `"Start a new Claude Code session and observe the hook output"`
+- Option 2 label: "Develop another hook" — description: `"Run /develop-hooks [hook-type] <hook-name> for another hook"`
+- Option 3 label: "Done" — description: `"End the workflow"`
 
----
-**What's next?**
-1. Test the hook in a real Claude Code session
-2. Develop another hook → `/develop-hooks [hook-type] <hook-name>`
-3. Done
-
-_Type a number to continue._
-
----
-
-When the user responds: **1** → advise them to start a new session and observe hook output. **2** → ask for the new hook name and type, then restart from Step 1. **3** → acknowledge and stop.
+On "Test the hook": advise them to start a new session and observe hook output. On "Develop another hook": ask for the new hook name and type, then restart from Step 1. On "Done": acknowledge and stop.
 
 ## Hard Rules
 

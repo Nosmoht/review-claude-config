@@ -417,25 +417,20 @@ For BLOCKED cases: show which skill was missing and what it would have tested.
 
 ### Step 3: Persist
 
-Ask: "Save report to `.claude/reviews/YYYY-MM-DDTHHMMSS-eval-cases.md`? (yes/no)"
+Confirm via AskUserQuestion (header: "Save report"):
+- Option 1 label: "Save report" (Recommended) — description: `"Write to .claude/reviews/YYYY-MM-DDTHHMMSS-eval-cases.md"`
+- Option 2 label: "Skip" — description: `"Discard the report"`
 
-If yes, write the report. Use today's date and current time in the filename. If the directory does not exist, create it first.
+On "Save report": write the report. Use today's date and current time in the filename. If the directory does not exist, create it first.
 
 ### Step 4: What's Next
 
-End your response with this menu:
+Present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Re-run a specific case" — description: `"Run /run-eval-cases <case-number> to retest a single eval case"`
+- Option 2 label: "Review the review system" — description: `"Run /review-claude-config . to audit overall quality"`
+- Option 3 label: "Done" (Recommended) — description: `"End the workflow"`
 
----
-**What's next?**
-1. Re-run a specific case → `/run-eval-cases <case-number>`
-2. Review the review system → `/review-claude-config .`
-3. Done
-
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke `/run-eval-cases` with the specified case number. **2** → invoke `/review-claude-config .`. **3** → acknowledge and stop.
+On "Re-run a specific case": invoke `/run-eval-cases` with the specified case number. On "Review the review system": invoke `/review-claude-config .`. On "Done": acknowledge and stop.
 
 ## Hard Rules
 

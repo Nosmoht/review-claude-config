@@ -56,9 +56,12 @@ filename: [path]" — do not error out.
 Select the file with the most recent valid timestamp and compute days since that run.
 
 If the last run was fewer than 90 days ago AND no `--scope` flag was provided:
-Inform the user: "Last evidence-layer maintenance run was N days ago — scheduled
-refresh (90-day cycle) is not yet due." Ask: "Proceed anyway? (yes/no)"
-If the user says no, stop. If yes, continue with all checks.
+Inform the user: "Last evidence-layer maintenance run was N days ago — scheduled refresh (90-day cycle) is not yet due."
+Confirm via AskUserQuestion (header: "Evidence layer maintenance"):
+- Option 1 label: "Proceed anyway" — description: `"Run all checks even though the scheduled refresh is not yet due"`
+- Option 2 label: "Cancel" (Recommended) — description: `"Stop — check again when the 90-day cycle is due"`
+
+On "Cancel": stop. On "Proceed anyway": continue with all checks.
 
 If no previous run exists, proceed without prompting.
 
@@ -234,9 +237,11 @@ Review (unrecorded contradictions, tier violations):
 
 Present the report in the conversation.
 
-Ask: "Save this report to .claude/reviews/YYYY-MM-DDTHHMMSS-evidence-layer.md? (yes/no)"
-Use the current timestamp for the filename (format YYYY-MM-DDTHHMMSS with hours, minutes,
-seconds as HHMMSS).
+Confirm via AskUserQuestion (header: "Save report"):
+- Option 1 label: "Save report" (Recommended) — description: `"Write to .claude/reviews/YYYY-MM-DDTHHMMSS-evidence-layer.md"`
+- Option 2 label: "Skip" — description: `"Discard the report"`
+
+Use the current timestamp for the filename (format YYYY-MM-DDTHHMMSS with hours, minutes, seconds as HHMMSS). On "Save report": write the file.
 
 If the user confirms, write the file to `.claude/reviews/YYYY-MM-DDTHHMMSS-evidence-layer.md`.
 
@@ -245,23 +250,13 @@ Suggest a commit message:
 
 ### Step 9: What's Next menu
 
-Present the following options:
+If any findings exist, present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Fix non-canonical labels" (Recommended) — description: `"Edit files directly or use /apply-rule-review-findings; list specific files and replacements again on request"`
+- Option 2 label: "Refresh stale sources" — description: `"Run /refresh-engineering-baseline to update the engineering baseline"`
+- Option 3 label: "Check overall repo health" — description: `"Run /check-repo-health for a broader health overview"`
+- Option 4 label: "Done" — description: `"End the workflow"`
 
----
-**What's next?**
-1. Fix non-canonical labels — edit files directly or use `/apply-rule-review-findings`
-2. Refresh stale sources — run `/refresh-engineering-baseline`
-3. Check overall repo health — run `/check-repo-health`
-4. Done
-
-_Type a number to continue._
-
----
-
-When the user responds: **1** → remind the user that label edits are direct file edits;
-offer to list the specific files and replacements again. **2** → invoke
-`/refresh-engineering-baseline`. **3** → invoke `/check-repo-health`. **4** →
-acknowledge and stop.
+On "Fix non-canonical labels": remind the user that label edits are direct file edits; offer to list the specific files and replacements again. On "Refresh stale sources": invoke `/refresh-engineering-baseline`. On "Check overall repo health": invoke `/check-repo-health`. On "Done": acknowledge and stop.
 
 If all checks passed with zero findings, skip the menu and confirm the healthy state.
 

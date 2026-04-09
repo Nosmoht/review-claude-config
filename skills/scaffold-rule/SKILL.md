@@ -71,11 +71,12 @@ Before presenting, run these validation checks against the generated content:
 
 If any check fails, report the specific violation and correct it before presenting.
 
-Present the full generated content to the user. Ask: "Does this look correct? (yes/edit/cancel)"
+Present the full generated content to the user. Confirm via AskUserQuestion (header: "Rule preview"):
+- Option 1 label: "Correct — write file" (Recommended) — description: `"Write the rule to .claude/rules/<rule-name>.md"`
+- Option 2 label: "Adjust" — description: `"Describe what to change; will regenerate and show again"`
+- Option 3 label: "Cancel" — description: `"Stop without writing anything"`
 
-- **yes** — Proceed to writing the file.
-- **edit** — Ask what to change, regenerate, and show the preview again before writing.
-- **cancel** — Stop without writing anything.
+On "Adjust": ask what to change, regenerate, and show the preview again before writing. On "Cancel": stop without writing anything.
 
 ### 5. Write file
 
@@ -103,19 +104,12 @@ Rule scaffolded. Suggested commit:
   feat(<rule-name>): add <rule-name> rule
 ```
 
-Then end your response with this menu:
+Then present next steps via AskUserQuestion (header: "What's next?"):
+- Option 1 label: "Review the new rule" (Recommended) — description: `"Run /review-rule .claude/rules/<rule-name>.md to validate quality"`
+- Option 2 label: "Scaffold another rule" — description: `"Provide a rule name to scaffold another"`
+- Option 3 label: "Done" — description: `"End the workflow"`
 
----
-**What's next?**
-1. Review the new rule → `/review-rule .claude/rules/<rule-name>.md`
-2. Scaffold another rule → `/scaffold-rule <new-name>`
-3. Done
-
-_Type a number to continue._
-
----
-
-When the user responds: **1** → invoke `/review-rule` with the new rule's path. **2** → ask for the rule name, then invoke `/scaffold-rule`. **3** → acknowledge and stop.
+On "Review the new rule": invoke `/review-rule` with the new rule's path. On "Scaffold another rule": ask for the rule name, then invoke `/scaffold-rule`. On "Done": acknowledge and stop.
 
 ## Hard Rules
 
