@@ -59,6 +59,8 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 
 > **Agentic overlay** (applies when item has multi-step workflows, subagent delegation, loop/retry logic, or Write/Bash/Edit tools): R1-R10 reliability checks apply per `autonomous-agent-reliability.md` §Quality Rubric Checks. High-severity checks (R1: termination conditions, R4: escalation/HITL, R9: safety/PII scope) are B/C discriminators — missing any High check caps Safety at C. Grade mapping: **A** = all 10 addressed; **B** = all High checks addressed, ≤2 Medium implicit; **C-F** = inherit base grades, each missing High check shifts one grade down.
 
+> **Execution diagnostics:** RD-6 (tool availability probe) contributes to Safety; RD-4 (error handling for tool unavailability and unexpected output) contributes to Completeness; RD-5 (explicit step dependencies) contributes to Clarity.
+
 ### 7. Metadata (10%; 5% if Safety is 15%)
 - **A**: Complete frontmatter, description matches body, tool list matches usage, argument-hint present, trigger conditions explicit.
 - **B**: Complete frontmatter; one minor tool list mismatch.
@@ -67,6 +69,8 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 - **F**: Missing required fields or description is misleading.
 
 For agent-specific criteria, see `agent-evaluation-guide.md`. R1-R10 definitions: `autonomous-agent-reliability.md` §Quality Rubric Checks.
+
+> **Activation diagnostics:** RD-1 (trigger ambiguity), RD-2 (negative constraints), RD-3 (trigger overlap with siblings) contribute activation-failure evidence to Metadata grading. Any RD-1/2/3 FAIL indicates activation reliability risk.
 
 ## Reviewer Output Expectations
 

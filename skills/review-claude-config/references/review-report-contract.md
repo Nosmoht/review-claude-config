@@ -10,7 +10,7 @@ The only normative source for the review/report contract (used by `review-*`, `a
 
 ## Certificate Shape
 
-Order: `Goal` → `Certificate` → `Strengths` → `Recommendations`. Calibration sections may appear between `Certificate` and `Strengths`.
+Order: `Goal` → `Certificate` → `Strengths` → `[Diagnostics]` → `Recommendations`. Calibration sections may appear between `Certificate` and `Strengths`. Diagnostic sections (e.g., `### Reliability Diagnostics`) may appear between `Strengths` and `Recommendations`.
 
 ## Recommendation Block
 

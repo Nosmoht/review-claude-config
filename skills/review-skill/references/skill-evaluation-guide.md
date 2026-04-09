@@ -42,3 +42,9 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | AP-2 | No tools in `allowed-tools` unreferenced in the workflow body? | Meta |
 | AP-3 | Output format explicitly specified (not relying on implicit model behavior)? | PE |
 | AP-4 | Error handling present for tool failures or unavailable tools? | Compl |
+| RD-1 | Trigger phrases specific enough — no common user phrases match unintentionally? | Meta |
+| RD-2 | Negative constraints present and concrete — skill explicitly rejects ≥1 out-of-scope scenario? | Meta |
+| RD-3 | No overlapping triggers with sibling skills in same plugin directory? (Glob siblings, compare descriptions) | Meta |
+| RD-4 | Error handling covers tool unavailability AND unexpected tool output? | Compl |
+| RD-5 | Step dependencies explicit — upstream/downstream relationships stated, not just numbered? | Clarity |
+| RD-6 | Tool availability validated before first use (probe or conditional fallback, not assumed present)? | Safety |

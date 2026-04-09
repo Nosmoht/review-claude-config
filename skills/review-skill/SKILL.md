@@ -79,7 +79,7 @@ Score using the rubric as the PRIMARY basis. The skill evaluation guide provides
 
 **Scoring procedure:**
 
-1. Work through the full checklist in `references/skill-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item (ID PD-1 through AP-4).
+1. Work through the full checklist in `references/skill-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item (ID PD-1 through RD-6). RD-1 through RD-6 are reliability diagnostic checks — their FAILs are surfaced in the `### Reliability Diagnostics` output section and contribute to the mapped dimension grade (RD-1/2/3 → Metadata; RD-4 → Completeness; RD-5 → Clarity; RD-6 → Safety). For RD-3, Glob for sibling `SKILL.md` files in the same plugin directory and compare trigger phrases.
 2. **Completeness gate:** Before producing the certificate, verify:
    - Every checklist item has a verdict (no blanks).
    - Every dimension has at least one non-NA item.
@@ -128,6 +128,16 @@ Calculate overall grade:
 - [strength 1]
 - [strength 2]
 - [strength 3 if applicable]
+
+### Reliability Diagnostics
+
+#### Activation
+[For each RD-1/2/3 FAIL: "- **RD-N FAIL**: [evidence quote or reference] → Fix: [specific action]"]
+[If all RD-1/2/3 PASS: "No activation issues detected."]
+
+#### Execution
+[For each RD-4/5/6 FAIL: "- **RD-N FAIL**: [evidence quote or reference] → Fix: [specific action]"]
+[If all RD-4/5/6 PASS: "No execution issues detected."]
 
 ### Recommendations
 
