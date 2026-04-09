@@ -33,17 +33,20 @@ class TestEstimateTokens:
 
 class TestGetBudget:
     def test_rubric(self, tmp_path):
-        assert get_budget(tmp_path / "scoring-rubric.md") == 1000
+        assert get_budget(tmp_path / "scoring-rubric.md") == 2000
 
     def test_baseline(self, tmp_path):
-        assert get_budget(tmp_path / "engineering-baseline.md") == 2000
+        assert get_budget(tmp_path / "engineering-baseline.md") == 3500
 
     def test_signal_catalog(self, tmp_path):
         assert get_budget(tmp_path / "signal-catalog.md") == 1000
 
     def test_domain_cache(self, tmp_path):
         p = tmp_path / "skills" / "x" / "references" / "domain-cache" / "cilium.md"
-        assert get_budget(p) == 500
+        assert get_budget(p) == 800
+
+    def test_eval_guide(self, tmp_path):
+        assert get_budget(tmp_path / "skill-evaluation-guide.md") == 1000
 
     def test_default(self, tmp_path):
         assert get_budget(tmp_path / "other-file.md") == 500
@@ -98,8 +101,8 @@ class TestValidateTokenBudgets:
         monkeypatch.setattr(validate_token_budgets, "REPO_ROOT", tmp_path)
         d = tmp_path / "skills" / "review-claude-config" / "references"
         d.mkdir(parents=True)
-        # scoring-rubric.md has budget 1000 → 800 tokens = WARN, not FAIL
-        (d / "scoring-rubric.md").write_text("x" * 3200)  # 800 tokens
+        # scoring-rubric.md has budget 2000 → 1600 tokens = WARN, not FAIL
+        (d / "scoring-rubric.md").write_text("x" * 6400)  # 1600 tokens
         errors = validate_fn()
         assert errors == []
 
@@ -107,7 +110,7 @@ class TestValidateTokenBudgets:
         monkeypatch.setattr(validate_token_budgets, "REPO_ROOT", tmp_path)
         d = tmp_path / "skills" / "review-claude-config" / "references" / "domain-cache"
         d.mkdir(parents=True)
-        (d / "cilium.md").write_text("x" * 2400)  # 600 tokens, budget 500
+        (d / "cilium.md").write_text("x" * 3600)  # 900 tokens, budget 800
         errors = validate_fn()
         assert len(errors) == 1
         assert "domain-cache" in errors[0]

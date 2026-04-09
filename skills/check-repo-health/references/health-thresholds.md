@@ -16,10 +16,16 @@ last_refreshed: 2026-03-26
 
 | File Pattern | Budget (tokens) |
 |-------------|-----------------|
-| scoring-rubric.md | 1000 |
-| engineering-baseline.md | 2000 |
+| scoring-rubric.md | 2000 |
+| engineering-baseline.md | 3500 |
 | signal-catalog.md | 1000 |
-| domain-cache/*.md (excl. INDEX.md) | 500 |
+| *-evaluation-guide.md | 800–1000 |
+| *-template.md (scaffold) | 600–750 |
+| reference-patterns.md | 800 |
+| cross-skill-dependencies.md | 600 |
+| review-report-contract.md | 600 |
+| report-template.md | 700 |
+| domain-cache/*.md (excl. INDEX.md) | 800 |
 | Other reference files | 500 |
 
 Token budget status:

@@ -12,14 +12,32 @@ import sys
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
-# Budget in tokens (chars / 4). Pattern matched against file name.
+# Budget in tokens (chars / 4). Matched against file name.
+# Rationale: centralized budget map per ESLint/Ruff convention (not per-file
+# frontmatter overrides). See research: arXiv 2603.29919, ESLint flat config,
+# Ruff per-file-ignores — all use centralized config for numeric thresholds.
 BUDGETS: dict[str, int] = {
-    "scoring-rubric.md": 1000,
-    "engineering-baseline.md": 2000,
+    # Core review references (large by design)
+    "scoring-rubric.md": 2000,
+    "engineering-baseline.md": 3500,
     "signal-catalog.md": 1000,
+    # Evaluation guides — dense checklists, legitimately >500
+    "skill-evaluation-guide.md": 1000,
+    "agent-evaluation-guide.md": 1000,
+    "claude-md-evaluation-guide.md": 800,
+    "hook-evaluation-guide.md": 800,
+    # Scaffold templates — contain full examples
+    "skill-template.md": 750,
+    "rule-template.md": 700,
+    "agent-template.md": 600,
+    # Structured references
+    "reference-patterns.md": 800,
+    "cross-skill-dependencies.md": 600,
+    "review-report-contract.md": 600,
+    "report-template.md": 700,
 }
 
-DOMAIN_CACHE_BUDGET = 500
+DOMAIN_CACHE_BUDGET = 800
 DEFAULT_BUDGET = 500
 
 

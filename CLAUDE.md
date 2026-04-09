@@ -102,7 +102,7 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 ## Development Conventions
 
 - Language: English
-- Reference file budgets: rubric `<1K`, baseline `<2K`, all others `<=500` tokens
+- Reference file budgets: see `scripts/validate_token_budgets.py` BUDGETS map (authoritative); default `<=500` tokens, named files have justified higher budgets
 - Treat exact thresholds and workflow conventions as `Repo default` unless stronger evidence exists
 - Domain cache refresh discipline follows the repo's 90-day cadence
 - `last_refreshed` belongs in YAML frontmatter only — body markers (`**Fetched:**`, `Last reviewed:`) are distinct fields with different meanings and must not be converted; absence of `last_refreshed` causes silent skip by `check-repo-health` (not FAIL)
@@ -171,6 +171,8 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 ## Change Discipline
 
 Change Discipline Rule ([docs/change-discipline-rule.md](docs/change-discipline-rule.md)) — mandatory plan→review→implement→review→commit; **subagent must receive plan+CLAUDE.md+research+target files+checklist** before any plan approval. Zero Medium findings before commit. Applies to all changes: skills, agents, rules, code, docs.
+
+**No plan without multi-perspective review.** Before calling ExitPlanMode, launch 2–3 Plan agents with different review perspectives (risk/regression, convention compliance, dependency correctness). Only truly trivial single-file changes (typo, rename) skip this step. LLM self-review catches <44% of its own errors — subagent review is mandatory.
 
 ## Research Backlog
 
