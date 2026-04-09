@@ -91,9 +91,17 @@ Create the skill directory and files:
    ---
    name: <reference-name>
    description: <purpose from user input>
+   last_refreshed: <today's date in YYYY-MM-DD format>
    ---
 
-   [TODO: Add content]
+   ## Overview
+
+   <Describe the purpose and scope of this reference. One or two sentences.>
+
+   ## Key Points
+
+   - <Key point 1>
+   - <Key point 2>
    ```
 
 If any write fails, report which files were successfully created and which failed. Do not proceed to Step 6 until all files are written.

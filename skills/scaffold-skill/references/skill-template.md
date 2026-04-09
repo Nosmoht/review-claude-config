@@ -44,9 +44,9 @@ user-invocable: false                     # Optional: set if Claude-only (rare)
 - <Error handling guarantee>
 ```
 
-## Reference File Frontmatter
+## Reference File Template
 
-Reference files in `references/` use minimal YAML frontmatter:
+Reference files in `references/` use minimal YAML frontmatter followed by structured body sections:
 
 ```yaml
 ---
@@ -54,6 +54,15 @@ name: <reference-name>            # Required: kebab-case, matches filename
 description: <one-line summary>   # Required: what this reference contains
 last_refreshed: YYYY-MM-DD        # Required: ISO date; participates in check-repo-health freshness
 ---
+
+## Overview
+
+<Describe the purpose and scope of this reference. One or two sentences.>
+
+## Key Points
+
+- <Key point 1>
+- <Key point 2>
 ```
 
 Set `last_refreshed` to today's date on creation and update it on any substantive content change.
