@@ -20,6 +20,7 @@ Update `references/engineering-baseline.md` with current research findings.
 ### 1. Locate the baseline file
 
 Read `skills/review-claude-config/references/engineering-baseline.md`. If the file is not found, report the error and stop.
+Read `skills/review-claude-config/references/engineering-baseline-provenance.md` to load the current source provenance map. If not found, report the error and stop — the provenance map must stay in sync with the baseline.
 Read `skills/review-claude-config/references/evidence-contract.md` to load the canonical evidence classes and source precedence rules.
 Read `skills/review-claude-config/references/source-quality-criteria.md` to load the source filtering criteria used in Step 3.
 
@@ -117,14 +118,20 @@ Confirm via AskUserQuestion (header: "Apply baseline changes"):
 
 On "Cancel": stop and preserve the current file.
 
-### 6. Write the updated file
+### 6. Write the updated files
 
 Only after user confirmation. Update `engineering-baseline.md` with:
 - Set `last_refreshed` in frontmatter to today's date
 - Before writing, estimate the token count of the updated file. If it would exceed 2K tokens, remove the lowest-evidence techniques until it fits, and note the removals in the change report. If removing techniques would compromise coverage of a full section, warn the user before proceeding.
 - Preserve the Prompt / Context / Tool section headings
 - Preserve explicit evidence-class labels on each claim cluster
-- Add new sources to the Sources section at the bottom
+- Do NOT add a Sources section — all source provenance belongs in `engineering-baseline-provenance.md`
+
+Also update `engineering-baseline-provenance.md`:
+- For each added technique: add a row with technique name, evidence class, sources, and tier
+- For each updated technique: update the corresponding provenance row with new or changed sources
+- For each removed technique: remove its provenance row
+- Set `last_refreshed` in frontmatter to today's date
 
 ### 7. Report changes
 
@@ -155,6 +162,6 @@ Present the change report in this format:
 
 - Preserve the three section headings, but allow prose structure changes needed for evidence classification
 - Do not exceed 2K tokens in the output file
-- Every technique must cite an evidence source
+- Every technique must have an entry in engineering-baseline-provenance.md
 - Do not remove techniques unless evidence shows they are wrong or superseded
 - If WebSearch fails or user declines changes, leave the baseline unchanged

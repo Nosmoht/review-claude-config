@@ -30,6 +30,8 @@ BUDGETS: dict[str, int] = {
     "skill-template.md": 750,
     "rule-template.md": 700,
     "agent-template.md": 600,
+    # Provenance map — not runtime-loaded, budget prevents unbounded growth
+    "engineering-baseline-provenance.md": 1500,
     # Structured references
     "reference-patterns.md": 800,
     "cross-skill-dependencies.md": 600,

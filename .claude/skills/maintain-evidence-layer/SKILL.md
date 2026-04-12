@@ -144,22 +144,39 @@ Tier 3: tutorials, blog posts without metrics, Stack Overflow, marketing content
 Local summary: any `research/*.md` file treated as a derived summary, not a primary
 source.
 
-Search `docs/` and `skills/review-claude-config/references/` for occurrences of
-`[Proven result]`.
+#### engineering-baseline.md — use the provenance map
 
-For each "Proven result" claim:
+Read `skills/review-claude-config/references/engineering-baseline-provenance.md` as the
+authoritative source register for `engineering-baseline.md`. Citations are no longer
+inline in the baseline — they live exclusively in the provenance map.
+
+Search `skills/review-claude-config/references/engineering-baseline.md` for `[Proven result]`.
+
+For each "Proven result" claim in engineering-baseline.md:
+- Extract the technique name (bold text before the evidence class label).
+- Look up the technique in the provenance map.
+- Flag if: the technique is missing from the map; the map entry shows no Tier 1 source;
+  or the only listed source is a local `research/*.md` summary with no Tier 1 primary
+  source traceable from it.
+
+Search the same file for `[Engineering guidance]`.
+
+For each "Engineering guidance" claim in engineering-baseline.md:
+- Same lookup in the provenance map.
+- Flag if the only traceable source is Tier 3, or if the technique is absent from the map.
+
+#### docs/ — check inline citations
+
+Search `docs/` for `[Proven result]` and `[Engineering guidance]`.
+
+For each claim found in docs/ files:
 - Look at the surrounding text (±5 lines) for a citation or source link.
-- Flag the claim if the only cited source is a local `research/*.md` summary with no
-  Tier 1 primary source traceable from it, or if no source is cited at all.
+- Flag "Proven result" if the only cited source is a local `research/*.md` summary with
+  no Tier 1 primary source traceable from it, or if no source is cited at all.
+- Flag "Engineering guidance" if the only traceable source appears to be Tier 3 or is
+  uncited.
 
-Search the same scope for `[Engineering guidance]`.
-
-For each "Engineering guidance" claim:
-- Look at surrounding text for a citation.
-- Flag the claim if the only traceable source appears to be Tier 3 (blog post without
-  metrics, tutorial) or is uncited.
-
-Record each violation with: file path, line, claim excerpt, source issue.
+Record each violation with: file path, technique name or line, claim excerpt, source issue.
 
 ## Phase 3 — Report
 
