@@ -334,7 +334,8 @@ Use the current date and time for the timestamp. Create the `<target>/.claude/re
 ### Step 3: Delta comparison
 
 If a previous review report exists in `<target>/.claude/reviews/`:
-- Read the most recent prior report's frontmatter `summary` block
+- Read the most recent prior report's frontmatter `summary` block and `baseline_version`
+- **Baseline check:** If the prior report's `baseline_version` differs from the current engineering baseline, apply the Baseline version lock hard rule (present choice to user before proceeding)
 - Compare each item's current grades against prior grades
 - Append a "Delta from Prior Review" section to the report body:
 
@@ -370,3 +371,4 @@ On "Apply review findings": invoke `/apply-review-findings` with the report path
 - **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present all reports before asking** about follow-up actions.
 - **Error handling:** If an analysis agent fails, report the failure with partial results and continue with remaining items. Never silently skip.
+- **Baseline version lock.** When a prior review report exists for the same target directory, use the same `baseline_version` as the prior report. If the current engineering baseline is newer, present the user with a choice: "Prior review used baseline v{prior}. Current baseline is v{current}. Use [prior|current]?" A baseline change is equivalent to a rubric change and must be a conscious decision, not an implicit drift.
