@@ -9,21 +9,21 @@ last_refreshed: 2026-04-08
 ## Grade Scale
 A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<60)=Failing.
 
-**B across all dimensions** = A with one or two minor gaps. **D across all dimensions** = below C but not fully failing.
+**Grade derivation:** A=0 FAILs; B=≤25% (no High); C=any High or >25%; D=>50% High; F=>50% total. Cite evidence before grading.
 
 ## Dimensions
 
 ### 1. Clarity (15%)
 - **A**: Explicit sequential workflow, no ambiguous conditionals, deterministic behavior across runs.
 - **B**: All steps sequenced; one conditional broad but not vague.
-- **C**: Mostly followable but some steps require interpretation. *if two models would likely produce different workflows from the instructions, it's C or below.*
+- **C**: Mostly followable but some steps require interpretation. *Test: any conditional uses a bare vague predicate ("if needed", "as appropriate") without a concrete trigger → C or below.*
 - **D**: Key dependencies implicit; multiple ambiguous conditionals remain.
 - **F**: Vague instructions like "handle appropriately" or "use best judgment" with no criteria.
 
 ### 2. Completeness (15%)
 - **A**: Edge cases addressed, output format defined, input validation present, failure modes documented; chain-level completeness: handles upstream/downstream dependency failures with progressive fallback (self-correct → fallback → escalate), propagates [INCOMPLETE] or stub-dependency states explicitly rather than silently continuing with partial data.
 - **B**: Most errors handled; output format defined; one edge case undocumented.
-- **C**: Happy path works but error handling or output format is incomplete. *If a common real-world scenario would cause undefined behavior, it's C or below.*
+- **C**: Happy path works but error handling or output format is incomplete. *Test: any declared input can reach a path with no defined output or error handling → C or below.*
 - **D**: Multiple errors undefined; output format absent or vague.
 - **F**: Only describes the goal, not how to achieve it. No output specification.
 
@@ -46,14 +46,14 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 ### 5. Goal Alignment (20%)
 - **A**: Has right domain knowledge, tools, and structure; best practices reflected in workflow; findings self-evident to reviewers.
 - **B**: Domain-appropriate structure; one aspect superficially covered.
-- **C**: Addresses the goal superficially but misses domain-critical aspects. *if a domain expert would identify obvious missing steps or checks, it's C or below.*
+- **C**: Addresses the goal superficially but misses domain-critical aspects. *Test: workflow omits a step flagged FAIL by the evaluation checklist → C or below.*
 - **D**: Goal met but misses multiple domain-critical aspects practitioners expect.
 - **F**: Goal stated in description but body doesn't support achieving it.
 
 ### 6. Safety (10%; 15% with Write/Bash/Edit)
 - **A**: Least-privilege tool scoping per archetype (`tool-grant-decision-tree.md`), explicit guardrails for destructive actions, stop conditions, confirmation gates; failure path defined for every external dependency; stop condition prevents infinite recursion.
 - **B**: Least-privilege with one exception; gates present; one failure path implicit.
-- **C**: Tools are broader than needed or guardrails are implicit; any unmitigated Tier A high-risk combination (see `tool-grant-decision-tree.md`) caps Safety at C. *if the item could modify/delete user data without explicit confirmation, it's C or below.*
+- **C**: Tools broader than needed or guardrails implicit; unmitigated Tier A combination caps Safety at C. *Test: item modifies/deletes user data without explicit confirmation → C or below.*
 - **D**: Multiple tools too broad; no gates; some stop conditions missing.
 - **F**: Unrestricted tools with no guardrails. No stop conditions.
 
@@ -64,7 +64,7 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 ### 7. Metadata (10%; 5% if Safety is 15%)
 - **A**: Complete frontmatter, description matches body, tool list matches usage, argument-hint present, trigger conditions explicit.
 - **B**: Complete frontmatter; one minor tool list mismatch.
-- **C**: Required fields present but description is vague or tool list doesn't match usage. *If the description would cause incorrect skill/agent selection, it's C or below.*
+- **C**: Required fields present but description is vague or tool list doesn't match usage. *Test: description lacks a primary verb+object or contains no discriminating keyword → C or below.*
 - **D**: Required fields present; description vague AND multiple tool list mismatches.
 - **F**: Missing required fields or description is misleading.
 
