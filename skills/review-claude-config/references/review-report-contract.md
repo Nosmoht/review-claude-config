@@ -14,11 +14,15 @@ Order: `Goal` → `Certificate` → `Strengths` → `[Diagnostics]` → `Recomme
 
 ## Recommendation Block
 
-Heading: `#### N. [Title] (Impact: [High/Medium/Low][, Category: ...])`
+Heading: `#### N. [Title] (Impact: [High/Medium/Low][, Category: ...][, ID: {finding_id}])`
 
-Required: `Evidence`, `Why it matters`, `Validation`. Optional: `Current`, `Recommended`.
+Required: `Evidence`, `Why it matters`, `Validation`. Optional: `Current`, `Recommended`, `finding_id`.
 
 "Dispatchable" = includes both `Current` and `Recommended` anchors (≡ ESLint `meta.fixable`). "Manual-only" = valid finding without anchors.
+
+## Finding Identity (optional)
+
+`finding_id`: `{checklist_item}:{path}:{dimension}/v1` (e.g. `WS-2:skills/foo/SKILL.md:Clarity/v1`). Non-checklist: `ADHOC:{path}:{dim}:{slug}/v1`. Derived from verdict, not LLM text. Consumers match on `finding_id` when present; fall back to heading parse when absent.
 
 ## Report Frontmatter
 

@@ -27,3 +27,5 @@ Rules use only Clarity (30%), Completeness (30%), Goal Alignment (40%). PE, CE, 
 | GA-3 | Rule prevents the specific behavior it targets? | GA |
 | GA-4 | No obvious workarounds the rule doesn't address? | GA |
 | GA-5 | All constraints needed for stated goal are present? | GA |
+
+**Finding identity:** Every FAIL must produce a recommendation with `ID: {item}:{path}:{dim}/v1` in the heading.

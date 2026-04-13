@@ -48,3 +48,5 @@ Each AF item is NA unless its trigger field is present.
 | AF-1 | `background`/`isolation` match autonomy level — background agents need `isolation: worktree` or explicit scope constraints? | Safety | `background` or `isolation` |
 | AF-2 | `memory` scope (`user`/`project`/`local`) proportional to task? | CE | `memory` |
 | AF-3 | `initialPrompt` structured (goal, constraints, references) — not raw user forwarding? | PE | `initialPrompt` |
+
+**Finding identity:** Every FAIL must produce a recommendation with `ID: {item}:{path}:{dim}/v1` in the heading.

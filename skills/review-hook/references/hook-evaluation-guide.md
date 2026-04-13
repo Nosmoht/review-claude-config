@@ -49,3 +49,5 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | GA-1 | Hook's stated purpose matches its event trigger (e.g., quality gate on PreToolUse, not PostToolUse)? | Goal |
 | GA-2 | Hook's output (systemMessage, additionalContext, or block) is appropriate for the event type? | Goal |
 | GA-3 | Matcher scope is minimal — does not fire on events outside the hook's responsibility? | Goal |
+
+**Finding identity:** Every FAIL must produce a recommendation with `ID: {item}:{path}:{dim}/v1` in the heading.
