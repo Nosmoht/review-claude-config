@@ -81,3 +81,5 @@ Tools with Write/Bash/Edit: Safety→15%, Meta→5%; otherwise Safety→10%, Met
 
 ## Rule-Specific Scoring
 Rules use only 3 dimensions (renormalized): Clarity 30%, Completeness 30%, Goal Alignment 40%. Skip: PE, CE, Safety, Metadata (rules have no tools, no frontmatter, and are directives not prompts).
+
+**Hard rule:** Every rule review MUST produce grades for all 3 dimensions. A rule report with any dimension set to `null` is INVALID — re-evaluate the missing dimension before finalizing the certificate.
