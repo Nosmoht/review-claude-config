@@ -14,9 +14,9 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | PD-2 | SKILL.md under 500 lines? | CE |
 | PD-3 | Supplementary files loaded on-demand (Read), not pre-loaded? | CE |
 | PD-4 | Subagent isolation used for complex subtasks? | CE |
-| PD-5 | Activation boundaries clear — no unrelated request matching? | Meta |
+| PD-5 | Description contains ≥1 keyword that excludes unrelated requests? | Meta |
 | WS-1 | Steps numbered with explicit sequential dependencies? | Clarity |
-| WS-2 | Conditional branches have measurable criteria (not "if needed")? | Clarity |
+| WS-2 | Every conditional specifies a concrete trigger (value, threshold, file test, or tool output)? | Clarity |
 | WS-3 | Parallel vs sequential steps explicitly marked? | Clarity |
 | WS-4 | Stop conditions and recovery actions defined? | Safety |
 | RF-1 | Reference files within token budgets? | CE |
@@ -43,7 +43,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | AP-3 | Output format explicitly specified (not relying on implicit model behavior)? | PE |
 | AP-4 | Error handling present for tool failures or unavailable tools? | Compl |
 | RD-1 | Trigger phrases specific enough — no common user phrases match unintentionally? | Meta |
-| RD-2 | Negative constraints present and concrete — skill explicitly rejects ≥1 out-of-scope scenario? | Meta |
+| RD-2 | Skill explicitly rejects ≥1 out-of-scope scenario? | Meta |
 | RD-3 | No overlapping triggers with sibling skills in same plugin directory? (Glob siblings, compare descriptions) | Meta |
 | RD-4 | Error handling covers tool unavailability AND unexpected tool output? | Compl |
 | RD-5 | Step dependencies explicit — upstream/downstream relationships stated, not just numbered? | Clarity |

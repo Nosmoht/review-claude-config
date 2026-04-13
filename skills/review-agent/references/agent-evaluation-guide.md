@@ -12,7 +12,8 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 |----|-------|-----|
 | MS-1 | Model matches task complexity — no over/under-provisioning (haiku=routing, sonnet=analysis, opus=complex reasoning)? | Meta |
 | DA-1 | Description has specific trigger keywords — not generic? | Meta |
-| DA-2 | Description precision — narrow enough to avoid false activation yet broad enough for all legitimate triggers? | CE |
+| DA-2a | Description contains ≥1 discriminating keyword not in unrelated requests? | CE |
+| DA-2b | Description covers all documented example triggers? | CE |
 | DA-4 | `<example>` blocks present when trigger conditions are non-obvious? | Compl |
 | DA-5 | Body instructions do not redefine or contradict the description's trigger logic? | Meta |
 | TC-1 | `<example>` blocks cover all primary use cases? | Compl |
@@ -25,7 +26,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | SF-2 | Long body uses headings for structure (not dense prose)? | Clarity |
 | AP-2 | No tools copied from another agent without pruning unused ones? | Safety |
 | AP-3 | `disable-model-invocation: true` present if user-only invocation is appropriate? | Meta |
-| AP-4 | Agent avoids aggressive imperative language (MUST/CRITICAL/ALWAYS) where natural phrasing suffices. Safety/guardrail sections exempted. | PE |
+| AP-4 | Non-guardrail sections use MUST/CRITICAL ≤3 times total? | PE |
 | RL-1 | Termination conditions defined (step limit, timeout, success criteria, or bounded retry/backoff; `maxTurns` frontmatter satisfies this)? | Safety |
 | RL-2 | Failure paths specified, not just happy path? | Compl |
 | RL-4 | Escalation / HITL trigger defined for high-autonomy operations? | Safety |

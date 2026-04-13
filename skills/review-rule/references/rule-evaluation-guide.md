@@ -12,7 +12,7 @@ Rules use only Clarity (30%), Completeness (30%), Goal Alignment (40%). PE, CE, 
 
 | ID | Check | Dim |
 |----|-------|-----|
-| CL-1 | Two models would interpret this rule the same way? | Clarity |
+| CL-1 | Rule contains no term that admits two plausible opposite actions? | Clarity |
 | CL-2 | Terms precisely defined (no "appropriate", "good", "reasonable")? | Clarity |
 | CL-3 | Scope explicit (which files, operations, contexts)? | Clarity |
 | CL-4 | Action verbs unambiguous ("must"/"never", not "should"/"try to")? | Clarity |
@@ -26,4 +26,4 @@ Rules use only Clarity (30%), Completeness (30%), Goal Alignment (40%). PE, CE, 
 | GA-2 | Constraint proportional (not overly broad or narrow)? | GA |
 | GA-3 | Rule prevents the specific behavior it targets? | GA |
 | GA-4 | No obvious workarounds the rule doesn't address? | GA |
-| GA-5 | Domain knowledge reveals no missing constraints? | GA |
+| GA-5 | All constraints needed for stated goal are present? | GA |

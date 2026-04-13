@@ -13,7 +13,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | ID | Check | Dim |
 |----|-------|-----|
 | HC-1 | Event name is a valid Claude Code hook event (SessionStart, PreToolUse, PostToolUse, Stop, etc.)? | Compl |
-| HC-2 | Matcher pattern (if present) is specific enough to avoid unintended triggers? | Clarity |
+| HC-2 | Matcher pattern targets a single tool name or explicit glob — not a catch-all? | Clarity |
 | HC-3 | `on_error` behavior is defined or default (non-blocking) is appropriate for this hook's risk level? | Safety |
 | HC-4 | `timeout` is set and reasonable for the hook's operation (≤10s for PreToolUse, ≤30s for async events)? | Safety |
 | HC-5 | `description` field present in hooks.json explaining the hook's purpose? | Meta |
