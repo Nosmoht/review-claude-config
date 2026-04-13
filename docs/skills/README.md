@@ -17,6 +17,7 @@ System map for the plugin's skills and hooks. Use this page for component invent
 | [apply-rule-review-findings](apply-rule-review-findings.md) | Fix/Apply | `/apply-rule-review-findings [report]` | Standalone + Orchestrated |
 | [apply-audit-findings](apply-audit-findings.md) | Fix/Apply | `/apply-audit-findings [report]` | Standalone |
 | [audit-repo](audit-repo.md) | Discovery | `/audit-repo [folder]` | Standalone |
+| [audit-context-budget](audit-context-budget.md) | Maintenance | `/audit-context-budget [folder]` | Standalone |
 | [suggest-skills](suggest-skills.md) | Discovery | `/suggest-skills [folder]` | Standalone |
 | [scaffold-skill](scaffold-skill.md) | Development | `/scaffold-skill [plugin\|maintenance\|external <target-path>] <name>` | Standalone |
 | [check-repo-health](check-repo-health.md) | Maintenance | `/check-repo-health [all\|freshness\|tokens\|integrity]` | Standalone |
@@ -37,7 +38,7 @@ System map for the plugin's skills and hooks. Use this page for component invent
 - **Fix/Apply:** `apply-review-findings`, `apply-skill-review-findings`, `apply-agent-review-findings`, `apply-rule-review-findings`, `apply-audit-findings`
 - **Discovery:** `audit-repo`, `suggest-skills`
 - **Development:** `scaffold-skill`, `scaffold-agent`, `scaffold-rule`, `develop-hooks`
-- **Maintenance:** `check-repo-health`, `refresh-engineering-baseline`, `sync-research-index`, `run-eval-cases`, `validate-primitive-dependencies`, `maintain-evidence-layer`
+- **Maintenance:** `audit-context-budget`, `check-repo-health`, `refresh-engineering-baseline`, `sync-research-index`, `run-eval-cases`, `validate-primitive-dependencies`, `maintain-evidence-layer`
 - **Hooks:** `hook-skill-quality-gate`, `hook-session-check`
 
 ## Workflow Chains

@@ -37,6 +37,7 @@ This is the authoritative maintainer command inventory for the repo.
 
 ### Maintain
 
+- `/audit-context-budget [folder]` - estimate session-start token cost of a repo's Claude Code config
 - `/check-repo-health [all|freshness|tokens|integrity] [--validation]`
 - `/review-analytics [folder] [--validation]`
 - `/sync-research-index [folder]`
