@@ -347,7 +347,25 @@ If a previous review report exists in `<target>/.claude/reviews/`:
 | [only rows where grades changed] |
 ```
 
-If no prior report exists, skip this step.
+If the prior report contains `finding_id` values in recommendation headings, also append a finding-level delta:
+
+```
+## Finding Delta from Prior Review
+
+| finding_id | Status | Prior Impact | Current Impact |
+|------------|--------|-------------|----------------|
+| [rows for: new, recurring, fixed, regressed] |
+```
+
+Status definitions (SARIF/SonarQube pattern):
+- **new:** finding_id in current but NOT in prior
+- **recurring:** finding_id in BOTH current AND prior
+- **fixed:** finding_id in prior but NOT in current
+- **regressed:** finding_id was `verified` in prior `.finding-state` section but reappears as FAIL
+
+If the prior report has no finding_ids, skip the finding delta (backward-compatible).
+
+If no prior report exists, skip this step entirely.
 
 ### Step 4: Confirm
 
