@@ -163,6 +163,15 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 - [Error Class to Primitive Mapping for AI Coding Assistants](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale error taxonomy → primitive type mapping. Load when deriving primitives from error patterns or designing audit detection logic.
 - [Systematische Claude Code Optimierung für unbekannte Repositories](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation methodology; phase ordering and output contracts. Load when running `/audit-repo` or extending audit workflow.
 
+### Review Convergence & Evaluation Quality
+- [LLM Evaluator Consistency](research/llm-evaluator-consistency/llm-evaluator-consistency.md) — behavioral rubrics ICC3 +46%; RULERS binary decomposition QWK 0.7276; majority voting k=3 strongest variance reduction. Load when addressing review convergence or evaluator reliability.
+- [Rubric Design for LLM Evaluators](research/rubric-design/rubric-design-for-llm-evaluators.md) — Prometheus r=0.897 with behavioral anchoring; binary 76% acc vs 5-way 57%; LLM-hostile/friendly pattern catalog. Load when modifying scoring-rubric.md or evaluation guides.
+- [Checklist Item Calibration](research/checklist-calibration/checklist-calibration.md) — RubricEval 55.97% on hard binary; IFEval programmatic-first; BARS kappa >0.80 with boundary examples; Gawande 5-9 item cap. Load when calibrating evaluation guide checklist items.
+- [Finding Identity and Lifecycle](research/finding-identity/finding-identity-and-lifecycle.md) — SARIF v2.1.0 fingerprints; SonarQube cascading match; baseline diff pattern. Load when implementing finding tracking or delta comparison.
+- [Fix Completeness](research/fix-completeness/fix-completeness.md) — DRV K=2 raises yield 0-54%→50-77%; LLMs cannot self-correct without external feedback; per-finding tracking raises resolution 52%→70%. Load when improving apply-review-findings.
+- [Verification Methods per Dimension](research/verification-methods/verification-methods-per-dimension.md) — CheckEval +0.45 agreement with binary verification; 3-tier architecture (deterministic→LLM-binary→functional). Load when designing fix verification.
+- [Selective Multi-Rating](research/selective-multi-rating/selective-multi-rating.md) — Trust or Escalate: 78.5% cost reduction; selective k=3 at 1.6x cost targets borderline items. Load when considering multi-rater evaluation.
+
 ### Supporting Research
 - [LLM Agent Caching and Knowledge Persistence Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — file-based memory beats graph-based (74% vs 68.5%); CAG beats RAG for bounded corpora. Load when designing knowledge persistence or reviewing caching strategies.
 - [Web Content Scraping Tools for LLM Agents](research/web-scraping/web-content-scraping-tools.md) — Jina Reader returns clean Markdown, handles 512K tokens; faster than raw WebFetch for technical docs. Load when writing web research skills or choosing fetch strategy.
