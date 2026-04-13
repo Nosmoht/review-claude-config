@@ -95,7 +95,7 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 - **Every claim needs a source.** All research files, documentation, and recommendations must link to verifiable sources.
 - **Verify claims before acting on them.** Check git history, inspect actual data. Do not redesign a working system based on theoretical concerns.
 - **Use the canonical evidence layer for repo-wide claims.** Classify repository-level statements with [evidence-contract.md](skills/review-claude-config/references/evidence-contract.md) and follow [evidence-maintenance.md](docs/evidence-maintenance.md) for maintenance process.
-- **Iterate reviews until convergence.** Address findings, then re-review. Medium and High findings block completion.
+- **Iterate reviews until convergence.** Converged = two consecutive runs on unchanged files produce: (1) same set of `finding_id`s at Impact High/Medium, (2) grade variance ≤1 letter in any dimension, (3) no null dimensions where prior run had values. Medium and High findings block completion.
 - **Prefer evidence over rhetoric.** Findings should cite concrete paths, text, or examples.
 - **Research before design in novel areas.** Save results in `research/` with sources.
 - **Keep project knowledge in the repo.** No reliance on external memory.

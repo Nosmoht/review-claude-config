@@ -44,9 +44,11 @@ Expected scaffold behavior:
 Artifact: a skill with exactly 3 known defects (one each in Clarity, Safety, and Completeness) and 2 clear strengths.
 
 Expected review behavior:
-- Two consecutive runs on the same unchanged file produce the same set of findings: same dimensions flagged, same defects identified.
-- All 27 checklist items (PD-1 through AP-4) have a PASS/FAIL/NA verdict in every run.
-- Grade variance across runs is zero for all dimensions.
+- Two consecutive runs produce the same `finding_id` values for the 3 defects.
+- All checklist items have a PASS/FAIL/NA verdict in every run (no blanks).
+- Grade variance ≤1 letter in any single dimension (accounts for boundary effects).
+- No High/Medium finding in one run absent from the other (finding-level stability).
+- Rules always evaluated with all 3 dimensions (never null).
 - If Goal Alignment uses the domain cache, justifications reference the same cached evidence in both runs.
 
 ## Case 7 — New Checklist Item Discrimination
@@ -91,3 +93,31 @@ Expected review behavior:
 - Safety dimension capped at C due to unmitigated Tier A combination.
 - Recommendation includes concrete `Current:`/`Recommended:` blocks reducing tools to `[Read, Grep, Glob]` with justification for what would re-admit each removed tool.
 - **No false positive on Bash** if the agent description explicitly states "runs shell commands to parse binary log formats" — justification present, Tier A flag should not appear.
+
+## Case 9 — Finding-ID Stability
+
+Artifact: same skill reviewed twice without changes.
+
+Expected review behavior:
+- Both reports contain `finding_id` values in recommendation headings.
+- Every High/Medium finding appears with the same `finding_id` in both runs.
+- The finding delta table shows all findings as `recurring` — zero `new`, zero `fixed`.
+- `finding_id` format matches `{checklist_item}:{path}:{dimension}/v1`.
+
+## Case 10 — Baseline Version Lock
+
+Artifact: a repo with a prior review report using `baseline_version: 2026-04-04` when the current engineering baseline is `2026-04-08`.
+
+Expected review behavior:
+- Reviewer detects the baseline mismatch and presents a choice to the user.
+- Report uses the baseline version the user chose (prior or current).
+- Report does NOT silently switch to the newer baseline.
+
+## Case 11 — Rule Dimension Completeness
+
+Artifact: a rule file reviewed twice.
+
+Expected review behavior:
+- Both reports produce grades for all 3 rule dimensions (Clarity, Completeness, Goal Alignment).
+- No dimension is `null` in either report.
+- Grade variance ≤1 letter per dimension between runs.
