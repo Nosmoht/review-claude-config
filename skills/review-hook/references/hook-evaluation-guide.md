@@ -25,7 +25,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 |----|-------|-----|
 | PY-1 | Script reads input from `sys.stdin` (not args) when hook event provides JSON input? | Compl |
 | PY-2 | Script always outputs valid JSON to `stdout` (including on error paths)? | Safety |
-| PY-3 | Script exits with correct code: 0=pass, 1=block with message, 2=non-blocking error? | Safety |
+| PY-3 | Script exits with correct code: 0=pass, 2=block with message, 1/other=non-blocking error? | Safety |
 | PY-4 | No side effects on error paths (no partial writes, no external API calls without cleanup)? | Safety |
 | PY-5 | Heavy imports (network libs, large frameworks) avoided for PreToolUse hooks? | Goal |
 | PY-6 | `CLAUDE_PLUGIN_ROOT` env var checked before use; graceful exit if absent? | Compl |
@@ -39,7 +39,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | SR-1 | No credentials, tokens, or secrets accessed or logged? | Safety |
 | SR-2 | No unbounded loops or operations without timeout/limit? | Safety |
 | SR-3 | Hook is idempotent — running it twice produces the same result? | Safety |
-| SR-4 | Block decision (exit 1) includes a user-readable message explaining why? | Clarity |
+| SR-4 | Block decision (exit 2) includes a user-readable message on stderr explaining why? | Clarity |
 | SR-5 | Hook does not modify the files it is triggered on (read-only where possible)? | Safety |
 
 ## Goal Alignment
