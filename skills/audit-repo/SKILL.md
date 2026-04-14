@@ -39,6 +39,9 @@ Read from the sibling `suggest-skills` skill's references:
 - Locate via Glob: `**/suggest-skills/references/signal-catalog.md`
 - This provides the Application Signal Table and Skills Repository Signal Table for Phase 4B skill detection
 
+Load repo-identification reference to resolve suite-root and repo-slug:
+- Locate via Glob: `**/review-claude-config/references/repo-identification.md`
+
 ### Step 2: Initial Target Assessment
 
 Check the target folder for existing Claude Code configuration:
@@ -347,7 +350,7 @@ If `websearch_available = true`, validate the top 3 P0 recommendations:
 
 Assemble the report following `references/audit-report-schema.md`:
 
-**Frontmatter:** All required fields from schema (generated_by, schema_version, date, target, existing_claude_config, languages, repo_type, intervention_count, p0/p1/p2 counts, summary array).
+**Frontmatter:** All required fields from schema (generated_by, schema_version, date, target, existing_claude_config, languages, repo_type, intervention_count, p0/p1/p2 counts, summary array). Include `repo: <slug>` and `origin: <git-remote-url>` (origin is optional — omit if no remote configured).
 
 **Body:**
 
@@ -387,9 +390,9 @@ Always append a Verification group:
 
 Present the full report to the user.
 
-After presenting, confirm before writing: "Save audit report to `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-audit-repo.md`?"
+After presenting, confirm before writing: "Save audit report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-repo.md`?"
 
-If confirmed, write the report. Create `<target>/.claude/reviews/` if it does not exist. If declined, display the path that would have been used.
+If confirmed, write the report. Create `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` if it does not exist. If declined, display the path that would have been used.
 
 Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS audit-repo report`
 
@@ -417,7 +420,7 @@ On "Apply audit findings": invoke `/apply-audit-findings` with the report path. 
 
 ## Hard Rules
 
-- **Read-only on target repository.** Never modify any existing file. The only file this skill writes is the audit report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-audit-repo.md`.
+- **Read-only on target repository.** Never modify any existing file. The only file this skill writes is the audit report at `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-repo.md`.
 - **Bash only in sub-agents.** Bash is intentionally excluded from top-level allowed-tools and only granted to Phase 2/3 sub-agents. Sub-agent instructions explicitly prohibit write commands.
 - **Scan limits enforced.** Max 50 lines per file read, max 4 directory levels, max 500 files per listing. For very large repos (>5000 files), focus on root configs and first-level subdirectories.
 - **Every recommendation needs evidence.** Cite specific file paths, metrics, or absence evidence. Never recommend a primitive without explaining what analysis data supports it.

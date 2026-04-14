@@ -8,7 +8,7 @@ Maintainer operating guide for this repository (Clarity, Completeness, Prompt En
 - **Shared references**: `skills/review-claude-config/references/`, including the rubric, baseline, evidence contract, source-quality criteria, and review-report contract
 - **Domain cache**: `skills/review-claude-config/references/domain-cache/`, contains 7 universal methodology entries (context-engineering, research-sourcing, etc.) maintained on the repo's 90-day rhythm. Domain-specific knowledge is researched at runtime via WebSearch, not pre-cached
 - **Repo-internal skills**: `.claude/skills/` for maintenance utilities not needed globally
-- **Review reports**: `.claude/reviews/` for timestamped reports consumed by analytics and apply flows
+- **Review reports**: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` for timestamped reports organized by target repo, consumed by analytics and apply flows. Slug = `basename(target_dir)`, see `references/repo-identification.md`
 - **Self-contained knowledge**: The plugin carries all knowledge needed for quality in its own files. External services (KB server, web research) are optional enhancements — skills degrade gracefully without them. The distillation path is: `research/ → engineering-baseline.md + skill-agent-format-conventions.md → skill decisions`. Research findings must be distilled into these operational surfaces to affect plugin behavior in any repo.
 - **Runtime audit layer**: `hooks/` provides observation (PostToolUse, SubagentStart/Stop, SessionEnd) and opt-in policy enforcement (PreToolUse policy gate). Audit traces written to `$CLAUDE_PLUGIN_DATA/audit/`. Skills consume these traces for analysis.
 
@@ -148,10 +148,10 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 - WebFetch is optional; skills must degrade gracefully to WebSearch-only when needed
 - Baseline updates happen only through `/refresh-engineering-baseline`
 - Baseline refresh covers only `Prompt Engineering`, `Context Engineering`, and `Tool Design`
-- Artifact identity is `type + path`; analytics series identity is `generated_by + type + path`; `name` is display-only
+- Artifact identity is `type + path`; analytics series identity is `repo + generated_by + type + path`; `name` is display-only
 - Commit format: `type(scope): description`
 - Audit-fix chain: commit review report first, then commit fixes
-- Review, suggest, and audit skills are read-only on analyzed files except for reports and domain cache
+- Review, suggest, and audit skills are read-only on analyzed files except for reports (`$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`) and domain cache
 - Apply skills and `scaffold-skill` modify files and require confirmation gates
 
 ## Research References

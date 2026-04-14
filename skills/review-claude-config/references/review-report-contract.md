@@ -6,11 +6,11 @@ last_refreshed: 2026-04-03
 
 # Review Report Contract
 
-The only normative source for the review/report contract (used by `review-*`, `apply-*-review-findings`, `review-analytics`, `check-repo-health`). Producer-specific behavior and legacy-consumer tolerance stay in individual skills.
+Normative source for the review/report contract (`review-*`, `apply-*-review-findings`, `review-analytics`, `check-repo-health`).
 
 ## Certificate Shape
 
-Order: `Goal` → `Certificate` → `Strengths` → `[Diagnostics]` → `Recommendations`. Calibration sections may appear between `Certificate` and `Strengths`. Diagnostic sections (e.g., `### Reliability Diagnostics`) may appear between `Strengths` and `Recommendations`.
+Order: `Goal` → `Certificate` → `Strengths` → `[Diagnostics]` → `Recommendations`. Calibration/diagnostic sections may appear between `Certificate` and `Recommendations`.
 
 ## Recommendation Block
 
@@ -18,11 +18,11 @@ Heading: `#### N. [Title] (Impact: [High/Medium/Low][, Category: ...][, ID: {fin
 
 Required: `Evidence`, `Why it matters`, `Validation`. Optional: `Current`, `Recommended`, `finding_id`.
 
-"Dispatchable" = includes both `Current` and `Recommended` anchors (≡ ESLint `meta.fixable`). "Manual-only" = valid finding without anchors.
+Dispatchable = both `Current` and `Recommended` present. Manual-only = valid finding without anchors.
 
 ## Finding Identity (optional)
 
-`finding_id`: `{checklist_item}:{path}:{dimension}/v1` (e.g. `WS-2:skills/foo/SKILL.md:Clarity/v1`). Non-checklist: `ADHOC:{path}:{dim}:{slug}/v1`. Derived from verdict, not LLM text. Consumers match on `finding_id` when present; fall back to heading parse when absent.
+`finding_id`: `{checklist_item}:{path}:{dimension}/v1`. Non-checklist: `ADHOC:{path}:{dim}:{slug}/v1`. Consumers match on `finding_id` when present; fall back to heading parse when absent.
 
 ## Report Frontmatter
 
@@ -31,6 +31,8 @@ Required: `Evidence`, `Why it matters`, `Validation`. Optional: `Current`, `Reco
 generated_by: review-*  # review-skill, review-agent, review-rule, review-mcp-server, review-settings, review-claude-config
 schema_version: 1
 date: YYYY-MM-DD
+repo: <slug>                # basename(target_dir)
+origin: <git-remote-url>    # Optional
 target: /absolute/path
 baseline_version: YYYY-MM-DD
 items_reviewed: N
@@ -52,7 +54,7 @@ summary:
 
 ## Identity and Tracking
 
-`type + path` is the canonical identity; `name` is display-only. A disappearing path + new path is a rename/move candidate, not a silent merge by name.
+`type + path` is the canonical artifact identity; `name` is display-only. A disappearing path + new path is a rename/move candidate, not a silent merge by name. Analytics series identity: `repo + generated_by + type + path`.
 
 ## Producer Compatibility
 

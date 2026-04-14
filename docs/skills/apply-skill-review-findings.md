@@ -27,7 +27,7 @@ The skill checks whether the prompt contains an orchestration metadata block wit
 
 ### Phase 1 -- Setup (standalone mode only)
 
-**Step 1: Locate report.** If `$ARGUMENTS` contains a file path, the skill uses it directly. Otherwise, it globs `.claude/reviews/*-review-skill.md` and selects the most recent report by filename timestamp. The skill reads the report file and verifies that `generated_by` in the frontmatter equals `review-skill`. If the file does not exist or validation fails, the skill reports the error and stops.
+**Step 1: Locate report.** If `$ARGUMENTS` contains a file path, the skill uses it directly. Otherwise, it globs `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-review-skill.md` and selects the most recent report by filename timestamp. The skill reads the report file and verifies that `generated_by` in the frontmatter equals `review-skill`. If the file does not exist or validation fails, the skill reports the error and stops.
 
 **Step 2: Parse and classify.** The skill locates the canonical review contract, extracts the YAML frontmatter to get `date`, `target`, and `summary`, and parses recommendation sections using consumer compatibility rules. Historical reports may use `###` headings or omit some modern fields, but only findings with both `Current` and `Recommended` are dispatchable to edits. Anchorless findings remain visible as manual-only follow-up items. Low findings are deferred, not discarded.
 

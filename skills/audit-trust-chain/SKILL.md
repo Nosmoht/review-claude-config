@@ -115,13 +115,16 @@ main
 
 ## Phase 4 — Report Persistence
 
-1. Present report. Confirm before writing to `.claude/reviews/YYYY-MM-DDTHHMMSS-audit-trust-chain.md`.
-2. Frontmatter:
+1. Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`).
+2. Present report. Confirm before writing to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-trust-chain.md`.
+3. Frontmatter:
    ```yaml
    ---
    generated_by: audit-trust-chain
    schema_version: 1
    date: YYYY-MM-DD
+   repo: <slug>
+   origin: <git-remote-url>    # Optional
    target: /path/to/trace.jsonl
    summary:
      - name: trust-chain
@@ -136,7 +139,7 @@ main
 
 ## Hard Rules
 
-- **Read-only on the trace.** Write only to `.claude/reviews/`.
+- **Read-only on the trace.** Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 - **Tier A justification:** Write for report persistence. Grep/Read for trace + optional CLAUDE.md parsing.
 - **Graceful degradation.** Missing CLAUDE.md = skip config-enriched checks, not abort.
 - **Evidence over inference.** Every violation cites agent_id, timestamps, and concrete data.

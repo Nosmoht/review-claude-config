@@ -39,7 +39,9 @@ report_timestamp: YYYY-MM-DDTHHMMSS
 
 ### Step 1: Locate Report
 
-If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `.claude/reviews/*-review-skill.md` and select the most recent report by filename timestamp.
+**Resolve report directory:** Load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to compute `<repo-slug>` (= `sanitize(basename(CWD))` — lowercase, alphanumeric + hyphens only). The report directory is `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+
+If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-review-skill.md` and select the most recent report by filename timestamp.
 
 Read the report file. If the file does not exist or `generated_by` is not `review-skill`, report the error and stop.
 

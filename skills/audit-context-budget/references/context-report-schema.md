@@ -11,6 +11,8 @@ last_refreshed: 2026-04-11
 generated_by: audit-context-budget
 schema_version: 2
 date: YYYY-MM-DD
+repo: <slug>                           # required — basename(target_dir), sanitized
+origin: <git-remote-url>               # optional — git remote URL when available
 target: /absolute/path
 total_tokens_low: N
 total_tokens_high: N

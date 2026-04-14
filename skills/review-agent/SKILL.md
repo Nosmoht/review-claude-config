@@ -53,6 +53,8 @@ Locate the `review-claude-config` skill directory (sibling skill in the same plu
 
 Use Glob to find the files if the path is not immediately known: `**/review-claude-config/references/scoring-rubric.md`
 
+Also load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`.
+
 **If any of these files is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
 
 Read the type-specific evaluation guide from this skill's own directory:
@@ -164,10 +166,11 @@ In orchestrated mode, skip this phase entirely — return only the structured ce
 
 In standalone mode:
 1. Present the certificate to the user.
-2. Confirm before writing: "Save review report to `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-agent.md`?"
+2. Confirm before writing: "Save review report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-agent.md`?"
 3. If confirmed, assemble the report using the canonical frontmatter contract located in Step 1 with:
    - `generated_by: review-agent`
    - one `summary` item of type `Agent`
+   - `repo: <slug>` and optionally `origin: <git-remote-url>`
    - `type + path` as the canonical identity and `name` as display-only
 4. Write the report file. Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS review report`
 5. **What's Next?** (standalone mode only — skip in orchestrated mode)
@@ -192,7 +195,7 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 
 ## Hard Rules
 
-- **Read-only on the analyzed agent.** Never modify the agent being reviewed. Write only to `.claude/reviews/`.
+- **Read-only on the analyzed agent.** Never modify the agent being reviewed. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present the full certificate before any follow-up actions.**

@@ -38,7 +38,7 @@ last_refreshed: 2026-04-03
 | Multiple skills, no review/audit | ≥2 skills, none with review/audit/quality in description | Quality audit skill | S |
 | References without refresh | `references/*.md` with dates, no refresh skill | Reference refresh skill | S |
 | Skills share infrastructure | Multiple skills read same `references/` dir | Shared infra docs skill | M |
-| Review reports, no analytics | `.claude/reviews/` ≥3 reports, no analytics skill | Review analytics skill | M |
+| Review reports, no analytics | `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` ≥3 reports, no analytics skill | Review analytics skill | M |
 | Web research, no cache | Skills use WebSearch, no `domain-cache/` | Domain cache skill | S |
 | CLAUDE.md workflows not formalized | Multi-step CLAUDE.md processes with no covering skill | Extract as skill | S |
 | No scaffolding tool | ≥3 skills, no skill-creation skill | Scaffolding skill | M |

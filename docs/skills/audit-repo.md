@@ -18,7 +18,7 @@ Analyze any repository to identify what Claude Code primitives (CLAUDE.md sectio
 
 The skill performs a comprehensive static analysis of any repository to answer: "What Claude Code primitives does this repo need, and why?" It examines the repository's toolchain, architecture, naming conventions, linter coverage, domain knowledge artifacts, and token efficiency characteristics. From these signals it derives a prioritized intervention matrix mapping error classes to specific primitives (CLAUDE.md sections, skills, agents, hooks, rules), each backed by concrete evidence from the scan and labeled with an evidence class and confidence level.
 
-The skill is strictly read-only on the target repository. It writes only the final audit report to `.claude/reviews/`. It does not generate any primitives -- it produces a diagnostic matrix that other skills (`/scaffold-skill`, `/suggest-skills`) can act on.
+The skill is strictly read-only on the target repository. It writes only the final audit report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`. It does not generate any primitives -- it produces a diagnostic matrix that other skills (`/scaffold-skill`, `/suggest-skills`) can act on.
 
 ## Process Steps
 
@@ -106,7 +106,7 @@ This phase runs inline in the top-level skill (not delegated to a sub-agent). It
 
 **Step 3: Build report.** The report includes YAML frontmatter (following `audit-report-schema.md`) and a body with five sections: Repository Profile (basic stats and existing infrastructure), Static Analysis Summary (key findings from Phase 2), Token Efficiency Summary (key findings from Phase 3), Intervention Matrix (the full prioritized table), and Recommendations grouped by priority (P0, P1, P2).
 
-**Step 4: Present and persist.** The full report is presented to the user, then persisted to `.claude/reviews/YYYY-MM-DDTHHMMSS-audit-repo.md`.
+**Step 4: Present and persist.** The full report is presented to the user, then persisted to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-repo.md`.
 
 **Step 5: "What's next?" menu.**
 
@@ -144,7 +144,7 @@ Web research is optional and limited to Phase 5, Step 2. If WebSearch is availab
 
 ## Hard Rules
 
-1. **Read-only on the target repository.** Never modify any file in the analyzed repo. Write only the audit report to `.claude/reviews/`.
+1. **Read-only on the target repository.** Never modify any file in the analyzed repo. Write only the audit report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 2. **Bash only in sub-agents.** Bash is allowed in the Repo Scanner and Token Analyzer agents but not at the top-level skill scope.
 3. **Scan limits enforced.** 50 lines per file, 4 directory levels deep, 500 files per directory listing, read-only Bash commands only.
 4. **Every recommendation needs evidence.** Each row in the intervention matrix must cite concrete file paths, metrics, or patterns observed during the scan. No speculative recommendations.

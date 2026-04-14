@@ -74,16 +74,16 @@ class TestLoadPolicy:
 class TestCheckOverrides:
     def test_matching_override(self):
         overrides = [
-            {"tool": "Write", "path_pattern": ".claude/reviews/*", "action": "allow"}
+            {"tool": "Write", "path_pattern": "reports/*", "action": "allow"}
         ]
         action = _check_overrides(
-            overrides, "Write", {"file_path": ".claude/reviews/report.md"}
+            overrides, "Write", {"file_path": "reports/report.md"}
         )
         assert action == "allow"
 
     def test_non_matching_override(self):
         overrides = [
-            {"tool": "Write", "path_pattern": ".claude/reviews/*", "action": "allow"}
+            {"tool": "Write", "path_pattern": "reports/*", "action": "allow"}
         ]
         action = _check_overrides(
             overrides, "Write", {"file_path": "src/main.py"}
@@ -162,7 +162,7 @@ class TestMain:
         policy_data = {
             "rules": [{"level": "L4", "action": "deny"}],
             "overrides": [
-                {"tool": "Write", "path_pattern": ".claude/reviews/*", "action": "allow"}
+                {"tool": "Write", "path_pattern": "reports/*", "action": "allow"}
             ],
         }
         (tmp_path / "policy.json").write_text(json.dumps(policy_data))
@@ -171,7 +171,7 @@ class TestMain:
         input_data = {
             "session_id": "test",
             "tool_name": "Write",
-            "tool_input": {"file_path": ".claude/reviews/report.md"},
+            "tool_input": {"file_path": "reports/report.md"},
         }
         monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(input_data)))
         main()

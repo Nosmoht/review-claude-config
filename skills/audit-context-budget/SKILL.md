@@ -29,6 +29,9 @@ Read these files from this skill's `references/` directory:
 - `references/context-report-schema.md` — report structure and YAML schema
 - `references/healthy-baselines.md` — per-component thresholds
 
+Load repo-identification reference to resolve suite-root and repo-slug:
+- Locate via Glob: `**/review-claude-config/references/repo-identification.md`
+
 **Step 2: Resolve target.**
 
 `$ARGUMENTS` is the target folder path. Use the current working directory when empty.
@@ -212,11 +215,13 @@ Checkbox list: one item per recommendation with specific file path and action.
 
 **Present the full report in the conversation. Then confirm before writing the report file.**
 
-Offer to write to: `<target>/.claude/reviews/<YYYY-MM-DDTHHMMSS>-audit-context-budget.md`
+Offer to write to: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/<YYYY-MM-DDTHHMMSS>-audit-context-budget.md`
+
+Resolve `<repo-slug>` per `repo-identification.md`. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
 
 ## Hard Rules
 
-- Read-only on the target repository. Write only the report file to `<target>/.claude/reviews/`.
+- Read-only on the target repository. Write only the report file to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 - Token estimates are always ranges (chars/4 to chars/3), always labeled "estimated".
 - Every recommendation cites the evidence tier and specific file paths measured.
 - Never recommend removing MCP servers, skills, or rules. Report cost only.

@@ -13,6 +13,8 @@ All fields required unless marked Optional.
 generated_by: audit-repo               # always "audit-repo"
 schema_version: 2                      # v1=review, v2=audit
 date: YYYY-MM-DD
+repo: <slug>                           # basename(target_dir)
+origin: <git-remote-url>               # Optional
 target: /absolute/path
 existing_claude_config: true|false
 languages: [python, typescript]

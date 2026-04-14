@@ -150,7 +150,7 @@ Based on the scan results, classify the repository as one of two types:
 - No source code package managers or build tools
 - `.claude/skills/` contains multiple skills (≥2)
 - May have `research/`, `docs/`, or reference material as primary content
-- Review reports (`.claude/reviews/`) may exist
+- Review reports (`$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`) may exist
 - Signals: Category B produced ≥2 skills, Categories C/D/F produced few or no results
 
 **Mixed Repository** — Has both source code AND significant skill/agent infrastructure:
@@ -393,7 +393,9 @@ Read `references/report-template.md` for the report body structure (see `## Repo
 ### Step 2: Persist Report
 
 After presenting all suggestions, confirm before writing:
-"Save suggestions report to `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md`?"
+"Save suggestions report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-suggest-skills.md`?"
+
+Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`). Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
 
 If the user declines, skip report writing but still display the report path that would have been used.
 
@@ -401,9 +403,9 @@ If the user declines, skip report writing but still display the report path that
 
 **Body:** Full report content as presented.
 
-Write to: `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md`
+Write to: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-suggest-skills.md`
 
-Use the current date and time for the timestamp. Create `<target>/.claude/reviews/` if it does not exist.
+Use the current date and time for the timestamp. Create `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` if it does not exist.
 
 ### Step 3: Confirm and Next Steps
 
@@ -418,7 +420,7 @@ On "Scaffold a suggested skill": ask which skill from the suggestions, then invo
 
 ## Hard Rules
 
-- **Read-only on target repository.** Never modify any existing file in the analyzed repository. The only file this skill writes is the suggestions report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-suggest-skills.md`.
+- **Read-only on target repository.** Never modify any existing file in the analyzed repository. The only file this skill writes is the suggestions report at `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-suggest-skills.md`.
 - **Every suggestion needs evidence.** Concrete repository signal + web-validated rationale (or `[no web verification]` if WebSearch unavailable).
 - **Expose uncertainty honestly.** Every suggestion must include `evidence_class` and `confidence` using the canonical evidence vocabulary plus an explicit certainty signal.
 - **No duplicates.** Cross-check every suggestion against existing skills/agents inventory.

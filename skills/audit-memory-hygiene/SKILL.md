@@ -106,13 +106,16 @@ Read files flagged by Steps 3-6 plus a sample of 10 unflagged files. Extract fac
 ## Phase 3 — Report Persistence
 
 1. Present the report.
-2. Confirm before writing to `.claude/reviews/YYYY-MM-DDTHHMMSS-audit-memory-hygiene.md`.
-3. Frontmatter:
+2. Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`).
+3. Confirm before writing to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-memory-hygiene.md`.
+4. Frontmatter:
    ```yaml
    ---
    generated_by: audit-memory-hygiene
    schema_version: 1
    date: YYYY-MM-DD
+   repo: <slug>
+   origin: <git-remote-url>    # Optional
    target: /path/to/memory-dir
    summary:
      - name: memory-hygiene
@@ -129,7 +132,7 @@ Read files flagged by Steps 3-6 plus a sample of 10 unflagged files. Extract fac
 
 ## Hard Rules
 
-- **Read-only on memory files.** Never modify memory files. Write only to `.claude/reviews/`.
+- **Read-only on memory files.** Never modify memory files. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 - **Tier A justification:** Write is for report persistence only. Grep/Read are for memory analysis.
 - **Redact credentials in findings.** When reporting MH-3 matches, show only the first 8 characters followed by `***`. Never include full credentials in the report.
 - **Evidence over inference.** Report only patterns with concrete file + line evidence.

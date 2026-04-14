@@ -27,7 +27,7 @@ This page documents the behavior that is specific to `review-skill`. Canonical c
 - **Standalone vs orchestrated:** standalone performs tool probes, reference loading, report persistence, and the menu; orchestrated mode skips those and returns only the structured certificate.
 - **Safety/Metadata weighting:** if the skill uses `Write`, `Bash`, or `Edit`, Safety becomes 15% and Metadata 5%; otherwise Safety is 10% and Metadata is 10%.
 - **Research fallback:** if web tools are unavailable, Goal Alignment falls back to model knowledge and should be marked accordingly.
-- **Read-only target:** the reviewed skill file is never modified; standalone mode may write only to `.claude/reviews/`.
+- **Read-only target:** the reviewed skill file is never modified; standalone mode may write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 
 ## Interactions
 

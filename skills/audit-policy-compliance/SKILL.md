@@ -132,13 +132,16 @@ Compute:
 ## Phase 4 — Report Persistence
 
 1. Present the report.
-2. Confirm before writing to `.claude/reviews/YYYY-MM-DDTHHMMSS-audit-policy-compliance.md`.
-3. Frontmatter:
+2. Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`).
+3. Confirm before writing to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-policy-compliance.md`.
+4. Frontmatter:
    ```yaml
    ---
    generated_by: audit-policy-compliance
    schema_version: 1
    date: YYYY-MM-DD
+   repo: <slug>
+   origin: <git-remote-url>    # Optional
    target: /path/to/trace.jsonl
    summary:
      - name: policy-compliance
@@ -153,7 +156,7 @@ Compute:
 
 ## Hard Rules
 
-- **Read-only on the trace.** Never modify the analyzed file. Write only to `.claude/reviews/`.
+- **Read-only on the trace.** Never modify the analyzed file. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 - **Tier A justification:** Write is for report persistence only. No web tools needed.
 - **Default to restrictive.** When tool level is ambiguous (e.g., unknown MCP tool), classify as L4.
 - **Privacy preserved.** Never attempt to decode or log raw tool_input. Use input_hash for correlation only.

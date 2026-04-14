@@ -31,3 +31,4 @@ Severity: `!`=fatal `?`=warn `-`=skip
 | apply-audit-findings | skills/apply-review-findings/references/commit-conventions.md | ! |
 | review-analytics | skills/review-analytics/references/report-schema.md | ? |
 | apply-review-findings | skills/apply-*-review-findings/SKILL.md | ? |
+| all-report-producers,all-report-consumers | repo-identification.md | ! |

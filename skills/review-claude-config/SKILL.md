@@ -65,7 +65,7 @@ Discover all Claude Code skills, agents, rules, MCP server configs, and settings
 - <folder>/.claude/settings.json (project settings)
 - <folder>/.claude/settings.local.json (local settings, if exists)
 
-Exclude paths containing: node_modules, .git, vendor, dist, build, .claude/reviews
+Exclude paths containing: node_modules, .git, vendor, dist, build, reports
 
 For each discovered file:
 - Read the full content
@@ -321,7 +321,9 @@ sources:
 If `validation_mode = true`, skip this entire phase.
 
 After presenting all reports to the user, confirm before writing:
-"Save review report to `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md`?"
+"Save review report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`?"
+
+Resolve `<repo-slug>` per `references/repo-identification.md`. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
 
 If the user declines, skip report writing but still display the report path that would have been used.
 
@@ -343,13 +345,13 @@ For every High or Medium recommendation in the body, preserve the shared recomme
 
 ### Step 2: Write the report
 
-Write to: `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md`
+Write to: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`
 
-Use the current date and time for the timestamp. Create the `<target>/.claude/reviews/` directory if it does not exist. Timestamp ensures each run produces a unique file, supporting the "iterate until convergence" workflow.
+Use the current date and time for the timestamp. Create the `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` directory if it does not exist. Timestamp ensures each run produces a unique file, supporting the "iterate until convergence" workflow.
 
 ### Step 3: Delta comparison
 
-If a previous review report exists in `<target>/.claude/reviews/`:
+If a previous review report exists in `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`:
 - Read the most recent prior report's frontmatter `summary` block and `baseline_version`
 - **Baseline check:** If the prior report's `baseline_version` differs from the current engineering baseline, apply the Baseline version lock hard rule (present choice to user before proceeding)
 - Compare each item's current grades against prior grades
@@ -398,7 +400,7 @@ On "Apply review findings": invoke `/apply-review-findings` with the report path
 
 ## Hard Rules
 
-- **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-claude-config.md` and domain cache entries in its own `references/domain-cache/`.
+- **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md` and domain cache entries in its own `references/domain-cache/`.
 - **Domain cache entries must come from web research (WebSearch and/or WebFetch) only.** Never write cache entries based on model knowledge alone. If WebSearch is unavailable, skip cache persistence entirely.
 - **Analyze every discovered item.** Skip none in the normal mode. Validation mode is the only exception and must stay capped at the deterministic sample described above.
 - **Apply the rubric strictly.** Do not inflate grades.

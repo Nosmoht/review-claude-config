@@ -21,9 +21,13 @@ If `$ARGUMENTS` contains the standalone token `--validation`, set `validation_mo
 
 If no target folder remains, use the current working directory.
 
-Glob `<target>/.claude/reviews/*-review-*.md` to find all review reports. Sort by filename (timestamps sort lexicographically).
+**Resolve report directory:** Load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to compute `<repo-slug>` (= `sanitize(basename(target_dir))` — lowercase, alphanumeric + hyphens only). The report directory is `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 
-If no reports are found, tell the user: "No review reports found in `<target>/.claude/reviews/`." Stop.
+Glob `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-review-*.md` to find all review reports. Sort by filename (timestamps sort lexicographically).
+
+When no target is specified (CWD mode), also support cross-repo analysis: Glob `$CLAUDE_PLUGIN_DATA/reports/**/*-review-*.md` to discover reports across all repos.
+
+If no reports are found, tell the user: "No review reports found in `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`." Stop.
 
 ### 2. Parse report frontmatter
 
@@ -41,7 +45,7 @@ For each report, read the YAML frontmatter and extract:
 
 Skip any report whose `generated_by` is not one of the supported review producers above.
 
-Treat `type + path` as the artifact key and `generated_by + type + path` as the series key. Treat `name` as a display label only.
+Treat `type + path` as the artifact key and `repo + generated_by + type + path` as the series key (where `repo` is the `<repo-slug>` derived from the report's parent directory under `reports/`). Treat `name` as a display label only.
 
 If a report has malformed or missing frontmatter, skip it with a warning: "Skipped report `<filename>`: could not parse frontmatter."
 
@@ -50,7 +54,7 @@ Extract the timestamp from each filename for display (e.g., `2026-03-24T161200`)
 If `validation_mode = true`, after filtering unsupported or malformed reports, keep only the 10 most recent supported, parseable reports.
 
 After filtering (and validation-mode capping, if active):
-- If no supported, parseable reports remain, tell the user: "No supported review reports found in `<target>/.claude/reviews/`." Stop.
+- If no supported, parseable reports remain, tell the user: "No supported review reports found in `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`." Stop.
 - If exactly one supported, parseable report remains, present the single-report summary path and note: "Trend analysis requires at least 2 supported review reports." Stop.
 
 ### 3. Build time series

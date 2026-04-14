@@ -43,6 +43,7 @@ domain_cache: |
 1. **Load references.** Read:
    - Scoring rubric: Glob `**/review-claude-config/references/scoring-rubric.md`
    - Source quality criteria: Glob `**/review-claude-config/references/source-quality-criteria.md`
+   - Repo identification: Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`
    - Settings evaluation guide: `references/settings-evaluation-guide.md`
 
 2. **Probe tool availability.** Test WebSearch with a trivial query. Record `websearch_available`.
@@ -75,12 +76,12 @@ Produce the certificate (same format as review-mcp-server).
 
 ## Phase 3 — Report (standalone mode only)
 
-1. Write to `<target>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-settings.md`.
+1. Create the `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` directory if it does not exist. Write to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-settings.md` with `repo: <slug>` and optionally `origin: <git-remote-url>` in the frontmatter (after `date`).
 2. Suggest commit message.
 
 ## Hard Rules
 
-- **Read-only on analyzed files.** Never modify settings.json.
+- **Read-only on analyzed files.** Never modify settings.json. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 - **Apply the rubric strictly.**
 - **Every High or Medium recommendation must include evidence and a concrete rewrite.**
 - **Parse failure = Critical.** Invalid JSON disables ALL permission rules.

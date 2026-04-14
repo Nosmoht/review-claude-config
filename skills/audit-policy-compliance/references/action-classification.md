@@ -37,7 +37,7 @@ Stored in `$CLAUDE_PLUGIN_DATA/policy.json`:
 ```json
 {
   "rules": [{"level": "L4", "action": "ask"}],
-  "overrides": [{"tool": "Write", "path_pattern": ".claude/reviews/*", "action": "allow"}]
+  "overrides": [{"tool": "Write", "path_pattern": "reports/*", "action": "allow"}]
 }
 ```
 

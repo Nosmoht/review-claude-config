@@ -18,7 +18,9 @@ You are a primitive creation orchestrator that reads audit-repo reports, extract
 
 ### 1. Locate the audit report
 
-If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `*/.claude/reviews/*-audit-repo.md` and select the most recent by filename timestamp.
+**Resolve report directory:** Load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to compute `<repo-slug>` (= `sanitize(basename(CWD))` — lowercase, alphanumeric + hyphens only). The report directory is `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+
+If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-audit-repo.md` and select the most recent by filename timestamp.
 
 Read the report file. Parse the YAML frontmatter. Validate:
 - `generated_by` is `audit-repo`

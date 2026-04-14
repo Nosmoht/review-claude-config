@@ -118,13 +118,16 @@ Compute summary:
 ## Phase 4 — Report Persistence
 
 1. Present the report.
-2. Confirm before writing to `.claude/reviews/YYYY-MM-DDTHHMMSS-classify-trace-errors.md`.
-3. Frontmatter:
+2. Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`).
+3. Confirm before writing to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-classify-trace-errors.md`.
+4. Frontmatter:
    ```yaml
    ---
    generated_by: classify-trace-errors
    schema_version: 1
    date: YYYY-MM-DD
+   repo: <slug>
+   origin: <git-remote-url>    # Optional
    target: /path/to/trace.jsonl
    summary:
      - name: trace-classification
@@ -140,7 +143,7 @@ Compute summary:
 
 ## Hard Rules
 
-- **Read-only on the trace.** Never modify the analyzed file. Write only to `.claude/reviews/`.
+- **Read-only on the trace.** Never modify the analyzed file. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 - **Tier A justification:** Write is for report persistence only. No web tools needed.
 - **Evidence over inference.** Every classification must cite a line number and excerpt. Do not classify based on absence alone except for FM-3.1 and FM-3.2.
 - **Taxonomy-only codes.** Only use FM-* codes from the codebook. Do not invent new failure modes.

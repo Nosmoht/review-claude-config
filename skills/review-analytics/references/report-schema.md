@@ -16,7 +16,8 @@ This file is not an independent schema authority. It exists only to document ana
 
 - `review-analytics` reads the frontmatter fields from the canonical contract.
 - `type + path` identifies the reviewed artifact.
-- `generated_by + type + path` identifies the analytics series so batch and standalone reviews are not merged blindly.
+- `repo + generated_by + type + path` identifies the analytics series so batch and standalone reviews are not merged blindly, and cross-repo path collisions are avoided.
+- When `repo` is absent in legacy reports, infer it from the directory path (`reports/<slug>/` → slug).
 - `name` is display-only.
 - If a path disappears and a new path appears, analytics should flag a rename/move candidate instead of silently merging by name.
 - Legacy reports may use older heading depth or recommendation shapes. Analytics compatibility is limited to what can be derived from frontmatter plus supported historical layouts.

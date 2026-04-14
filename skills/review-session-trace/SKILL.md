@@ -42,6 +42,8 @@ Verify Grep works by running a trivial pattern on the transcript (e.g., `"uuid"`
 
 Read `references/transcript-schema.md` for the JSONL entry structure.
 
+Also load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`.
+
 ### Step 2: Sample the Transcript
 
 Read the first 50 lines and the last 20 lines to determine session boundaries (start/end timestamps, session ID, total line count via Grep for line count).
@@ -152,13 +154,15 @@ Return the report in this exact format:
 ## Phase 4 — Report Persistence
 
 1. Present the report to the user.
-2. Confirm before writing: "Save trace report to `<project>/.claude/reviews/YYYY-MM-DDTHHMMSS-review-session-trace.md`?"
-3. If confirmed, write with frontmatter:
+2. Confirm before writing: "Save trace report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-session-trace.md`?"
+3. If confirmed, create the `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` directory if it does not exist. Write with frontmatter:
    ```yaml
    ---
    generated_by: review-session-trace
    schema_version: 1
    date: YYYY-MM-DD
+   repo: <slug>
+   origin: <git-remote-url>  # optional
    target: /path/to/transcript.jsonl
    summary:
      - name: session-trace
@@ -173,7 +177,7 @@ Return the report in this exact format:
 
 ## Hard Rules
 
-- **Read-only on the transcript.** Never modify the analyzed file. Write only to `.claude/reviews/`.
+- **Read-only on the transcript.** Never modify the analyzed file. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
 - **Tier A justification:** Write is for report persistence only. Grep/Read are for transcript parsing. No web tools needed.
 - **Context budget discipline.** Do not read the full transcript into context. Use Grep for bulk extraction, Read with offset/limit for sampling. Transcripts can be 100K+ tokens.
 - **Evidence over inference.** Report only patterns with concrete line-number evidence. Do not speculate about intent.
