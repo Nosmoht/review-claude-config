@@ -46,11 +46,12 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | RD-2 | Skill explicitly rejects ≥1 out-of-scope scenario? | Meta |
 | RD-3 | No overlapping triggers with sibling skills in same plugin directory? (Glob siblings, compare descriptions) | Meta |
 | RD-4 | Error handling covers tool unavailability AND unexpected tool output? | Compl |
-| RD-5 | Step dependencies explicit — upstream/downstream relationships stated, not just numbered? | Clarity |
-| RD-6 | Tool availability validated before first use (probe or conditional fallback, not assumed present)? | Safety |
+| RD-5 | Step dependencies explicit — upstream/downstream stated, not just numbered? | Clarity |
+| RD-6 | Tool availability validated before first use (probe or fallback, not assumed)? | Safety |
 | RT-1 | Optional-dep failure produces fallback output, not abort? [Agentic] | Compl |
 | RT-2 | Output template has status token (success/partial/failure)? [Agentic] | PE |
 | RT-3 | Numeric cap for ≥1 resource (files, calls, or depth)? [Agentic] | Safety |
+| IJ-1 | External input + write tool, no gate? | Safety |
 
 **Severity guidance:** Broken cross-primitive dependencies (missing referenced files, unavailable tools, dangling skill/agent references) are **High** severity findings.
 
