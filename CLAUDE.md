@@ -172,6 +172,10 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 - [Verification Methods per Dimension](research/verification-methods/verification-methods-per-dimension.md) — CheckEval +0.45 agreement with binary verification; 3-tier architecture (deterministic→LLM-binary→functional). Load when designing fix verification.
 - [Selective Multi-Rating](research/selective-multi-rating/selective-multi-rating.md) — Trust or Escalate: 78.5% cost reduction; selective k=3 at 1.6x cost targets borderline items. Load when considering multi-rater evaluation.
 
+### Primitive Coverage
+- [MCP Server Configuration Quality](research/mcp-server-quality/mcp-server-configuration-quality.md) — MCP spec schema, security risk taxonomy (43% command injection rate), server risk tiers, token cost thresholds. Load when reviewing MCP server configs or designing MCP evaluation.
+- [Settings.json Quality Criteria](research/settings-quality/settings-json-quality-criteria.md) — 60+ fields, scope precedence, critical security fields (permissions.deny, enableAllProjectMcpServers, invalid JSON). Load when reviewing settings.json or designing settings evaluation.
+
 ### Supporting Research
 - [LLM Agent Caching and Knowledge Persistence Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — file-based memory beats graph-based (74% vs 68.5%); CAG beats RAG for bounded corpora. Load when designing knowledge persistence or reviewing caching strategies.
 - [Web Content Scraping Tools for LLM Agents](research/web-scraping/web-content-scraping-tools.md) — Jina Reader returns clean Markdown, handles 512K tokens; faster than raw WebFetch for technical docs. Load when writing web research skills or choosing fetch strategy.
