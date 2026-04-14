@@ -123,6 +123,8 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 - **Iterate reviews until convergence.** Converged = two consecutive runs on unchanged files produce: (1) same set of `finding_id`s at Impact High/Medium, (2) grade variance ≤1 letter in any dimension, (3) no null dimensions where prior run had values. Medium and High findings block completion.
 - **Prefer evidence over rhetoric.** Findings should cite concrete paths, text, or examples.
 - **Research before design in novel areas.** Save results in `research/` with sources.
+- **Use `$HOME/...` (never absolute user-home paths) in written doc/report content.** The user's `block-sensitive-content.sh` PreToolUse hook rejects Writes whose content embeds a hardcoded home-dir prefix. Applies to review report frontmatter `target:` fields, plan files, and any body text. Relative paths (`.claude/skills/...`) in bodies are preferred. Scan generated content for absolute home-dir prefixes before Write.
+- **Recover large lost tool-call payloads from the session transcript, don't regenerate.** If context compaction drops a prepared Write/Edit payload (e.g., a multi-thousand-line review report), the full content is preserved in the session jsonl under `$HOME/.claude/projects/<project>/<sessionId>.jsonl`. Parse jsonl for the matching `tool_use` entry and extract `input.content` — regeneration can require re-dispatching all analysis agents.
 - **Keep project knowledge in the repo.** No reliance on external memory.
 - **Verify changes with the repo's own review skills, not ad-hoc Plan agents.** `make validate` checks structure; review skills check quality. Use this mapping:
 
