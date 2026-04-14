@@ -108,19 +108,29 @@ Otherwise continue with the normal cache workflow below.
 
 Before dispatching analysis agents, the orchestrator performs domain cache lookup:
 
-1. **Load knowledge base index.** Read `references/domain-cache/INDEX.md`. If missing or empty, skip to step 3 (all items get MISS status and proceed with WebSearch as normal).
+1. **Load knowledge base index.** Read `references/domain-cache/INDEX.md`. INDEX.md contains only universal methodology entries (context-engineering, research-sourcing, etc.). Domain-specific knowledge is researched at runtime.
 
-2. **Match or infer domain keys.** For each discovered item, determine its domain:
-   - Present the full INDEX.md table (keys + descriptions) as context.
-   - For each item, ask: "Which existing knowledge base entry best matches this item's domain? If none fit, generate a new key (lowercase-hyphenated, 2-4 words)."
-   - **Prefer reuse:** An existing key is always better than generating a new one that means the same thing. E.g., if `kubernetes` exists in the index and a skill targets Kubernetes, use `kubernetes` — do not generate `k8s` or `kube-orchestration`.
-   - If ambiguous between existing entries, prefer the more specific one (e.g., `argocd` over `gitops`). If ambiguous between existing and new, prefer existing.
-   - If no clear domain is inferable (e.g., a generic "code-review" or "commit" skill), skip cache lookup for that item and use current behavior (WebSearch or model knowledge).
-   - **Normalization pass (fallback):** After all items, review the full list and normalize near-duplicates (e.g., collapse `react-test` and `react-testing` to the more specific form).
-   - For each matched/new key: check `last_refreshed` date in INDEX.md. **CACHED** (<90 days), **STALE** (≥90 days), or **MISS** (new key, not in index).
-   - For CACHED/STALE: read the full `references/domain-cache/{domain-key}.md` on-demand. If index says CACHED but the file is missing, treat as MISS.
+2. **Match items against universal cache.** For each discovered item:
+   - Match against the INDEX.md entries (keys + descriptions).
+   - If a universal entry matches: check `last_refreshed` date. **CACHED** (<90 days), **STALE** (≥90 days). Read `references/domain-cache/{key}.md` on-demand.
+   - If no universal entry matches: extract domain keywords from item content (description, directory names, technology terms). Assign status **RUNTIME_RESEARCH**.
+   - If no clear domain is inferable (e.g., generic "code-review"): assign `Domain: none`, `Cache Status: NONE`.
 
-3. **Assign one researcher per domain.** For STALE/MISS domains shared by multiple items, designate only **one** analysis agent as the "researcher" for that domain. Other agents sharing the same domain are told: "Another agent is researching this domain — use cached content or model knowledge, do not WebSearch for domain research."
+3. **Assign researchers.** For STALE universal entries shared by multiple items, designate one agent as researcher (existing pattern). For RUNTIME_RESEARCH domains, designate one researcher per unique domain keyword.
+
+### Step 0b: Domain Deep Research (parallel with Step 1)
+
+If any items have `RUNTIME_RESEARCH` status and `websearch_available = true`:
+
+1. From the discovery results (Phase 1) and the detected runtime domain keywords, derive 2-3 **specific** research questions. Not generic "best practices" — targeted questions from the repo context. Examples:
+   - Technology: "SwiftUI AudioSession best practices for recording + offline storage"
+   - Workflow: "corpus canonization quality criteria for chat exports"
+   - Quality: "requirement traceability validation patterns for specification documents"
+2. Launch a Domain Research Agent (allowed-tools: WebSearch, WebFetch, Read) that executes 2-3 WebSearch queries per domain (max 5 total, hard cap). Apply `source-quality-criteria.md` discard rules. Tag each source with tier.
+3. Collect structured domain knowledge per domain (max 500 tokens each).
+4. This research is **ephemeral** — it is injected into the per-item orchestration suffix but NOT persisted to disk.
+
+If `websearch_available = false`, skip this step. Items with RUNTIME_RESEARCH proceed with model knowledge only.
 
 ### Step 1: Load Specialized Skill Content
 
@@ -164,9 +174,8 @@ mode: orchestrated
 websearch_available: [true/false]
 webfetch_available: [true/false]
 domain_cache: |
-  [cached domain content, "none", or full cache protocol instructions:]
   Domain: [domain key or "none"]
-  Cache Status: [CACHED | STALE | MISS | NONE]
+  Cache Status: [CACHED | STALE | RUNTIME_RESEARCH | NONE]
   Role: [researcher | consumer]
 
   [If CACHED: insert cached content + "Use as domain knowledge, skip WebSearch.
@@ -179,11 +188,11 @@ domain_cache: |
   [If STALE + consumer: insert cached content + "Use as-is, another agent
   is refreshing."]
 
-  [If MISS + researcher: "No cache. 1 WebSearch query. Apply discard rules
-  from source-quality-criteria.md. Tag each source with tier (1/2/3). Return
+  [If RUNTIME_RESEARCH + research available: insert runtime research content +
+  "Use as domain context. This research is ephemeral — do NOT return a
   Domain Cache Update section."]
 
-  [If MISS + consumer: "No cache. Use model knowledge only."]
+  [If RUNTIME_RESEARCH + no research: "No cache. Use model knowledge only."]
 
   [If NONE: "No domain inferred. WebSearch as normal."]
 ---
@@ -211,7 +220,7 @@ If `validation_mode = true`, select a deterministic validation sample before dis
 
 ### Domain Cache Update Collection
 
-After all agents complete, collect "Domain Cache Update" sections from researcher agents that had STALE or MISS cache status. Hold these for Phase 3.5.
+After all agents complete, collect "Domain Cache Update" sections from researcher agents that had STALE cache status for universal entries only. RUNTIME_RESEARCH results are ephemeral and must NOT be collected for persistence. Hold updates for Phase 3.5.
 
 If `validation_mode = true`, skip this collection step entirely.
 
@@ -272,7 +281,7 @@ After presenting all reports, confirm before writing:
 If the user declines, skip cache persistence.
 
 1. Create the `references/domain-cache/` directory if it does not exist.
-2. Collect all "Domain Cache Update" sections from researcher agents that had STALE or MISS cache status.
+2. Collect "Domain Cache Update" sections from researcher agents. **Only persist updates for domains already listed in INDEX.md** (universal entries). Do not create new domain-cache entries from runtime research — it is ephemeral by design.
 3. For each update, format as a cache entry file with YAML frontmatter and body (≤500 tokens of bullet content — truncate if exceeded):
 
 ```yaml
