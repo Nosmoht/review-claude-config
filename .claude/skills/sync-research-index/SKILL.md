@@ -17,17 +17,17 @@ You are an index maintainer ensuring the CLAUDE.md Research References section s
 
 ### 1. Discover research files
 
-If `$ARGUMENTS` contains a folder path, use it as the target. Otherwise, use the current working directory.
+If `$ARGUMENTS` contains a non-empty folder path, use it as the target. If `$ARGUMENTS` is empty, absent, or whitespace-only, use the current working directory.
 
-Verify `<target>` exists using Glob on `<target>/CLAUDE.md`. If it does not exist, tell the user: "Target folder not found or has no CLAUDE.md." Stop.
+Verify `<target>` exists by reading `<target>/CLAUDE.md`. If it does not exist or cannot be read, tell the user: "Target folder not found or has no CLAUDE.md at `<target>/CLAUDE.md`." Stop.
 
-Glob `<target>/research/**/*.md` to find all research files. If the `research/` directory does not exist or contains no `.md` files, tell the user: "No research files found in `<target>/research/`." Stop.
+Glob `<target>/research/**/*.md` to find all research files. If the `research/` directory does not exist or contains no `.md` files, tell the user: "No research files found in `<target>/research/`. Nothing to sync." Stop.
 
 For each research file, read the first 5 lines to extract the title (first `# ` heading).
 
 ### 2. Parse CLAUDE.md references
 
-Read `<target>/CLAUDE.md`. Locate the `## Research References` section. If the section does not exist, tell the user: "No Research References section found in CLAUDE.md." Stop.
+Read `<target>/CLAUDE.md`. Locate the `## Research References` section. If the section does not exist, tell the user: "No `## Research References` section found in CLAUDE.md. Cannot sync without this section." Stop.
 
 Parse each entry in the section. Expected format:
 ```
@@ -46,7 +46,7 @@ Classify each item:
 - **OK** — File exists on disk AND is referenced in CLAUDE.md with a matching title.
 - **UNLINKED** — File exists on disk but is NOT referenced in CLAUDE.md.
 - **BROKEN** — Referenced in CLAUDE.md but file does NOT exist on disk.
-- **STALE** — File exists and is referenced, but the CLAUDE.md title does not match the file's heading.
+- **STALE** — File exists and is referenced, but the CLAUDE.md link text (inside `[...]`) does not match the file's first `# ` heading.
 
 ### 4. Present drift report
 
@@ -75,7 +75,7 @@ On "Cancel": stop. On "Update CLAUDE.md to fix drift":
 - **For BROKEN links:** Remove the entry from the Research References section.
 - **For STALE entries:** Update the title in the CLAUDE.md entry to match the file's current `# ` heading.
 
-Use Edit to make targeted changes to the `## Research References` section only. Never modify other sections of CLAUDE.md. If Edit fails (e.g., non-unique match), report the specific entry that could not be updated to the user and continue with remaining entries.
+Use Edit to make targeted changes to the `## Research References` section only. Never modify other sections of CLAUDE.md. Apply changes one entry at a time. If an Edit fails (e.g., non-unique match), stop applying further edits and report to the user: "Edit failed for [entry]. Applied N of M changes successfully. Remaining changes: [list]. Review CLAUDE.md before continuing." Ask the user via AskUserQuestion whether to retry the remaining changes or stop.
 
 After editing, re-run the comparison from Step 3 against the updated CLAUDE.md (at most once). If drift remains after one fix cycle, report the remaining issues to the user and stop — do not attempt further fixes without user confirmation. Otherwise, confirm: "All drift resolved."
 
