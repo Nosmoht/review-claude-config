@@ -67,9 +67,10 @@ When the skill declares Write, Bash, Edit, or MCP tools in `allowed-tools`: also
 
 1. Read the skill file and infer its primary goal/domain in one sentence.
 2. Domain research (follow orchestration flags if in orchestrated mode):
-   - First, check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the skill's domain to a cache entry.
+   - First, check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the skill's domain to a universal cache entry.
    - If `CACHED` (entry exists, ≤90 days old): read the cache file and use as primary domain knowledge. At most 1 supplemental WebSearch query if the cache lacks coverage for this skill's specific area.
-   - If `STALE` (≥90 days) or `MISS` (no entry): perform 1 WebSearch query for domain best practices. If `webfetch_available`, fetch the most relevant URL.
+   - If `STALE` (≥90 days): perform 1 WebSearch query to refresh.
+   - If no cache entry matches: extract domain keywords from the skill's description and content, then perform 1-2 targeted WebSearch queries for domain-specific knowledge. If `webfetch_available`, fetch the most relevant URL.
    - If neither cache nor WebSearch available: use model knowledge only, marked `[no external verification]`.
    - Apply source quality criteria (loaded above or from shared reference materials in orchestrated mode): discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
 3. Synthesize: what should a high-quality skill in this domain include?

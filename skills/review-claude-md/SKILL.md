@@ -68,9 +68,10 @@ Read the type-specific evaluation guide from this skill's own directory:
    - Stated purpose and audience
    - Which sections are present (Architecture, Commands, Working Guidelines, Development Conventions, etc.)
 2. Domain research (follow orchestration flags if in orchestrated mode):
-   - Check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the project type.
+   - Check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the project type to a universal cache entry.
    - If `CACHED` (≤90 days): read the cache file as primary domain knowledge.
-   - If `STALE` or `MISS`: perform 1 WebSearch using "Claude Code CLAUDE.md best practices [project-type]" where [project-type] is the one-word project type identified in step 1 (e.g., "Kubernetes", "Python service", "TypeScript app"). Fetch the top result if `webfetch_available`.
+   - If `STALE`: perform 1 WebSearch to refresh.
+   - If no cache entry matches: perform 1-2 targeted WebSearch queries for "Claude Code CLAUDE.md best practices [project-type]" where [project-type] is identified in step 1. Fetch the top result if `webfetch_available`.
    - If unavailable: use model knowledge only, marked `[no external verification]`.
    - Apply source quality criteria: prefer official Anthropic docs (Tier 1).
 3. Synthesize: what should a high-quality CLAUDE.md for this project type include?
