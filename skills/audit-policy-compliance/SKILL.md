@@ -73,8 +73,22 @@ For violations, record: tool_name, level, policy action (ask/deny), timestamp, a
 | L1-L5 distribution | Group by authorization level |
 | Violation count | Entries where level exceeds policy |
 | Violation rate | Violations / total |
-| Escalation correctness | L4 calls that were preceded by an AskUserQuestion (check within 3 prior entries) |
+| Escalation correctness | L4 calls preceded by AskUserQuestion within 3 prior entries |
 | L5 attempts | Any L5 calls — should be 0 under default policy |
+
+### Step 7: Deep Escalation Analysis
+
+Step 7 requires output from Steps 5-6 (classified tool calls and compliance metrics).
+
+For each L4+ tool_call, search backward for a matching `policy_decision` entry (same tool_name, within 30 seconds or 10 entries). Classify:
+- **Chain complete:** policy_decision(ask) found, tool_call followed → approved escalation
+- **Escalation gap:** L4+ tool_call with NO preceding policy_decision → hooks bypassed or misconfigured
+- **Subagent L4:** L4+ call where agent_id is non-null → flag for delegation authorization check
+
+Compute:
+- Escalation gap count and rate
+- Over-escalation rate: policy_decision(ask) count / total tool_calls. Flag if >30%.
+- Subagent L4 count (these may lack user confirmation by design)
 
 ## Phase 3 — Output
 
@@ -105,8 +119,11 @@ For violations, record: tool_name, level, policy action (ask/deny), timestamp, a
 
 ### Escalation Analysis
 
-- L4 calls with prior user confirmation: [N] of [total L4] ([X%])
-- L4 calls without confirmation: [N] — these represent unconfirmed modifications
+- L4 calls with prior confirmation: [N] of [total L4] ([X%])
+- L4 calls without confirmation: [N]
+- Escalation gaps (no policy_decision): [N]
+- Over-escalation rate: [X%] [if >30%: "ELEVATED — review whether all ask prompts are necessary"]
+- Subagent L4 calls: [N] (these may lack user confirmation by design)
 
 ### Recommendations
 
