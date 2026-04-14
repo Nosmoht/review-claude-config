@@ -196,11 +196,11 @@ In standalone mode:
 5. **What's Next?**
 
 After all output is complete, present next steps via AskUserQuestion (header: "What's next?"):
-- Option 1 label: "Apply findings" (Recommended) — description: `"Run /apply-claude-md-review-findings <report-path> to address High/Medium findings"`
+- Option 1 label: "Apply findings manually" (Recommended) — description: `"Address High/Medium findings from the report using the Current/Recommended blocks"`
 - Option 2 label: "Review another CLAUDE.md" — description: `"Provide a file path to review next"`
 - Option 3 label: "Done" — description: `"End the workflow"`
 
-On "Apply findings": invoke `/apply-claude-md-review-findings` with the report path. On "Review another CLAUDE.md": ask for the file path, then invoke `/review-claude-md`. On "Done": acknowledge and stop.
+On "Apply findings manually": list the High/Medium findings with their Current/Recommended blocks for the user to act on. On "Review another CLAUDE.md": ask for the file path, then invoke `/review-claude-md`. On "Done": acknowledge and stop.
 
 ## Error Handling
 

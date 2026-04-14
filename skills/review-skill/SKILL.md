@@ -75,6 +75,8 @@ When the skill declares Write, Bash, Edit, or MCP tools in `allowed-tools`: also
    - Apply source quality criteria (loaded above or from shared reference materials in orchestrated mode): discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
 3. Synthesize: what should a high-quality skill in this domain include?
 
+**Resource caps (hard limits per review):** ≤3 WebSearch queries, ≤1 WebFetch call, ≤10 reference file reads. Exceeding these indicates scope creep — narrow the research focus rather than broadening.
+
 ### Step B: Scoring + Recommendations
 
 Score using the rubric as the PRIMARY basis. The skill evaluation guide provides type-specific criteria. Domain research informs Goal Alignment and enriches recommendations but does NOT alter scoring criteria for other dimensions.
@@ -92,6 +94,12 @@ Score using the rubric as the PRIMARY basis. The skill evaluation guide provides
 ## Phase 3 — Output
 
 Return the report in this EXACT format:
+
+### Status
+[success | partial | failure]
+- `success` — review completed, all grades B or above
+- `partial` — review completed, one or more grades C or below
+- `failure` — review could not complete (missing file, missing references)
 
 ### Goal
 [One sentence describing what this skill aims to achieve]
@@ -202,6 +210,7 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 ## Hard Rules
 
 - **Read-only on the analyzed skill.** Never modify the skill being reviewed. Write only to `.claude/reviews/`.
+- **Tier A tool justification:** Write+WebSearch/WebFetch are present because: (1) Write is restricted to `.claude/reviews/` for report persistence only, (2) WebSearch/WebFetch are for domain research, not file modification, (3) read-only Hard Rule above prevents write-to-analyzed-file risk.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present the full certificate before any follow-up actions.**

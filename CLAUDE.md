@@ -34,7 +34,6 @@ This is the authoritative maintainer command inventory for the repo.
 - `/apply-skill-review-findings [report]`
 - `/apply-agent-review-findings [report]`
 - `/apply-rule-review-findings [report]`
-- `/apply-claude-md-review-findings [report]`
 - `/apply-audit-findings [report]` - create primitives recommended by `audit-repo`
 
 ### Maintain
