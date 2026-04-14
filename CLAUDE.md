@@ -26,6 +26,8 @@ This is the authoritative maintainer command inventory for the repo.
 - `/review-settings <path>` - single settings.json quality review
 - `/review-claude-md <path>` - single CLAUDE.md quality review
 - `/review-session-trace <path>` - analyze Claude Code JSONL transcript for runtime behavior
+- `/classify-trace-errors <path>` - classify trace errors against MAST failure taxonomy
+- `/audit-policy-compliance <path>` - audit tool call authorization against action classification policy
 - `/suggest-skills [folder]` - heuristic skill discovery
 - `/audit-repo [folder]` - repo-structure audit for Claude Code primitives
 
