@@ -150,6 +150,17 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 - Baseline refresh covers only `Prompt Engineering`, `Context Engineering`, and `Tool Design`
 - Artifact identity is `type + path`; analytics series identity is `repo + generated_by + type + path`; `name` is display-only
 - Commit format: `type(scope): description`
+- Make targets:
+
+| Target | Command | Purpose |
+|--------|---------|---------|
+| `validate` | `make validate` | Run all checks (lint + format + schema + budget + test) |
+| `lint` | `make lint` | `ruff check hooks/ scripts/` |
+| `format` | `make format` | `ruff format --check hooks/ scripts/` |
+| `schema-validate` | `make schema-validate` | `python3 scripts/validate_schema.py` |
+| `token-budget` | `make token-budget` | `python3 scripts/validate_token_budgets.py` |
+| `test` | `make test` | `pytest tests/ -v --tb=short` |
+| `test-cov` | `make test-cov` | `pytest tests/ -v --tb=short --cov=hooks --cov=scripts` |
 - Audit-fix chain: commit review report first, then commit fixes
 - Review, suggest, and audit skills are read-only on analyzed files except for reports (`$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`) and domain cache
 - Apply skills and `scaffold-skill` modify files and require confirmation gates
