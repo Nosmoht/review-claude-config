@@ -7,6 +7,12 @@ description: >
   files — each has its own update path.
 disable-model-invocation: true
 allowed-tools: WebSearch, WebFetch, Read, Write, AskUserQuestion
+tool-justification: >
+  Write+WebFetch (Tier A): WebFetch retrieves research sources; Write updates
+  only two hardcoded reference files (engineering-baseline.md and
+  engineering-baseline-provenance.md) after explicit AskUserQuestion confirmation.
+  No raw fetch output is forwarded to Write — findings are classified and
+  merged before any file is modified.
 ---
 
 # Refresh Engineering Baseline
