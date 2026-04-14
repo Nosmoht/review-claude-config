@@ -67,7 +67,7 @@ Read the type-specific evaluation guide from this skill's own directory:
    - First, check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the rule's domain to a universal cache entry.
    - If `CACHED` (entry exists, ≤90 days old): read the cache file and use as primary domain knowledge. At most 1 supplemental WebSearch query if the cache lacks coverage for this rule's specific area.
    - If `STALE` (≥90 days): perform 1 WebSearch query to refresh.
-   - If no cache entry matches: extract domain keywords from the rule's content, then perform 1-2 targeted WebSearch queries for domain-specific knowledge. If `webfetch_available`, fetch the most relevant URL.
+   - If no cache entry matches: extract domain keywords from the rule's content, then perform 1-2 targeted WebSearch queries (technology + workflow + quality aspect, not generic "best practices"). If `webfetch_available`, fetch the most relevant URL.
    - If neither cache nor WebSearch available: use model knowledge only, marked `[no external verification]`.
    - Apply source quality criteria (loaded above or from shared reference materials in orchestrated mode): discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
 3. Synthesize: what should a high-quality rule in this domain enforce?

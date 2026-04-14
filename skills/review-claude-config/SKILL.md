@@ -112,13 +112,13 @@ Before dispatching analysis agents, the orchestrator performs domain cache looku
 
 2. **Match items against universal cache.** For each discovered item:
    - Match against the INDEX.md entries (keys + descriptions).
-   - If a universal entry matches: check `last_refreshed` date. **CACHED** (<90 days), **STALE** (≥90 days). Read `references/domain-cache/{key}.md` on-demand.
-   - If no universal entry matches: extract domain keywords from item content (description, directory names, technology terms). Assign status **RUNTIME_RESEARCH**.
+   - If a universal entry matches: check `last_refreshed` date. **CACHED** (<90 days), **STALE** (≥90 days). Read `references/domain-cache/{key}.md` on-demand. If file is missing despite being in INDEX.md, downgrade to RUNTIME_RESEARCH.
+   - If no universal entry matches: extract the single most specific technology or workflow term from (1) frontmatter description, (2) parent directory name, (3) explicit technology references in body. If multiple candidates, prefer the term appearing in both description and body. Assign status **RUNTIME_RESEARCH**.
    - If no clear domain is inferable (e.g., generic "code-review"): assign `Domain: none`, `Cache Status: NONE`.
 
 3. **Assign researchers.** For STALE universal entries shared by multiple items, designate one agent as researcher (existing pattern). For RUNTIME_RESEARCH domains, designate one researcher per unique domain keyword.
 
-### Step 0b: Domain Deep Research (parallel with Step 1)
+### Step 0b: Domain Deep Research (parallel with Step 1; Step 2 waits for both to complete)
 
 If any items have `RUNTIME_RESEARCH` status and `websearch_available = true`:
 

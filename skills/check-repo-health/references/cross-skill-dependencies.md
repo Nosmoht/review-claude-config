@@ -20,7 +20,7 @@ Severity: `!`=fatal `?`=warn `-`=skip
 | review-claude-config | skills/review-agent/references/agent-evaluation-guide.md | ? |
 | review-claude-config | skills/review-rule/SKILL.md | ? |
 | review-claude-config | skills/review-rule/references/rule-evaluation-guide.md | ? |
-| review-claude-config,suggest-skills,review-skill,review-agent,review-rule,review-claude-md,review-hook | domain-cache/INDEX.md (7 universal entries) | - |
+| review-claude-config,suggest-skills,review-skill,review-agent,review-rule,review-claude-md,review-hook,check-repo-health | domain-cache/INDEX.md (7 universal entries) | - |
 | audit-repo | skills/suggest-skills/references/signal-catalog.md | ! |
 | audit-repo,suggest-skills | evidence-contract.md | ? |
 | refresh-engineering-baseline | evidence-contract.md | ! |

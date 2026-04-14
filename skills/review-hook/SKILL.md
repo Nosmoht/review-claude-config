@@ -72,7 +72,7 @@ Read the type-specific evaluation guide from this skill's own directory:
 Check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match to a universal cache entry.
 - If `CACHED` (≤90 days): use cache as primary knowledge.
 - If `STALE`: perform 1 WebSearch to refresh.
-- If no cache entry matches: perform 1-2 targeted WebSearch queries for Claude Code hook best practices. Fetch the top result if `webfetch_available`.
+- If no cache entry matches: perform 1-2 targeted WebSearch queries for Claude Code hook quality patterns (technology + workflow aspect, not generic "best practices"). Fetch the top result if `webfetch_available`.
 - If unavailable: use model knowledge only, marked `[no external verification]`.
 
 Apply source quality criteria: prefer official Anthropic docs (Tier 1) and production case studies (Tier 2).
