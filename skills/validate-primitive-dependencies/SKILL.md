@@ -49,6 +49,11 @@ Also check for hook configuration:
 - `<folder>/.claude/hooks/hooks.json`
 - `<folder>/.claude/settings.json` (hooks may live here)
 
+Also check for MCP and settings:
+
+- `<folder>/.mcp.json` (MCP server declarations)
+- `<folder>/.claude/settings.json` (project settings — permissions, MCP governance)
+
 If no primitives are found, report that and stop.
 
 ## Phase 2 — Dependency Extraction (subagent)
@@ -122,6 +127,18 @@ Read <folder>/CLAUDE.md.
 Extract the ## Research References section.
 For each line matching: `[^\]]+\]\(([^)]+\.md)\)` — capture the path.
 Record each as a forward reference of type "research-ref" from CLAUDE.md to the path.
+
+## Task E: Scan MCP cross-references
+
+If <folder>/.mcp.json exists:
+1. Parse it and extract all server name keys.
+2. For each agent in the inventory that has `mcpServers:` in its frontmatter, extract the server name list.
+3. Record a forward reference of type "mcp-ref" from each agent to each declared server name.
+4. Cross-check: every agent `mcpServers` entry should resolve to a key in `.mcp.json`. Record MISSING if not found.
+5. Reverse check: every `.mcp.json` server should be referenced by at least one agent or skill. Record ORPHAN if unreferenced (Low severity — server may be used interactively).
+
+If <folder>/.claude/settings.json exists:
+6. Check if `permissions.deny` key exists. Record MISSING-DENY if absent (High severity).
 
 ## Output format
 
