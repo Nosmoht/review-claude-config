@@ -47,6 +47,10 @@ One JSONL file per session at `$CLAUDE_PLUGIN_DATA/audit/{session_id}.audit.json
 
 `event`: `"start"` or `"stop"`.
 
+### api_error (StopFailure)
+
+Same common fields + `error_type`: `rate_limit`, `authentication_failed`, `billing_error`, `server_error`, `max_output_tokens`, `unknown`.
+
 ### session_summary (SessionEnd)
 
 ```json

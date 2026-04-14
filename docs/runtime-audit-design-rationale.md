@@ -34,6 +34,19 @@ Both Phase 3 and Phase 4 considered this. Same rationale: premature without a co
 **Recursive loop safety checker → SKIP.**
 The system doesn't have recursive review loops. The convergence requirement in CLAUDE.md already prevents infinite review-apply cycles by requiring two consecutive stable runs. No additional tool needed.
 
+## Explicitly Deferred Deliverables
+
+These were in the original roadmap but deferred with documented rationale:
+
+| Deliverable | Phase | Why Deferred |
+|---|---|---|
+| `/run-behavioral-benchmarks` | 2a | Needs labeled training data (task → expected tool distribution). No baseline data exists yet. |
+| Reproducibility runner (N runs + variance) | 2a | Requires CI pipeline invoking Claude Code programmatically. Outside plugin model. |
+| Decision Authority Model reference | 2b | Action classification model (L1-L5) covers the core. Formal authority model is governance-theoretical without a consuming enforcement mechanism. |
+| `/review-escalation-policy` skill | 2b | Escalation rules are plain-markdown rules reviewable via `/review-rule`. EP-1/EP-2 checklist items handle the quality checks. Dedicated skill not justified. |
+| Goal-drift detection | 4 | Requires intent inference from prompts + tool-sequence anomaly baselines. Partially theoretical without labeled data. |
+| Recursive loop safety checker | 5 | CLAUDE.md convergence requirement + bounded review-apply cycle already prevents infinite loops. No additional tool needed. |
+
 ## General Principles Established
 
 1. **Extend before creating.** When an existing skill covers 60%+ of a proposed skill's scope, extend it rather than creating a new skill.

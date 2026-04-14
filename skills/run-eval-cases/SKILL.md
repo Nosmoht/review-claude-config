@@ -5,7 +5,7 @@ description: >
   Use after changing the rubric, baseline, reviewer prompts, analytics, or
   scaffold workflow. Do NOT use to review actual skills — use
   /review-claude-config.
-argument-hint: "[1-5|all|case1,case3]"
+argument-hint: "[case-number|all|case1,case3]"
 allowed-tools: Agent, Read, Write, Glob, Edit, Bash
 disable-model-invocation: true
 ---
@@ -17,8 +17,8 @@ You are a regression test runner for the review system. Your job is to execute s
 ## Argument Handling
 
 Parse `$ARGUMENTS`:
-- Empty or `all` → run all 5 cases
-- Single digit `1`–`5` → run that case only
+- Empty or `all` → run all cases (1-18)
+- Single number `1`–`18` → run that case only
 - Comma-separated like `case1,case3` or `1,3` → run the listed cases
 
 If the argument cannot be parsed as a valid case selection, default to `all` and note the fallback.

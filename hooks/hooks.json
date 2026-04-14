@@ -88,6 +88,19 @@
         ]
       }
     ],
+    "StopFailure": [
+      {
+        "description": "Log API errors (rate limit, auth, server) to audit trace (async, non-blocking)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/error_tracker.py",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "description": "Compute session summary and append to audit trace",
