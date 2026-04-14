@@ -51,27 +51,30 @@ Check `last_refreshed` date in the baseline frontmatter. If older than 3 months,
 
 **2. Discovery Agent**
 
-Launch an Agent (allowed-tools: Glob, Read) to discover all skills, agents, and rules in the target folder:
+Launch an Agent (allowed-tools: Glob, Read) to discover all Claude Code primitives in the target folder:
 
 ```
-Discover all Claude Code skills, agents, and rules. Use Glob with these patterns:
+Discover all Claude Code skills, agents, rules, MCP server configs, and settings. Use Glob/Read with these patterns:
 - <folder>/.claude/skills/*/SKILL.md
 - <folder>/.claude/agents/*.md
 - <folder>/.claude/rules/*.md
 - <folder>/**/.claude/skills/*/SKILL.md (monorepo support)
 - <folder>/**/.claude/agents/*.md (monorepo support)
 - <folder>/**/.claude/rules/*.md (monorepo support)
+- <folder>/.mcp.json (MCP server config)
+- <folder>/.claude/settings.json (project settings)
+- <folder>/.claude/settings.local.json (local settings, if exists)
 
 Exclude paths containing: node_modules, .git, vendor, dist, build, .claude/reviews
 
 For each discovered file:
 - Read the full content
-- Classify as "Skill", "Agent", or "Rule"
+- Classify as "Skill", "Agent", "Rule", "MCP", or "Settings"
 
 Return results in this exact format per item:
 
 ### [file path]
-**Type:** Skill | Agent | Rule
+**Type:** Skill | Agent | Rule | MCP | Settings
 **Content:**
 [full file content]
 
@@ -82,12 +85,12 @@ If a file cannot be read, return:
 
 If a Glob pattern returns no results, skip it silently (not all repos have all types).
 
-Also note (but do not analyze): existence of CLAUDE.md, .claude/settings.json
+Also note (but do not analyze): existence of CLAUDE.md
 
 COMPLETION: You are done when all Glob patterns have been checked and all readable files are classified.
 ```
 
-If no skills, agents, or rules are discovered, report that and stop.
+If no primitives are discovered at all, report that and stop.
 
 Sort the discovered items lexicographically by file path before returning them to the orchestrator.
 
@@ -134,18 +137,20 @@ If `websearch_available = false`, skip this step. Items with RUNTIME_RESEARCH pr
 
 ### Step 1: Load Specialized Skill Content
 
-Locate the specialized review skills (sibling directories in the same plugin). Use Glob if paths are not immediately known: `**/review-skill/SKILL.md`, `**/review-agent/SKILL.md`, `**/review-rule/SKILL.md`.
+Locate the specialized review skills (sibling directories in the same plugin). Use Glob if paths are not immediately known.
 
 Read the SKILL.md and evaluation guide for each type that has discovered items:
 - Skills: `review-skill/SKILL.md` + `review-skill/references/skill-evaluation-guide.md`
 - Agents: `review-agent/SKILL.md` + `review-agent/references/agent-evaluation-guide.md`
 - Rules: `review-rule/SKILL.md` + `review-rule/references/rule-evaluation-guide.md`
+- MCP: `review-mcp-server/SKILL.md` + `review-mcp-server/references/mcp-evaluation-guide.md`
+- Settings: `review-settings/SKILL.md` + `review-settings/references/settings-evaluation-guide.md`
 
-Only load the types that have discovered items (e.g., skip agent content if no agents found).
+Only load the types that have discovered items (e.g., skip MCP content if no `.mcp.json` found).
 
 ### Step 2: Dispatch Analysis Agents
 
-Group discovered items by type (Skill, Agent, Rule). For each type group, construct a **type-specific shared prefix** that is **byte-identical** across all items of the same type. This maximizes KV-cache hits within each type group.
+Group discovered items by type (Skill, Agent, Rule, MCP, Settings). For each type group, construct a **type-specific shared prefix** that is **byte-identical** across all items of the same type. MCP and Settings are typically single-item groups (one `.mcp.json`, one `settings.json` per repo) — dispatch as batch of 1, same pattern.
 
 **Type-specific shared prefix structure:**
 ```
@@ -262,6 +267,8 @@ Present each item's report to the user. After all items, add:
 |------|------|---------|---------|--------------|----|----|------|--------|------|
 | ... | Skill/Agent | ... | ... | ... | ... | ... | ... | ... | ... |
 | ... | Rule | ... | ... | ... | — | — | ... | — | — |
+| ... | MCP | ... | — | ... | — | — | ... | ... | ... |
+| ... | Settings | ... | — | ... | — | — | ... | ... | ... |
 ```
 
 ### Cross-Cutting Observations
