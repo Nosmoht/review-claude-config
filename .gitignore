@@ -11,6 +11,9 @@ logs/security/
 __pycache__
 *.pyc
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # Python project artifacts
 .venv/
 .coverage
