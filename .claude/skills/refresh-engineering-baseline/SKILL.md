@@ -6,7 +6,7 @@ description: >
   last_refreshed is older than 3 months. Do NOT use for other reference
   files — each has its own update path.
 disable-model-invocation: true
-allowed-tools: WebSearch, WebFetch, Read, Write
+allowed-tools: WebSearch, WebFetch, Read, Write, AskUserQuestion
 ---
 
 # Refresh Engineering Baseline
@@ -39,7 +39,7 @@ If `last_refreshed` is less than 90 days ago:
 
 ### 3. Research current best practices
 
-Run these WebSearch queries (replace `[current year]` with the actual year). After each query, check if new actionable techniques were found for the three baseline sections. If two consecutive queries yield no new techniques beyond what earlier queries found, skip remaining queries and note skipped queries in the change report.
+Run these WebSearch queries sequentially (early termination requires evaluating each before proceeding). Replace `[current year]` with the actual year. After each query, check if new actionable techniques were found for the three baseline sections. If two consecutive queries yield no new techniques beyond what earlier queries found, skip remaining queries and note skipped queries in the change report.
 
 - "agentic workflow patterns multi-agent orchestration [current year]"
 - "prompt engineering techniques evidence research [current year]"

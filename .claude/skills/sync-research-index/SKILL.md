@@ -75,9 +75,9 @@ On "Cancel": stop. On "Update CLAUDE.md to fix drift":
 - **For BROKEN links:** Remove the entry from the Research References section.
 - **For STALE entries:** Update the title in the CLAUDE.md entry to match the file's current `# ` heading.
 
-Use Edit to make targeted changes to the `## Research References` section only. Never modify other sections of CLAUDE.md.
+Use Edit to make targeted changes to the `## Research References` section only. Never modify other sections of CLAUDE.md. If Edit fails (e.g., non-unique match), report the specific entry that could not be updated to the user and continue with remaining entries.
 
-After editing, re-run the comparison from Step 3 against the updated CLAUDE.md. If drift remains, report the remaining issues and offer to fix. Otherwise, confirm: "All drift resolved."
+After editing, re-run the comparison from Step 3 against the updated CLAUDE.md (at most once). If drift remains after one fix cycle, report the remaining issues to the user and stop — do not attempt further fixes without user confirmation. Otherwise, confirm: "All drift resolved."
 
 ### 6. Suggest commit
 

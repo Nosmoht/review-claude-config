@@ -5,7 +5,7 @@ description: >
   contradictions, and tier compliance. Use every 90 days or when evidence
   sources change. Do NOT use to check skill quality — use /review-claude-config.
 argument-hint: "[--scope all|labels|freshness|contradictions|tiers]"
-allowed-tools: Read, Write, Glob, Grep
+allowed-tools: Read, Write, Glob, Grep, AskUserQuestion
 disable-model-invocation: true
 ---
 
@@ -25,6 +25,8 @@ surface. It modifies only `.claude/reviews/` output files.
 
 Parse `$ARGUMENTS` for `--scope` followed by one of: `all`, `labels`, `freshness`,
 `contradictions`, `tiers`. If not provided or `all`, run all four checks.
+If `--scope` is provided with an unrecognized value, report:
+"Unrecognized scope: [value]. Valid options: all, labels, freshness, contradictions, tiers." and stop.
 
 ## Phase 1 — Setup
 
@@ -66,6 +68,8 @@ On "Cancel": stop. On "Proceed anyway": continue with all checks.
 If no previous run exists, proceed without prompting.
 
 ## Phase 2 — Checks
+
+Run only the steps matching the --scope flag (or all four when scope is `all`). Execute sequentially.
 
 ### Step 3: Label normalization check [scope: labels]
 
