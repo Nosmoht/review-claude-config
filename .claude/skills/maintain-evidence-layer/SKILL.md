@@ -35,13 +35,12 @@ If `--scope` is provided with an unrecognized value, report:
 Read `skills/review-claude-config/references/evidence-contract.md`.
 Read `docs/evidence-maintenance.md`.
 
-From these files, confirm:
-- Canonical class names: "Proven result", "Engineering guidance", "Repo default",
-  "Low-evidence area"
-- Non-canonical → canonical mapping:
-  - "Local design preference" → "Repo default"
-  - "local policy" → "Repo default"
-  - "heuristic" / "novel contribution" / "limited evidence" → "Low-evidence area"
+From these files, extract:
+- The four canonical class names.
+- The non-canonical → canonical mapping table.
+Use the values found in those files — do not assume hardcoded values. If the mapping
+in evidence-contract.md or evidence-maintenance.md changes, the skill must reflect
+the current values without requiring a SKILL.md edit.
 
 If `evidence-contract.md` cannot be read, stop immediately and report:
 "evidence-contract.md not found — cannot run evidence layer audit. Verify the file
@@ -245,13 +244,13 @@ Freshness cutoff: [today minus 90 days — computed at runtime]
 ### Recommended Actions
 
 Immediate (non-canonical labels):
-[list, or "None"]
+[For each: "- [file:line] Found: '[non-canonical]' → Replace with '[canonical]'. Validate: Grep for old label after edit returns zero results." Or "None"]
 
 Soon (stale sources):
-[list, or "None"]
+[For each: "- [file] Last refreshed: [date], [N] days stale. Cited in: [citing files]. Validate: Re-run freshness check after update." Or "None"]
 
 Review (unrecorded contradictions, tier violations):
-[list, or "None"]
+[For each: "- [file:line] [excerpt]. Action: [specific action]. Validate: [verification step]." Or "None"]
 ```
 
 ### Step 8: Present and persist
@@ -280,6 +279,18 @@ If any findings exist, present next steps via AskUserQuestion (header: "What's n
 On "Fix non-canonical labels": remind the user that label edits are direct file edits; offer to list the specific files and replacements again. On "Refresh stale sources": invoke `/refresh-engineering-baseline`. On "Check overall repo health": invoke `/check-repo-health`. On "Done": acknowledge and stop.
 
 If all checks passed with zero findings, skip the menu and confirm the healthy state.
+
+## Error Handling
+
+- If any Read/Grep/Glob call returns an error (not just file-not-found), record
+  "Tool error: [tool] on [path] — [error message]" in the report and continue to
+  the next step.
+- If Write fails when saving the report, present the report text in the conversation
+  with note: "Report could not be saved — copy manually."
+- If AskUserQuestion is unavailable (non-interactive context), default to proceeding
+  (for Step 2 confirmation) and saving the report (for Step 8 confirmation).
+- If Glob returns more than 100 files in any step, process in batches of 50 and note
+  total count in the report header.
 
 ## Hard Rules
 
