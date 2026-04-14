@@ -155,6 +155,32 @@ Items tracked: N | Reports analyzed: M
 
 If no regressions, new items, removed items, or systemic issues exist, show: "No alerts. All items stable or improving."
 
+**View 4: Convergence Analysis**
+
+For each artifact with 2+ reports, analyze finding-level stability:
+
+1. Parse recommendation headings in report bodies for `finding_id` values (format: `{checklist_item}:{path}:{dimension}/v1`). If report bodies are not available (frontmatter-only), skip View 4 with note "Convergence analysis requires report bodies."
+
+2. For the two most recent reports per artifact, classify each finding_id:
+   - `recurring` — present in both reports
+   - `new` — present only in latest
+   - `fixed` — present only in previous
+
+3. For each artifact with 3+ reports, compute max grade variance per dimension (difference between highest and lowest grade across all reports).
+
+4. Convergence verdict per artifact:
+   - **Converged** — latest two reports share all High/Medium finding_ids AND max grade variance ≤1 per dimension AND no dimension is null in latest where previous had a non-null grade
+   - **Not converged** — any High/Medium finding_id differs OR dimension variance >1 OR null-dimension regression
+
+```
+## Convergence Analysis
+
+| Artifact | Reports | Recurring | New | Fixed | Max Grade Var | Converged? |
+|----------|---------|-----------|-----|-------|---------------|------------|
+
+[If no artifact has 2+ reports: "Insufficient data for convergence analysis (requires 2+ reports per artifact)."]
+```
+
 ### 6. Summary
 
 Present a one-line summary:
@@ -179,7 +205,7 @@ If no regressions (classification is "Improving" or "Stable"), skip the menu —
 
 - **Read-only.** Never modify any file. This is a diagnostic skill only.
 - **Handle malformed reports gracefully.** Skip with a warning, never error out.
-- **Present all data before conclusions.** Show the three views before the summary.
+- **Present all data before conclusions.** Show all four views before the summary.
 - **Timestamp sorting is lexicographic.** YYYY-MM-DDTHHMMSS format sorts correctly as strings.
 - **Track by path first, partition by producer.** `type + path` identifies the artifact; `generated_by + type + path` identifies the analytics series. `name` is only a label.
 - **Grade comparison order.** A > B > C > D > F for trend computation.

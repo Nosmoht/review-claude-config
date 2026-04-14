@@ -2,9 +2,18 @@
 
 Manual regression cases for the prompt/context-first review flow. Use these when changing the rubric, shared baseline, reviewer prompts, analytics logic, or scaffold workflow.
 
+## Defect Annotation Convention
+
+Cases that test finding detection include a `defects:` block listing expected defects. Each defect has `{item, dim, sev, desc}`. Cases testing behavior (not detection) have `defects: N/A`. Clean-artifact cases have `defects: []`. Used by `/run-eval-cases` for FP/FN precision/recall measurement.
+
 ## Case 1 — Real Issue, Should Be Caught
 
 Artifact: a skill with `Write` in `allowed-tools`, no `disable-model-invocation: true`, vague description, and no output format.
+
+defects:
+- {item: SP-2, dim: Safety, sev: High, desc: "Write without disable-model-invocation"}
+- {item: PD-5, dim: Meta, sev: Medium, desc: "Vague description lacks discriminating keywords"}
+- {item: OF-1, dim: PE, sev: Medium, desc: "No output format specified"}
 
 Expected review behavior:
 - Surfaces at least one High or Medium finding.
@@ -16,12 +25,16 @@ Expected review behavior:
 
 Artifact: a skill with solid workflow, correct argument handling, correct tool set, and a clear output format — with only one slightly awkward (but functionally correct) sentence in the workflow body.
 
+defects: []
+
 Expected review behavior:
 - Does not invent structural defects.
 - Keeps findings Low impact or omits them entirely.
 - Avoids claiming that the artifact is unsafe or incomplete without evidence.
 
 ## Case 3 — Analytics Rename/Move Candidate
+
+defects: N/A (tests analytics behavior, not finding detection)
 
 Artifact set: two reports where a primitive disappears at one path and a similar one appears at another path.
 
@@ -32,6 +45,8 @@ Expected analytics behavior:
 
 ## Case 4 — Scaffold Registration Targets
 
+defects: N/A (tests scaffold behavior, not finding detection)
+
 Artifact: `scaffold-skill plugin foo` vs `scaffold-skill maintenance foo`.
 
 Expected scaffold behavior:
@@ -40,6 +55,8 @@ Expected scaffold behavior:
 - Neither mode refers to `## Skills`, `## File Structure`, or `## Installation` as registration targets.
 
 ## Case 6 — Cross-Run Consistency
+
+defects: N/A (tests cross-run stability, not detection accuracy)
 
 Artifact: a skill with exactly 3 known defects (one each in Clarity, Safety, and Completeness) and 2 clear strengths.
 
@@ -52,6 +69,10 @@ Expected review behavior:
 - If Goal Alignment uses the domain cache, justifications reference the same cached evidence in both runs.
 
 ## Case 7 — New Checklist Item Discrimination
+
+defects:
+- {item: DA-5, dim: Meta, sev: Medium, desc: "Description-body contradiction on trigger logic"}
+- {item: TC-3, dim: Compl, sev: Medium, desc: "No verification criteria for primary output"}
 
 Artifact: a synthetic agent with these specific properties:
 - Description says "Use when user asks to audit dependencies" but body says "Activate when the user wants to check code quality" — a description-body contradiction.
@@ -67,6 +88,10 @@ Expected review behavior:
 
 ## Case 5 — Reliability Pattern Detection
 
+defects:
+- {item: RL-1, dim: Safety, sev: High, desc: "No termination condition for recursion/retries"}
+- {item: RL-2, dim: Compl, sev: High, desc: "No failure path for external dependencies"}
+
 Artifact: an agent that spawns subagents or calls external dependencies (MCP tools, WebFetch, subprocess tools) with no failure path defined, no stop condition for recursion/retries, and continues execution even when dependencies return stub data or fail silently.
 
 Expected review behavior:
@@ -78,6 +103,10 @@ Expected review behavior:
 
 
 ## Case 8 — Tool Grant Least-Privilege Detection
+
+defects:
+- {item: TV-3, dim: Safety, sev: High, desc: "Tier A combinations (Bash+WebFetch, Write+WebFetch) without justification"}
+- {item: TV-2, dim: Safety, sev: Medium, desc: "Tool set exceeds read-only analyst archetype"}
 
 Artifact: an agent with the following frontmatter:
 ```yaml
@@ -96,6 +125,8 @@ Expected review behavior:
 
 ## Case 9 — Finding-ID Stability
 
+defects: N/A (tests finding-ID stability, not detection accuracy)
+
 Artifact: same skill reviewed twice without changes.
 
 Expected review behavior:
@@ -106,6 +137,8 @@ Expected review behavior:
 
 ## Case 10 — Baseline Version Lock
 
+defects: N/A (tests baseline version handling, not detection)
+
 Artifact: a repo with a prior review report using `baseline_version: 2026-04-04` when the current engineering baseline is `2026-04-08`.
 
 Expected review behavior:
@@ -115,6 +148,8 @@ Expected review behavior:
 
 ## Case 11 — Rule Dimension Completeness
 
+defects: N/A (tests dimension completeness, not detection)
+
 Artifact: a rule file reviewed twice.
 
 Expected review behavior:
@@ -123,6 +158,11 @@ Expected review behavior:
 - Grade variance ≤1 letter per dimension between runs.
 
 ## Case 12 — MCP Server Misconfiguration Detection
+
+defects:
+- {item: MC-4, dim: Safety, sev: High, desc: "Hardcoded API key in env"}
+- {item: MC-6, dim: Safety, sev: High, desc: "Tier A server without justification"}
+- {item: MC-8, dim: Compl, sev: Low, desc: "Stale orphan server entry"}
 
 Artifact: a `.mcp.json` with:
 - A hardcoded API key in `env` (`"API_KEY": "sk-live-abc123"`)
@@ -137,6 +177,8 @@ Expected review behavior:
 
 ## Case 13 — Clean Settings.json (No False Positives)
 
+defects: []
+
 Artifact: a well-configured `.claude/settings.json` with:
 - Valid JSON with `$schema` field
 - `permissions.deny` covering `~/.ssh/**`, `~/.aws/**`, `.env`
@@ -150,6 +192,11 @@ Expected review behavior:
 
 ## Case 14 — Silent Error Swallowing
 
+defects:
+- {item: RD-4, dim: Compl, sev: Medium, desc: "No error handling for WebSearch failure"}
+- {item: RT-1, dim: Compl, sev: Medium, desc: "No fallback output when upstream data missing"}
+- {item: RT-2, dim: PE, sev: Medium, desc: "No status token in output template"}
+
 Artifact: a skill that calls WebSearch in step 2, then uses the results in step 3 to produce a summary. No error handling for WebSearch failure. No conditional path. No indication in the output that data may be missing. The skill produces a "complete" summary even when the search returned nothing.
 
 Expected review behavior:
@@ -161,6 +208,10 @@ Expected review behavior:
 - Recommendation includes concrete `Current:`/`Recommended:` blocks showing: (1) conditional check after WebSearch, (2) output status field, (3) fallback output path.
 
 ## Case 15 — Circular Delegation
+
+defects:
+- {item: SP-3, dim: Safety, sev: High, desc: "No stop condition for recursive delegation"}
+- {item: RL-1, dim: Safety, sev: High, desc: "No termination condition — cycle runs indefinitely"}
 
 Artifact: a skill `analyze-deps` whose workflow step 3 says "Spawn the `dep-checker` agent to validate results." The `dep-checker` agent body says "Use /analyze-deps to cross-check findings." This creates a skill→agent→skill cycle with no termination condition.
 
@@ -174,6 +225,10 @@ Expected review behavior:
 
 ## Case 16 — Unbounded Retry on Flaky MCP Tool
 
+defects:
+- {item: RL-1, dim: Safety, sev: High, desc: "No termination condition — unbounded retry loop"}
+- {item: RL-2, dim: Compl, sev: Medium, desc: "No failure path when tool never succeeds"}
+
 Artifact: an agent whose workflow says: "Call the `code-search` MCP tool. If it returns an error, retry the call. Continue retrying until the tool returns a valid response."
 
 No maximum retry count. No backoff delay. No timeout. No fallback for persistent failure. Tool description does not guarantee eventual success.
@@ -185,3 +240,32 @@ Expected review behavior:
 - Should NOT require new checklist items to catch — validates that existing RL-1 and RL-2 discriminate correctly against this pattern.
 - Distinct from Case 5: Case 5 tests multi-dependency chains with subagents and silent stub-data continuation; Case 16 tests a single explicit retry loop with no bound — a tighter, more mechanical failure mode.
 - Recommendation includes bounded retry with exponential backoff, max attempts, and fallback action.
+
+## Case 17 — FP/FN Accuracy on Known-Defect Artifact
+
+defects:
+- {item: WS-2, dim: Clarity, sev: Medium, desc: "Conditional uses 'if appropriate' without concrete trigger"}
+- {item: SP-2, dim: Safety, sev: High, desc: "Bash in allowed-tools for read-only skill"}
+- {item: AH-3, dim: Compl, sev: Medium, desc: "No error for invalid argument format"}
+
+Artifact: a synthetic skill with exactly 3 planted defects (one vague conditional, one overprivileged tool, one missing argument validation) and no other structural issues. Solid output format, clear description, correct reference files.
+
+Expected meta-evaluation behavior:
+- C17-1: Precision ≥ 0.75 (at most 1 FP for 3 TP)
+- C17-2: Recall ≥ 0.67 (at least 2 of 3 defects found)
+- C17-3: No High/Medium finding on a dimension where no defect was planted (no phantom findings in PE, CE, GA, Meta)
+- C17-4: Each found defect's `finding_id` contains the correct `checklist_item` prefix
+
+## Case 18 — Convergence Detection Accuracy
+
+defects: N/A (tests analytics convergence detection, not finding detection)
+
+Artifact set: two synthetic review reports for the same skill path:
+- Report A: finding_ids `[WS-2:path:Clarity/v1, SP-2:path:Safety/v1]`, grades Clarity=C, Safety=C
+- Report B: finding_ids `[WS-2:path:Clarity/v1, AH-3:path:Compl/v1]`, grades Clarity=C, Safety=B
+
+Expected analytics behavior:
+- C18-1: Analytics View 4 identifies `SP-2` as `fixed` and `AH-3` as `new`
+- C18-2: `WS-2` classified as `recurring`
+- C18-3: Convergence verdict is "Not converged" (SP-2 differs between reports)
+- C18-4: Grade variance for Safety reported as 1 (C→B)

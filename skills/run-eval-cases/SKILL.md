@@ -399,6 +399,18 @@ Present the report with the overall verdict first, then per-case details.
 
 ## Regression Verdict
 [CLEAN — safe to commit] or [REGRESSION DETECTED — do not commit until fixed]
+
+## Detection Accuracy (cases with defect annotations only)
+
+For cases with `defects:` arrays (not N/A), parse `finding_id` from recommendation headings. Match `checklist_item` prefix against each defect's `item` field:
+- **TP** = finding matches a defect by item + dimension
+- **FP** = finding has no matching defect
+- **FN** = defect has no matching finding
+
+| Case | Defects | TP | FP | FN | Precision | Recall | F1 |
+|------|---------|----|----|----|-----------| -------|----|
+
+Cases with `defects: N/A` show "N/A — tests behavior". Cases with `defects: []` show precision 1.00 if zero findings, else flag FP count.
 ```
 
 For each FAIL: show the criterion ID, what was expected, what the actual output showed (quote or paraphrase the relevant excerpt), and a `Fix target:` line with the file path and section to edit. Use this mapping:
