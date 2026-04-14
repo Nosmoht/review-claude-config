@@ -5,7 +5,7 @@ description: >
   files, broken links, description mismatches. Use after adding or removing
   research files. Do NOT use to check skill quality — use /review-claude-config.
 argument-hint: "[folder]"
-allowed-tools: Read, Edit, Glob
+allowed-tools: Read, Edit, Glob, AskUserQuestion
 disable-model-invocation: true
 ---
 
