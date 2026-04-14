@@ -26,6 +26,8 @@ BUDGETS: dict[str, int] = {
     "agent-evaluation-guide.md": 1000,
     "claude-md-evaluation-guide.md": 800,
     "hook-evaluation-guide.md": 800,
+    "mcp-evaluation-guide.md": 800,
+    "settings-evaluation-guide.md": 800,
     # Scaffold templates — contain full examples
     "skill-template.md": 750,
     "rule-template.md": 700,
