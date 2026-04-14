@@ -31,17 +31,30 @@ System map for the plugin's skills and hooks. Use this page for component invent
 | [validate-primitive-dependencies](validate-primitive-dependencies.md) | Maintenance | `/validate-primitive-dependencies [folder]` | Standalone |
 | [develop-hooks](develop-hooks.md) | Development | `/develop-hooks [type] <name>` | Standalone |
 | [maintain-evidence-layer](maintain-evidence-layer.md) | Maintenance | `/maintain-evidence-layer [--scope ...]` | Standalone |
+| review-session-trace | Runtime | `/review-session-trace <path>` | Standalone |
+| classify-trace-errors | Runtime | `/classify-trace-errors <path>` | Standalone |
+| audit-policy-compliance | Runtime | `/audit-policy-compliance <path>` | Standalone |
+| audit-trust-chain | Runtime | `/audit-trust-chain <path>` | Standalone |
+| audit-memory-hygiene | Security | `/audit-memory-hygiene [dir]` | Standalone |
+| review-hook | Review | `/review-hook <path>` | Standalone + Orchestrated |
+| review-claude-md | Review | `/review-claude-md <path>` | Standalone |
 | [hook-skill-quality-gate](hook-skill-quality-gate.md) | Hook | `PreToolUse` | Automatic |
 | [hook-session-check](hook-session-check.md) | Hook | `SessionStart` | Automatic |
+| hook-audit-logger | Hook | `PostToolUse`, `PostToolUseFailure` | Automatic (async) |
+| hook-delegation-tracker | Hook | `SubagentStart`, `SubagentStop` | Automatic (async) |
+| hook-session-audit | Hook | `SessionEnd` | Automatic |
+| hook-policy-gate | Hook | `PreToolUse` | Automatic (opt-in via policy.json) |
 
 ## By Function
 
-- **Review:** `review-claude-config`, `review-skill`, `review-agent`, `review-rule`, `review-mcp-server`, `review-settings`, `review-analytics`
+- **Review:** `review-claude-config`, `review-skill`, `review-agent`, `review-rule`, `review-hook`, `review-claude-md`, `review-mcp-server`, `review-settings`, `review-analytics`
+- **Runtime:** `review-session-trace`, `classify-trace-errors`, `audit-policy-compliance`, `audit-trust-chain`
+- **Security:** `audit-memory-hygiene`
 - **Fix/Apply:** `apply-review-findings`, `apply-skill-review-findings`, `apply-agent-review-findings`, `apply-rule-review-findings`, `apply-audit-findings`
 - **Discovery:** `audit-repo`, `suggest-skills`
 - **Development:** `scaffold-skill`, `scaffold-agent`, `scaffold-rule`, `develop-hooks`
 - **Maintenance:** `audit-context-budget`, `check-repo-health`, `refresh-engineering-baseline`, `sync-research-index`, `run-eval-cases`, `validate-primitive-dependencies`, `maintain-evidence-layer`
-- **Hooks:** `hook-skill-quality-gate`, `hook-session-check`
+- **Hooks:** `hook-skill-quality-gate`, `hook-session-check`, `hook-audit-logger`, `hook-delegation-tracker`, `hook-session-audit`, `hook-policy-gate`
 
 ## Workflow Chains
 

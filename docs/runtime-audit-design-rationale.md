@@ -1,0 +1,43 @@
+# Runtime Audit Design Rationale
+
+Scope decisions made during Phase 1-5 implementation (2026-04-14). Records why specific deliverables were built, merged, simplified, deferred, or skipped. Prevents future re-exploration of already-decided questions.
+
+## Phase 2b — Policy Engine
+
+**`/audit-escalation-correctness` → MERGE into `/audit-policy-compliance`.**
+The existing skill already does basic escalation analysis (L4 calls with prior AskUserQuestion check). Deep chain tracking, gap detection, and subagent escalation flags are incremental depth on the same analysis axis. A separate skill would duplicate trace parsing infrastructure. The merged Step 7 adds full L4 chain tracking without a new skill.
+
+## Phase 3 — Dynamic Security
+
+**`/probe-injection-resistance` → SIMPLIFY to IJ-* checklist items.**
+80% of injection surface analysis overlaps with existing Safety checklist items (SP-2, SP-4, TV-2, TV-3) that already evaluate tool grants and high-risk combinations. The genuine gap — cross-primitive data flow analysis (external input → privileged action without boundary) — is addressed by IJ-1/IJ-2 checklist items plus the `injection-surface-catalog.md` reference. No separate skill needed because single-file reviews already check these patterns, and the `/review-claude-config` orchestrator covers cross-file batch analysis.
+
+**`/audit-trust-chain` → DEFER from Phase 3, then BUILD in Phase 4 with post-hoc enrichment.**
+Initially deferred because audit traces lack declared tool grants per agent (`tools:` field). The Phase 4 design found a workaround: parse CLAUDE.md at each delegation event's CWD to extract agent configs post-hoc. This is fragile (CLAUDE.md may have changed since the session) but provides useful signal with graceful degradation when config is unavailable.
+
+**Containment architecture spec → SKIP.**
+No consuming skill exists. Research papers without consumers go stale. The `action-classification.md` reference and `hook-observation-patterns.md` research already document the plugin's containment capabilities. Defer the spec to when an MCP server build actually begins.
+
+## Phase 4 — Autonomous Governance
+
+**Goal-drift detection → SKIP (partially).**
+Detecting goal drift from traces requires inferring user intent from prompts and comparing against tool-call sequences. Without labeled baseline data (task → expected tool distribution), detection is unreliable. Tool-sequence anomaly detection is theoretically possible but needs training data the repo doesn't have. Deferred to when sufficient trace data accumulates.
+
+**Containment architecture spec → SKIP (repeated).**
+Both Phase 3 and Phase 4 considered this. Same rationale: premature without a consuming skill. The architectural boundaries table in CLAUDE.md documents what requires external infrastructure.
+
+## Phase 5 — Meta-Audit
+
+**`/meta-evaluate` → NO NEW SKILL, extend existing.**
+`/run-eval-cases` already owns the pattern of synthetic artifact + acceptance criteria + PASS/FAIL verdict. FP/FN measurement is a natural extension (match finding_ids against defect arrays). `/review-analytics` already owns trend tracking. Convergence analysis (View 4) extends its existing time-series infrastructure. Building a separate `/meta-evaluate` skill would duplicate both.
+
+**Recursive loop safety checker → SKIP.**
+The system doesn't have recursive review loops. The convergence requirement in CLAUDE.md already prevents infinite review-apply cycles by requiring two consecutive stable runs. No additional tool needed.
+
+## General Principles Established
+
+1. **Extend before creating.** When an existing skill covers 60%+ of a proposed skill's scope, extend it rather than creating a new skill.
+2. **Post-hoc enrichment over hook enhancement.** When trace data is incomplete, prefer parsing static configs at trace CWDs over modifying hooks — hooks change the data collection surface and require separate testing.
+3. **Opt-in for enforcement, always-on for observation.** Observation hooks (audit_logger, delegation_tracker) are always active. Policy enforcement (policy_gate) is opt-in via policy.json — zero impact on sessions without explicit policy configuration.
+4. **Research before implementation.** Every phase that involved novel design started with research (QW-5 hook observation, injection taxonomy, memory poisoning patterns) before building skills.
+5. **Review with the repo's own harness.** Every artifact was reviewed via `/review-skill`, `/review-hook`, or `/review-claude-md` before commit. Plan agents are supplementary, not primary quality gates.

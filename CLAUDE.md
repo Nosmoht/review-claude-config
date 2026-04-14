@@ -10,6 +10,25 @@ Maintainer operating guide for this repository (Clarity, Completeness, Prompt En
 - **Repo-internal skills**: `.claude/skills/` for maintenance utilities not needed globally
 - **Review reports**: `.claude/reviews/` for timestamped reports consumed by analytics and apply flows
 - **Self-contained knowledge**: The plugin carries all knowledge needed for quality in its own files. External services (KB server, web research) are optional enhancements — skills degrade gracefully without them. The distillation path is: `research/ → engineering-baseline.md + skill-agent-format-conventions.md → skill decisions`. Research findings must be distilled into these operational surfaces to affect plugin behavior in any repo.
+- **Runtime audit layer**: `hooks/` provides observation (PostToolUse, SubagentStart/Stop, SessionEnd) and opt-in policy enforcement (PreToolUse policy gate). Audit traces written to `$CLAUDE_PLUGIN_DATA/audit/`. Skills consume these traces for analysis.
+
+### Plugin vs External Infrastructure Boundaries
+
+The plugin model has hard limits. These boundaries determine what can be built as skills/hooks vs what requires external systems.
+
+| Capability | Plugin provides | Requires external infrastructure |
+|---|---|---|
+| Per-tool-call audit log | PostToolUse async hook → JSONL | — |
+| Pre-action policy gate | PreToolUse hook (deny/ask/allow) | — |
+| Delegation chain tracking | SubagentStart/Stop hooks | — |
+| Session summary metrics | SessionEnd hook | — |
+| Post-hoc trace analysis | `/review-session-trace`, `/classify-trace-errors`, `/audit-trust-chain`, `/audit-policy-compliance` | — |
+| Memory hygiene auditing | `/audit-memory-hygiene` | — |
+| Persistent governance state | — | MCP server (policy store, cross-session ledger) |
+| Kill switch / session termination | — | External process manager or sidecar |
+| Token cost tracking | — | API proxy between Claude Code and Anthropic API |
+| Multi-run statistical evaluation | — | CI pipeline invoking Claude Code programmatically |
+| Continuous runtime monitoring | — | Watchdog daemon |
 
 ## Commands
 
@@ -105,6 +124,17 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 - **Prefer evidence over rhetoric.** Findings should cite concrete paths, text, or examples.
 - **Research before design in novel areas.** Save results in `research/` with sources.
 - **Keep project knowledge in the repo.** No reliance on external memory.
+- **Verify changes with the repo's own review skills, not ad-hoc Plan agents.** `make validate` checks structure; review skills check quality. Use this mapping:
+
+| Changed... | Run... |
+|---|---|
+| Evaluation guide or rubric | `/review-skill` or `/review-agent` on a representative artifact |
+| Hook code or hook eval guide | `/review-hook hooks/hooks.json` |
+| CLAUDE.md | `/review-claude-md CLAUDE.md` |
+| Rule eval guide or template | `/review-rule` on a representative rule |
+| Eval cases | `/run-eval-cases <case-numbers>` |
+| Cross-primitive references | `/validate-primitive-dependencies` |
+| Any batch of changes | `/review-claude-config .` |
 
 ## Development Conventions
 
@@ -172,6 +202,7 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 - [Architecture Pattern Recognition from Repository Structure](research/architecture-detection/architecture-pattern-recognition.md) — hybrid detection of repo architecture from file structure; Kustomize, Helm, FastAPI, monorepo patterns. Load when running `/audit-repo` on unknown repos.
 - [Error Class to Primitive Mapping for AI Coding Assistants](research/primitive-derivation/error-class-to-primitive-mapping.md) — IFScale error taxonomy → primitive type mapping. Load when deriving primitives from error patterns or designing audit detection logic.
 - [Systematische Claude Code Optimierung für unbekannte Repositories](research/repo-audit/repo-audit-methodology.md) — 6-phase primitive derivation methodology; phase ordering and output contracts. Load when running `/audit-repo` or extending audit workflow.
+- [Audit-Harness Research Summary](research/audit-harness/audit-harness-research-summary.md) — 15 core audit themes, 15 autonomy themes, 12 target audit domains, 9 required system components for an autonomous agent harness auditor. Seed document for the runtime audit roadmap. Load when planning new phases or revisiting architectural scope.
 
 ### Review Convergence & Evaluation Quality
 - [LLM Evaluator Consistency](research/llm-evaluator-consistency/llm-evaluator-consistency.md) — behavioral rubrics ICC3 +46%; RULERS binary decomposition QWK 0.7276; majority voting k=3 strongest variance reduction. Load when addressing review convergence or evaluator reliability.
