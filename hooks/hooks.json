@@ -1,9 +1,10 @@
 {
-  "description": "Skill quality hooks: edit-time guidelines injection and baseline freshness check",
+  "description": "Skill quality hooks and runtime audit observation hooks",
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
+        "description": "Inject quality guidelines when editing skill/agent/rule files",
         "hooks": [
           {
             "type": "command",
@@ -13,13 +14,78 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "description": "Log tool call to audit trace (async, non-blocking)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/audit_logger.py",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "description": "Log tool failure to audit trace (async, non-blocking)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/audit_logger.py",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "description": "Log subagent spawn to audit trace (async, non-blocking)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/delegation_tracker.py",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "description": "Log subagent completion to audit trace (async, non-blocking)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/delegation_tracker.py",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
+        "description": "Check reference freshness and emit research corpus stats",
         "hooks": [
           {
             "type": "command",
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/session_check.py",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "description": "Compute session summary and append to audit trace",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/session_audit.py",
+            "timeout": 30
           }
         ]
       }
