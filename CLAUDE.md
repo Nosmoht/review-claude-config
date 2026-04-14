@@ -25,6 +25,7 @@ This is the authoritative maintainer command inventory for the repo.
 - `/review-mcp-server <path>` - single MCP server config review (.mcp.json)
 - `/review-settings <path>` - single settings.json quality review
 - `/review-claude-md <path>` - single CLAUDE.md quality review
+- `/review-session-trace <path>` - analyze Claude Code JSONL transcript for runtime behavior
 - `/suggest-skills [folder]` - heuristic skill discovery
 - `/audit-repo [folder]` - repo-structure audit for Claude Code primitives
 
