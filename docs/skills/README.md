@@ -10,6 +10,8 @@ System map for the plugin's skills and hooks. Use this page for component invent
 | [review-skill](review-skill.md) | Review | `/review-skill <path>` | Standalone + Orchestrated |
 | [review-agent](review-agent.md) | Review | `/review-agent <path>` | Standalone + Orchestrated |
 | [review-rule](review-rule.md) | Review | `/review-rule <path>` | Standalone + Orchestrated |
+| [review-mcp-server](review-mcp-server.md) | Review | `/review-mcp-server <path>` | Standalone + Orchestrated |
+| [review-settings](review-settings.md) | Review | `/review-settings <path>` | Standalone + Orchestrated |
 | [review-analytics](review-analytics.md) | Review | `/review-analytics [folder]` | Standalone |
 | [apply-review-findings](apply-review-findings.md) | Fix/Apply | `/apply-review-findings [report]` | Standalone |
 | [apply-skill-review-findings](apply-skill-review-findings.md) | Fix/Apply | `/apply-skill-review-findings [report]` | Standalone + Orchestrated |
@@ -34,7 +36,7 @@ System map for the plugin's skills and hooks. Use this page for component invent
 
 ## By Function
 
-- **Review:** `review-claude-config`, `review-skill`, `review-agent`, `review-rule`, `review-analytics`
+- **Review:** `review-claude-config`, `review-skill`, `review-agent`, `review-rule`, `review-mcp-server`, `review-settings`, `review-analytics`
 - **Fix/Apply:** `apply-review-findings`, `apply-skill-review-findings`, `apply-agent-review-findings`, `apply-rule-review-findings`, `apply-audit-findings`
 - **Discovery:** `audit-repo`, `suggest-skills`
 - **Development:** `scaffold-skill`, `scaffold-agent`, `scaffold-rule`, `develop-hooks`

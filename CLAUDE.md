@@ -22,6 +22,8 @@ This is the authoritative maintainer command inventory for the repo.
 - `/review-agent <path>` - single agent review
 - `/review-rule <path>` - single rule review
 - `/review-hook <path>` - single hook review (hooks.json + Python scripts)
+- `/review-mcp-server <path>` - single MCP server config review (.mcp.json)
+- `/review-settings <path>` - single settings.json quality review
 - `/review-claude-md <path>` - single CLAUDE.md quality review
 - `/suggest-skills [folder]` - heuristic skill discovery
 - `/audit-repo [folder]` - repo-structure audit for Claude Code primitives

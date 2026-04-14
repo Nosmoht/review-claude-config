@@ -74,7 +74,7 @@ For agent-specific criteria, see `agent-evaluation-guide.md`. R1-R10 definitions
 
 ## Reviewer Output Expectations
 
-Every High or Medium recommendation must cite concrete evidence, explain impact, include `Current:` and `Recommended:` blocks when a rewrite is feasible, and add a `Validation:` line. Omit or mark Low cosmetic issues that don't affect trigger, safety, or completeness.
+High/Medium recommendations must cite evidence, explain impact, include `Current:`/`Recommended:` blocks, and a `Validation:` line. Omit Low cosmetic issues.
 
 ## Conditional Weighting
 Tools with Write/Bash/Edit: Safety→15%, Meta→5%; otherwise Safety→10%, Meta→10%.
@@ -83,3 +83,6 @@ Tools with Write/Bash/Edit: Safety→15%, Meta→5%; otherwise Safety→10%, Met
 Rules use only 3 dimensions (renormalized): Clarity 30%, Completeness 30%, Goal Alignment 40%. Skip: PE, CE, Safety, Metadata (rules have no tools, no frontmatter, and are directives not prompts).
 
 **Hard rule:** Every rule review MUST produce grades for all 3 dimensions. A rule report with any dimension set to `null` is INVALID — re-evaluate the missing dimension before finalizing the certificate.
+
+## MCP/Settings Scoring
+4 dims: Compl 25%, GA 25%, Safety 30%, Meta 20%. Skip Clarity/PE/CE.

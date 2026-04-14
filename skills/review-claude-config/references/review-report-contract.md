@@ -28,7 +28,7 @@ Required: `Evidence`, `Why it matters`, `Validation`. Optional: `Current`, `Reco
 
 ```yaml
 ---
-generated_by: review-skill|review-agent|review-rule|review-claude-config
+generated_by: review-*  # review-skill, review-agent, review-rule, review-mcp-server, review-settings, review-claude-config
 schema_version: 1
 date: YYYY-MM-DD
 target: /absolute/path
@@ -36,7 +36,7 @@ baseline_version: YYYY-MM-DD
 items_reviewed: N
 summary:
   - name: item-name
-    type: Skill|Agent|Rule
+    type: Skill|Agent|Rule|MCP|Settings
     path: relative/path/to/file
     overall: B
     score: 85.0
@@ -56,8 +56,8 @@ summary:
 
 ## Producer Compatibility
 
-Single-item and batch reports share the same schemas. `generated_by` is producer-specific; `schema_version` stays `1` unless a real breaking change is introduced.
+Single-item and batch reports share the same schemas. `schema_version` stays `1` unless breaking change.
 
 ## Dimensions
 
-Full reports: `clarity`, `completeness`, `prompt_engineering`, `context_engineering`, `goal_alignment`, `safety`, `metadata`. Rules: non-applicable → `null`.
+Full reports: `clarity`, `completeness`, `prompt_engineering`, `context_engineering`, `goal_alignment`, `safety`, `metadata`. Rules/MCP/Settings: non-applicable → `null`.

@@ -121,3 +121,29 @@ Expected review behavior:
 - Both reports produce grades for all 3 rule dimensions (Clarity, Completeness, Goal Alignment).
 - No dimension is `null` in either report.
 - Grade variance ≤1 letter per dimension between runs.
+
+## Case 12 — MCP Server Misconfiguration Detection
+
+Artifact: a `.mcp.json` with:
+- A hardcoded API key in `env` (`"API_KEY": "sk-live-abc123"`)
+- A Tier A server (filesystem write mode) with no justification comment
+- A stale orphan server entry (`"old-server": { "command": "removed-tool", "disabled": true }`)
+
+Expected review behavior:
+- **MC-4 FAIL (High):** Surfaces hardcoded secret with evidence citing the literal value.
+- **MC-6 FAIL (High):** Surfaces unjustified Tier A server. Safety capped at C.
+- **MC-8 FAIL (Low):** Surfaces orphan/stale entry.
+- Does NOT flag servers that are properly configured with `${VAR}` expansion.
+
+## Case 13 — Clean Settings.json (No False Positives)
+
+Artifact: a well-configured `.claude/settings.json` with:
+- Valid JSON with `$schema` field
+- `permissions.deny` covering `~/.ssh/**`, `~/.aws/**`, `.env`
+- No `bypassPermissions`, no `enableAllProjectMcpServers`
+- `.claude/settings.local.json` in `.gitignore`
+
+Expected review behavior:
+- All checklist items PASS.
+- Overall grade A.
+- Zero findings (no false positives on well-configured settings).
