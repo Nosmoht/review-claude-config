@@ -6,7 +6,7 @@ Maintainer operating guide for this repository (Clarity, Completeness, Prompt En
 
 - **Plugin surface**: `skills/` and `hooks/`, installed via `claude --plugin-dir`
 - **Shared references**: `skills/review-claude-config/references/`, including the rubric, baseline, evidence contract, source-quality criteria, and review-report contract
-- **Domain cache**: `skills/review-claude-config/references/domain-cache/`, committed to git and maintained on the repo's 90-day rhythm; this is a repo default, not a scientific claim
+- **Domain cache**: `skills/review-claude-config/references/domain-cache/`, contains 7 universal methodology entries (context-engineering, research-sourcing, etc.) maintained on the repo's 90-day rhythm. Domain-specific knowledge is researched at runtime via WebSearch, not pre-cached
 - **Repo-internal skills**: `.claude/skills/` for maintenance utilities not needed globally
 - **Review reports**: `.claude/reviews/` for timestamped reports consumed by analytics and apply flows
 - **Self-contained knowledge**: The plugin carries all knowledge needed for quality in its own files. External services (KB server, web research) are optional enhancements — skills degrade gracefully without them. The distillation path is: `research/ → engineering-baseline.md + skill-agent-format-conventions.md → skill decisions`. Research findings must be distilled into these operational surfaces to affect plugin behavior in any repo.
@@ -105,7 +105,7 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 - Language: English
 - Reference file budgets: see `scripts/validate_token_budgets.py` BUDGETS map (authoritative); default `<=500` tokens, named files have justified higher budgets
 - Treat exact thresholds and workflow conventions as `Repo default` unless stronger evidence exists
-- Domain cache refresh discipline follows the repo's 90-day cadence
+- Domain cache contains only universal methodology entries (7 total); domain-specific knowledge is researched at runtime. Universal entries follow the repo's 90-day refresh cadence
 - `last_refreshed` belongs in YAML frontmatter only — body markers (`**Fetched:**`, `Last reviewed:`) are distinct fields with different meanings and must not be converted; absence of `last_refreshed` causes silent skip by `check-repo-health` (not FAIL)
 - Reference files carry `name` + `description` + `last_refreshed`; research files carry `last_refreshed` only — these shapes are intentionally different
 - `last_refreshed` is hard-enforced only for `engineering-baseline.md`; `session_check.py` also provides opportunistic freshness warnings for all other `*.md` files in `skills/review-claude-config/references/`, reporting only the single oldest stale file (>90 days)
