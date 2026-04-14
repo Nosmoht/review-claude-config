@@ -27,5 +27,7 @@ Rules use only Clarity (30%), Completeness (30%), Goal Alignment (40%). PE, CE, 
 | GA-3 | Rule prevents the specific behavior it targets? | GA |
 | GA-4 | No obvious workarounds the rule doesn't address? | GA |
 | GA-5 | All constraints needed for stated goal are present? | GA |
+| EP-1 | Threshold-based triggers (if any) use measurable bounds, not vague criteria ("high risk" → "risk score >7", "too many" → ">3 consecutive")? | Clarity |
+| EP-2 | Action handlers (if any) specify receiver/system and expected behavior, not just "escalate" or "notify" ("escalate" → "return ask with reason to user via AskUserQuestion")? | Compl |
 
 **Finding identity:** Every FAIL must produce a recommendation with `ID: {item}:{path}:{dim}/v1` in the heading.

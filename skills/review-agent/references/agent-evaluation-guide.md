@@ -36,6 +36,8 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | RL-8 | Role/scope boundaries explicitly stated? | Safety |
 | RL-9 | Safety/PII/credential scope constraints present? | Safety |
 | RL-10 | Observability hooks or logging specified? | Compl |
+| RT-4 | Subagent failure propagated — parent defines behavior when child fails/times out, not just retry? [Agentic only] | Compl |
+| RT-5 | Numeric cap stated for ≥1 context-consuming operation (files read, search results, output size)? [Multi-step only] | CE |
 
 **Severity guidance:** Broken tool grants or cross-primitive dependencies (missing referenced tools, dangling agent/skill references) are **High** severity findings.
 

@@ -147,3 +147,41 @@ Expected review behavior:
 - All checklist items PASS.
 - Overall grade A.
 - Zero findings (no false positives on well-configured settings).
+
+## Case 14 — Silent Error Swallowing
+
+Artifact: a skill that calls WebSearch in step 2, then uses the results in step 3 to produce a summary. No error handling for WebSearch failure. No conditional path. No indication in the output that data may be missing. The skill produces a "complete" summary even when the search returned nothing.
+
+Expected review behavior:
+- **RD-4 FAIL (Medium)**: Surfaces a finding in Completeness citing absent error handling for WebSearch unavailability or unexpected output.
+- **RT-1 FAIL (Medium)**: Surfaces a finding in Completeness citing no fallback output — skill produces complete-looking output when upstream data is missing, with no reduced-capability path.
+- **RT-2 FAIL (Medium)**: Surfaces a finding in **Prompt Engineering** citing no status token in output template — downstream consumers cannot distinguish sourced from unsourced results.
+- Completeness dimension ≤ C due to >25% Completeness FAILs (RD-4 + RT-1 among Compl items).
+- Distinct from Case 5: Case 5 tests multi-dependency chain propagation with subagents; Case 14 tests single-tool failure with output that *conceals* the missing data (deceptive completeness vs missing completeness).
+- Recommendation includes concrete `Current:`/`Recommended:` blocks showing: (1) conditional check after WebSearch, (2) output status field, (3) fallback output path.
+
+## Case 15 — Circular Delegation
+
+Artifact: a skill `analyze-deps` whose workflow step 3 says "Spawn the `dep-checker` agent to validate results." The `dep-checker` agent body says "Use /analyze-deps to cross-check findings." This creates a skill→agent→skill cycle with no termination condition.
+
+Expected review behavior:
+- **SP-3 FAIL (High)**: Surfaces a High finding in Safety citing missing stop condition for recursive operation — the delegation chain has no depth limit or cycle guard.
+- **RL-1 FAIL**: Surfaces a finding citing no termination condition — the cycle can run indefinitely.
+- **RT-3 FAIL** (skill) or **RT-4 FAIL** (agent, if reviewing the agent side): Surfaces resource consumption or subagent failure propagation concern.
+- Safety dimension capped at C or lower due to unbounded recursion risk.
+- Evidence cites the exact text of both the skill's spawn instruction and the agent's cross-check instruction.
+- Recommendation includes concrete cycle-breaking pattern: depth counter, seen-set, or explicit "do not re-invoke the parent skill" constraint.
+
+## Case 16 — Unbounded Retry on Flaky MCP Tool
+
+Artifact: an agent whose workflow says: "Call the `code-search` MCP tool. If it returns an error, retry the call. Continue retrying until the tool returns a valid response."
+
+No maximum retry count. No backoff delay. No timeout. No fallback for persistent failure. Tool description does not guarantee eventual success.
+
+Expected review behavior:
+- **RL-1 FAIL (High)**: Surfaces a High finding citing absent termination condition — "continue retrying until" with no bound is an infinite loop.
+- **RL-2 FAIL (Medium)**: Surfaces a finding in Completeness citing no failure path — what happens if the tool never succeeds?
+- Safety dimension capped at C due to missing High-severity reliability check (RL-1).
+- Should NOT require new checklist items to catch — validates that existing RL-1 and RL-2 discriminate correctly against this pattern.
+- Distinct from Case 5: Case 5 tests multi-dependency chains with subagents and silent stub-data continuation; Case 16 tests a single explicit retry loop with no bound — a tighter, more mechanical failure mode.
+- Recommendation includes bounded retry with exponential backoff, max attempts, and fallback action.

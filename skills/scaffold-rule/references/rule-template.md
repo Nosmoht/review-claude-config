@@ -71,6 +71,23 @@ operations performed through git helper scripts.
 - `--force-with-lease` is permitted on non-protected branches when rebasing is required.
 ```
 
+## Escalation Policy Example
+
+```markdown
+# Escalation Policy
+
+Always escalate when: (1) irreversible operation, (2) confidence <70%,
+(3) >3 consecutive tool failures, or (4) credentials/PII access.
+
+## Scope
+
+Workflows using Write, Bash, or Edit. Read-only exempt.
+
+## Edge Cases
+
+- User pre-authorization overrides condition 1 for its scope.
+```
+
 ## Constraint Load Warning
 
 Adding rules increases cognitive load on the model. If a project already has 5 or more rules covering similar themes (e.g., multiple "no destructive operations" constraints), consolidate into one focused rule rather than adding another. Overlapping rules degrade instruction-following reliability.
