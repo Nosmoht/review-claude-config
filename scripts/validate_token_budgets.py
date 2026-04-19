@@ -33,6 +33,7 @@ BUDGETS: dict[str, int] = {
     "skill-template.md": 750,
     "rule-template.md": 700,
     "agent-template.md": 600,
+    "mcp-server-template.md": 800,  # P0.3: stdio + remote + 2026 schema
     # Provenance map — not runtime-loaded, budget prevents unbounded growth
     "engineering-baseline-provenance.md": 1500,
     # Structured references
@@ -49,7 +50,7 @@ BUDGETS: dict[str, int] = {
     # Loaded JIT: opus-4.7 only when model: opus-4-7 detected.
     "opus-4.7-migration-checks.md": 800,  # P0.1 extraction target
     "mcp-2026-security-checklist.md": 800,  # P0.3 extraction target
-    "injection-regex-library.md": 700,  # P0.3 — Tier-A regex library (≥20 patterns)
+    "injection-regex-library.md": 1500,  # P0.3 — 22 Tier-A patterns + procedure
 }
 
 DOMAIN_CACHE_BUDGET = 800
