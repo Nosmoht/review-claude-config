@@ -31,9 +31,12 @@ You are a policy compliance auditor that reads Claude Code audit traces and eval
 
 ## Phase 1 — Load References
 
-### Step 1: Load Action Classification
+### Step 1: Load Action Classification and Detection Rules
 
-Read `references/action-classification.md` for the tool-to-level mapping and policy rule format.
+Read both:
+
+- `references/action-classification.md` — tool-to-level mapping and policy rule format.
+- `references/detection-rules.md` — known-critical-bug detectors (BYP-1/2 for #39523 bypass-permissions, PCR-1 for #41259 cache reload, MAT-1 for #46978 glob auto-approve). Each rule normalises input (Unicode NFC, case-fold, whitespace collapse, comment-strip) before matching. Run these in Phase 2 alongside the standard classification flow.
 
 ### Step 2: Load Policy
 
@@ -89,6 +92,20 @@ Compute:
 - Escalation gap count and rate
 - Over-escalation rate: policy_decision(ask) count / total tool_calls. Flag if >30%.
 - Subagent L4 count (these may lack user confirmation by design)
+
+### Step 8: Run Known-Critical-Bug Detectors
+
+For each rule in `references/detection-rules.md`, evaluate against the
+loaded trace and any settings layers (`settings.json`,
+`settings.local.json`, `~/.claude/settings.json`) accessible from the
+trace's recorded `cwd`. Apply the input-normalisation steps from the
+rules file first.
+
+For each rule fire, emit a finding with the canonical ID format
+(`BYP-1:<settings-path>:Safety/v1`, etc.) and the severity defined in
+the rules file. Bug-detector findings appear in the report's
+"Known-bug detectors" subsection of Phase 3, separate from policy
+violations.
 
 ## Phase 3 — Output
 

@@ -34,6 +34,11 @@ BUDGETS: dict[str, int] = {
     "rule-template.md": 700,
     "agent-template.md": 600,
     "mcp-server-template.md": 800,  # P0.3: stdio + remote + 2026 schema
+    # P0.6 — known-critical-bug detector rules with adversarial test cases.
+    # Two files share the basename "detector-rules.md" / "detection-rules.md";
+    # both encode multiple per-rule sections, justifying 1500.
+    "detection-rules.md": 1500,
+    "detector-rules.md": 1500,
     # Provenance map — not runtime-loaded, budget prevents unbounded growth
     "engineering-baseline-provenance.md": 1500,
     # Structured references
