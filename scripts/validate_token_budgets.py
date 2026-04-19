@@ -18,7 +18,7 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 # Ruff per-file-ignores — all use centralized config for numeric thresholds.
 BUDGETS: dict[str, int] = {
     # Core review references (large by design)
-    "scoring-rubric.md": 2000,
+    "scoring-rubric.md": 3000,  # P0.5: META/CE-X/COMP/SAMP binary items + plugin scoring
     "engineering-baseline.md": 3500,  # P0.5 lowers to 2,600 post-refresh
     "signal-catalog.md": 1000,
     # Evaluation guides — dense checklists, legitimately >500.

@@ -1,7 +1,7 @@
 ---
 name: engineering-baseline
 description: Evidence-based prompt, context, and tool design techniques for evaluating Claude Code skills and agents
-last_refreshed: 2026-04-04
+last_refreshed: 2026-04-20
 ---
 
 # Engineering Baseline
@@ -14,9 +14,9 @@ last_refreshed: 2026-04-04
 
 **Stepwise Decision Flow** `[Engineering guidance]` — Break fragile reasoning into explicit ordered steps for analysis, validation, or branching work. Check: are complex decisions sequenced instead of left implicit?
 
-**Few-Shot Examples** `[Engineering guidance]` — Add 3-5 canonical examples when output or trigger logic is easy to misread; wrap in `<example>` tags. Excessive examples actively degrade performance — optimal count is model-specific, and more is not better. Check: are examples present where behavior would otherwise be ambiguous?
+**Few-Shot Examples** `[Engineering guidance]` — Add 3-5 canonical examples when output or trigger logic is easy to misread; wrap in `<example>` tags. Optimal count is model-specific; more is not better. Check: are examples present where behavior would otherwise be ambiguous?
 
-**Constraint Specification** `[Proven result]` — State prohibitions, boundaries, and success conditions explicitly. Check: are negative constraints and scope limits visible?
+**Constraint Specification** `[Proven result]` — State prohibitions, boundaries, and success conditions explicitly.
 
 **Verification Criteria** `[Engineering guidance]` — Tell the agent how to confirm correctness using checks, validators, or expected outcomes. Check: can the agent verify the output without relying only on intuition?
 
@@ -24,13 +24,13 @@ last_refreshed: 2026-04-04
 
 **Evidence-First Critique** `[Engineering guidance]` — In review tasks, ground findings in quotes, paths, or specific examples rather than generic quality language. Check: could another reviewer verify the claim from the artifact?
 
-**Constraint Load** `[Engineering guidance]` — When a step carries many simultaneous constraints, split it into smaller steps. Performance collapses beyond ~100 simultaneous instances; instance count matters more than raw token count — batch large workloads. For agent definitions specifically, dense per-section constraint packing risks the same degradation at smaller scale `[Repo default]`. Check: would breaking the step reduce ambiguity?
+**Constraint Load** `[Engineering guidance]` — When a step carries many simultaneous constraints, split it. Performance collapses beyond ~100 instances; instance count matters more than token count. For agent definitions, dense per-section packing risks the same at smaller scale `[Repo default]`.
 
 **Deterministic Conditionals** `[Proven result]` — Write branch conditions as observable tests, not vague phrases like "if needed" or "as appropriate". Check: would two models take the same branch from the same input?
 
-**Instruction Calibration** `[Engineering guidance]` — Smarter models need less aggressive prompting. Claude 4.6 overtriggers on MUST/CRITICAL/ALWAYS — use natural phrasing ("use this tool when…"). Prefilled responses deprecated in Claude 4.6; use `thinking: {type: "adaptive"}` instead of prescriptive step-by-step chains. Check: does the skill use aggressive imperative language?
+**Instruction Calibration** `[Engineering guidance]` — Smarter models need less aggressive prompting. Claude 4.6+ overtriggers on MUST/CRITICAL/ALWAYS — use natural phrasing. Prefilled responses deprecated; use `thinking: {type: "adaptive"}` over prescriptive step chains.
 
-**Subagent Guardrails** `[Engineering guidance]` — Claude 4.6 natively delegates to subagents but may overuse them and over-engineer solutions. Skills should steer when subagents are/are not warranted and include "keep solutions minimal" constraints. Check: does the skill guide subagent use, or leave the decision fully open?
+**Subagent Guardrails** `[Engineering guidance]` — Claude 4.6+ natively delegates but may overuse subagents. Skills should steer when subagents are/are not warranted and include "keep solutions minimal" constraints.
 
 ## Context Engineering Techniques
 
@@ -42,7 +42,7 @@ last_refreshed: 2026-04-04
 
 **Reference File Separation** `[Engineering guidance]` — Move stable knowledge into `references/` files and keep the main instruction surface concise. Check: is reusable background knowledge separated from the workflow?
 
-**Tool Set Curation** `[Engineering guidance]` — Give agents the smallest tool set that still lets them complete the task. Least-privilege enforcement reduces agent attack success rates by orders of magnitude with only 1-6% latency overhead. Match tools to agent archetype per `tool-grant-decision-tree.md`; Tier A high-risk combinations (Bash+network, Bash+Write, Write+WebFetch) require documented justification. Check: could any tool be removed without reducing required capability? Does any Tier A combination lack documented justification?
+**Tool Set Curation** `[Engineering guidance]` — Give agents the smallest tool set that completes the task. Least-privilege reduces agent attack success rates by orders of magnitude with only 1-6% latency overhead. Match tools to archetype per `tool-grant-decision-tree.md`; Tier A combinations (Bash+network, Bash+Write, Write+WebFetch) require documented justification.
 
 **Activation Precision** `[Engineering guidance]` — Describe clearly when a skill or agent should trigger and when it should not. The description is the sole activation signal for auto-dispatch — trigger logic that appears only in the body is invisible to the dispatcher. Check: would unrelated requests accidentally match this wording? Does the body contradict what the description says about when to activate?
 
@@ -52,11 +52,11 @@ last_refreshed: 2026-04-04
 
 **Confirmation Gates** `[Engineering guidance]` — Require explicit user confirmation before destructive or irreversible actions. Check: can the item modify or delete important data without approval?
 
-**Stop Conditions** `[Engineering guidance]` — Define clear termination criteria for retries, loops, and recursive work. For complex multi-step skills, use sprint contracts: define testable "done" criteria before execution begins, not after — this prevents agents from marking work complete without proper verification. Check: could the workflow continue indefinitely without a stopping rule, or are "done" criteria defined only implicitly?
+**Stop Conditions** `[Engineering guidance]` — Define clear termination criteria for retries, loops, recursive work. For multi-step skills, define testable "done" criteria before execution — prevents marking work complete without verification.
 
 **Retry Ceilings** `[Repo default]` — When a task includes retries, keep the retry budget small and explicit so failures escalate instead of looping invisibly. Check: is there a concrete retry limit?
 
-**Idempotency Design** `[Engineering guidance]` — Make tool operations produce the same result when executed multiple times, enabling safe retries. Check: can every tool call that creates, modifies, or deletes be safely retried? LLM agents retry 15-30% of tool calls due to timeouts or validation errors.
+**Idempotency Design** `[Engineering guidance]` — Make tool operations produce the same result when executed multiple times. LLM agents retry 15-30% of tool calls due to timeouts or validation errors. Check: can every create/modify/delete tool call be safely retried?
 
 **Circuit Breaker Pattern** `[Engineering guidance]` — Track failures in a sliding window and temporarily halt requests when thresholds are exceeded to prevent cascade failures. Check: does the workflow stop calling a failing service after repeated failures?
 
@@ -66,7 +66,13 @@ last_refreshed: 2026-04-04
 
 **Dynamic Tool Loadout** `[Low-evidence area]` — Pre-filter available tools when a large shared catalog creates selection ambiguity, but treat exact numeric cutoffs as heuristic unless benchmarked for the target environment. Check: does the agent see only the tools relevant to the current task?
 
-**Context Compression** `[Engineering guidance]` — For long-running work, compress older context while preserving key decisions and failures. Guided compression (driven by failure-case analysis or learned guidelines) is safe and effective: ACON achieves 26-54% token reduction preserving >95% accuracy; Focus achieves 22.7% autonomous compaction with identical SWE-bench accuracy; Context-Folding yields 10x smaller active context vs. ReAct baselines. Check: does the skill have a compaction strategy for workflows exceeding ~10 tool-call turns?
+**Context Compression** `[Engineering guidance]` — For long-running work, compress older context while preserving key decisions and failures. Guided compression: ACON 26-54% token reduction at >95% accuracy; Focus 22.7% autonomous compaction at identical SWE-bench accuracy; Context-Folding 10× smaller active context. Check: does the skill have a compaction strategy for workflows exceeding ~10 tool-call turns?
+
+**Observation Masking** `[Engineering guidance]` — Prefer masking (drop entries by age/index) over LLM summarisation when output is non-decision-relevant. ACE pattern (arXiv:2508.21433): 52% cost reduction at parity on SWE-bench Verified. CE-X decision table:
+- (a) Output <1K tokens AND turn-history ≤5 → neither required.
+- (b) Output ≥1K tokens AND non-decision-relevant → masking preferred (rotating window, drop entries older than N tool-calls).
+- (c) Output ≥1K tokens AND semantic condensation needed → summarisation, with body-justification of why masking would lose dependency-graph signal.
+Check: if workflow keeps history ≥10 turns AND uses summarisation, is the choice justified?
 
 **Context Placement** `[Proven result]` — Place critical instructions at START and END, never only in the middle. LiM effect peaks at <50% context utilization; at >50%, weight toward END. Reduced in larger models. Check: are key instructions anchored at both ends?
 
@@ -80,7 +86,7 @@ last_refreshed: 2026-04-04
 
 **Actionable Errors** `[Engineering guidance]` — Make tool errors suggest the next fix instead of returning opaque failure states. Check: would the error help the agent recover?
 
-**Avoid Time-Sensitive Guidance** `[Engineering guidance]` — Keep stable prompt assets free of time-bound wording unless the task is explicitly time-sensitive. Check: will the guidance still make sense months later?
+**Avoid Time-Sensitive Guidance** `[Engineering guidance]` — Keep stable prompt assets free of time-bound wording unless the task is explicitly time-sensitive.
 
 **Poka-Yoke Tool Design** `[Engineering guidance]` — Remove common failure modes structurally, for example by requiring absolute paths or constrained parameters. Check: can the most common misuse be made impossible instead of merely warned about?
 

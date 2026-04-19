@@ -1,7 +1,7 @@
 ---
 name: scoring-rubric
 description: A-F grading criteria for evaluating Claude Code skills, agents, and rules across type-appropriate dimensions
-last_refreshed: 2026-04-08
+last_refreshed: 2026-04-20
 ---
 
 # Scoring Rubric
@@ -86,3 +86,47 @@ Rules use only 3 dimensions (renormalized): Clarity 30%, Completeness 30%, Goal 
 
 ## MCP/Settings Scoring
 4 dims: Compl 25%, GA 25%, Safety 30%, Meta 20%. Skip Clarity/PE/CE.
+
+## Plugin Scoring
+4 dims: Compl 25%, GA 25%, Safety 30%, Meta 20%. See `skills/review-plugin/references/plugin-evaluation-guide.md`.
+
+## Binary-Verifiable Rubric Items (issues #4/#5/#6/#10)
+
+Each item below is binary (PASS/FAIL via regex/glob/count/LLM-binary)
+with documented BOUNDARY PASS / BOUNDARY FAIL exemplars. See
+`research/rubric-design/rubric-calibration-evidence.md` for evidence
+sources (Tier-1 cited per item).
+
+### Trigger-Consistency (Metadata B/C discriminator) — issue #4
+
+- **META-1a Trigger-Match-Primary**: `description` contains the body's primary trigger keyword. *Verification:* token-set overlap. *PASS:* "Use when reviewing MCP server configs" + body triggers on `.mcp.json`. *FAIL:* body triggers on `.mcp.json` but description says "Use for configurations".
+- **META-1b Trigger-Match-Generalisation**: OR-joined with META-1a — description uses "when", "for", or a domain term that covers a broader trigger.
+- **META-2 Anti-Pattern Example**: description contains `/do ?not use|not for|skip (when|if)/i`. *PASS:* "Do NOT use for agents or rules — use /review-agent instead." *FAIL:* "Use this skill when you need to review a skill."
+- **META-3a Concrete Trigger**: no description uses `/as needed|if appropriate|when useful/i`. *PASS:* "when file contains hooks.json". *FAIL:* "use as appropriate".
+- **META-3b Sibling-Distinguishability**: no sibling SKILL.md in the same plugin shares ≥2 trigger keywords (token-set overlap).
+
+Grade boundary: META-1 ✗ → D/F (dispatch failure); META-2 ✗ → C; all ✓ → B; all ✓ + no sibling overlap → A.
+
+### Observation-Masking Parity (CE Grade-A) — issue #5
+
+- **CE-X Compaction-Strategy Declaration**: if the workflow keeps conversation history ≥10 turns AND uses LLM-based summarisation, the skill body contains ≥1 sentence justifying why masking is insufficient. See engineering-baseline.md §"Observation Masking" decision table for the (a)/(b)/(c) cases.
+
+### Verification Criteria (Completeness Grade-A) — issue #6
+
+- **COMP-X Success Criteria**: explicit success condition defined, not just output format. *Verification:* count of "complete when|success when|done when" patterns in body.
+- **COMP-Y Verification Method**: programmatic check or explicit binary LLM item (not holistic "looks good"). *Exclusion regex:* `/looks good|seems correct|appears valid/i`.
+- **COMP-Z Evidence Trail**: verification-decision evidence recorded. *Regex:* `/evidence|citation|quote|verified against/i` in output spec.
+
+### Task-Type Resolution — issue #10
+
+Before dimension scoring, run the heuristic-first resolution algorithm in
+`research/rubric-design/task-type-rubric-variants.md` §"Resolution
+Algorithm". The chosen task type (orchestrator | code-review |
+research-synthesis | scaffold | tutoring | general-purpose) selects the
+override table that adjusts dimension weights. Override choice + LLM
+justification (when applied) are logged in the report certificate.
+
+### Sampling-Param Migration (PE/Metadata) — Opus 4.7
+
+- **SAMP-1 (PE-body)**: skill/agent body free of hardcoded `temperature`/`top_p`/`top_k` (regex `/\b(temperature|top_p|top_k)\s*[:=]/i`). FAIL caps PE at C.
+- **SAMP-2 (Metadata frontmatter)**: frontmatter override block free of removed sampling params. FAIL is hard F (runtime 400-error on Opus 4.7).
