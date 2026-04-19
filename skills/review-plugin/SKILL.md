@@ -42,7 +42,7 @@ revision.
    - Source quality criteria: Glob `**/review-claude-config/references/source-quality-criteria.md`
    - Repo identification: Glob `**/review-claude-config/references/repo-identification.md`
    - Plugin evaluation guide: `references/plugin-evaluation-guide.md`
-   - Injection regex library (shared with `/review-mcp-server`): Glob `**/review-mcp-server/references/injection-regex-library.md`
+   - Injection regex library (shared with `/review-mcp-server`): Glob `**/review-mcp-server/references/injection-regex-library.md`. If Glob returns 0 hits, skip Step D and surface `IJ-skipped: injection-regex-library.md not found — install the /review-mcp-server skill or pass --skip-injection-scan` in the certificate.
 2. Build a primitive inventory of the plugin via Glob:
    - `<plugin-root>/skills/*/SKILL.md`
    - `<plugin-root>/agents/*.md`
@@ -104,6 +104,13 @@ Safety 30%, Metadata 20%.
 
 Emit the certificate to stdout (no file writes — the user copies the
 certificate into their preferred report location).
+
+**Complete when**: every dimension (Completeness, Goal Alignment, Safety,
+Metadata) carries a non-null A–F grade, every FAIL in Phase 2 produced
+a recommendation with `ID:`, `Evidence:` (with file:line), and
+`Validation:` lines, and the certificate table has been emitted to
+stdout. If any dimension is null or any FAIL lacks a recommendation,
+return to Phase 2 Step F before emitting.
 
 ```
 ### Goal
