@@ -1,16 +1,26 @@
 ---
 name: agent-evaluation-guide
 description: Type-specific evaluation criteria for Claude Code agents (single-file .md in agents/ directory)
-last_refreshed: 2026-04-08
+last_refreshed: 2026-04-19
 ---
 
 # Agent Evaluation Checklist
 
 Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 
+The 15-field 2026 frontmatter catalog (`name`, `description`, `model`, `color`,
+`tools`, `disallowedTools`, `maxTurns`, `background`, `isolation`, `memory`,
+`initialPrompt`, `mcpServers`, `skills`, `hooks`, `permissionMode`, `effort`)
+is the authoritative source — see
+`research/claude-code/skill-agent-format-conventions.md` §"Agent Frontmatter
+2026 Catalog" for field semantics, the 6-mode `permissionMode` hierarchy, and
+the `effort` Opus 4.7 compatibility table. If the parent guide overflows
+1,800 tok, Opus-4.7 specifics are extracted to
+`opus-4.7-migration-checks.md` (loaded JIT when `model: opus-4-7` detected).
+
 | ID | Check | Dim |
 |----|-------|-----|
-| MS-1 | Model matches task complexity — no over/under-provisioning (haiku=routing, sonnet=analysis, opus=complex reasoning)? | Meta |
+| MS-1 | Model matches task complexity — no over/under-provisioning (haiku=routing, sonnet=analysis, opus=complex reasoning)? Opus 4.7 reserved for `effort: xhigh|max` workloads. | Meta |
 | DA-1 | Description has specific trigger keywords — not generic? | Meta |
 | DA-2a | Description contains ≥1 discriminating keyword not in unrelated requests? | CE |
 | DA-2b | Description covers all documented example triggers? | CE |
@@ -22,6 +32,9 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | TV-1 | Tool array matches tools actually referenced in the body? | Meta |
 | TV-2 | No unused tools — tool set matches task archetype per `tool-grant-decision-tree.md` (least-privilege)? | Safety |
 | TV-3 | High-risk tool combinations (Tier A/B) or `mcpServers`/`skills` surface expansions justified if present? (Plugin agents cannot use `mcpServers`.) | Safety |
+| TV-4 | `disallowedTools` (denylist) does not overlap with `tools` (allowlist) — denylist is subtractive from inherited tools, not from explicit allowlist? [If `disallowedTools` present] | Meta |
+| TV-5 | Declared `skills` exist as resolvable skill names (cross-primitive integrity); not inherited from parent — explicit redeclaration required? [If `skills` present] | Meta |
+| TV-6 | Declared `hooks` reference valid event names from the 26-event catalog (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `Stop`, etc.); event-to-CLI-version compatible with target runtime? [If `hooks` present] | Meta |
 | SF-1 | All context self-contained — no external files assumed? | CE |
 | SF-2 | Long body uses headings for structure (not dense prose)? | Clarity |
 | AP-2 | No tools copied from another agent without pruning unused ones? | Safety |
@@ -54,5 +67,20 @@ Each AF item is NA unless its trigger field is present.
 | AF-1 | `background`/`isolation` match autonomy level — background agents need `isolation: worktree` or explicit scope constraints? | Safety | `background` or `isolation` |
 | AF-2 | `memory` scope (`user`/`project`/`local`) proportional to task? | CE | `memory` |
 | AF-3 | `initialPrompt` structured (goal, constraints, references) — not raw user forwarding? | PE | `initialPrompt` |
+| AF-4 | `maxTurns` set when agent does multi-step work (>3 expected tool calls) — runaway prevention? Verify integer >0 and ≤200 (sanity ceiling). | Safety | `maxTurns` or multi-step body |
+| AF-5 | `permissionMode` value ∈ {`default`, `acceptEdits`, `auto`, `dontAsk`, `bypassPermissions`, `plan`}. `bypassPermissions` justified inline (downgrade rationale + scope). Parent-overrides-child rule respected — child cannot escalate beyond parent. | Safety | `permissionMode` |
+| AF-6 | `effort` value ∈ {`low`, `medium`, `high`, `xhigh`, `max`}. `xhigh`/`max` requires `model: opus` or `claude-opus-4-7` (xhigh+max are Opus-4.7-only). | Meta | `effort` |
+| AF-7 | `model` override matches workload — no `inherit` for agents with safety-critical or long-horizon work; full model ID (`claude-opus-4-7`) preferred over `opus` alias when version pinning matters. | Meta | `model` |
+
+## Opus 4.7 Sampling-Param Migration (SAMP)
+
+Opus 4.7 (released 2026-04-16) removed `temperature`, `top_p`, `top_k` sampling
+parameters. Agents carrying these references either fail review (PE-body) or
+400-error at runtime (Metadata frontmatter override block).
+
+| ID | Check | Dim | Verification |
+|----|-------|-----|--------------|
+| SAMP-1 | Body contains no hardcoded `temperature`/`top_p`/`top_k` references (case-insensitive). | PE | Regex `/\b(temperature\|top_p\|top_k)\s*[:=]/i` returns no match in body. **FAIL → PE capped at Grade C.** |
+| SAMP-2 | Frontmatter override block is free of removed sampling params. | Meta | Same regex on YAML frontmatter. **FAIL → hard F on Metadata** (runtime 400-error on Opus 4.7). |
 
 **Finding identity:** Every FAIL must produce a recommendation with `ID: {item}:{path}:{dim}/v1` in the heading.

@@ -40,6 +40,9 @@ BUDGETS: dict[str, int] = {
     "cross-skill-dependencies.md": 600,
     "review-report-contract.md": 600,
     "report-template.md": 700,
+    # Boundary exemplars — PASS/FAIL pairs reduce verdict variance (BARS).
+    # P0.1 added 8 new exemplar pairs; P0.5 will add more for META/CE-X/COMP-X/Y/Z.
+    "boundary-exemplars.md": 1500,
     # P1.2 — 3-tier structured-output recovery contract
     "report-parser-contract.md": 1000,
     # Optional extractions pre-declared (created if parent guide overflows).
