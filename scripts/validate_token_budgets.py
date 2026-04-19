@@ -19,14 +19,15 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 BUDGETS: dict[str, int] = {
     # Core review references (large by design)
     "scoring-rubric.md": 2000,
-    "engineering-baseline.md": 3500,
+    "engineering-baseline.md": 3500,  # P0.5 lowers to 2,600 post-refresh
     "signal-catalog.md": 1000,
-    # Evaluation guides — dense checklists, legitimately >500
+    # Evaluation guides — dense checklists, legitimately >500.
+    # Opus 4.7 tokenizer ~35% larger than 4.6 — bumped per plan rev4.
     "skill-evaluation-guide.md": 1000,
-    "agent-evaluation-guide.md": 1000,
+    "agent-evaluation-guide.md": 1800,  # P0.1: 15 fields + Opus 4.7 SAMP-1/2
     "claude-md-evaluation-guide.md": 800,
-    "hook-evaluation-guide.md": 800,
-    "mcp-evaluation-guide.md": 800,
+    "hook-evaluation-guide.md": 1500,  # P0.2: 26-event catalog + version-min
+    "mcp-evaluation-guide.md": 1200,  # P0.3: MCP 2026 + April security disclosure
     "settings-evaluation-guide.md": 800,
     # Scaffold templates — contain full examples
     "skill-template.md": 750,
@@ -39,6 +40,13 @@ BUDGETS: dict[str, int] = {
     "cross-skill-dependencies.md": 600,
     "review-report-contract.md": 600,
     "report-template.md": 700,
+    # P1.2 — 3-tier structured-output recovery contract
+    "report-parser-contract.md": 1000,
+    # Optional extractions pre-declared (created if parent guide overflows).
+    # Loaded JIT: opus-4.7 only when model: opus-4-7 detected.
+    "opus-4.7-migration-checks.md": 800,  # P0.1 extraction target
+    "mcp-2026-security-checklist.md": 800,  # P0.3 extraction target
+    "injection-regex-library.md": 700,  # P0.3 — Tier-A regex library (≥20 patterns)
 }
 
 DOMAIN_CACHE_BUDGET = 800
