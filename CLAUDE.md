@@ -42,8 +42,10 @@ This is the authoritative maintainer command inventory for the repo.
 - `/review-rule <path>` - single rule review
 - `/review-hook <path>` - single hook review (hooks.json + Python scripts)
 - `/review-mcp-server <path>` - single MCP server config review (.mcp.json)
+- `/review-plugin <plugin-root>` - single Claude Code plugin review (.claude-plugin/plugin.json + components)
 - `/review-settings <path>` - single settings.json quality review
 - `/review-claude-md <path>` - single CLAUDE.md quality review
+- `/audit-mcp-auth [account]` - audit macOS keychain for #45551 MCP OAuth credential-store race
 - `/review-session-trace <path>` - analyze Claude Code JSONL transcript for runtime behavior
 - `/classify-trace-errors <path>` - classify trace errors against MAST failure taxonomy
 - `/audit-policy-compliance <path>` - audit tool call authorization against action classification policy
@@ -74,6 +76,7 @@ This is the authoritative maintainer command inventory for the repo.
 ### Develop
 
 - `/scaffold-skill [plugin|maintenance|external <target-path>] <name>`
+- `/scaffold-mcp-server <server-name>` - scaffold a `.mcp.json` server entry (declaration only, not server code)
 - `/scaffold-agent <agent-name>`
 - `/scaffold-rule <rule-name>`
 - `/develop-hooks [hook-type] <hook-name>`
@@ -179,7 +182,8 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 - [Evidence Maintenance Guide](docs/evidence-maintenance.md) — label upgrade/downgrade process, contradiction resolution, freshness enforcement. Load when running `/maintain-evidence-layer` or auditing stale labels.
 
 ### Format & Scaffolding
-- [Claude Code Skill and Agent Format Conventions](research/claude-code/skill-agent-format-conventions.md) — official frontmatter fields, body structure, activation patterns, safety constraints. Load when scaffolding, reviewing format violations, or checking frontmatter completeness.
+- [Claude Code Skill and Agent Format Conventions](research/claude-code/skill-agent-format-conventions.md) — official frontmatter fields, body structure, activation patterns, safety constraints. Load when scaffolding, reviewing format violations, or checking frontmatter completeness. Includes 15-field agent-frontmatter 2026 catalog + Opus 4.7 migration rules (SAMP-1/SAMP-2).
+- [Claude Code Plugin System](research/claude-code/plugin-system.md) — `.claude-plugin/plugin.json` manifest schema, marketplace distribution, skill/agent namespacing, `claude plugin validate` CLI, top-5 failure modes. Load when reviewing plugin manifests, scaffolding new plugins, or writing `/review-plugin`.
 - [Command Naming Conventions: Evidence-Based Findings](research/command-naming/command-naming-conventions.md) — verb-noun CLI convention; slash command brevity evidence; plugin naming patterns. Load when scaffolding new commands or reviewing command naming.
 - [Scientific Research Dossier](docs/scientific-research-dossier.md) — repo-level evidence synthesis with theme matrix; tracks which research themes are covered. Load when planning new research or checking overall evidence state.
 
@@ -201,6 +205,8 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 - [Hook-Based Runtime Observation Patterns](research/hook-observation/hook-based-runtime-observation-patterns.md) — 26 hook events categorized by observation value; 5 observation patterns (audit logger, policy gate, session bookend, delegation tracker, stateful via ENV_FILE); transcript_path as underutilized asset; architectural boundaries (no token/cost/confidence visibility). Load when designing runtime audit hooks or building trace infrastructure.
 - [Prompt Injection Taxonomy for Claude Code](research/injection-taxonomy/injection-taxonomy.md) — 4 injection vectors (direct, indirect via tools, via memory, via config); detection feasibility per vector; IJ-* checklist item evidence. Load when reviewing Safety for injection surface or designing injection detection.
 - [Memory Poisoning Patterns](research/memory-poisoning/memory-poisoning-patterns.md) — 3 poisoning vectors (instruction injection, stale accumulation, contradiction insertion); detection heuristics; mitigation patterns. Load when running `/audit-memory-hygiene` or evaluating memory-related security.
+- [Claude Code Auto-Memory System](research/claude-code/auto-memory-system.md) — per-project MEMORY.md storage, 200-line / 25 KB system-prompt injection rule, agent memory scoping (`user`/`project`/`local`), 3 poisoning-vector detectors. Load when extending `/audit-memory-hygiene` or reviewing agents with `memory:` frontmatter.
+- [Claude Code Known Issues](research/claude-code/known-issues.md) — rolling catalog of open bugs (permissions, MCP OAuth, hooks, plugin manifest git-index leak) with detector recipes per issue. Load when building or extending `/audit-policy-compliance`, `/audit-mcp-auth`, or any bug-specific detector.
 - [Injection Surface Catalog](skills/review-claude-config/references/injection-surface-catalog.md) — IJ-1 data flow path and IJ-2 raw input forwarding detection criteria. Load during Safety evaluation for IJ-* checklist items.
 
 ### Agent Skills & Quality
@@ -220,9 +226,12 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 ### Review Convergence & Evaluation Quality
 - [LLM Evaluator Consistency](research/llm-evaluator-consistency/llm-evaluator-consistency.md) — behavioral rubrics ICC3 +46%; RULERS binary decomposition QWK 0.7276; majority voting k=3 strongest variance reduction. Load when addressing review convergence or evaluator reliability.
 - [Rubric Design for LLM Evaluators](research/rubric-design/rubric-design-for-llm-evaluators.md) — Prometheus r=0.897 with behavioral anchoring; binary 76% acc vs 5-way 57%; LLM-hostile/friendly pattern catalog. Load when modifying scoring-rubric.md or evaluation guides.
+- [Rubric Calibration Evidence](research/rubric-design/rubric-calibration-evidence.md) — binary-verifiable checklist items for issues #4/#5/#6/#10 (META-1a/1b/2/3a/3b, CE-X, COMP-X/Y/Z) with BOUNDARY PASS/FAIL examples + 10 Tier-1 citations. Load when implementing P0.5 rubric calibration or auditing rubric item quality.
+- [Task-Type Rubric Variants](research/rubric-design/task-type-rubric-variants.md) — override tables per task type (orchestrator / code-review / research-synthesis / scaffold / tutoring) + heuristic-first resolution algorithm. Load when reviewing task-specialized skills or resolving dimension-weight ambiguity.
 - [Checklist Item Calibration](research/checklist-calibration/checklist-calibration.md) — RubricEval 55.97% on hard binary; IFEval programmatic-first; BARS kappa >0.80 with boundary examples; Gawande 5-9 item cap. Load when calibrating evaluation guide checklist items.
-- [Finding Identity and Lifecycle](research/finding-identity/finding-identity-and-lifecycle.md) — SARIF v2.1.0 fingerprints; SonarQube cascading match; baseline diff pattern. Load when implementing finding tracking or delta comparison.
+- [Finding Identity and Lifecycle](research/finding-identity/finding-identity-and-lifecycle.md) — SARIF v2.1.0 fingerprints; SonarQube cascading match; baseline diff pattern; dual-layer fingerprint + multi-source merge rules (Layer 0–4) for multi-perspective review. Load when implementing finding tracking, delta comparison, or the P1.1 merge pipeline.
 - [Fix Completeness](research/fix-completeness/fix-completeness.md) — DRV K=2 raises yield 0-54%→50-77%; LLMs cannot self-correct without external feedback; per-finding tracking raises resolution 52%→70%. Load when improving apply-review-findings.
+- [Structured Output Recovery Patterns](research/fix-completeness/structured-output-recovery-patterns.md) — 3-tier cascade (strict parse → LLM-assisted minimal-schema → regex text fallback) reducing total failure <2%. Aperant PR #1797 reference. Load when implementing `report-parser-contract.md` or reviewing robustness of `apply-*-review-findings`.
 - [Verification Methods per Dimension](research/verification-methods/verification-methods-per-dimension.md) — CheckEval +0.45 agreement with binary verification; 3-tier architecture (deterministic→LLM-binary→functional). Load when designing fix verification.
 - [Selective Multi-Rating](research/selective-multi-rating/selective-multi-rating.md) — Trust or Escalate: 78.5% cost reduction; selective k=3 at 1.6x cost targets borderline items. Load when considering multi-rater evaluation.
 
@@ -232,6 +241,10 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 
 ### Supporting Research
 - [LLM Agent Caching and Knowledge Persistence Patterns](research/agent-knowledge-caching/llm-agent-caching-patterns.md) — file-based memory beats graph-based (74% vs 68.5%); CAG beats RAG for bounded corpora. Load when designing knowledge persistence or reviewing caching strategies.
+- [Aperant Orchestration Patterns](research/agent-knowledge-caching/aperant-orchestration-patterns.md) — Anthropic prompt-cache mechanics (4,096/1,024 token minimums, 90% savings), shared-prefix construction, atomic file writes (Aperant PR #1785). Load when designing multi-perspective orchestration (P1.1), review-report persistence (P2.7), or debugging KV-cache hit rate.
+- [Cache-Status Labels and Runtime JIT Research](research/agent-knowledge-caching/cache-labels-and-jit-research.md) — 4-state label schema (CACHED/STALE/FAILED/RUNTIME_RESEARCH), 2h sliding-window stuck-detection, Tier-1/2/3 ephemeral research injection, Aperant RDR 6-priority recovery. Load when designing domain-cache freshness (P2.4) or runtime fallback (P2.6).
+- [Claude Code /ultrareview Service](research/claude-code/ultrareview-service.md) — cloud multi-agent PR review service (GA 2026-04-16). $15–25/review. No programmatic API trigger — only `@claude review` PR comments. Load when considering `/ultrareview` integration or recommending it from local review skills.
+- [Claude Code Monitor Tool](research/claude-code/monitor-tool.md) — streaming stdout tool for background processes. Known bugs #50258 (notification flooding) and #45976 (tmux detachment). Not on Bedrock/Vertex/Foundry. Load when choosing between Monitor, `Bash(run_in_background)`, and `/loop` for long-running skills.
 - [Web Content Scraping Tools for LLM Agents](research/web-scraping/web-content-scraping-tools.md) — Jina Reader returns clean Markdown, handles 512K tokens; faster than raw WebFetch for technical docs. Load when writing web research skills or choosing fetch strategy.
 - [Engineering Documentation Best Practices](research/documentation/engineering-documentation-best-practices.md) — rationale-first docs, hyperlinks over repetition; omitting rationale halves documentation value. Load when reviewing skill reference file quality or writing new reference docs.
 - [Web Research Quality Evaluation](research/source-quality/web-research-quality-evaluation.md) — CRAAP/E-E-A-T credibility assessment; Tier 1/2/3 classification guide with age cutoffs. Load when evaluating research sources (alongside Source Quality Criteria).

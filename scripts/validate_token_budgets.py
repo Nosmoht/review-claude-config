@@ -28,6 +28,7 @@ BUDGETS: dict[str, int] = {
     "claude-md-evaluation-guide.md": 800,
     "hook-evaluation-guide.md": 1500,  # P0.2: 26-event catalog + version-min
     "mcp-evaluation-guide.md": 1200,  # P0.3: MCP 2026 + April security disclosure
+    "plugin-evaluation-guide.md": 1500,  # P0.4: PM/CL/F/IJ/MS sections
     "settings-evaluation-guide.md": 800,
     # Scaffold templates — contain full examples
     "skill-template.md": 750,
