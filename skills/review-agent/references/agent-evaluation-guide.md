@@ -29,6 +29,7 @@ the `effort` Opus 4.7 compatibility table. If the parent guide overflows
 | TC-1 | `<example>` blocks cover all primary use cases? | Compl |
 | TC-2 | Negative examples present (when NOT to trigger)? | Compl |
 | TC-3 | Agent includes verification criteria or success conditions for its primary output? | Compl |
+| AH-2b | Missing-arg trigger paired with PASS-response (default value OR prompt-and-stop) within 200 chars? (binary check — see scoring-rubric.md) | Compl |
 | TV-1 | Tool array matches tools actually referenced in the body? | Meta |
 | TV-2 | No unused tools — tool set matches task archetype per `tool-grant-decision-tree.md` (least-privilege)? | Safety |
 | SP-2b | Per-tool archetype binding (body OR Hard Rules OR referenced policy) for each `tools` entry? (binary check — see scoring-rubric.md) | Safety |

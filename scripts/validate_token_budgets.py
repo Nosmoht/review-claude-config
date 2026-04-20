@@ -19,8 +19,9 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 BUDGETS: dict[str, int] = {
     # Core review references (large by design)
     # Issue #69: +10 binary exemplars with full regex specs (CLAR-3/4,
-    # SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b) + COMP-X review-skill clause.
-    "scoring-rubric.md": 6500,
+    # SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b) + COMP-X review-skill clause +
+    # AH-2b Default-Handling-Pair (Plans/steady-distilling-runner.md Phase 0).
+    "scoring-rubric.md": 6700,
     "engineering-baseline.md": 3500,  # P0.5 lowers to 2,600 post-refresh
     "signal-catalog.md": 1000,
     # Evaluation guides — dense checklists, legitimately >500.

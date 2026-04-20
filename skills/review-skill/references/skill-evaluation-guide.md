@@ -26,6 +26,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | RF-3 | No reference content that could be eliminated without capability loss? | CE |
 | AH-1 | `$ARGUMENTS` parsed with validation? | Compl |
 | AH-2 | Defaults defined for missing arguments? | Compl |
+| AH-2b | Missing-arg trigger paired with PASS-response (default value OR prompt-and-stop) within 200 chars? (binary check — see scoring-rubric.md) | Compl |
 | AH-3 | Error handling for invalid arguments present? | Compl |
 | AH-4 | `argument-hint` accurately describes expected input? | Meta |
 | OF-1 | Output format specified with a literal template or example? | PE |

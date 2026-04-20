@@ -155,6 +155,18 @@ Rationale: the 2026-04-20 `/review-skill` re-test showed Run-A Integration accep
 
 Grade boundary: SP-2b ✗ OR SP-4b ✗ OR IJ-1b ✗ → Safety capped at C (Tier A unmitigated). All ✓ + R1-R10 addressed → Safety eligible for A.
 
+### Argument Handling (Completeness B/C discriminator) — issue #69
+
+- **AH-2b Default-Handling-Pair**: when the body references a required argument (e.g., `$ARGUMENTS`), it names a defined response path for the missing-argument case. *Verification:* regex — body contains ≥1 missing-argument trigger sentence AND a PASS-response within 200 characters.
+  - **Trigger:** `/\b(if\s+[^.]{0,100}?(\$ARGUMENTS|argument|input|parameter)[^.]{0,80}?(empty|missing|absent|not\s+provided|not\s+supplied|unset|null|blank))/i`
+  - **PASS-response within 200 chars:** `/(default(s|ing)?\s+to|fall\s?back\s+to|use(s|d)?\s+[^.]{0,50}?as\s+default|prompt\s+the\s+user|ask\s+the\s+user\s+for|request\s+input|stop\s+with\s+(error|usage|message)|report\s+[^.]{0,50}?(error|usage).*stop)/i`
+  - *PASS (value fallback):* "If `$ARGUMENTS` is empty, default to `**/SKILL.md` glob and prompt the user to pick."
+  - *PASS (prompt + stop):* "If `$ARGUMENTS` is empty, prompt the user: 'Provide the path to a SKILL.md file.' and stop."
+  - *FAIL (silent assumption):* skill references `$ARGUMENTS` throughout but never names a missing-arg handler.
+  - *FAIL (undefined-behavior):* "If no argument is given, use an appropriate default." — `appropriate` is vague; no named default value or behavior.
+
+Grade boundary: AH-2b ✗ → Completeness capped at C. Source: engineering-baseline.md §Knowledge Gap Detection.
+
 ### Agentic Reliability Binary Items (Safety/Completeness) — issue #69
 
 Applies to agentic skills/agents — any file whose body contains `Agent`/`Task`/`subagent` dispatch verbs, explicit loop verbs (`for each`, `retry`, `iterate`, `while`, `until`), or `Write`/`Bash`/`Edit` tools. The `-b` items binarise the narrative RL-1/3/4/9 checks in the evaluation guides so Haiku-class reviewers produce identical verdicts.
