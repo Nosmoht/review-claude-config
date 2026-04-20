@@ -8,7 +8,7 @@ description: >
   subagent_type=review-perspective-integration. Do NOT evaluate step
   readability (delegate to review-perspective-clarity) or factual
   rubric-accuracy (delegate to review-perspective-correctness).
-model: haiku-4-5
+model: haiku
 tools: Read, Grep, Glob, WebSearch
 disallowedTools: Write, Edit, Bash, WebFetch, Agent, Task, TaskCreate, TaskUpdate, TaskGet, TaskList, mcp__*
 mcpServers: []

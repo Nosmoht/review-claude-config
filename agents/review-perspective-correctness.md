@@ -7,7 +7,7 @@ description: >
   subagent_type=review-perspective-correctness. Do NOT evaluate step
   readability (delegate to review-perspective-clarity) or injection /
   tool-grant safety (delegate to review-perspective-integration).
-model: haiku-4-5
+model: haiku
 tools: Read, Grep, Glob
 disallowedTools: Write, Edit, Bash, WebSearch, WebFetch, Agent, Task, TaskCreate, TaskUpdate, TaskGet, TaskList, mcp__*
 mcpServers: []

@@ -7,7 +7,7 @@ description: >
   subagent_type=review-perspective-clarity. Do NOT evaluate factual
   correctness (delegate to review-perspective-correctness) or cross-primitive
   integration (delegate to review-perspective-integration).
-model: haiku-4-5
+model: haiku
 tools: Read, Grep, Glob
 disallowedTools: Write, Edit, Bash, WebSearch, WebFetch, Agent, Task, TaskCreate, TaskUpdate, TaskGet, TaskList, mcp__*
 mcpServers: []
