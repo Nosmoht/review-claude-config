@@ -90,7 +90,7 @@ Rules use only 3 dimensions (renormalized): Clarity 30%, Completeness 30%, Goal 
 ## Plugin Scoring
 4 dims: Compl 25%, GA 25%, Safety 30%, Meta 20%. See `skills/review-plugin/references/plugin-evaluation-guide.md`.
 
-## Binary-Verifiable Rubric Items (issues #4/#5/#6/#10)
+## Binary-Verifiable Rubric Items (issues #4/#5/#6/#10/#62)
 
 Each item below is binary (PASS/FAIL via regex/glob/count/LLM-binary)
 with documented BOUNDARY PASS / BOUNDARY FAIL exemplars. See
@@ -104,8 +104,9 @@ sources (Tier-1 cited per item).
 - **META-2 Anti-Pattern Example**: description contains `/do ?not use|not for|skip (when|if)/i`. *PASS:* "Do NOT use for agents or rules — use /review-agent instead." *FAIL:* "Use this skill when you need to review a skill."
 - **META-3a Concrete Trigger**: no description uses `/as needed|if appropriate|when useful/i`. *PASS:* "when file contains hooks.json". *FAIL:* "use as appropriate".
 - **META-3b Sibling-Distinguishability**: no sibling SKILL.md in the same plugin shares ≥2 trigger keywords (token-set overlap).
+- **META-4 Third-Person Description** — issue #62: frontmatter `description` field uses third person throughout. *Verification:* regex exclusion on the rendered description block — no first-person (`\bI\s`, `\bmy\s`, `\bme\s`, case-sensitive on `I`) and no second-person imperative (`\byou can\s`, `\byour\s`, case-insensitive). *PASS:* "Evaluates MCP server configs and produces a quality certificate." *FAIL:* "I help you review your MCP configs." Source: Anthropic Skills best-practices (Warning block) — "Always write in third person. The description is injected into the system prompt, and inconsistent point-of-view can cause discovery problems."
 
-Grade boundary: META-1 ✗ → D/F (dispatch failure); META-2 ✗ → C; all ✓ → B; all ✓ + no sibling overlap → A.
+Grade boundary: META-1 ✗ → D/F (dispatch failure); META-2 ✗ → C; META-4 ✗ → C (third-person violation = discovery risk); all ✓ → B; all ✓ + no sibling overlap → A.
 
 ### Observation-Masking Parity (CE Grade-A) — issue #5
 
