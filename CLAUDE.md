@@ -4,7 +4,7 @@ Maintainer operating guide for this repository (Clarity, Completeness, Prompt En
 
 ## Architecture
 
-- **Plugin surface**: `skills/` and `hooks/`, installed via `claude --plugin-dir`
+- **Plugin surface**: `skills/`, `agents/`, and `hooks/`, installed via `claude --plugin-dir`. `agents/` contains top-level perspective agents (`review-perspective-{clarity,correctness,integration}`) dispatched by `/review-skill` in multi-perspective mode (P1.1 pilot).
 - **Shared references**: `skills/review-claude-config/references/`, including the rubric, baseline, evidence contract, source-quality criteria, and review-report contract
 - **Domain cache**: `skills/review-claude-config/references/domain-cache/`, contains 7 universal methodology entries (context-engineering, research-sourcing, etc.) maintained on the repo's 90-day rhythm. Domain-specific knowledge is researched at runtime via WebSearch, not pre-cached
 - **Repo-internal skills**: `.claude/skills/` for maintenance utilities not needed globally

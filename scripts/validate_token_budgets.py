@@ -48,10 +48,16 @@ BUDGETS: dict[str, int] = {
     "review-report-contract.md": 600,
     "report-template.md": 700,
     # Boundary exemplars — PASS/FAIL pairs reduce verdict variance (BARS).
-    # P0.1 added 8 new exemplar pairs; P0.5 will add more for META/CE-X/COMP-X/Y/Z.
-    "boundary-exemplars.md": 1500,
+    # P0.1 added 8 new exemplar pairs; P0.5 added META/CE-X/COMP-X/Y/Z;
+    # P1.1 added 10 Integration-owned exemplars (IJ-1, SP-1/3/4, RL-1/4/9, RD-1/3).
+    "boundary-exemplars.md": 1700,
     # P1.2 — 3-tier structured-output recovery contract
     "report-parser-contract.md": 1000,
+    # P1.1 — multi-perspective review (JIT-loaded by /review-skill orchestrator only)
+    # Dense protocol + merge-rules spec; 1,200 accommodates Layer-0-to-Layer-4
+    # pseudocode + per-block cache-breakpoint layout without loss of fidelity.
+    "perspective-dispatch-protocol.md": 1200,
+    "merge-rules.md": 1200,
     # Optional extractions pre-declared (created if parent guide overflows).
     # Loaded JIT: opus-4.7 only when model: opus-4-7 detected.
     "opus-4.7-migration-checks.md": 800,  # P0.1 extraction target

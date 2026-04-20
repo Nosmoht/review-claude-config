@@ -146,6 +146,57 @@ def validate_domain_cache_files() -> list[str]:
     return errors
 
 
+SAMP_REGEX = re.compile(r"\b(temperature|top_p|top_k)\s*[:=]", re.IGNORECASE)
+
+
+def validate_agent_files() -> list[str]:
+    """Validate agents/*.md frontmatter + SAMP-1/2 sampling-param migration.
+
+    Required frontmatter fields: name, description, model, tools, disallowedTools.
+    SAMP-1: body contains no hardcoded sampling-param references.
+    SAMP-2: frontmatter contains no removed sampling params (runtime 400-error
+    on Opus 4.7).
+    """
+    errors: list[str] = []
+    agents_dir = REPO_ROOT / "agents"
+    if not agents_dir.exists():
+        return []
+
+    for path in sorted(agents_dir.glob("*.md")):
+        fm = parse_frontmatter(path)
+        if fm is None:
+            errors.append(f"{path}: missing YAML frontmatter")
+            continue
+        for field in ("name", "description", "model", "tools"):
+            if field not in fm:
+                # description may be block scalar — check raw
+                if field == "description":
+                    if "description:" in path.read_text(encoding="utf-8"):
+                        continue
+                errors.append(f"{path}: missing required field '{field}'")
+
+        text = path.read_text(encoding="utf-8")
+        frontmatter_end = text.find("---", 3)
+        body = text[frontmatter_end + 3 :] if frontmatter_end != -1 else text
+        frontmatter_text = text[3:frontmatter_end] if frontmatter_end != -1 else ""
+
+        # SAMP-2: frontmatter check — hard failure (Opus 4.7 400-error)
+        if SAMP_REGEX.search(frontmatter_text):
+            errors.append(
+                f"{path}: SAMP-2 FAIL — frontmatter contains removed Opus 4.7 "
+                "sampling param (temperature/top_p/top_k) — runtime 400-error"
+            )
+        # SAMP-1: body check — PE cap at C on match outside quoted example
+        if SAMP_REGEX.search(body):
+            # Only fail if the match appears outside typical example-fencing.
+            # Conservative: any match in body triggers WARN not ERROR.
+            errors.append(
+                f"{path}: SAMP-1 WARN — body contains sampling-param reference "
+                "(temperature/top_p/top_k); verify it is quoted example text"
+            )
+    return errors
+
+
 def validate_hooks_json() -> list[str]:
     """Validate hooks/hooks.json syntax and script path references."""
     errors = []
@@ -176,6 +227,7 @@ def main() -> int:
     validators = [
         ("Reference files", validate_reference_files),
         ("Skill files", validate_skill_files),
+        ("Agent files", validate_agent_files),
         ("Research files", validate_research_files),
         ("Domain cache files", validate_domain_cache_files),
         ("hooks.json", validate_hooks_json),

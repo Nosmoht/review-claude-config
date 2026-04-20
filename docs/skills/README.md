@@ -105,3 +105,17 @@ Maintenance Chain (additions):
 **Workflow menus:** Every skill ends with a "What's next?" menu presented via `AskUserQuestion` (header: `"What's next?"`) with action-oriented option labels. Menu is skipped in orchestrated mode and conditionally shown in diagnostic skills (only when issues are found).
 
 **Confirmation gates:** Write-capable skills confirm destructive or irreversible actions via `AskUserQuestion` before proceeding. Use a contextual header and action-oriented option labels. The recommended option is always listed first with a `(Recommended)` annotation.
+
+## Multi-Perspective Review Pattern (P1.1 pilot)
+
+`/review-skill` in standalone mode defaults to **three parallel perspective sub-agents** (Clarity, Correctness, Integration) dispatched via the `Agent` tool. Sibling review skills (`/review-agent`, `/review-rule`, `/review-hook`) retain single-perspective dispatch pending pilot convergence.
+
+- **Agents:** `agents/review-perspective-{clarity,correctness,integration}.md` — Haiku-4.5 default, Read/Grep/Glob only (Integration adds WebSearch), `Agent` + `Task*` + `Bash` + `Write` explicitly in `disallowedTools`, `mcpServers: []`, `memory: none`, `permissionMode: default`.
+- **Shared prefix** (byte-identical across all 3 perspectives, ~6,100 Opus-4.7 tokens): `scoring-rubric.md` + `engineering-baseline.md` + `source-quality-criteria.md`. Cached under `cache_control` marker 1. Break-even after ~12 hits (Aperant orchestration research).
+- **Per-type block** (byte-identical across 3 perspectives for one review type, ~1,850 tokens): `skill-evaluation-guide.md` + `boundary-exemplars.md`. Cached under marker 2.
+- **Per-perspective block** (~400 tokens): ownership contract + functional role + output schema reminder. Cached under marker 3.
+- **Artifact** (~2–4K tokens, uncached): `## Item Under Review` + full content.
+- **Dispatch order:** Clarity synchronous first (primes cache); Correctness + Integration parallel after first-token return. Target cost ≈ 1.3× baseline.
+- **Merge:** `scripts/merge_findings.py` applies Layer 0 content-dedup (path + line-range + token-overlap ≥0.80), Layer 1 owner-weighted vote (owner weight 2×), Layers 2–4 (max-severity, lexicographic, manual-review).
+- **Escalation:** `scripts/escalation_decision.py` flags `escalation_required: true` on ESC-1..5 triggers. Auto-re-run only on ESC-5 (degraded mode). Users invoke `/review-skill --deep <path>` for Opus-tier escalation on ESC-1/2/3/4.
+- **Full spec:** `skills/review-skill/references/perspective-dispatch-protocol.md` and `merge-rules.md`.

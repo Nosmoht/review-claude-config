@@ -111,6 +111,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "description": "Rotate audit JSONL when >10 MB (3-generation ladder with atomic replace + fcntl lock)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/audit_rotator.py",
+            "timeout": 10
+          }
+        ]
       }
     ]
   }

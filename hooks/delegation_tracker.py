@@ -40,6 +40,8 @@ def main():
         "session_id": session_id,
         "agent_id": input_data.get("agent_id"),
         "agent_type": input_data.get("agent_type"),
+        "parent_agent_id": input_data.get("parent_agent_id"),
+        "tool_use_id": input_data.get("tool_use_id"),
         "event": event,
         "cwd": input_data.get("cwd"),
     }
