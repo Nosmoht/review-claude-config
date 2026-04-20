@@ -175,11 +175,11 @@ In standalone mode:
 5. **What's Next?**
 
 After all output is complete, present next steps via AskUserQuestion (header: "What's next?"):
-- Option 1 label: "Apply findings" (Recommended) — description: `"Run /apply-hook-findings <report-path> to address High/Medium findings"`
+- Option 1 label: "Apply findings manually" (Recommended) — description: `"Address High/Medium findings using the Current/Recommended blocks; hook code changes (hooks.json + Python scripts) require manual review before edit"`
 - Option 2 label: "Review another hook" — description: `"Provide a hook path to review next"`
 - Option 3 label: "Done" — description: `"End the workflow"`
 
-On "Apply findings": invoke `/apply-hook-findings` with the report path. On "Review another hook": ask for the hook path, then invoke `/review-hook`. On "Done": acknowledge and stop.
+On "Apply findings manually": list the High/Medium findings with their Current/Recommended blocks for the user to act on. On "Review another hook": ask for the hook path, then invoke `/review-hook`. On "Done": acknowledge and stop.
 
 ## Error Handling
 
