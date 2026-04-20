@@ -16,7 +16,7 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 ### 1. Clarity (15%)
 - **A**: Explicit sequential workflow, no ambiguous conditionals, deterministic behavior across runs.
 - **B**: All steps sequenced; one conditional broad but not vague.
-- **C**: Mostly followable but some steps require interpretation. *Test: any conditional uses a bare vague predicate ("if needed", "as appropriate") without a concrete trigger → C or below.*
+- **C**: Mostly followable but some steps require interpretation. *Test: any conditional uses a bare vague predicate ("if needed", "as appropriate") without a concrete trigger, OR any step parameter uses a fuzzy quantifier ("slightly", "a bit", "some", "roughly"), OR any instruction contains an unresolved pronoun referring to prior tool output → C or below.*
 - **D**: Key dependencies implicit; multiple ambiguous conditionals remain.
 - **F**: Vague instructions like "handle appropriately" or "use best judgment" with no criteria.
 
@@ -90,7 +90,7 @@ Rules use only 3 dimensions (renormalized): Clarity 30%, Completeness 30%, Goal 
 ## Plugin Scoring
 4 dims: Compl 25%, GA 25%, Safety 30%, Meta 20%. See `skills/review-plugin/references/plugin-evaluation-guide.md`.
 
-## Binary-Verifiable Rubric Items (issues #4/#5/#6/#10/#62)
+## Binary-Verifiable Rubric Items (issues #4/#5/#6/#10/#62/#66)
 
 Each item below is binary (PASS/FAIL via regex/glob/count/LLM-binary)
 with documented BOUNDARY PASS / BOUNDARY FAIL exemplars. See
@@ -107,6 +107,13 @@ sources (Tier-1 cited per item).
 - **META-4 Third-Person Description** — issue #62: frontmatter `description` field uses third person throughout. *Verification:* regex exclusion on the rendered description block — no first-person (`\bI\s`, `\bmy\s`, `\bme\s`, case-sensitive on `I`) and no second-person imperative (`\byou can\s`, `\byour\s`, case-insensitive). *PASS:* "Evaluates MCP server configs and produces a quality certificate." *FAIL:* "I help you review your MCP configs." Source: Anthropic Skills best-practices (Warning block) — "Always write in third person. The description is injected into the system prompt, and inconsistent point-of-view can cause discovery problems."
 
 Grade boundary: META-1 ✗ → D/F (dispatch failure); META-2 ✗ → C; META-4 ✗ → C (third-person violation = discovery risk); all ✓ → B; all ✓ + no sibling overlap → A.
+
+### Ambiguity Markers (Clarity B/C discriminator) — issue #66
+
+- **CLAR-1 Fuzzy-Quantifier-Free**: step parameters contain no fuzzy quantifier. *Regex:* `/\b(slightly|a bit|roughly|somewhat|some)\b/i` (skip `some` inside placeholder paths). *PASS:* "fetch 10 entries". *FAIL:* "fetch roughly 10 entries".
+- **CLAR-2 Resolved-Pronoun**: pronouns referring to prior tool outputs (`it`/`them`/`that`/`this`/`those`) have an explicit antecedent in the same or immediately-preceding step. *Verification:* LLM-binary. *PASS:* "parse the grep output; store the matches". *FAIL:* "parse the output; then process them".
+
+Grade boundary: CLAR-1 ✗ OR CLAR-2 ✗ → Clarity capped at C. Source: arXiv:2507.11525 (ambiguity taxonomy, F1=0.83 Gemma 3 12B); arXiv:2512.14754 (IFEval++ reliable@k, 61.8 % accuracy drop).
 
 ### Observation-Masking Parity (CE Grade-A) — issue #5
 

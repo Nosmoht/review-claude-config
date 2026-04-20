@@ -2,7 +2,7 @@
 last_refreshed: 2026-04-19
 ---
 
-# Rubric Calibration Evidence for Issues #4, #5, #6, #10, #62
+# Rubric Calibration Evidence for Issues #4, #5, #6, #10, #62, #66
 
 Evidence-backed operationalization for P0.5 rubric changes. Each issue gets concrete binary-verifiable checklist items with BOUNDARY PASS/FAIL examples and cited Tier-1 sources. Feeds `skills/review-claude-config/references/scoring-rubric.md` and `engineering-baseline.md` updates.
 
@@ -13,6 +13,7 @@ Evidence-backed operationalization for P0.5 rubric changes. Each issue gets conc
 - **#6 Verification criteria (Completeness A)**: COMP-X, COMP-Y, COMP-Z binary items. Evidence: RubricEval (arXiv:2603.25133), RULERS (arXiv:2601.08654 — QWK 0.73 vs 0.26 without evidence-cap), CheckEval (+0.45 agreement), IFEval (perfect κ on programmatic verifiability), MAST FC3 cluster.
 - **#10 Task-type rubric variants (CE + GA)**: documentation-only override tables via `task-type-rubric-variants.md` + hybrid resolution algorithm. Evidence: AdaRubric (arXiv:2603.21362, r=0.79 vs r=0.63 fixed rubric).
 - **#62 Third-person description (Metadata B/C)**: META-4 binary item caps Metadata at C when description uses first-person or second-person imperative. Evidence: Anthropic Skills best-practices Warning block — "Always write in third person… inconsistent point-of-view can cause discovery problems." Originally-proposed META-5 (ban `hooks` in plugin.json) dropped after Tier-1 contradiction with plugins-reference.
+- **#66 Ambiguity markers (Clarity B/C)**: CLAR-1 (fuzzy quantifiers in step parameters) and CLAR-2 (unresolved pronouns referring to prior tool outputs) both cap Clarity at C. Evidence: ambiguity taxonomy F1=0.83 on Gemma 3 12B (arXiv:2507.11525, ROMAN 2025); 61.8 % accuracy drop on subtle constraint-wording nuances (arXiv:2512.14754, ACL 2026).
 
 All items follow the canonical template: `<ID> <Label>: <observable>. PASS: <example>. FAIL: <example>. Verification: <regex|glob|count|LLM-binary>.`
 
@@ -197,6 +198,50 @@ META-4 is a C-cap, not D/F: the description is still parseable and the skill sti
 
 The originally-proposed META-5 (ban `hooks` key in `.claude-plugin/plugin.json`) contradicts the official Anthropic plugins-reference (https://code.claude.com/docs/en/plugins-reference, fetched 2026-04-20) which lists `hooks` as a valid top-level manifest field (`string | array | object`) with an inline-hooks example. A check banning `hooks` would false-positive on spec-compliant plugins. See #62 comment thread for full contradiction.
 
+## Issue #66 — Clarity Ambiguity Markers (CLAR-1 / CLAR-2)
+
+### Problem
+
+The current Clarity C-test in `scoring-rubric.md:19` covers one ambiguity class — bare vague predicates ("if needed", "as appropriate") without a concrete trigger. 2026 NL-instruction ambiguity research identifies two additional binary-verifiable markers with comparable or higher discriminative value:
+
+1. **Fuzzy quantifiers** in step parameters (`slightly`, `a bit`, `some`, `roughly`) — turn a deterministic parameter into a free-floating value the agent must interpret at runtime.
+2. **Unresolved pronouns** referring to prior tool outputs (`it`, `them`, `that`, `this`) without an adjacent noun phrase — force the agent to guess which previous output is the antecedent when multiple candidates exist.
+
+Both markers correspond to the `WS-2 Clarity` divergence identified as the largest driver of the P1.1 multi-perspective pilot-convergence FAIL (see #68). Adding them as binary-verifiable items reduces reviewer divergence on Clarity grading.
+
+### Checklist Items
+
+**CLAR-1 Fuzzy-Quantifier-Free**
+- Observable: step parameters and instructions contain no fuzzy quantifier.
+- PASS: "fetch 10 entries", "reduce the window by 2 turns", "retry 3 times".
+- FAIL: "fetch roughly 10 entries", "slightly reduce the window", "retry some times".
+- Verification: regex exclusion on instruction body — `/\b(slightly|a bit|roughly|somewhat)\b/i` and context-aware `\bsome\b` (excluding placeholder paths like `research/some/file.md` and rubric meta-text describing grade states).
+
+**CLAR-2 Resolved-Pronoun**
+- Observable: every pronoun referring to a prior tool output has an explicit antecedent in the same step or the immediately preceding step.
+- PASS: "parse the grep output; store the matches in results.json."
+- FAIL: "parse the output; then process them." (ambiguous antecedent across tool calls)
+- Verification: LLM-binary check scoped to instruction pronouns (`it`, `them`, `that`, `this`, `those`) appearing without an adjacent noun phrase.
+
+### Grade Boundary
+
+| Grade | Condition |
+|-------|-----------|
+| B or higher | CLAR-1 ✓ AND CLAR-2 ✓ |
+| C | CLAR-1 ✗ OR CLAR-2 ✗ (ambiguity → interpretation required) |
+
+CLAR-* failures are C-caps, not D/F: the workflow is still followable, but step-parameter ambiguity or unresolved antecedents make the execution non-deterministic. Contrast with bare vague predicates in the original C-test, which are likewise C-caps.
+
+### Evidence
+
+- [arXiv:2507.11525 — LLM-based ambiguity detection](https://arxiv.org/abs/2507.11525) (Davila et al., ROMAN 2025, 2025-07-15) — operational ambiguity taxonomy across linguistic, contextual, procedural, and critical classes. F1=0.83 with Gemma 3 12B ensemble. High-ambiguity markers identified: unresolved pronouns, fuzzy spatial/temporal hedges ("slightly", "move more left"), missing procedural parameters, implicit assumptions. **Tier 1**.
+- [arXiv:2512.14754 — Revisiting the Reliability of Language Models in Instruction-Following](https://arxiv.org/abs/2512.14754) (Dong et al., ACL 2026, submitted 2025-12-15, revised 2026-04-14) — IFEval++ benchmark with `reliable@k` metric. Subtle constraint-wording nuances cause up to 61.8 % accuracy drop on small models. Tested across 20 proprietary + 26 open-source LLMs. **Tier 1**.
+- Industrial confirmation: prompt-determinism case study ([ScienceDirect S2666827025001872](https://www.sciencedirect.com/science/article/pii/S2666827025001872), 2025) — prompt structure outweighs model choice for determinism. **Tier 2**.
+
+### Non-change: none
+
+No items dropped. CLAR-1 and CLAR-2 are both directly supported by the Tier-1 sources above; no contradiction with Anthropic docs or other rubric items was surfaced during research.
+
 ## Canonical Item Template (applied to all items above)
 
 ```
@@ -219,6 +264,8 @@ Tier 1:
 - [arXiv:2311.07911 — IFEval](https://arxiv.org/abs/2311.07911)
 - [arXiv:2403.18771 — CheckEval](https://arxiv.org/abs/2403.18771)
 - [arXiv:2603.21362 — AdaRubric](https://arxiv.org/abs/2603.21362)
+- [arXiv:2507.11525 — LLM-based Ambiguity Detection](https://arxiv.org/abs/2507.11525)
+- [arXiv:2512.14754 — IFEval++ / reliable@k](https://arxiv.org/abs/2512.14754)
 - arXiv:2503.13657 — MAST
 
 Tier 2:
