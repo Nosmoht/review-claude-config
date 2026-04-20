@@ -90,7 +90,7 @@ Rules use only 3 dimensions (renormalized): Clarity 30%, Completeness 30%, Goal 
 ## Plugin Scoring
 4 dims: Compl 25%, GA 25%, Safety 30%, Meta 20%. See `skills/review-plugin/references/plugin-evaluation-guide.md`.
 
-## Binary-Verifiable Rubric Items (issues #4/#5/#6/#10/#62/#66)
+## Binary-Verifiable Rubric Items (issues #4/#5/#6/#10/#62/#64/#66)
 
 Each item below is binary (PASS/FAIL via regex/glob/count/LLM-binary)
 with documented BOUNDARY PASS / BOUNDARY FAIL exemplars. See
@@ -124,6 +124,7 @@ Grade boundary: CLAR-1 ✗ OR CLAR-2 ✗ → Clarity capped at C. Source: arXiv:
 - **COMP-X Success Criteria**: explicit success condition defined, not just output format. *Verification:* count of "complete when|success when|done when" patterns in body.
 - **COMP-Y Verification Method**: programmatic check or explicit binary LLM item (not holistic "looks good"). *Exclusion regex:* `/looks good|seems correct|appears valid/i`.
 - **COMP-Z Evidence Trail**: verification-decision evidence recorded. *Regex:* `/evidence|citation|quote|verified against/i` in output spec.
+- **COMP-W Termination Criteria** — issue #64: iterative skills/agents (body mentions `for each|retry|iterate|while|until|loop`) declare an explicit termination predicate (`stop when|terminate|halt|max iterations|escalate after|loop until|exit if/when`) distinct from COMP-X success. *PASS:* "escalate after 3 consecutive failures". *FAIL:* bare "retry on failure". Source: MAST cluster (arXiv:2503.13657); MOP framework (arXiv:2603.29231).
 
 ### Task-Type Resolution — issue #10
 

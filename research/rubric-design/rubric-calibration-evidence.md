@@ -2,7 +2,7 @@
 last_refreshed: 2026-04-19
 ---
 
-# Rubric Calibration Evidence for Issues #4, #5, #6, #10, #62, #66
+# Rubric Calibration Evidence for Issues #4, #5, #6, #10, #62, #64, #66
 
 Evidence-backed operationalization for P0.5 rubric changes. Each issue gets concrete binary-verifiable checklist items with BOUNDARY PASS/FAIL examples and cited Tier-1 sources. Feeds `skills/review-claude-config/references/scoring-rubric.md` and `engineering-baseline.md` updates.
 
@@ -14,6 +14,7 @@ Evidence-backed operationalization for P0.5 rubric changes. Each issue gets conc
 - **#10 Task-type rubric variants (CE + GA)**: documentation-only override tables via `task-type-rubric-variants.md` + hybrid resolution algorithm. Evidence: AdaRubric (arXiv:2603.21362, r=0.79 vs r=0.63 fixed rubric).
 - **#62 Third-person description (Metadata B/C)**: META-4 binary item caps Metadata at C when description uses first-person or second-person imperative. Evidence: Anthropic Skills best-practices Warning block — "Always write in third person… inconsistent point-of-view can cause discovery problems." Originally-proposed META-5 (ban `hooks` in plugin.json) dropped after Tier-1 contradiction with plugins-reference.
 - **#66 Ambiguity markers (Clarity B/C)**: CLAR-1 (fuzzy quantifiers in step parameters) and CLAR-2 (unresolved pronouns referring to prior tool outputs) both cap Clarity at C. Evidence: ambiguity taxonomy F1=0.83 on Gemma 3 12B (arXiv:2507.11525, ROMAN 2025); 61.8 % accuracy drop on subtle constraint-wording nuances (arXiv:2512.14754, ACL 2026).
+- **#64 Termination criteria (Completeness A)**: COMP-W binary item requires iterative skills/agents to declare an explicit termination predicate distinct from COMP-X success. Evidence: MAST task-verification-and-termination failure cluster (arXiv:2503.13657); Meltdown Onset Point reliability framework (arXiv:2603.29231, 2026-03-31); AgentDebug +24 % all-correct accuracy from failure annotation (arXiv:2509.25370, 2025-09). Grade-A schema-compliance clarification deferred — requires direct verification of MCP 2025-11-25 spec.
 
 All items follow the canonical template: `<ID> <Label>: <observable>. PASS: <example>. FAIL: <example>. Verification: <regex|glob|count|LLM-binary>.`
 
@@ -198,6 +199,41 @@ META-4 is a C-cap, not D/F: the description is still parseable and the skill sti
 
 The originally-proposed META-5 (ban `hooks` key in `.claude-plugin/plugin.json`) contradicts the official Anthropic plugins-reference (https://code.claude.com/docs/en/plugins-reference, fetched 2026-04-20) which lists `hooks` as a valid top-level manifest field (`string | array | object`) with an inline-hooks example. A check banning `hooks` would false-positive on spec-compliant plugins. See #62 comment thread for full contradiction.
 
+## Issue #64 — Completeness Termination Criteria (COMP-W)
+
+### Problem
+
+The current Completeness binary items COMP-X (success criteria), COMP-Y (verification method), and COMP-Z (evidence trail) cover what a skill should produce and how to validate it — but none of them requires an explicit termination condition for iterative or looped workflows. MAST (arXiv:2503.13657) identifies task-verification-and-termination as a distinct high-frequency failure cluster. Skills with loops but no stopping predicate drift into unbounded retry, silent incomplete runs, or Meltdown-Onset-Point-style cascading failure (arXiv:2603.29231).
+
+### Checklist Item
+
+**COMP-W Termination Criteria**
+- Observable: skills/agents whose body contains iterative language (`for each`, `retry`, `iterate`, `while`, `until`, `loop`) declare an explicit termination predicate distinct from the COMP-X success condition.
+- PASS (iterative with predicate): "retry up to 3 times on HTTP 503; escalate after 3 consecutive failures."
+- PASS (non-iterative): skill is one-shot (no loop language present) — COMP-W not applicable.
+- FAIL (iterative, no predicate): "retry on failure" without a max-attempt count or escalation path.
+- Verification: two-step — (1) detect loop language with regex `/for each|retry|iterate|while|until\s|loop/i`; (2) when detected, require a termination-predicate match `/stop when|terminate|halt|max.*iterations?|escalate after|loop until|exit (if|when)|stopping condition/i`.
+
+### Grade Boundary
+
+| Grade | Condition |
+|-------|-----------|
+| A | COMP-W ✓ AND COMP-X ✓ AND COMP-Y ✓ AND COMP-Z ✓ |
+| B | COMP-W ✓ and one of COMP-X/Y/Z implicit but recoverable |
+| C | COMP-W ✗ (iterative workflow without termination predicate) |
+
+COMP-W is a C-cap (not D/F) — a skill with a loop and no stop condition still executes, but risks unbounded runtime or silent truncation. Contrast with COMP-X (missing success criterion = cannot verify completion at all).
+
+### Evidence
+
+- [arXiv:2503.13657 — Why Multi-Agent LLM Systems Fail](https://arxiv.org/abs/2503.13657) (Cemri et al., 2025-03) — 14 MAST failure modes identified via 1600+ annotated traces; task-verification-and-termination cluster ~15 % of SWE-agent failures. **Tier 1**.
+- [arXiv:2603.29231 — Beyond pass@1: Reliability Science Framework](https://arxiv.org/abs/2603.29231) (Khanal, Tao, Zhou, 2026-03-31) — Reliability Decay Curve, Variance Amplification Factor, Graceful Degradation Score, Meltdown Onset Point (MOP); frontier models exhibit up to 19 % meltdown rate on long-horizon tasks. Motivates explicit termination as a reliability discipline. **Tier 1**.
+- [arXiv:2509.25370 — Where LLM Agents Fail and How They can Learn From Failures](https://arxiv.org/abs/2509.25370) (Zhu et al., 2025-09-29) — AgentErrorTaxonomy + AgentErrorBench + AgentDebug framework; +24 % all-correct accuracy, +17 % step accuracy via failure annotation. Validates annotation-grade termination predicates as a lever for agent reliability. **Tier 1**.
+
+### Non-change: Grade-A schema-compliance refinement deferred
+
+Issue #64 also proposed refining the Completeness Grade-A wording from "output format defined" to "schema-compliant output spec" for agents producing structured output (citing MCP 2025-11-25 mandate). This refinement is deferred: the issue itself classifies the MCP citation as Tier 2 and requests direct verification against https://spec.modelcontextprotocol.io before adoption. Split into a follow-up sub-issue once spec-direct verification is complete.
+
 ## Issue #66 — Clarity Ambiguity Markers (CLAR-1 / CLAR-2)
 
 ### Problem
@@ -266,6 +302,8 @@ Tier 1:
 - [arXiv:2603.21362 — AdaRubric](https://arxiv.org/abs/2603.21362)
 - [arXiv:2507.11525 — LLM-based Ambiguity Detection](https://arxiv.org/abs/2507.11525)
 - [arXiv:2512.14754 — IFEval++ / reliable@k](https://arxiv.org/abs/2512.14754)
+- [arXiv:2603.29231 — Beyond pass@1 Reliability Framework](https://arxiv.org/abs/2603.29231)
+- [arXiv:2509.25370 — AgentErrorTaxonomy / AgentDebug](https://arxiv.org/abs/2509.25370)
 - arXiv:2503.13657 — MAST
 
 Tier 2:
