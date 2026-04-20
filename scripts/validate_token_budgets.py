@@ -18,13 +18,18 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 # Ruff per-file-ignores — all use centralized config for numeric thresholds.
 BUDGETS: dict[str, int] = {
     # Core review references (large by design)
-    "scoring-rubric.md": 3400,  # P0.5: META/CE-X/COMP-X/Y/Z/W/SAMP/CLAR binary items + plugin scoring
+    # Issue #69: +10 binary exemplars with full regex specs (CLAR-3/4,
+    # SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b) + COMP-X review-skill clause.
+    "scoring-rubric.md": 6500,
     "engineering-baseline.md": 3500,  # P0.5 lowers to 2,600 post-refresh
     "signal-catalog.md": 1000,
     # Evaluation guides — dense checklists, legitimately >500.
     # Opus 4.7 tokenizer ~35% larger than 4.6 — bumped per plan rev4.
-    "skill-evaluation-guide.md": 1000,
-    "agent-evaluation-guide.md": 1800,  # P0.1: 15 fields + Opus 4.7 SAMP-1/2
+    # Issue #69: +CLAR-3/4, SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b rows
+    "skill-evaluation-guide.md": 1400,
+    # P0.1: 15 fields + Opus 4.7 SAMP-1/2.
+    # Issue #69: +SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b rows.
+    "agent-evaluation-guide.md": 2100,
     "claude-md-evaluation-guide.md": 800,
     "hook-evaluation-guide.md": 1500,  # P0.2: 26-event catalog + version-min
     "mcp-evaluation-guide.md": 1200,  # P0.3: MCP 2026 + April security disclosure

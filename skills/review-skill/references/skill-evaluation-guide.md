@@ -18,7 +18,9 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | WS-1 | Steps numbered with explicit sequential dependencies? | Clarity |
 | WS-2 | Every conditional specifies a concrete trigger (value, threshold, file test, or tool output)? | Clarity |
 | WS-3 | Parallel vs sequential steps explicitly marked? | Clarity |
-| WS-4 | Stop conditions and recovery actions defined? | Safety |
+| WS-4 | Stop conditions and recovery actions defined? (binary check: CLAR-3 Stop/Recovery — see scoring-rubric.md) | Safety |
+| CLAR-3 | Every `stop/abort/refuse/bail/halt/timeout` paired with named recovery target within 200 chars? | Clarity |
+| CLAR-4 | Every numbered upstream dependency names a failure branch (inline or cross-reference)? | Clarity |
 | RF-1 | Reference files within token budgets? | CE |
 | RF-2 | Each reference file is single-purpose? | CE |
 | RF-3 | No reference content that could be eliminated without capability loss? | CE |
@@ -32,12 +34,18 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | OF-4 | Review skills: findings include `Evidence:` and `Validation:`? | PE |
 | SP-1 | Confirmation gates before destructive/irreversible operations? | Safety |
 | SP-2 | `allowed-tools` matches actual tool usage — tools align with task archetype per `tool-grant-decision-tree.md` (least-privilege)? | Safety/Meta |
+| SP-2b | Per-tool archetype binding (body OR Hard Rules OR referenced policy) for each `allowed-tools` entry? (binary check — see scoring-rubric.md) | Safety |
 | SP-4 | High-risk tool combinations (Tier A/B per `tool-grant-decision-tree.md`) justified if present? | Safety |
+| SP-4b | For Tier-A combinations: ≥1 constraint sentence per Tier-A tool (location-agnostic)? (binary check — see scoring-rubric.md) | Safety |
 | SP-3 | Stop conditions defined for loops or recursive operations? | Safety |
 | RL-1 | Termination conditions defined (step limit, timeout, or success criteria)? [Agentic only] | Safety |
+| RL-1b | Numeric/enum termination predicate matches one of the RL-1b regex variants? [Agentic only] | Safety |
 | RL-3 | Retry/backoff strategy bounded (not infinite)? [Agentic only] | Safety |
+| RL-3b | Every retry/regenerate/redisplay/adjust has a numeric cap within 400 chars? [Agentic only] | Safety |
 | RL-4 | Escalation / HITL trigger defined for high-autonomy operations? [Agentic only] | Safety |
+| RL-4b | ≥1 literal HITL / `status: partial` / `escalate` token present on autonomy paths? [Agentic only] | Safety |
 | RL-9 | Safety/PII/credential scope constraints present? [Agentic only] | Safety |
+| RL-9b | ≥1 credential-scope rule matches redact/truncate/skip/token-like regex? [Agentic only] | Safety |
 | AP-1 | No content inlined that belongs in a `references/` file? | CE |
 | AP-2 | No tools in `allowed-tools` unreferenced in the workflow body? | Meta |
 | AP-3 | Output format explicitly specified (not relying on implicit model behavior)? | PE |
@@ -52,6 +60,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | RT-2 | Output template has status token (success/partial/failure)? [Agentic] | PE |
 | RT-3 | Numeric cap for ≥1 resource (files, calls, or depth)? [Agentic] | Safety |
 | IJ-1 | External input + write tool, no gate? | Safety |
+| IJ-1b | Validation regex/allowlist AND write-gate (AskUserQuestion/preview/confirm before Write/Edit) both present? | Safety |
 
 **Severity guidance:** Broken cross-primitive dependencies (missing referenced files, unavailable tools, dangling skill/agent references) are **High** severity findings.
 

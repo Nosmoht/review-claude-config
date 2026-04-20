@@ -33,7 +33,7 @@ class TestEstimateTokens:
 
 class TestGetBudget:
     def test_rubric(self, tmp_path):
-        assert get_budget(tmp_path / "scoring-rubric.md") == 3400
+        assert get_budget(tmp_path / "scoring-rubric.md") == 6500
 
     def test_baseline(self, tmp_path):
         assert get_budget(tmp_path / "engineering-baseline.md") == 3500
@@ -46,7 +46,7 @@ class TestGetBudget:
         assert get_budget(p) == 800
 
     def test_eval_guide(self, tmp_path):
-        assert get_budget(tmp_path / "skill-evaluation-guide.md") == 1000
+        assert get_budget(tmp_path / "skill-evaluation-guide.md") == 1400
 
     def test_default(self, tmp_path):
         assert get_budget(tmp_path / "other-file.md") == 500
