@@ -21,3 +21,13 @@ __pycache__
 .ruff_cache/
 *.egg-info/
 dist/
+
+# macOS cruft
+.DS_Store
+
+# Per-machine MCP server declaration (paths differ by host)
+.mcp.json
+
+# Claude Code runtime state
+.claude/pipeline.jsonl
+.claude/reviews/
