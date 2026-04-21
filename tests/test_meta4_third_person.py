@@ -9,25 +9,23 @@ Patterns flagged (from scoring-rubric.md):
 - Second-person imperative (case-insensitive): \byou can\s, \byour\s
 
 Grade boundary: META-4 fail → Metadata capped at C.
+
+Regex constants and ``is_third_person`` helper now live in
+``scripts/rubric_patterns.py`` so the deterministic runner and these
+tests share a single source of truth.
 """
 
-import re
+from __future__ import annotations
+
+import pathlib
+import sys
 
 import pytest
 
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-# Patterns mirror scoring-rubric.md §"META-4 Third-Person Description".
-FIRST_PERSON = re.compile(r"\b(I|my|me)\s")
-SECOND_PERSON = re.compile(r"\b(you can|your)\s", re.IGNORECASE)
-
-
-def is_third_person(description: str) -> bool:
-    """Return True when description has no META-4 anti-patterns."""
-    if FIRST_PERSON.search(description):
-        return False
-    if SECOND_PERSON.search(description):
-        return False
-    return True
+from rubric_patterns import FIRST_PERSON, SECOND_PERSON, is_third_person  # noqa: E402, F401
 
 
 class TestMETA4Pass:

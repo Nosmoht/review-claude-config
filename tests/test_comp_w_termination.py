@@ -4,7 +4,7 @@ COMP-W requires skills/agents with iterative or looped workflows to
 declare an explicit termination predicate distinct from COMP-X success.
 
 Verification is two-step:
-1. Detect loop language (for each / retry / iterate / while / until / loop).
+1. Detect loop language (for each / retry / iterate / while / loop).
 2. When detected, require a termination-predicate match.
 
 If step 1 is negative (no loop language), COMP-W is not applicable and
@@ -16,39 +16,32 @@ Sources:
 - arXiv:2509.25370 (AgentErrorTaxonomy / AgentDebug) — failure annotation.
 
 Grade boundary: COMP-W ✗ → Completeness capped at C.
+
+Regex constants and ``has_loop``/``has_termination``/``passes_comp_w``
+helpers now live in ``scripts/rubric_patterns.py`` so the deterministic
+runner and these tests share a single source of truth. COMP-W
+``LOOP_PATTERN`` intentionally omits ``until`` (see the module-level
+asymmetry note in rubric_patterns.py); the agentic branch uses a
+separate ``AGENTIC_LOOP_PATTERN`` that includes it.
 """
 
-import re
+from __future__ import annotations
+
+import pathlib
+import sys
 
 import pytest
 
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-LOOP_PATTERN = re.compile(
-    r"\b(for\s+each|retry|iterate|while\s+|loop)\b",
-    re.IGNORECASE,
+from rubric_patterns import (  # noqa: E402, F401
+    LOOP_PATTERN,
+    TERMINATION_PREDICATE,
+    has_loop,
+    has_termination,
+    passes_comp_w,
 )
-
-TERMINATION_PREDICATE = re.compile(
-    r"\b(stop\s+when|terminate|halt|max.*iterations?|"
-    r"escalate\s+after|loop\s+until|exit\s+(if|when)|stopping\s+condition|"
-    r"retry\s+up\s+to|up\s+to\s+\d+\s+(times|attempts))\b",
-    re.IGNORECASE,
-)
-
-
-def has_loop(text: str) -> bool:
-    return LOOP_PATTERN.search(text) is not None
-
-
-def has_termination(text: str) -> bool:
-    return TERMINATION_PREDICATE.search(text) is not None
-
-
-def passes_comp_w(body: str) -> bool:
-    """COMP-W passes iff the body is non-iterative OR declares termination."""
-    if not has_loop(body):
-        return True
-    return has_termination(body)
 
 
 class TestCOMPWPassNonIterative:

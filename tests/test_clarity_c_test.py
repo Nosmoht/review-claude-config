@@ -15,37 +15,28 @@ CLAR-2 is LLM-binary in the rubric; these tests use a bare-verb+pronoun
 heuristic as a deterministic proxy for unit-test purposes.
 
 Grade boundary: CLAR-1 ✗ OR CLAR-2 ✗ → Clarity capped at C.
+
+Regex constants and ``passes_clar1``/``passes_clar2`` helpers now live
+in ``scripts/rubric_patterns.py`` so the deterministic runner and these
+tests share a single source of truth.
 """
 
-import re
+from __future__ import annotations
+
+import pathlib
+import sys
 
 import pytest
 
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-# CLAR-1: fuzzy-quantifier regex. Patterns mirror scoring-rubric.md §CLAR-1.
-FUZZY_QUANTIFIER = re.compile(
-    r"\b(slightly|a\s+bit|roughly|somewhat|some)\b",
-    re.IGNORECASE,
+from rubric_patterns import (  # noqa: E402, F401
+    BARE_PRONOUN_VERB,
+    FUZZY_QUANTIFIER,
+    passes_clar1,
+    passes_clar2,
 )
-
-# CLAR-2 proxy: bare action-verb directly followed by a bare pronoun
-# (no noun phrase between verb and pronoun) is the heuristic FAIL shape.
-BARE_PRONOUN_VERB = re.compile(
-    r"\b(process|store|save|parse|fix|use|send|handle|return|format|"
-    r"output|write|log|forward|retry|re-?run|commit|check)\s+"
-    r"(it|them|that|this|those)\b",
-    re.IGNORECASE,
-)
-
-
-def passes_clar1(text: str) -> bool:
-    """Return True when the text contains no fuzzy quantifier."""
-    return FUZZY_QUANTIFIER.search(text) is None
-
-
-def passes_clar2(text: str) -> bool:
-    """Return True when the text has no bare action-verb+pronoun pattern."""
-    return BARE_PRONOUN_VERB.search(text) is None
 
 
 class TestCLAR1Pass:
