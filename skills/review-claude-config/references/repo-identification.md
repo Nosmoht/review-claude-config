@@ -8,9 +8,9 @@ last_refreshed: 2026-04-14
 
 ## Report Path
 
-`$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-<skill>.md`
+`${CLAUDE_PLUGIN_DATA}/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-<skill>.md`
 
-Resolve `$CLAUDE_PLUGIN_DATA` via Bash: `echo $CLAUDE_PLUGIN_DATA`. This env var is provided by Claude Code to all plugin skills and hooks.
+`${CLAUDE_PLUGIN_DATA}` is substituted inline by Claude Code wherever it appears in skill, agent, hook, or MCP content — the rendered value reaches the model as a literal absolute path. Do **not** resolve it via Bash (`echo $CLAUDE_PLUGIN_DATA`): the variable is not reliably exported to Bash-tool subprocesses, and when present it may carry the value of a different installed plugin. The official contract covers inline substitution and hook/MCP/LSP subprocess env only — see https://code.claude.com/docs/en/plugins-reference.
 
 ## Slug Derivation
 
@@ -27,4 +27,4 @@ No git dependency. Slug is stable regardless of whether the target gains or lose
 
 ## Collision Detection
 
-Before writing a report, if `$CLAUDE_PLUGIN_DATA/reports/<slug>/` already has reports with a different `origin:` value, warn the user about a potential slug collision.
+Before writing a report, if `${CLAUDE_PLUGIN_DATA}/reports/<slug>/` already has reports with a different `origin:` value, warn the user about a potential slug collision.

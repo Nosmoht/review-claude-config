@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-14
+last_refreshed: 2026-04-19
 ---
 
 # Hook-Based Runtime Observation Patterns for Claude Code
@@ -315,3 +315,90 @@ Every hook receives `transcript_path` — the path to the session's full JSONL c
 6. **Observation hooks must be async to preserve agent performance.** Synchronous observation hooks on every tool call would measurably degrade interactive responsiveness. Use `async: true` for all logging hooks; reserve synchronous execution for policy gates only.
 
 7. **Exit code discipline is critical.** Per the exit-code contract analysis in multi-primitive-dependencies research, observation hooks must always exit 0. Exit 2 blocks actions; exit 1 creates transcript noise. The safety wrapper pattern (`try/except/finally: sys.exit(0)`) is mandatory.
+
+---
+
+## Event Catalog (CLI-Version-Pinned)
+
+*Added 2026-04-19. The 26-event catalog is fully documented in the Claude Code hooks reference with per-event minimum CLI versions. `verify_hook_events.py` (P0.2 in roadmap) maps each registered event in `hooks.json` against the installed CLI version and emits `status: unknown — verify against CLI version X.Y.Z` for events above the installed version.*
+
+### Full Event Catalog (26 events, v2.1.114 baseline)
+
+| Event | Phase | Min CLI | Blocking | Timeout (cmd) |
+|-------|-------|---------|----------|---------------|
+| SessionStart | session | 2.0.0 | No | 600 s |
+| SessionEnd | session | 2.0.0 | No | N/A |
+| UserPromptSubmit | turn | 2.0.0 | Yes | N/A |
+| Stop | turn | 2.0.0 | Yes | N/A |
+| StopFailure | turn | 2.1.78 | No | N/A |
+| PreToolUse | tool | 2.0.0 | Yes (exit 2) | N/A |
+| PostToolUse | tool | 2.0.0 | No | N/A |
+| PostToolUseFailure | tool | 2.1.76 | No | N/A |
+| PermissionRequest | permission | 2.0.0 | Yes | N/A |
+| PermissionDenied | permission | 2.1.89 | No | N/A |
+| SubagentStart | delegation | 2.0.0 | No | N/A |
+| SubagentStop | delegation | 2.0.0 | Yes | N/A |
+| TaskCreated | task | 2.1.84 | Yes | N/A |
+| TaskCompleted | task | 2.0.0 | Yes | N/A |
+| TeammateIdle | team | 2.0.0 | Yes | N/A |
+| ConfigChange | config | 2.0.0 | Yes | N/A |
+| CwdChanged | config | 2.1.83 | No | N/A |
+| FileChanged | config | 2.1.83 | No | N/A |
+| InstructionsLoaded | config | 2.0.0 | No | N/A |
+| PreCompact | compaction | 2.1.76 | Yes (v2.1.105+) | N/A |
+| PostCompact | compaction | 2.1.76 | No | N/A |
+| Elicitation | mcp | 2.1.76 | Yes | 30 s (prompt) |
+| ElicitationResult | mcp | 2.1.76 | Yes | N/A |
+| Notification | ui | 2.0.0 | No | N/A |
+| WorktreeCreate | git | 2.0.0 | Yes (any non-0) | N/A |
+| WorktreeRemove | git | 2.0.0 | No | N/A |
+
+Key additions 2026-Q1:
+- `PostToolUseFailure` (v2.1.76) — dedicated path for tool failures.
+- `CwdChanged`, `FileChanged` (v2.1.83) — filesystem-observation events.
+- `TaskCreated` (v2.1.84) — visible Task dispatch, enables trust-chain tracking for `apply-* → repair-*` delegation chains.
+- `PermissionDenied` (v2.1.89) — policy-violation audit log.
+
+Deprecated: `Setup` (historic, no equivalent in v2.1.114+); `Compact` (renamed to `PreCompact`/`PostCompact` in v2.1.76).
+
+### Hook Runtime Types
+
+Four handler types with distinct execution contracts:
+
+| Type | Input | Output | Timeout default | Async support |
+|------|-------|--------|-----------------|----------------|
+| `command` | stdin JSON | stdout JSON + exit code | 600 s | Yes (`async: true`) |
+| `http` | POST body JSON | HTTP response JSON | 30 s | No |
+| `prompt` | stdin + prompt template | stdout JSON `{"ok": bool, "reason": str}` | 30 s | No |
+| `agent` | stdin + prompt template | stdout JSON + tool calls (multi-turn up to ~50 tool-use turns) | 60 s | No |
+
+Agent-type hooks are specialized sub-agent handlers. Tools available: `Read`, `Grep`, `Glob` only (matches Explore/Plan agent tool set). Response format mirrors `prompt` hooks. No async support. Use case: verification-intensive Stop hooks ("verify all tests pass" with code inspection).
+
+### Exit Code Semantics (command type)
+
+- Exit 0: success, stdout JSON parsed.
+- Exit 2: blocking error; stderr becomes feedback to Claude; action blocked.
+- Exit 1 or other: non-blocking error; stderr logged to transcript, action proceeds.
+
+### CLI-Version Verification Strategy
+
+`scripts/verify_hook_events.py` (P0.2):
+1. Parse `claude --version` → `X.Y.Z`.
+2. Load repo-local event-to-version map (this file's table above, extracted to JSON).
+3. For each hook in `hooks.json`, check event-name present in map AND installed version ≥ min CLI version.
+4. Unknown event OR version-mismatch → emit `status: unknown — verify against CLI version <installed>` (not FAIL — future-compat).
+
+### Known Open Bugs (cross-linked)
+
+- #34713: false "Hook Error" labels for exit-0 hooks (up to 200–400 fake errors/session).
+- #23545: docs incomplete for `TeammateIdle` + `TaskCompleted` JSON decision control.
+- #18392: hooks in agent frontmatter not executed (only global/project hooks run).
+
+See `research/claude-code/known-issues.md` for detector recipes.
+
+### Sources for This Section
+
+Tier 1:
+- [Hooks reference](https://code.claude.com/docs/en/hooks) — accessed 2026-04-19
+- [Hooks guide](https://code.claude.com/docs/en/hooks-guide) — accessed 2026-04-19
+- [claude-code CHANGELOG.md](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md) — version-to-event mapping source

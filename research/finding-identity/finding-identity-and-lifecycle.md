@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-14
+last_refreshed: 2026-04-19
 ---
 
 # Stable Finding Identity and Lifecycle Tracking
@@ -43,3 +43,98 @@ Example:    WS-2:skills/foo/SKILL.md:Clarity/v1
 | DefectDojo dedup algorithms | DefectDojo docs | 1 |
 | GitHub primaryLocationLineHash | GitHub SARIF docs | 1 |
 | SemHash semantic dedup | arXiv:2410.01141 | 1 |
+
+---
+
+## Multi-Source Merge Rules (Added 2026-04-19)
+
+*Specification for merging findings produced by multiple LLM perspectives reviewing the same artifact. Feeds P1.1 (multi-perspective review) merge logic.*
+
+### Problem Statement
+
+With three perspectives reviewing the same skill/agent/rule artifact (Clarity, Correctness, Integration), findings frequently describe the same defect through different lenses. A naive line-hash-only match misses cross-perspective overlaps; a naive file-hash-only match over-merges unrelated findings on the same file. We need a layered scheme.
+
+### Dual-Layer Fingerprint
+
+**Layer 1 — exact-merge (SARIF `partialFingerprints`)**
+
+```
+partialFingerprints:
+  ruleId/v1:                  "<checklist-item-id>"                      // e.g. WS-2
+  pathAndDimension/v1:        "<rel-path>:<dimension>"                   // e.g. skills/foo/SKILL.md:Clarity
+  primaryLocationLineHash/v1: "<sha256 of the source line-range>"
+```
+
+Two findings merge unconditionally when all three `partialFingerprints` match.
+
+**Layer 2 — flag-for-review**
+
+Path + dimension match but line-hash differs:
+- Embedding similarity ≥ 0.92 → soft-merge (mark as `auto-merged-by-similarity`).
+- Embedding similarity ≥ 0.85 but < 0.92 → flag for manual review (`manual-review-required`).
+- Embedding similarity < 0.85 → keep separate.
+
+Embedding similarity is **never** the sole merge criterion. Path + dimension + similarity together.
+
+### Full Merge Pipeline (5 layers)
+
+```
+Input: findings_by_perspective = { Clarity: [...], Correctness: [...], Integration: [...] }
+
+Layer 0 (content-dedup, runs first):
+  For each pair of findings sharing (path, line-range, ≥80% token-overlap on evidence):
+    merge into one finding tagged dimensions = {A, B, ...}
+
+Layer 1 (domain-ownership):
+  For each surviving conflict (same partialFingerprint, conflicting recommendations):
+    winner = finding from the perspective owning the relevant dimension
+      - Safety     → Correctness perspective
+      - Clarity    → Clarity perspective
+      - Integration / Dependencies → Integration perspective
+
+Layer 2 (weighted vote):
+  If no Layer-1 owner: aggregate by confidence-weighted severity vote.
+  severity = max(perspective severities)
+
+Layer 3 (deterministic tie-break):
+  Lexicographic by perspective name (Clarity < Correctness < Integration).
+
+Layer 4 (manual-review escalation):
+  If ≥2 perspectives vote with confidence >0.8 on conflicting actions → flag for human review.
+```
+
+### Ownership Assignment Table
+
+| Dimension / checklist prefix | Owner perspective |
+|------------------------------|-------------------|
+| WS-*, RD-5, PD-1 (structure, readability) | Clarity |
+| COMP-X, COMP-Y, COMP-Z, CE-X, SAMP-1, SAMP-2, RD-4, RD-6 (correctness, robustness) | Correctness |
+| IJ-*, SP-*, META-1a, META-1b, META-2, META-3a, META-3b (integration, safety-of-chain, metadata) | Integration |
+
+Each sub-agent prompt declares its ownership explicitly and records cross-domain signals with `flag owner_conflict = true` rather than grading them. The orchestrator forwards cross-domain signals to the owning perspective for validation.
+
+### Shared Boundary Exemplars (BARS)
+
+All three perspectives share the same `boundary-exemplars.md` file. Evidence: Behaviorally Anchored Rating Scales research shows shared exemplars reduce rater divergence from 30 % to <5 % vs. per-rater exemplars. Only split per-perspective if pilot convergence fails (≤1-letter grade variance across two runs on unchanged file) — not preemptively.
+
+### SARIF Compatibility Note
+
+The combined `finding_id` recommended in the "Recommended Finding-ID Schema" section above maps cleanly to SARIF `partialFingerprints`:
+
+```
+finding_id = "{checklist_item}:{rel_path}:{dimension}/v1"
+         ↔ partialFingerprints["pathAndDimension/v1"] + ["ruleId/v1"]
+```
+
+SARIF tools can interpret our finding-id schema without loss. Our custom dimension annotation lives in `properties.dimension` — a SARIF-spec-compliant extension slot.
+
+### Sources for This Section
+
+Tier 1:
+- [OASIS SARIF v2.1.0 — partialFingerprints spec](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html)
+- [GitHub Code Scanning — SARIF support](https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning) (primaryLocationLineHash convention)
+- [SonarQube docs v10.1 — cascading match](https://docs.sonarsource.com/sonarqube-server/10.1/user-guide/issues)
+
+Tier 2:
+- [AIHR — BARS overview](https://www.aihr.com/blog/behaviorally-anchored-rating-scale/) — shared-exemplar evidence.
+- [NVIDIA NeMo SemDedup](https://docs.nvidia.com/nemo-framework/user-guide/25.07/datacuration/semdedup.html) — threshold-tuning baseline.

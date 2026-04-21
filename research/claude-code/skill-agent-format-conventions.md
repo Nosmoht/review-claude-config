@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-08
+last_refreshed: 2026-04-19
 ---
 
 # Claude Code Skill and Agent Format Conventions
@@ -210,3 +210,107 @@ Skills should work standalone AND as nodes in workflow chains. Design for compos
 
 ### Least-Privilege Tools
 Declare only the tools the skill's workflow actually uses. Least-privilege enforcement incurs only 1-6% latency overhead and significantly improves safety (MiniScope, arXiv:2512.11147).
+
+## Agent Frontmatter 2026 Catalog
+
+*Added 2026-04-19 after Opus 4.7 release (2026-04-16, CLI v2.1.111). Previously implicit fields are now documented explicitly with semantics and model-compatibility.*
+
+### Full 15-Field Catalog
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `name` | string | Yes | — | kebab-case, max 64 chars, no "anthropic"/"claude" substring |
+| `description` | string | Yes | — | max 1024 chars, no XML tags |
+| `model` | string | No | `inherit` | `sonnet`, `opus`, `haiku`, `inherit`, or full model ID (e.g. `claude-opus-4-7`) |
+| `color` | string | No | — | Visual ID: red, blue, green, yellow, purple, orange, pink, cyan |
+| `tools` | array\|string | No | all | Allowlist; mutually exclusive with `disallowedTools` in spirit |
+| `disallowedTools` | array\|string | No | — | Denylist; subtracted from inherited tools |
+| `maxTurns` | integer | No | ∞ | Runaway prevention |
+| `background` | boolean | No | `false` | Pre-approves permissions, disables AskUserQuestion |
+| `isolation` | string | No | `shared` | `worktree` spawns isolated git worktree with auto-cleanup |
+| `memory` | string | No | `none` | `user` / `project` / `local` — first 200 lines / 25 KB injected |
+| `initialPrompt` | string | No | — | Auto-submitted on start via `--agent` or `agent` setting |
+| `mcpServers` | array | No | — | Additional MCP server access; NOT supported in plugin agents |
+| `skills` | array | No | — | Full skill content injected at startup; NOT inherited from parent |
+| `hooks` | object | No | — | Lifecycle hooks (PreToolUse, PostToolUse, PostToolUseFailure, Stop) |
+| `permissionMode` | string | No | `default` | 6 modes; see hierarchy below |
+| `effort` | string | No | `inherit` | Opus 4.7 exclusive for `xhigh` level |
+
+### `effort` Field (Opus 4.7+)
+
+| Level | Compatible models | Use case |
+|-------|-------------------|----------|
+| `low` | Sonnet, Opus, Haiku | Fast, simple tasks; aggressive scoping |
+| `medium` | Sonnet, Opus, Haiku | Balanced agentic workflows |
+| `high` (default) | Sonnet, Opus, Haiku | Complex reasoning, standard agentic |
+| `xhigh` | **Opus 4.7 only** | Long-horizon work (30+ min), exploratory multi-step |
+| `max` | Opus 4.7 | Frontier problems without cost ceiling |
+
+### `permissionMode` Hierarchy
+
+6 values: `default`, `acceptEdits`, `auto`, `dontAsk`, `bypassPermissions`, `plan`.
+
+**Parent-overrides-child rule** (subagent dispatch):
+- Parent `bypassPermissions` or `acceptEdits` → sub-agent inherits, cannot override.
+- Parent `auto` → sub-agent inherits classifier rules, frontmatter override ignored.
+- Otherwise: sub-agent frontmatter wins.
+
+### Opus 4.7 Breaking Changes (SAMP-1 / SAMP-2)
+
+Opus 4.7 (released 2026-04-16) removes sampling parameters and changes the tokenizer. Review rules:
+
+- **SAMP-1** (PE dimension, body check): skill/agent body must not contain hardcoded `temperature`, `top_p`, `top_k` references. Regex: `/\b(temperature|top_p|top_k)\s*[:=]/i`. FAIL caps PE at Grade C.
+- **SAMP-2** (Metadata dimension, frontmatter check): frontmatter override block must be free of removed sampling params. FAIL is hard F — at runtime, Opus 4.7 returns 400-error.
+- **Extended thinking budgets removed**: only adaptive thinking (`thinking: {type: "adaptive"}`) supported.
+- **New tokenizer**: ~1×–1.35× more tokens per text vs Opus 4.6 (up to ~35 % more). Cached prefixes sized for 4.6 may drop below the 4,096-token Opus cache minimum on 4.7. Re-size prefixes accordingly.
+- **Thinking omitted by default**: `display: "omitted"` (previous: `"summarized"`).
+- **Task Budgets (Beta)**: advisory token limit across the agentic loop; not a hard cap like `max_tokens`.
+- **Literal instruction following**: less inference; does not generalize unstated requests.
+- **Fewer tool calls by default**: more reasoning, fewer tool invocations.
+- **Fewer subagents spawned by default**: steerable via prompting.
+- **High-resolution vision**: max 2576 px / 3.75 MP (previously 1568 px / 1.15 MP).
+
+### Archetype Defaults
+
+Review agent (for `/review-agent`):
+```yaml
+name: review-agent
+model: opus
+effort: high
+tools: Read, Grep, Bash
+permissionMode: plan
+memory: user
+```
+
+Build agent (CI-fix, async):
+```yaml
+name: build-agent
+model: sonnet
+effort: xhigh
+tools: Read, Edit, Bash, Glob
+maxTurns: 15
+background: true
+isolation: worktree
+```
+
+Research agent (knowledge gathering):
+```yaml
+name: research-agent
+model: haiku
+effort: medium
+tools: Read, Grep, Glob, WebSearch, WebFetch
+maxTurns: 20
+memory: project
+```
+
+### Sources for This Section
+
+Tier 1:
+- [Anthropic — Opus 4.7 release notes](https://platform.claude.com/docs/en/about-claude/models/whats-new-claude-4-7) — 2026-04-16
+- [Anthropic — Effort Parameter](https://platform.claude.com/docs/en/build-with-claude/effort)
+- [Claude Code — Sub-Agents](https://code.claude.com/docs/en/sub-agents)
+
+Tier 2:
+- [GitHub Blog: Claude Opus 4.7 GA](https://github.blog/changelog/2026-04-16-claude-opus-4-7-is-generally-available/)
+
+Gaps flagged (unverified in docs): when `effort` is evaluated in a subagent vs main-thread dispatch; worktree cleanup criteria (git-clean vs uncommitted-tolerance); memory-injection timing (session start vs per-turn); Task-Budgets interaction with `effort`; hook execution order in subagent chains.
