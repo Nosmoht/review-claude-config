@@ -1,0 +1,905 @@
+r"""Tests for scripts/rubric_binary_evaluator.py.
+
+Source of truth: skills/review-claude-config/references/scoring-rubric.md
+section "Binary-Verifiable Rubric Items" (L93-188).
+
+The runner produces PASS / FAIL / NA verdicts for 24 binary rubric
+items. Per-item classes below pin at minimum one PASS, one FAIL, and
+(where applicable) one NA fixture. Integration classes cover the
+full pipeline against frozen SKILL.md fixtures and the exit-code
+contract.
+
+Schema-version contract: the runner emits ``schema_version: 1``.
+Breaking changes (removed / renamed items, changed verdict enum)
+require a bump; additive keys under ``evidence.<item>`` or new rubric
+items in ``verdicts`` do not.
+"""
+
+from __future__ import annotations
+
+import json
+import pathlib
+import subprocess
+import sys
+
+import pytest
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+
+from rubric_binary_evaluator import (  # noqa: E402
+    BINARY_ITEM_IDS,
+    NON_BINARY_ITEMS,
+    SCHEMA_VERSION,
+    check_AH_2b,
+    check_CE_X,
+    check_CLAR_1,
+    check_CLAR_2,
+    check_CLAR_3,
+    check_CLAR_4,
+    check_COMP_W,
+    check_COMP_X,
+    check_COMP_Y,
+    check_COMP_Z,
+    check_IJ_1b,
+    check_META_1a,
+    check_META_2,
+    check_META_3a,
+    check_META_3b,
+    check_META_4,
+    check_RL_1b,
+    check_RL_3b,
+    check_RL_4b,
+    check_RL_9b,
+    check_SAMP_1,
+    check_SAMP_2,
+    check_SP_2b,
+    check_SP_4b,
+    evaluate,
+    is_agentic,
+    needs_rl9b,
+    parse_frontmatter,
+    primary_verb,
+    tools_list,
+)
+from rubric_patterns import (  # noqa: E402
+    BARE_PRONOUN_VERB,
+    FIRST_PERSON,
+    FUZZY_QUANTIFIER,
+    LOOP_PATTERN,
+    SECOND_PERSON,
+    TERMINATION_PREDICATE,
+)
+
+FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "rubric_evaluator"
+REVIEW_SKILL_FIXTURE = FIXTURE_DIR / "review-skill.SKILL.md"
+SCAFFOLD_SKILL_FIXTURE = FIXTURE_DIR / "scaffold-skill.SKILL.md"
+
+
+# ---------------------------------------------------------------------------
+# Shared-module parity: the moved regexes must match their original
+# bodies byte-for-byte so prior test assertions keep holding.
+# ---------------------------------------------------------------------------
+
+
+class TestSharedModuleParity:
+    """Verbatim pattern strings — drift detector for the Commit 1 refactor."""
+
+    def test_first_person_pattern(self):
+        assert FIRST_PERSON.pattern == r"\b(I|my|me)\s"
+
+    def test_second_person_pattern(self):
+        assert SECOND_PERSON.pattern == r"\b(you can|your)\s"
+
+    def test_fuzzy_quantifier_pattern(self):
+        assert FUZZY_QUANTIFIER.pattern == r"\b(slightly|a\s+bit|roughly|somewhat|some)\b"
+
+    def test_bare_pronoun_verb_pattern(self):
+        assert BARE_PRONOUN_VERB.pattern == (
+            r"\b(process|store|save|parse|fix|use|send|handle|return|format|"
+            r"output|write|log|forward|retry|re-?run|commit|check)\s+"
+            r"(it|them|that|this|those)\b"
+        )
+
+    def test_loop_pattern(self):
+        assert LOOP_PATTERN.pattern == r"\b(for\s+each|retry|iterate|while\s+|loop)\b"
+
+    def test_termination_predicate_pattern(self):
+        assert TERMINATION_PREDICATE.pattern == (
+            r"\b(stop\s+when|terminate|halt|max.*iterations?|"
+            r"escalate\s+after|loop\s+until|exit\s+(if|when)|stopping\s+condition|"
+            r"retry\s+up\s+to|up\s+to\s+\d+\s+(times|attempts))\b"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Frontmatter parser — three list forms + absent/empty + malformed.
+# ---------------------------------------------------------------------------
+
+
+class TestParseFrontmatter:
+    def _write(self, tmp_path: pathlib.Path, body: str) -> pathlib.Path:
+        p = tmp_path / "fixture.md"
+        p.write_text(body, encoding="utf-8")
+        return p
+
+    def test_flat_string(self, tmp_path):
+        p = self._write(tmp_path, "---\nname: foo\ndescription: bar\n---\nbody")
+        fm, _ = parse_frontmatter(p)
+        assert fm["name"] == "foo"
+        assert fm["description"] == "bar"
+
+    def test_inline_bracket_list(self, tmp_path):
+        p = self._write(tmp_path, "---\nallowed-tools: [Read, Write, Bash]\n---\nbody")
+        fm, _ = parse_frontmatter(p)
+        assert fm["allowed-tools"] == ["Read", "Write", "Bash"]
+
+    def test_comma_list(self, tmp_path):
+        p = self._write(tmp_path, "---\nallowed-tools: Read, Write, Bash\n---\nbody")
+        fm, _ = parse_frontmatter(p)
+        assert fm["allowed-tools"] == ["Read", "Write", "Bash"]
+
+    def test_dash_list(self, tmp_path):
+        p = self._write(
+            tmp_path,
+            "---\nallowed-tools:\n  - Read\n  - Write\n  - Bash\n---\nbody",
+        )
+        fm, _ = parse_frontmatter(p)
+        assert fm["allowed-tools"] == ["Read", "Write", "Bash"]
+
+    def test_absent_key(self, tmp_path):
+        p = self._write(tmp_path, "---\nname: foo\n---\nbody")
+        fm, _ = parse_frontmatter(p)
+        assert "allowed-tools" not in fm
+
+    def test_no_frontmatter(self, tmp_path):
+        p = self._write(tmp_path, "no frontmatter here")
+        fm, raw = parse_frontmatter(p)
+        assert fm == {}
+        assert raw == ""
+
+    def test_html_comment_before_frontmatter(self, tmp_path):
+        # HTML comment on line 1 breaks parser per validate_schema.py L30 —
+        # runner returns empty fm, which cascades to NAs downstream.
+        p = self._write(tmp_path, "<!-- Frozen -->\n---\nname: foo\n---\nbody")
+        fm, _ = parse_frontmatter(p)
+        assert fm == {}
+
+    def test_raw_frontmatter_preserved(self, tmp_path):
+        p = self._write(tmp_path, "---\nname: foo\ntemperature: 0.3\n---\nbody")
+        _, raw = parse_frontmatter(p)
+        assert "temperature: 0.3" in raw
+
+    def test_block_scalar_description(self, tmp_path):
+        p = self._write(
+            tmp_path,
+            "---\nname: foo\ndescription: >\n  Evaluates a skill across\n  dimensions.\n---\nbody",
+        )
+        fm, _ = parse_frontmatter(p)
+        assert fm["name"] == "foo"
+        assert "Evaluates a skill across" in fm["description"]
+
+
+# ---------------------------------------------------------------------------
+# is_agentic / needs_rl9b branch coverage.
+# ---------------------------------------------------------------------------
+
+
+class TestIsAgentic:
+    def test_dispatch_verb_pascal_case_matches(self):
+        assert is_agentic("Invoke Agent(subagent_type=...)", [])
+
+    def test_dispatch_verb_lowercase_does_not_match(self):
+        # Case-sensitive branch 1.
+        assert not is_agentic("invoke agent only as helper", [])
+
+    def test_loop_verb_matches(self):
+        assert is_agentic("for each candidate, score", [])
+
+    def test_until_matches_agentic_but_not_loop_pattern(self):
+        # AGENTIC_LOOP_PATTERN includes `until`; LOOP_PATTERN does not.
+        assert is_agentic("Retry until stable", [])
+
+    def test_write_tool_matches(self):
+        assert is_agentic("plain body", ["Write"])
+
+    def test_edit_tool_matches(self):
+        assert is_agentic("plain body", ["Edit"])
+
+    def test_bash_tool_matches(self):
+        assert is_agentic("plain body", ["Bash"])
+
+    def test_lowercase_write_does_not_match(self):
+        # Branch 3 is exact-case membership.
+        assert not is_agentic("plain body", ["write"])
+
+    def test_read_only_tools_not_agentic(self):
+        assert not is_agentic("parse and emit", ["Read", "Glob"])
+
+
+class TestNeedsRL9B:
+    def test_read_paths_with_arguments(self):
+        assert needs_rl9b("process $ARGUMENTS file", ["Read", "Glob"])
+
+    def test_write_tool(self):
+        assert needs_rl9b("plain body", ["Write"])
+
+    def test_read_only_without_arguments(self):
+        assert not needs_rl9b("plain body", ["Read", "Glob"])
+
+    def test_arguments_without_read_tool(self):
+        assert not needs_rl9b("process $ARGUMENTS", ["WebSearch"])
+
+
+# ---------------------------------------------------------------------------
+# primary_verb — COMP-X review-skill clause trigger.
+# ---------------------------------------------------------------------------
+
+
+class TestPrimaryVerb:
+    def test_description_verb_wins(self):
+        fm = {"description": "Evaluates a single SKILL.md", "name": "foo"}
+        assert primary_verb(fm) == "evaluate"
+
+    def test_fallback_to_name(self):
+        fm = {"description": "Use when something", "name": "review-skill"}
+        assert primary_verb(fm) == "review"
+
+    def test_scaffold_description_no_match(self):
+        fm = {"description": "Creates a research-optimized skill", "name": "scaffold-skill"}
+        assert primary_verb(fm) is None
+
+    def test_audit_name_token(self):
+        fm = {"description": "Use when checking hygiene", "name": "audit-memory"}
+        assert primary_verb(fm) == "audit"
+
+
+# ---------------------------------------------------------------------------
+# Per-item check functions. PASS + FAIL + NA where applicable.
+# ---------------------------------------------------------------------------
+
+
+class TestMETA1a:
+    def test_overlap_passes(self):
+        fm = {"description": "Evaluates MCP server configs"}
+        result = check_META_1a("mcp server evaluation body", fm)
+        assert result["verdict"] == "PASS"
+
+    def test_no_overlap_fails(self):
+        fm = {"description": "Evaluates MCP configs"}
+        result = check_META_1a("totally unrelated prose about airplanes and fjords", fm)
+        assert result["verdict"] == "FAIL"
+
+    def test_absent_description_na(self):
+        assert check_META_1a("body", {})["verdict"] == "NA"
+
+
+class TestMETA2:
+    def test_do_not_use_passes(self):
+        fm = {"description": "Use when X. Do NOT use for agents."}
+        assert check_META_2("body", fm)["verdict"] == "PASS"
+
+    def test_not_for_passes(self):
+        fm = {"description": "Scaffolds a skill. Not for rules."}
+        assert check_META_2("body", fm)["verdict"] == "PASS"
+
+    def test_no_exclusion_fails(self):
+        fm = {"description": "Use when X."}
+        assert check_META_2("body", fm)["verdict"] == "FAIL"
+
+
+class TestMETA3a:
+    def test_concrete_trigger_passes(self):
+        fm = {"description": "Use when file contains hooks.json"}
+        assert check_META_3a("body", fm)["verdict"] == "PASS"
+
+    def test_fuzzy_trigger_fails(self):
+        fm = {"description": "Apply as needed during config work"}
+        assert check_META_3a("body", fm)["verdict"] == "FAIL"
+
+    def test_when_useful_fails(self):
+        fm = {"description": "Apply when useful during review"}
+        assert check_META_3a("body", fm)["verdict"] == "FAIL"
+
+
+class TestMETA3b:
+    def test_empty_description_na(self, tmp_path):
+        # Without tokens there is nothing to overlap with siblings.
+        p = tmp_path / "SKILL.md"
+        p.write_text("---\nname: x\n---\nbody")
+        fm, _ = parse_frontmatter(p)
+        assert check_META_3b(p, fm)["verdict"] == "NA"
+
+    def test_counter_reference_overrides_overlap(self):
+        # review-skill description contains "Do NOT use for agents or rules" —
+        # counter-reference overrides any token overlap with siblings.
+        fm, _ = parse_frontmatter(REVIEW_SKILL_FIXTURE)
+        assert check_META_3b(REVIEW_SKILL_FIXTURE, fm)["verdict"] == "PASS"
+
+
+class TestMETA4:
+    def test_third_person_passes(self):
+        assert check_META_4({"description": "Evaluates a skill"})["verdict"] == "PASS"
+
+    def test_first_person_fails(self):
+        assert check_META_4({"description": "I review skills"})["verdict"] == "FAIL"
+
+    def test_second_person_fails(self):
+        assert check_META_4({"description": "Use your workbook"})["verdict"] == "FAIL"
+
+    def test_absent_description_na(self):
+        assert check_META_4({})["verdict"] == "NA"
+
+
+class TestCLAR1:
+    def test_exact_quantifier_passes(self):
+        assert check_CLAR_1("retry 3 times")["verdict"] == "PASS"
+
+    def test_fuzzy_fails(self):
+        assert check_CLAR_1("retry roughly 10 times")["verdict"] == "FAIL"
+
+
+class TestCLAR2:
+    def test_resolved_pronoun_passes(self):
+        assert check_CLAR_2("parse the output; store the matches")["verdict"] == "PASS"
+
+    def test_bare_pronoun_fails(self):
+        result = check_CLAR_2("parse output; process them")
+        assert result["verdict"] == "FAIL"
+        assert result["evidence"].get("heuristic") is True
+
+
+class TestCLAR3:
+    def test_trigger_with_recovery_passes(self):
+        body = 'On timeout, write a {"status": "missing"} stub and continue to step b.4.'
+        assert check_CLAR_3(body)["verdict"] == "PASS"
+
+    def test_trigger_without_recovery_fails(self):
+        body = "Collect errors per perspective; do not abort the whole dispatch."
+        result = check_CLAR_3(body)
+        assert result["verdict"] == "FAIL"
+        assert result["evidence"]["trigger"] == "abort"
+
+    def test_no_trigger_na(self):
+        assert check_CLAR_3("plain descriptive body")["verdict"] == "NA"
+
+
+class TestCLAR4:
+    def test_no_dependency_na(self):
+        assert check_CLAR_4("plain body with no dependencies")["verdict"] == "NA"
+
+    def test_dependency_with_failure_branch_passes(self):
+        # CLAR_4_FAILURE_BRANCH uses [^.]{0,200}?; the `if ... fails`
+        # clause must not contain a period between them.
+        body = (
+            "Step 5 depends on step 4 completed; "
+            "if upstream fails or is missing, degrade via fallback"
+        )
+        assert check_CLAR_4(body)["verdict"] == "PASS"
+
+    def test_dependency_with_fallback_heading_passes(self):
+        body = "b.5 depends on b.4 completed.\n\n## Error Handling\n\nFallback: ..."
+        assert check_CLAR_4(body)["verdict"] == "PASS"
+
+    def test_dependency_without_branch_fails(self):
+        body = "Step 5 depends on step 4 completed. Continue onwards."
+        assert check_CLAR_4(body)["verdict"] == "FAIL"
+
+
+class TestCEX:
+    def test_no_summarisation_mention_na(self):
+        assert check_CE_X("plain procedural body")["verdict"] == "NA"
+
+    def test_summarisation_with_justification_passes(self):
+        # CE_X_TRIGGER uses American spelling `summariz(e|ation)` and
+        # `compact(ion)?`. British variants ("summarisation") do not
+        # match the trigger.
+        body = (
+            "We keep the conversation history for 20 turns and summarize each. "
+            "Masking is justified: summarization irreversibly drops tool outputs."
+        )
+        assert check_CE_X(body)["verdict"] == "PASS"
+
+    def test_summarisation_without_justification_fails(self):
+        body = "Keep the conversation history across 20 turns and summarize periodically."
+        assert check_CE_X(body)["verdict"] == "FAIL"
+
+
+class TestCOMPX:
+    def test_non_review_success_passes(self):
+        fm = {"description": "Creates a scaffold"}
+        body = "Complete when all output sections are emitted."
+        assert check_COMP_X(body, fm)["verdict"] == "PASS"
+
+    def test_review_without_convergence_fails(self):
+        fm = {"description": "Evaluates a skill", "name": "review-skill"}
+        body = "Complete when every checklist item has a verdict."
+        assert check_COMP_X(body, fm)["verdict"] == "FAIL"
+
+    def test_review_with_convergence_passes(self):
+        fm = {"description": "Evaluates a skill", "name": "review-skill"}
+        body = "Complete when all verdicts recorded AND re-run variance is zero across two consecutive runs."
+        assert check_COMP_X(body, fm)["verdict"] == "PASS"
+
+
+class TestCOMPY:
+    def test_binary_predicate_passes(self):
+        assert check_COMP_Y("validate that the count equals 24")["verdict"] == "PASS"
+
+    def test_holistic_phrase_fails(self):
+        assert check_COMP_Y("output looks good when complete")["verdict"] == "FAIL"
+
+    def test_no_predicate_fails(self):
+        assert check_COMP_Y("emit the report")["verdict"] == "FAIL"
+
+
+class TestCOMPZ:
+    def test_evidence_passes(self):
+        assert check_COMP_Z("each finding has Evidence: <quote>")["verdict"] == "PASS"
+
+    def test_no_trail_fails(self):
+        assert check_COMP_Z("emit findings as a list")["verdict"] == "FAIL"
+
+
+class TestCOMPW:
+    def test_non_iterative_na(self):
+        assert check_COMP_W("parse input, emit report")["verdict"] == "NA"
+
+    def test_loop_with_termination_passes(self):
+        body = "Retry up to 3 times; escalate after 3 consecutive failures."
+        assert check_COMP_W(body)["verdict"] == "PASS"
+
+    def test_loop_without_termination_fails(self):
+        assert check_COMP_W("retry on failure")["verdict"] == "FAIL"
+
+
+class TestSAMP1:
+    def test_no_param_na(self):
+        assert check_SAMP_1("plain body")["verdict"] == "NA"
+
+    def test_temperature_fails(self):
+        assert check_SAMP_1("Set temperature=0.5 during scoring")["verdict"] == "FAIL"
+
+    def test_top_p_fails(self):
+        assert check_SAMP_1("Use top_p: 0.9 for variety")["verdict"] == "FAIL"
+
+
+class TestSAMP2:
+    def test_no_param_na(self):
+        assert check_SAMP_2("name: foo\ndescription: bar")["verdict"] == "NA"
+
+    def test_temperature_in_frontmatter_fails(self):
+        assert check_SAMP_2("name: foo\ntemperature: 0.3")["verdict"] == "FAIL"
+
+
+class TestSP2b:
+    def test_absent_tools_na(self):
+        assert check_SP_2b("body", {})["verdict"] == "NA"
+
+    def test_read_only_subset_na(self):
+        fm = {"allowed-tools": ["Read", "Glob"]}
+        assert check_SP_2b("body", fm)["verdict"] == "NA"
+
+    def test_mutating_tool_with_binding_passes(self):
+        fm = {"allowed-tools": ["Read", "Write"]}
+        body = "Write is restricted to $CLAUDE_PLUGIN_DATA/reports/ only. Read is used only for loading references."
+        assert check_SP_2b(body, fm)["verdict"] == "PASS"
+
+    def test_mutating_tool_without_binding_fails(self):
+        fm = {"allowed-tools": ["Read", "Write", "Bash"]}
+        body = "This skill uses Write and Bash to emit reports."
+        assert check_SP_2b(body, fm)["verdict"] == "FAIL"
+
+
+class TestSP4b:
+    def test_no_write_na(self):
+        fm = {"allowed-tools": ["Read", "Bash"]}
+        assert check_SP_4b("body", fm)["verdict"] == "NA"
+
+    def test_write_without_partner_na(self):
+        fm = {"allowed-tools": ["Read", "Write"]}
+        assert check_SP_4b("body", fm)["verdict"] == "NA"
+
+    def test_tier_a_all_constrained_passes(self):
+        fm = {"allowed-tools": ["Write", "Bash", "Agent"]}
+        body = (
+            "Write is restricted to report paths only. "
+            "Bash is allowlisted to specific commands via policy_gate. "
+            "Agent is restricted to allowlisted subagent_type values."
+        )
+        assert check_SP_4b(body, fm)["verdict"] == "PASS"
+
+    def test_tier_a_unconstrained_fails(self):
+        fm = {"allowed-tools": ["Write", "Bash"]}
+        body = "This skill uses Write and Bash freely without scope limits."
+        assert check_SP_4b(body, fm)["verdict"] == "FAIL"
+
+
+class TestIJ1b:
+    def test_no_write_na(self):
+        fm = {"allowed-tools": ["Read"]}
+        assert check_IJ_1b("$ARGUMENTS body", fm)["verdict"] == "NA"
+
+    def test_no_external_input_na(self):
+        fm = {"allowed-tools": ["Write"]}
+        assert check_IJ_1b("plain body no inputs", fm)["verdict"] == "NA"
+
+    def test_both_predicates_passes(self):
+        fm = {"allowed-tools": ["Write"]}
+        body = (
+            "Validate repo-slug matches ^[a-z0-9-]+$ before constructing the path. "
+            "Preview via AskUserQuestion before first Write."
+        )
+        assert check_IJ_1b(body, fm)["verdict"] == "PASS"
+
+    def test_missing_validation_fails(self):
+        fm = {"allowed-tools": ["Write"]}
+        body = "Use $ARGUMENTS. Preview via AskUserQuestion before Write."
+        result = check_IJ_1b(body, fm)
+        assert result["verdict"] == "FAIL"
+        assert "validation-predicate" in result["evidence"]["missing"]
+
+    def test_missing_write_gate_fails(self):
+        fm = {"allowed-tools": ["Write"]}
+        body = "Validate $ARGUMENTS format matches ^[a-z]+$ then write."
+        result = check_IJ_1b(body, fm)
+        assert result["verdict"] == "FAIL"
+        assert "write-gate-predicate" in result["evidence"]["missing"]
+
+
+class TestRL1b:
+    def test_non_agentic_na(self):
+        assert check_RL_1b("body", is_agentic_flag=False)["verdict"] == "NA"
+
+    def test_max_wait_passes(self):
+        assert check_RL_1b("with max wait 5 minutes", is_agentic_flag=True)["verdict"] == "PASS"
+
+    def test_max_iterations_passes(self):
+        assert check_RL_1b("max iterations: 3", is_agentic_flag=True)["verdict"] == "PASS"
+
+    def test_status_predicate_passes(self):
+        assert check_RL_1b('status: "terminal"', is_agentic_flag=True)["verdict"] == "PASS"
+
+    def test_no_predicate_fails(self):
+        assert check_RL_1b("keep trying", is_agentic_flag=True)["verdict"] == "FAIL"
+
+
+class TestRL3b:
+    def test_non_agentic_na(self):
+        assert check_RL_3b("retry", is_agentic_flag=False)["verdict"] == "NA"
+
+    def test_no_retry_na(self):
+        assert check_RL_3b("plain body", is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_retry_with_cap_passes(self):
+        body = "Maximum 3 reflection cycles; retry each up to 2 times on failure."
+        assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "PASS"
+
+    def test_retry_without_cap_fails(self):
+        body = "retry the call and continue"
+        assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "FAIL"
+
+
+class TestRL4b:
+    def test_non_agentic_na(self):
+        assert check_RL_4b("body", is_agentic_flag=False)["verdict"] == "NA"
+
+    def test_askuserquestion_passes(self):
+        assert check_RL_4b("ask via AskUserQuestion", is_agentic_flag=True)["verdict"] == "PASS"
+
+    def test_partial_status_passes(self):
+        assert check_RL_4b('status: "partial"', is_agentic_flag=True)["verdict"] == "PASS"
+
+    def test_escalate_heading_passes(self):
+        body = "\n- escalate when budget exhausted\n"
+        assert check_RL_4b(body, is_agentic_flag=True)["verdict"] == "PASS"
+
+    def test_no_path_fails(self):
+        assert check_RL_4b("silently continue on failure", is_agentic_flag=True)["verdict"] == "FAIL"
+
+
+class TestRL9b:
+    def test_not_needed_na(self):
+        assert check_RL_9b("body", "name: foo", needs_rl9b_flag=False)["verdict"] == "NA"
+
+    def test_redact_rule_passes(self):
+        body = "redact token-like substrings matching /[A-Za-z0-9_-]{20,}/ with <REDACTED>"
+        assert check_RL_9b(body, "", needs_rl9b_flag=True)["verdict"] == "PASS"
+
+    def test_truncate_rule_passes(self):
+        body = "truncate evidence blocks at 500 characters before write"
+        assert check_RL_9b(body, "", needs_rl9b_flag=True)["verdict"] == "PASS"
+
+    def test_skip_env_rule_passes(self):
+        body = "skip writes entirely when path matches **/*.env or credentials.*"
+        assert check_RL_9b(body, "", needs_rl9b_flag=True)["verdict"] == "PASS"
+
+    def test_no_rule_fails(self):
+        body = "read user file and write output"
+        assert check_RL_9b(body, "", needs_rl9b_flag=True)["verdict"] == "FAIL"
+
+
+class TestAH2b:
+    def test_no_trigger_na(self):
+        assert check_AH_2b("plain body")["verdict"] == "NA"
+
+    def test_trigger_with_default_passes(self):
+        body = "If $ARGUMENTS is empty, default to **/SKILL.md glob and prompt the user to pick."
+        assert check_AH_2b(body)["verdict"] == "PASS"
+
+    def test_trigger_with_prompt_stop_passes(self):
+        body = 'If $ARGUMENTS is empty, prompt the user: "Provide the path to a SKILL.md file to review." and stop.'
+        assert check_AH_2b(body)["verdict"] == "PASS"
+
+    def test_trigger_without_response_fails(self):
+        body = "If $ARGUMENTS is missing, the skill cannot run."
+        assert check_AH_2b(body)["verdict"] == "FAIL"
+
+
+# ---------------------------------------------------------------------------
+# Schema stability + end-to-end fixtures.
+# ---------------------------------------------------------------------------
+
+EXPECTED_TOP_LEVEL_KEYS = {
+    "schema_version",
+    "artifact_path",
+    "artifact_type",
+    "artifact_frontmatter",
+    "verdicts",
+    "stats",
+    "non_binary_items",
+    "runner_error",
+}
+
+
+class TestSchemaStability:
+    def test_top_level_keys_exact(self):
+        result = evaluate(REVIEW_SKILL_FIXTURE)
+        assert set(result.keys()) == EXPECTED_TOP_LEVEL_KEYS
+
+    def test_schema_version_is_one(self):
+        result = evaluate(REVIEW_SKILL_FIXTURE)
+        assert result["schema_version"] == 1
+        assert SCHEMA_VERSION == 1
+
+    def test_verdicts_cover_all_binary_items(self):
+        result = evaluate(REVIEW_SKILL_FIXTURE)
+        assert set(result["verdicts"].keys()) == set(BINARY_ITEM_IDS)
+
+    def test_evidence_tolerates_unknown_keys(self):
+        result = evaluate(REVIEW_SKILL_FIXTURE)
+        for item_id, v in result["verdicts"].items():
+            assert "verdict" in v, f"{item_id} missing verdict"
+            assert "evidence" in v, f"{item_id} missing evidence"
+            assert isinstance(v["evidence"], dict)
+
+    def test_stats_counts_sum_to_24(self):
+        result = evaluate(REVIEW_SKILL_FIXTURE)
+        s = result["stats"]
+        assert s["pass"] + s["fail"] + s["na"] == 24
+
+
+REVIEW_SKILL_EXPECTED = {
+    "META-1a": "PASS",
+    "META-2": "PASS",
+    "META-3a": "PASS",
+    "META-3b": "PASS",
+    "META-4": "PASS",
+    "CLAR-1": "PASS",
+    "CLAR-2": "FAIL",
+    "CLAR-3": "FAIL",
+    "CLAR-4": "PASS",
+    "CE-X": "PASS",
+    "COMP-X": "FAIL",
+    "COMP-Y": "PASS",
+    "COMP-Z": "PASS",
+    "COMP-W": "FAIL",
+    "SAMP-1": "NA",
+    "SAMP-2": "NA",
+    "SP-2b": "PASS",
+    "SP-4b": "PASS",
+    "IJ-1b": "FAIL",
+    "RL-1b": "PASS",
+    "RL-3b": "NA",
+    "RL-4b": "PASS",
+    "RL-9b": "PASS",
+    "AH-2b": "PASS",
+}
+
+SCAFFOLD_SKILL_EXPECTED = {
+    "META-1a": "PASS",
+    "META-2": "PASS",
+    "META-3a": "PASS",
+    "META-3b": "FAIL",
+    "META-4": "PASS",
+    "CLAR-1": "PASS",
+    "CLAR-2": "FAIL",
+    "CLAR-3": "FAIL",
+    "CLAR-4": "NA",
+    "CE-X": "FAIL",
+    "COMP-X": "FAIL",
+    "COMP-Y": "FAIL",
+    "COMP-Z": "FAIL",
+    "COMP-W": "FAIL",
+    "SAMP-1": "NA",
+    "SAMP-2": "NA",
+    "SP-2b": "PASS",
+    "SP-4b": "FAIL",
+    "IJ-1b": "PASS",
+    "RL-1b": "PASS",
+    "RL-3b": "FAIL",
+    "RL-4b": "PASS",
+    "RL-9b": "FAIL",
+    "AH-2b": "NA",
+}
+
+
+class TestEndToEndFixtures:
+    """Pinned verdicts against frozen fixture copies of review-skill
+    and scaffold-skill SKILL.md (not live files). Drift catcher."""
+
+    @pytest.mark.parametrize(
+        "fixture, expected",
+        [
+            (REVIEW_SKILL_FIXTURE, REVIEW_SKILL_EXPECTED),
+            (SCAFFOLD_SKILL_FIXTURE, SCAFFOLD_SKILL_EXPECTED),
+        ],
+        ids=["review-skill", "scaffold-skill"],
+    )
+    def test_fixture_verdicts(self, fixture, expected):
+        assert fixture.exists(), f"fixture missing: {fixture}"
+        result = evaluate(fixture)
+        assert result["stats"]["runner_error"] == 0
+        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 24
+        actual = {k: v["verdict"] for k, v in result["verdicts"].items()}
+        assert actual == expected
+
+
+# ---------------------------------------------------------------------------
+# Repo-wide smoke — strict allow-list + lenient-on-all.
+# ---------------------------------------------------------------------------
+
+
+STRICT_ALLOWLIST = {"review-skill", "review-claude-config", "scaffold-skill"}
+
+
+class TestRepoWideSmokeStrict:
+    """Allow-listed skills MUST have runner_error == 0."""
+
+    @pytest.mark.parametrize("skill_name", sorted(STRICT_ALLOWLIST))
+    def test_stable_skill_runs_clean(self, skill_name):
+        path = REPO_ROOT / "skills" / skill_name / "SKILL.md"
+        assert path.exists(), f"allow-listed skill missing: {path}"
+        result = evaluate(path)
+        assert result["stats"]["runner_error"] == 0
+        total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
+        assert total == 24
+
+
+class TestRepoWideSmokeLenient:
+    """Every skills/*/SKILL.md evaluator invocation returns 24 verdicts;
+    runner_error per skill is logged but not asserted."""
+
+    def test_all_skills_produce_24_verdicts(self):
+        skills = sorted((REPO_ROOT / "skills").glob("*/SKILL.md"))
+        assert len(skills) >= 10, "expected multiple skill targets"
+        errors: list[tuple[str, int]] = []
+        for p in skills:
+            result = evaluate(p)
+            total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
+            assert total == 24, f"{p}: total {total} != 24"
+            if result["stats"]["runner_error"]:
+                errors.append((str(p), result["stats"]["runner_error"]))
+        # Surface drift without failing the suite: errors are reported
+        # in the test output but allowed.
+        if errors:
+            sys.stderr.write(f"\nRepoWideSmokeLenient errors (non-blocking): {errors}\n")
+
+
+# ---------------------------------------------------------------------------
+# Non-binary coverage against the evaluation guide table.
+# ---------------------------------------------------------------------------
+
+
+class TestNonBinaryCoverage:
+    def test_guide_items_subset_of_binary_union_non_binary(self):
+        guide = REPO_ROOT / "skills" / "review-skill" / "references" / "skill-evaluation-guide.md"
+        assert guide.exists()
+        text = guide.read_text(encoding="utf-8")
+        import re as _re
+
+        # Table rows look like: | ID | ...
+        rows = _re.findall(r"^\|\s*([A-Z]+-\d+[a-z]?)\s*\|", text, _re.MULTILINE)
+        guide_ids = set(rows)
+        covered = set(BINARY_ITEM_IDS) | set(NON_BINARY_ITEMS)
+        missing = guide_ids - covered
+        assert not missing, f"guide items not covered: {missing}"
+
+
+# ---------------------------------------------------------------------------
+# Runner-error handling + exit codes.
+# ---------------------------------------------------------------------------
+
+
+class TestRunnerErrorHandling:
+    def test_missing_file_global_error(self, tmp_path):
+        # evaluate() itself raises if the file doesn't exist — the global
+        # try/except lives in main(). We test the CLI path in TestExitCodes.
+        with pytest.raises(FileNotFoundError):
+            evaluate(tmp_path / "missing.md")
+
+    def test_empty_file_no_crash(self, tmp_path):
+        p = tmp_path / "empty.md"
+        p.write_text("", encoding="utf-8")
+        result = evaluate(p)
+        assert result["stats"]["runner_error"] == 0
+        # All 24 items produce verdicts (mostly NA/FAIL for missing content).
+        total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
+        assert total == 24
+
+    def test_no_frontmatter_no_crash(self, tmp_path):
+        p = tmp_path / "body-only.md"
+        p.write_text("# heading\n\nBody without any frontmatter.\n", encoding="utf-8")
+        result = evaluate(p)
+        assert result["stats"]["runner_error"] == 0
+
+
+RUNNER_PATH = REPO_ROOT / "scripts" / "rubric_binary_evaluator.py"
+
+
+class TestExitCodes:
+    def _run(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, str(RUNNER_PATH), *args],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO_ROOT),
+        )
+
+    def test_exit_0_on_clean(self):
+        result = self._run(str(REVIEW_SKILL_FIXTURE))
+        assert result.returncode == 0
+        data = json.loads(result.stdout)
+        assert data["schema_version"] == 1
+        assert data["stats"]["runner_error"] == 0
+
+    def test_exit_1_on_missing_file(self, tmp_path):
+        result = self._run(str(tmp_path / "nonexistent.md"))
+        assert result.returncode == 1
+        data = json.loads(result.stdout)
+        assert data["runner_error"] is not None
+        assert data["verdicts"] == {}
+
+    def test_exit_1_on_bad_argv(self):
+        result = subprocess.run(
+            [sys.executable, str(RUNNER_PATH)],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO_ROOT),
+        )
+        # argparse exits 2 when required positional is missing; that's
+        # the argparse default and is distinct from our exit-2-on-
+        # runner_error. Both are non-zero and Phase 2 consumers must
+        # check the JSON schema_version key, which argparse's error
+        # message does NOT contain.
+        assert result.returncode != 0
+        assert "schema_version" not in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# tools_list normalization.
+# ---------------------------------------------------------------------------
+
+
+class TestToolsList:
+    def test_list_form(self):
+        assert tools_list({"allowed-tools": ["Read", "Write"]}) == ["Read", "Write"]
+
+    def test_comma_string_form(self):
+        assert tools_list({"allowed-tools": "Read, Write, Bash"}) == ["Read", "Write", "Bash"]
+
+    def test_absent(self):
+        assert tools_list({}) == []
+
+    def test_empty_string(self):
+        assert tools_list({"allowed-tools": ""}) == []
