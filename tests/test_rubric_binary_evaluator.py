@@ -78,6 +78,7 @@ from rubric_patterns import (  # noqa: E402
 FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "rubric_evaluator"
 REVIEW_SKILL_FIXTURE = FIXTURE_DIR / "review-skill.SKILL.md"
 SCAFFOLD_SKILL_FIXTURE = FIXTURE_DIR / "scaffold-skill.SKILL.md"
+REVIEW_PERSPECTIVE_CLARITY_AGENT_FIXTURE = FIXTURE_DIR / "agents" / "review-perspective-clarity.md"
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +321,17 @@ class TestMETA3b:
         fm, _ = parse_frontmatter(REVIEW_SKILL_FIXTURE)
         assert check_META_3b(REVIEW_SKILL_FIXTURE, fm)["verdict"] == "PASS"
 
+    def test_agent_artifact_returns_na(self, tmp_path):
+        # Issue #74: META-3b globs skills/*/SKILL.md for siblings, which is
+        # skill-to-skill semantics. Agents must NA until issue #75 defines the
+        # agent-namespace sibling policy.
+        p = tmp_path / "agent.md"
+        p.write_text("---\nname: some-agent\ndescription: Verifies things\n---\nbody")
+        fm, _ = parse_frontmatter(p)
+        result = check_META_3b(p, fm, artifact_type="agent")
+        assert result["verdict"] == "NA"
+        assert "#75" in result["evidence"]["reason"]
+
 
 class TestMETA4:
     def test_third_person_passes(self):
@@ -424,6 +436,24 @@ class TestCOMPX:
         fm = {"description": "Evaluates a skill", "name": "review-skill"}
         body = "Complete when all verdicts recorded AND re-run variance is zero across two consecutive runs."
         assert check_COMP_X(body, fm)["verdict"] == "PASS"
+
+    def test_agent_artifact_returns_na(self):
+        # Issue #74: COMP-X encodes skill-review-semantics (convergence predicate
+        # on review-* skills). Agents emit structured output validated by the
+        # merge layer; their success contract is captured by TC-3 in
+        # agent-evaluation-guide.md (not yet a binary item). Return NA until
+        # TC-3 is binarised under issue #75 / #76.
+        fm = {"description": "Verifies step ordering in a skill", "name": "review-perspective-clarity"}
+        body = "emit certificate. return exactly this structure."
+        result = check_COMP_X(body, fm, artifact_type="agent")
+        assert result["verdict"] == "NA"
+        assert "#75" in result["evidence"]["reason"]
+
+    def test_skill_artifact_explicit_still_evaluated(self):
+        # Positive control: explicit artifact_type="skill" keeps existing behavior.
+        fm = {"description": "Creates a scaffold"}
+        body = "Complete when all output sections are emitted."
+        assert check_COMP_X(body, fm, artifact_type="skill")["verdict"] == "PASS"
 
 
 class TestCOMPY:
@@ -897,6 +927,37 @@ REVIEW_SKILL_EXPECTED = {
     "AH-2b": "PASS",
 }
 
+REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
+    "META-1a": "PASS",
+    "META-2": "FAIL",
+    "META-3a": "PASS",
+    "META-3b": "NA",  # Issue #74: skill-to-skill semantics; agent policy pending #75.
+    "META-4": "PASS",
+    "CLAR-1": "PASS",
+    "CLAR-2": "PASS",
+    "CLAR-3": "NA",
+    "CLAR-4": "NA",
+    "WS-2b": "NA",
+    "RD-5b": "NA",
+    "CE-X": "NA",
+    "COMP-X": "NA",  # Issue #74: skill-review-semantics only; agent TC-3 pending #75/#76.
+    "COMP-Y": "PASS",
+    "COMP-Z": "PASS",
+    "COMP-W": "FAIL",
+    "SAMP-1": "NA",
+    "SAMP-2": "NA",
+    "PE-1": "PASS",
+    "PE-2": "PASS",
+    "SP-2b": "NA",
+    "SP-4b": "NA",
+    "IJ-1b": "NA",
+    "RL-1b": "FAIL",
+    "RL-3b": "NA",
+    "RL-4b": "FAIL",
+    "RL-9b": "NA",
+    "AH-2b": "NA",
+}
+
 SCAFFOLD_SKILL_EXPECTED = {
     "META-1a": "PASS",
     "META-2": "PASS",
@@ -938,8 +999,9 @@ class TestEndToEndFixtures:
         [
             (REVIEW_SKILL_FIXTURE, REVIEW_SKILL_EXPECTED),
             (SCAFFOLD_SKILL_FIXTURE, SCAFFOLD_SKILL_EXPECTED),
+            (REVIEW_PERSPECTIVE_CLARITY_AGENT_FIXTURE, REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED),
         ],
-        ids=["review-skill", "scaffold-skill"],
+        ids=["review-skill", "scaffold-skill", "review-perspective-clarity-agent"],
     )
     def test_fixture_verdicts(self, fixture, expected):
         assert fixture.exists(), f"fixture missing: {fixture}"
@@ -948,6 +1010,19 @@ class TestEndToEndFixtures:
         assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 28
         actual = {k: v["verdict"] for k, v in result["verdicts"].items()}
         assert actual == expected
+
+    def test_agent_fixture_classified_as_agent(self):
+        # Issue #74: verify classify_artifact correctly returns "agent" for a
+        # fixture under tests/fixtures/rubric_evaluator/agents/*.md, and the
+        # agent-only NA clauses fire (COMP-X, META-3b).
+        result = evaluate(REVIEW_PERSPECTIVE_CLARITY_AGENT_FIXTURE)
+        assert result["artifact_type"] == "agent"
+        assert result["verdicts"]["COMP-X"]["verdict"] == "NA"
+        assert result["verdicts"]["META-3b"]["verdict"] == "NA"
+        # Sanity: these two are the only items the gating changes for this
+        # fixture — compare against the expected map to catch silent drift.
+        assert "#75" in result["verdicts"]["COMP-X"]["evidence"]["reason"]
+        assert "#75" in result["verdicts"]["META-3b"]["evidence"]["reason"]
 
 
 # ---------------------------------------------------------------------------

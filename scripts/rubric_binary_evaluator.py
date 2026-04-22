@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
-"""Deterministic binary-rubric evaluator for Claude Code skills.
+"""Deterministic binary-rubric evaluator for Claude Code skills and agents.
 
 Produces PASS / FAIL / NA verdicts for 28 binary-verifiable rubric items
-against a single skill artifact. Written JSON to stdout. Moves regex
-execution out of the LLM prompt so every perspective reviewer sees
+against a single skill or agent artifact. Written JSON to stdout. Moves
+regex execution out of the LLM prompt so every perspective reviewer sees
 byte-identical verdicts, eliminating the ~80% run-to-run variance
 observed in the /review-skill convergence retest.
 
-Scope: skills only (skills/<name>/SKILL.md). Agent/rule/plugin variants
-are follow-up work.
+Scope:
+  * skills/<name>/SKILL.md — all 28 items evaluated (full scope).
+  * agents/*.md — 26 items evaluated; COMP-X and META-3b return NA
+    because the rubric clauses encode skill-semantics (review-skill
+    convergence predicate; skills/*/SKILL.md sibling glob). Full
+    agent-semantic coverage (TC-3 for COMP-X analogue, agent-namespace
+    sibling policy for META-3b) is tracked under issue #75 (perspective
+    ownership) + issue #76 (merge ITEM_DIMENSION extension).
+  * rules/plugins — not yet supported; may return spurious verdicts on
+    checks that detect cross-primitive context.
 
 Usage:
     python3 scripts/rubric_binary_evaluator.py <absolute-artifact-path>
@@ -471,7 +479,10 @@ def split_content(path: pathlib.Path) -> tuple[str, str]:
 
 def classify_artifact(path: pathlib.Path, fm: dict) -> str:
     name_lower = path.name.lower()
-    if name_lower == "skill.md":
+    # Production skills are always exactly SKILL.md; test fixtures use the
+    # <name>.SKILL.md convention to colocate multiple skill snapshots in one
+    # directory. Both shapes classify as "skill".
+    if name_lower == "skill.md" or name_lower.endswith(".skill.md"):
         return "skill"
     if name_lower.endswith(".md") and "agents" in path.parts:
         return "agent"
@@ -615,7 +626,13 @@ def check_META_3a(body: str, fm: dict) -> dict:
     return _pass(reason="no fuzzy trigger phrase")
 
 
-def check_META_3b(path: pathlib.Path, fm: dict) -> dict:
+def check_META_3b(path: pathlib.Path, fm: dict, artifact_type: str = "skill") -> dict:
+    # Agents share descriptions with their orchestrator skill by design
+    # (perspective-clarity's description intentionally shadows review-skill's
+    # subject area). Sibling-overlap semantics for agents require an
+    # agent-namespace-aware counter-reference policy — see issue #75.
+    if artifact_type != "skill":
+        return _na("META-3b scope: skill-to-skill sibling check only; agent-namespace policy pending issue #75")
     own_desc = str(fm.get("description", ""))
     own_tokens = tokenize_description(own_desc)
     if not own_tokens:
@@ -727,7 +744,15 @@ def check_CE_X(body: str) -> dict:
     }
 
 
-def check_COMP_X(body: str, fm: dict) -> dict:
+def check_COMP_X(body: str, fm: dict, artifact_type: str = "skill") -> dict:
+    # COMP-X encodes skill-semantics: "complete when / success when / done when"
+    # prose predicate plus an optional review-skill convergence-predicate
+    # clause. Agents emit structured output validated by the merge layer;
+    # their success contract is captured by TC-3 in agent-evaluation-guide.md
+    # (not yet a binary item). Return NA for agents until TC-3 is binarised
+    # under issue #75 / #76.
+    if artifact_type != "skill":
+        return _na("COMP-X scope: skill-semantics only; agent analog is TC-3, pending binary — see issue #75")
     success_count = len(COMP_X_SUCCESS.findall(body))
     verb = primary_verb(fm)
     if verb is None:
@@ -1061,7 +1086,14 @@ BINARY_ITEM_IDS: list[str] = [
 
 
 def _run_check(
-    item_id: str, body: str, fm: dict, fm_raw: str, path: pathlib.Path, is_agentic_flag: bool, needs_rl9b_flag: bool
+    item_id: str,
+    body: str,
+    fm: dict,
+    fm_raw: str,
+    path: pathlib.Path,
+    is_agentic_flag: bool,
+    needs_rl9b_flag: bool,
+    artifact_type: str = "skill",
 ) -> dict:
     """Dispatch a single check, wrapping exceptions as NA + runner_error."""
     try:
@@ -1072,7 +1104,7 @@ def _run_check(
         if item_id == "META-3a":
             return check_META_3a(body, fm)
         if item_id == "META-3b":
-            return check_META_3b(path, fm)
+            return check_META_3b(path, fm, artifact_type)
         if item_id == "META-4":
             return check_META_4(fm)
         if item_id == "CLAR-1":
@@ -1090,7 +1122,7 @@ def _run_check(
         if item_id == "CE-X":
             return check_CE_X(body)
         if item_id == "COMP-X":
-            return check_COMP_X(body, fm)
+            return check_COMP_X(body, fm, artifact_type)
         if item_id == "COMP-Y":
             return check_COMP_Y(body)
         if item_id == "COMP-Z":
@@ -1138,11 +1170,12 @@ def evaluate(path: pathlib.Path) -> dict:
     tools = tools_list(fm)
     is_agentic_flag = is_agentic(body, tools)
     needs_rl9b_flag = needs_rl9b(body, tools)
+    artifact_type = classify_artifact(path, fm)
 
     verdicts: dict[str, dict] = {}
     stats = {"pass": 0, "fail": 0, "na": 0, "runner_error": 0}
     for item_id in BINARY_ITEM_IDS:
-        result = _run_check(item_id, body, fm, fm_raw, path, is_agentic_flag, needs_rl9b_flag)
+        result = _run_check(item_id, body, fm, fm_raw, path, is_agentic_flag, needs_rl9b_flag, artifact_type)
         verdicts[item_id] = result
         verdict = result.get("verdict")
         if verdict == "PASS":
@@ -1170,7 +1203,7 @@ def evaluate(path: pathlib.Path) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
         "artifact_path": rel_path,
-        "artifact_type": classify_artifact(path, fm),
+        "artifact_type": artifact_type,
         "artifact_frontmatter": fm_out,
         "verdicts": verdicts,
         "stats": stats,
