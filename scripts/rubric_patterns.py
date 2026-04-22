@@ -158,6 +158,115 @@ def strip_code(text: str) -> str:
     return text
 
 
+# WS-2b Conditional-Specificity-with-Marker (scoring-rubric.md — issue #70).
+# `If present / If absent` within 500 chars AFTER a block marker must have a
+# preceding prose predicate within 400 chars BEFORE the marker that names the
+# marker context.
+WS_2B_BLOCK_MARKER = re.compile(r"^---[a-z_-]+---$", re.MULTILINE)
+WS_2B_IF_CLAUSE = re.compile(r"\bIf\s+(present|absent)\b", re.IGNORECASE)
+WS_2B_PROSE_PREDICATE = re.compile(
+    r"(check|test|determine|examine|inspect|look\s+for|see\s+whether)"
+    r"\s+(whether|if|for)\s+[^.]{0,120}?"
+    r"(block|marker|fence|section|metadata|prompt|frontmatter)",
+    re.IGNORECASE,
+)
+WS_2B_MARKER_WINDOW = 500  # chars from block marker end to If clause start
+WS_2B_PREDICATE_WINDOW = 400  # chars before marker for prose predicate
+
+
+def passes_ws_2b(body: str) -> bool:
+    """Return True when every `If present / If absent` occurrence in body is
+    either (a) not within 500 chars after a block marker (NA per-occurrence) or
+    (b) preceded by a prose predicate within 400 chars before the marker.
+
+    Operates on raw body (no ``strip_code``) because block markers often live
+    inside fenced YAML examples and must remain discoverable. Inline-code
+    matches are filtered via marker-adjacency: a bare ``If present`` inside
+    backticks is only flagged if it also happens to sit within 500 chars of a
+    real block marker, which is vanishingly unusual.
+
+    Returns True when the body contains NO `If present / If absent` in-scope
+    occurrences (empty-set universal quantifier). Callers that need to
+    distinguish NA from PASS should inspect ``check_WS_2b`` in
+    ``rubric_binary_evaluator.py``.
+    """
+    markers = list(WS_2B_BLOCK_MARKER.finditer(body))
+    if not markers:
+        return True
+    for m in WS_2B_IF_CLAUSE.finditer(body):
+        preceding_markers = [mk for mk in markers if mk.end() <= m.start()]
+        if not preceding_markers:
+            continue
+        nearest = preceding_markers[-1]
+        if m.start() - nearest.end() > WS_2B_MARKER_WINDOW:
+            continue
+        window_start = max(0, nearest.start() - WS_2B_PREDICATE_WINDOW)
+        window_end = nearest.start()
+        if not WS_2B_PROSE_PREDICATE.search(body[window_start:window_end]):
+            return False
+    return True
+
+
+# RD-5b Step-Naming-Consistency (scoring-rubric.md — issue #70).
+# Detect step-naming schemes and require a mapping clause with mapping verb
+# + 2+ scheme tokens when ≥2 schemes are present.
+RD_5B_PHASE = re.compile(r"^#+\s+Phase\s+\d+\b", re.MULTILINE | re.IGNORECASE)
+RD_5B_STEP_LETTER = re.compile(r"^#+\s+Step\s+[A-Z]", re.MULTILINE)
+# heading depth ≤ 3 to exclude certificate-template `#### 1. [Title]` subsections.
+RD_5B_STEP_NUMBER = re.compile(r"^#{1,3}\s+\d+(\.\d+)?\.\s+", re.MULTILINE)
+RD_5B_DOTTED = re.compile(r"\*\*[a-z]\.\d+")
+RD_5B_MAPPING_VERB = re.compile(
+    r"(contains|within|inside|decomposes\s+into|maps\s+to|→|->|"
+    r"composed\s+of|consists\s+of|broken\s+into)",
+    re.IGNORECASE,
+)
+RD_5B_SCHEME_TOKENS = [
+    re.compile(r"Phase\s+\d+", re.IGNORECASE),
+    re.compile(r"Step\s+[A-Z]"),
+    re.compile(r"Step\s+\d+", re.IGNORECASE),
+    re.compile(r"\bb\.\d+"),
+]
+RD_5B_MAPPING_WINDOW = 200  # chars for mapping-clause scan
+
+
+def rd_5b_schemes_present(body: str) -> list[str]:
+    """Return names of scheme patterns found in body."""
+    schemes: list[str] = []
+    if RD_5B_PHASE.search(body):
+        schemes.append("PHASE")
+    if RD_5B_STEP_LETTER.search(body):
+        schemes.append("STEP_LETTER")
+    if RD_5B_STEP_NUMBER.search(body):
+        schemes.append("STEP_NUMBER")
+    if RD_5B_DOTTED.search(body):
+        schemes.append("DOTTED")
+    return schemes
+
+
+def rd_5b_has_mapping_clause(body: str) -> bool:
+    """Return True when body contains a sentence with a mapping verb AND 2+
+    distinct scheme tokens within ``RD_5B_MAPPING_WINDOW`` chars.
+    """
+    for verb_match in RD_5B_MAPPING_VERB.finditer(body):
+        window_start = max(0, verb_match.start() - RD_5B_MAPPING_WINDOW)
+        window_end = min(len(body), verb_match.end() + RD_5B_MAPPING_WINDOW)
+        window = body[window_start:window_end]
+        schemes_in_window = sum(1 for p in RD_5B_SCHEME_TOKENS if p.search(window))
+        if schemes_in_window >= 2:
+            return True
+    return False
+
+
+def passes_rd_5b(body: str) -> bool:
+    """Return True when body uses a single step scheme OR has a mapping clause
+    when multiple schemes are present.
+    """
+    schemes = rd_5b_schemes_present(body)
+    if len(schemes) <= 1:
+        return True
+    return rd_5b_has_mapping_clause(body)
+
+
 __all__ = [
     "FIRST_PERSON",
     "SECOND_PERSON",
@@ -179,4 +288,20 @@ __all__ = [
     "CODE_FENCE",
     "INLINE_CODE",
     "strip_code",
+    "WS_2B_BLOCK_MARKER",
+    "WS_2B_IF_CLAUSE",
+    "WS_2B_PROSE_PREDICATE",
+    "WS_2B_MARKER_WINDOW",
+    "WS_2B_PREDICATE_WINDOW",
+    "passes_ws_2b",
+    "RD_5B_PHASE",
+    "RD_5B_STEP_LETTER",
+    "RD_5B_STEP_NUMBER",
+    "RD_5B_DOTTED",
+    "RD_5B_MAPPING_VERB",
+    "RD_5B_SCHEME_TOKENS",
+    "RD_5B_MAPPING_WINDOW",
+    "rd_5b_schemes_present",
+    "rd_5b_has_mapping_clause",
+    "passes_rd_5b",
 ]

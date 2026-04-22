@@ -47,6 +47,7 @@ from rubric_binary_evaluator import (  # noqa: E402
     check_META_3a,
     check_META_3b,
     check_META_4,
+    check_RD_5b,
     check_RL_1b,
     check_RL_3b,
     check_RL_4b,
@@ -57,6 +58,7 @@ from rubric_binary_evaluator import (  # noqa: E402
     check_SAMP_2,
     check_SP_2b,
     check_SP_4b,
+    check_WS_2b,
     evaluate,
     is_agentic,
     needs_rl9b,
@@ -693,6 +695,134 @@ class TestAH2b:
         assert check_AH_2b(body)["verdict"] == "FAIL"
 
 
+class TestWS2b:
+    """WS-2b conditional specificity with block marker context — issue #70."""
+
+    def test_no_marker_na(self):
+        body = "Regular skill body with no block markers anywhere.\n\nIf present → do X."
+        result = check_WS_2b(body)
+        assert result["verdict"] == "NA"
+        assert "no block-marker" in result["evidence"]["reason"]
+
+    def test_marker_without_if_clause_na(self):
+        body = "Here is the block:\n\n---config---\nmode: x\n---\n\nEnd of body."
+        result = check_WS_2b(body)
+        assert result["verdict"] == "NA"
+
+    def test_marker_with_prose_predicate_passes(self):
+        body = (
+            "Check whether the prompt contains an orchestration metadata block:\n\n"
+            "---orchestration---\nmode: orchestrated\n---\n\n"
+            "- If present → orchestrated mode\n- If absent → standalone mode\n"
+        )
+        assert check_WS_2b(body)["verdict"] == "PASS"
+
+    def test_marker_without_prose_predicate_fails(self):
+        body = (
+            "Some intro text with no predicate here.\n\n"
+            "---orchestration---\nmode: x\n---\n\n"
+            "- If present → X\n- If absent → Y\n"
+        )
+        result = check_WS_2b(body)
+        assert result["verdict"] == "FAIL"
+        assert "no prose predicate" in result["evidence"]["reason"]
+
+    def test_review_skill_fixture_passes(self):
+        body = REVIEW_SKILL_FIXTURE.read_text(encoding="utf-8")
+        assert check_WS_2b(body)["verdict"] == "PASS"
+
+    def test_scaffold_skill_fixture_na(self):
+        body = SCAFFOLD_SKILL_FIXTURE.read_text(encoding="utf-8")
+        assert check_WS_2b(body)["verdict"] == "NA"
+
+
+class TestRD5b:
+    """RD-5b step-naming consistency — issue #70."""
+
+    def test_no_schemes_na(self):
+        body = "Plain body with no numbered steps or phase markers."
+        result = check_RD_5b(body)
+        assert result["verdict"] == "NA"
+
+    def test_single_step_number_scheme_na(self):
+        body = "## Workflow\n\n### 1. First\n\n### 2. Second\n\n### 3. Third\n"
+        result = check_RD_5b(body)
+        assert result["verdict"] == "NA"
+        assert "single scheme" in result["evidence"]["reason"]
+
+    def test_two_schemes_with_mapping_clause_na(self):
+        body = (
+            "## Phase 1 — Setup\n\n### Step A: Probe\n\n"
+            "**Note:** Phase 1 contains Step A as the entry point.\n"
+        )
+        result = check_RD_5b(body)
+        assert result["verdict"] == "NA"
+        assert "mapping clause" in result["evidence"]["reason"]
+
+    def test_three_schemes_without_mapping_fails(self):
+        body = (
+            "## Phase 1 — Setup\n"
+            "## Phase 2 — Evaluation\n\n"
+            "### Step A: Goal\n\n"
+            "### Step B-multi — Dispatch\n\n"
+            "**b.0 — First substep.**\n\n"
+            "**b.1 — Second substep.**\n"
+        )
+        result = check_RD_5b(body)
+        assert result["verdict"] == "FAIL"
+        assert set(result["evidence"]["schemes"]) == {"PHASE", "STEP_LETTER", "DOTTED"}
+
+    def test_review_skill_fixture_fails(self):
+        body = REVIEW_SKILL_FIXTURE.read_text(encoding="utf-8")
+        result = check_RD_5b(body)
+        assert result["verdict"] == "FAIL"
+
+    def test_scaffold_skill_fixture_na(self):
+        body = SCAFFOLD_SKILL_FIXTURE.read_text(encoding="utf-8")
+        result = check_RD_5b(body)
+        assert result["verdict"] == "NA"
+
+    def test_depth_4_heading_excluded_from_step_number(self):
+        # `#### 1. [Title]` inside a certificate template must NOT
+        # count as STEP_NUMBER scheme (heading depth > 3).
+        body = (
+            "## Phase 2\n\n### Step A\n\n#### 1. Certificate field\n\n#### 2. Another field\n"
+        )
+        result = check_RD_5b(body)
+        # Only PHASE + STEP_LETTER detected → 2 schemes, no mapping → FAIL.
+        assert result["verdict"] == "FAIL"
+        assert "STEP_NUMBER" not in set(result["evidence"]["schemes"])
+
+
+class TestBinaryItemIdsSync:
+    """Parity between evaluator.BINARY_ITEM_IDS and merge_findings.BINARY_ITEM_IDS."""
+
+    def test_sync(self):
+        sys.path.insert(0, str(REPO_ROOT / "scripts"))
+        import importlib
+
+        merge_findings = importlib.import_module("merge_findings")
+        assert set(BINARY_ITEM_IDS) == set(merge_findings.BINARY_ITEM_IDS)
+
+    def test_wsb_rdb_in_item_dimension(self):
+        sys.path.insert(0, str(REPO_ROOT / "scripts"))
+        import importlib
+
+        merge_findings = importlib.import_module("merge_findings")
+        assert merge_findings.ITEM_DIMENSION["WS-2b"] == "Clarity"
+        assert merge_findings.ITEM_DIMENSION["WS-4"] == "Clarity"
+        assert merge_findings.ITEM_DIMENSION["RD-5b"] == "Clarity"
+
+    def test_narrative_parents_include_ws_rd(self):
+        sys.path.insert(0, str(REPO_ROOT / "scripts"))
+        import importlib
+
+        merge_findings = importlib.import_module("merge_findings")
+        assert "WS-2" in merge_findings.NARRATIVE_PARENT_IDS
+        assert "WS-4" in merge_findings.NARRATIVE_PARENT_IDS
+        assert "RD-5" in merge_findings.NARRATIVE_PARENT_IDS
+
+
 # ---------------------------------------------------------------------------
 # Schema stability + end-to-end fixtures.
 # ---------------------------------------------------------------------------
@@ -730,10 +860,10 @@ class TestSchemaStability:
             assert "evidence" in v, f"{item_id} missing evidence"
             assert isinstance(v["evidence"], dict)
 
-    def test_stats_counts_sum_to_26(self):
+    def test_stats_counts_sum_to_28(self):
         result = evaluate(REVIEW_SKILL_FIXTURE)
         s = result["stats"]
-        assert s["pass"] + s["fail"] + s["na"] == 26
+        assert s["pass"] + s["fail"] + s["na"] == 28
 
 
 REVIEW_SKILL_EXPECTED = {
@@ -746,6 +876,8 @@ REVIEW_SKILL_EXPECTED = {
     "CLAR-2": "FAIL",
     "CLAR-3": "FAIL",
     "CLAR-4": "PASS",
+    "WS-2b": "PASS",
+    "RD-5b": "FAIL",
     "CE-X": "PASS",
     "COMP-X": "FAIL",
     "COMP-Y": "PASS",
@@ -775,6 +907,8 @@ SCAFFOLD_SKILL_EXPECTED = {
     "CLAR-2": "FAIL",
     "CLAR-3": "FAIL",
     "CLAR-4": "NA",
+    "WS-2b": "NA",
+    "RD-5b": "NA",
     "CE-X": "FAIL",
     "COMP-X": "FAIL",
     "COMP-Y": "FAIL",
@@ -811,7 +945,7 @@ class TestEndToEndFixtures:
         assert fixture.exists(), f"fixture missing: {fixture}"
         result = evaluate(fixture)
         assert result["stats"]["runner_error"] == 0
-        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 26
+        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 28
         actual = {k: v["verdict"] for k, v in result["verdicts"].items()}
         assert actual == expected
 
@@ -834,21 +968,21 @@ class TestRepoWideSmokeStrict:
         result = evaluate(path)
         assert result["stats"]["runner_error"] == 0
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 26
+        assert total == 28
 
 
 class TestRepoWideSmokeLenient:
-    """Every skills/*/SKILL.md evaluator invocation returns 26 verdicts;
+    """Every skills/*/SKILL.md evaluator invocation returns 28 verdicts;
     runner_error per skill is logged but not asserted."""
 
-    def test_all_skills_produce_26_verdicts(self):
+    def test_all_skills_produce_28_verdicts(self):
         skills = sorted((REPO_ROOT / "skills").glob("*/SKILL.md"))
         assert len(skills) >= 10, "expected multiple skill targets"
         errors: list[tuple[str, int]] = []
         for p in skills:
             result = evaluate(p)
             total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-            assert total == 26, f"{p}: total {total} != 26"
+            assert total == 28, f"{p}: total {total} != 28"
             if result["stats"]["runner_error"]:
                 errors.append((str(p), result["stats"]["runner_error"]))
         # Surface drift without failing the suite: errors are reported
@@ -894,9 +1028,9 @@ class TestRunnerErrorHandling:
         p.write_text("", encoding="utf-8")
         result = evaluate(p)
         assert result["stats"]["runner_error"] == 0
-        # All 26 items produce verdicts (mostly NA/FAIL for missing content).
+        # All 28 items produce verdicts (mostly NA/FAIL for missing content).
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 26
+        assert total == 28
 
     def test_no_frontmatter_no_crash(self, tmp_path):
         p = tmp_path / "body-only.md"

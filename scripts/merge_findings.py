@@ -41,7 +41,7 @@ GRADE_TO_NUMERIC = {"A": 95, "B": 85, "C": 75, "D": 65, "F": 50}
 GRADE_ORDER = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
 SEVERITY_RANK = {"High": 3, "Medium": 2, "Low": 1}
 
-# 26 binary-verifiable rubric items owned by scripts/rubric_binary_evaluator.py.
+# 28 binary-verifiable rubric items owned by scripts/rubric_binary_evaluator.py.
 # Perspective findings with these checklist_items are dropped before Layer 0
 # dedup; merged findings for these items come from synthesize_binary_findings().
 BINARY_ITEM_IDS = frozenset(
@@ -55,6 +55,8 @@ BINARY_ITEM_IDS = frozenset(
         "CLAR-2",
         "CLAR-3",
         "CLAR-4",
+        "WS-2b",
+        "RD-5b",
         "CE-X",
         "COMP-X",
         "COMP-Y",
@@ -75,9 +77,10 @@ BINARY_ITEM_IDS = frozenset(
     ]
 )
 
-# Narrative parent items the rubric supersedes with -b variants. Perspective
-# findings on these also drop to prevent Haiku-class agents from re-litigating
-# the same surface.
+# Narrative parent items the rubric supersedes with -b variants, or items the
+# rubric drops in favor of a deterministic drop-from-merge policy (WS-4).
+# Perspective findings on these also drop to prevent Haiku-class agents from
+# re-litigating the same surface.
 NARRATIVE_PARENT_IDS = frozenset(
     [
         "AH-2",
@@ -91,10 +94,16 @@ NARRATIVE_PARENT_IDS = frozenset(
         "META-1",
         "META-2",
         "META-3",
+        "WS-2",  # superseded by WS-2b (issue #70)
+        "WS-4",  # dim-pinned to Clarity via ITEM_DIMENSION + dropped here
+        "RD-5",  # superseded by RD-5b (issue #70)
     ]
 )
 
 # Item → dimension binding. Mirrors scoring-rubric.md section headings.
+# Used for (a) finding-ID canonicalisation in canonicalize_perspective_ids()
+# so Haiku agents cannot produce dim-drifted IDs (issue #70: WS-4 Clarity↔Safety flip),
+# and (b) BINARY_CAPS + synthesize_binary_findings() lookups.
 ITEM_DIMENSION: dict[str, str] = {
     "META-1a": "Metadata",
     "META-2": "Metadata",
@@ -105,6 +114,9 @@ ITEM_DIMENSION: dict[str, str] = {
     "CLAR-2": "Clarity",
     "CLAR-3": "Clarity",
     "CLAR-4": "Clarity",
+    "WS-2b": "Clarity",
+    "WS-4": "Clarity",
+    "RD-5b": "Clarity",
     "CE-X": "Context Engineering",
     "COMP-X": "Completeness",
     "COMP-Y": "Completeness",
@@ -129,11 +141,13 @@ ITEM_DIMENSION: dict[str, str] = {
 # clauses. Caps are monotone — never upgrade a merged grade. Multiple caps on
 # the same dimension stack (strictest wins because of GRADE_ORDER check).
 BINARY_CAPS: list[tuple[str, str, str]] = [
-    # Clarity (CLAR-1/2/3/4 OR → Clarity ≤ C)
+    # Clarity (CLAR-1/2/3/4 OR WS-2b OR RD-5b → Clarity ≤ C)
     ("CLAR-1", "Clarity", "C"),
     ("CLAR-2", "Clarity", "C"),
     ("CLAR-3", "Clarity", "C"),
     ("CLAR-4", "Clarity", "C"),
+    ("WS-2b", "Clarity", "C"),
+    ("RD-5b", "Clarity", "C"),
     # Completeness
     ("COMP-W", "Completeness", "C"),
     ("AH-2b", "Completeness", "C"),
@@ -157,6 +171,35 @@ BINARY_CAPS: list[tuple[str, str, str]] = [
     ("RL-4b", "Safety", "C"),
     ("RL-9b", "Safety", "C"),
 ]
+
+
+def canonicalize_perspective_ids(findings: list[dict]) -> list[dict]:
+    """Rewrite ``dimension`` + ``id`` on perspective findings whose
+    ``checklist_item`` is pinned in ``ITEM_DIMENSION``.
+
+    Rewrite rule: ``id = f"{checklist_item}:{path}:{pinned_dim}/v1"`` using
+    ``finding['checklist_item']`` and ``finding['path']`` as authoritative
+    sources. This prevents the retest-4 flip where Haiku emitted
+    ``WS-4:path:Clarity/v1`` in runA and ``WS-4:path:Safety/v1`` in runB on
+    identical evidence — after rewrite both runs produce the same id and
+    collapse in Layer-0 dedup. Findings without a pinned ``checklist_item``
+    or without a ``path`` pass through unchanged.
+
+    Issue #70.
+    """
+    rewritten: list[dict] = []
+    for f in findings:
+        item = f.get("checklist_item") or ""
+        pinned_dim = ITEM_DIMENSION.get(item)
+        path = f.get("path") or ""
+        if not pinned_dim or not path:
+            rewritten.append(f)
+            continue
+        new_f = dict(f)
+        new_f["dimension"] = pinned_dim
+        new_f["id"] = f"{item}:{path}:{pinned_dim}/v1"
+        rewritten.append(new_f)
+    return rewritten
 
 
 def tokenize(text: str) -> set[str]:
@@ -456,6 +499,11 @@ def merge_directory(session_dir: pathlib.Path) -> dict:
             finding = dict(f)
             finding.setdefault("perspective", persp)
             all_findings.append(finding)
+
+    # Canonicalise IDs on pinned-dim items before synthesis + dedup so
+    # perspective-emitted findings share IDs across runs even if Haiku
+    # reported different dimensions on identical evidence (issue #70).
+    all_findings = canonicalize_perspective_ids(all_findings)
 
     # Append deterministic findings synthesized from binary verdicts.
     binary_findings = synthesize_binary_findings(verdicts_doc, artifact_path) if apply_caps else []

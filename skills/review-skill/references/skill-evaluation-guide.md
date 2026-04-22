@@ -17,8 +17,9 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | PD-5 | Description contains ≥1 keyword that excludes unrelated requests? | Meta |
 | WS-1 | Steps numbered with explicit sequential dependencies? | Clarity |
 | WS-2 | Every conditional specifies a concrete trigger (value, threshold, file test, or tool output)? | Clarity |
+| WS-2b | `If present / If absent` near a `---marker---` has a preceding prose predicate naming the block? (binary check — see scoring-rubric.md) | Clarity |
 | WS-3 | Parallel vs sequential steps explicitly marked? | Clarity |
-| WS-4 | Stop conditions and recovery actions defined? (binary check: CLAR-3 Stop/Recovery — see scoring-rubric.md) | Safety |
+| WS-4 | Stop conditions and recovery actions defined? (dim-pinned Clarity; evaluated via CLAR-3 + drop-from-merge per issue #70) | Clarity |
 | CLAR-3 | Every `stop/abort/refuse/bail/halt/timeout` paired with named recovery target within 200 chars? | Clarity |
 | CLAR-4 | Every numbered upstream dependency names a failure branch (inline or cross-reference)? | Clarity |
 | RF-1 | Reference files within token budgets? | CE |
@@ -56,6 +57,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | RD-3 | No overlapping triggers with sibling skills in same plugin directory? (Glob siblings, compare descriptions) | Meta |
 | RD-4 | Error handling covers tool unavailability AND unexpected tool output? | Compl |
 | RD-5 | Step dependencies explicit — upstream/downstream stated, not just numbered? | Clarity |
+| RD-5b | Step-naming schemes (Phase/Step-letter/Step-number/dotted) — single scheme OR mapping clause present? (binary check — see scoring-rubric.md) | Clarity |
 | RD-6 | Tool availability validated before first use (probe or fallback, not assumed)? | Safety |
 | RT-1 | Optional-dep failure produces fallback output, not abort? [Agentic] | Compl |
 | RT-2 | Output template has status token (success/partial/failure)? [Agentic] | PE |

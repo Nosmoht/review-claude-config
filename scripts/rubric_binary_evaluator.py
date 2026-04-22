@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic binary-rubric evaluator for Claude Code skills.
 
-Produces PASS / FAIL / NA verdicts for 24 binary-verifiable rubric items
+Produces PASS / FAIL / NA verdicts for 28 binary-verifiable rubric items
 against a single skill artifact. Written JSON to stdout. Moves regex
 execution out of the LLM prompt so every perspective reviewer sees
 byte-identical verdicts, eliminating the ~80% run-to-run variance
@@ -14,7 +14,7 @@ Usage:
     python3 scripts/rubric_binary_evaluator.py <absolute-artifact-path>
 
 Exit codes:
-    0 — evaluator ran, stats.runner_error == 0 (all 24 items produced a
+    0 — evaluator ran, stats.runner_error == 0 (all 28 items produced a
         verdict). Also used by argparse --help per GNU convention, which
         downstream consumers disambiguate by checking for the
         "schema_version" key in stdout JSON.
@@ -64,11 +64,18 @@ from rubric_patterns import (  # noqa: E402
     FUZZY_QUANTIFIER,
     PE_1_PATTERN,
     PE_2_PATTERN,
+    WS_2B_BLOCK_MARKER,
+    WS_2B_IF_CLAUSE,
+    WS_2B_MARKER_WINDOW,
+    WS_2B_PREDICATE_WINDOW,
+    WS_2B_PROSE_PREDICATE,
     has_loop,
     is_third_person,
     passes_clar1,
     passes_clar2,
     passes_comp_w,
+    rd_5b_has_mapping_clause,
+    rd_5b_schemes_present,
     strip_code,
 )
 
@@ -936,6 +943,66 @@ def check_RL_9b(body: str, fm_raw: str, needs_rl9b_flag: bool) -> dict:
     return _fail(reason="no credential-scope rule found in frontmatter+body")
 
 
+def check_WS_2b(body: str) -> dict:
+    """WS-2b conditional-specificity with block-marker context.
+
+    Operates on raw body (no ``strip_code``) because block markers often live
+    inside fenced YAML examples and must remain discoverable.
+
+    PASS: every in-scope `If present|If absent` occurrence (within 500 chars
+        after a `---marker---` line) has a prose predicate naming the block
+        within 400 chars before the marker.
+    FAIL: at least one in-scope occurrence lacks a preceding predicate.
+    NA: no block markers in body, or no `If present|If absent` occurrence is
+        in-scope.
+    """
+    markers = list(WS_2B_BLOCK_MARKER.finditer(body))
+    if not markers:
+        return _na("no block-marker in body")
+    any_in_scope = False
+    for m in WS_2B_IF_CLAUSE.finditer(body):
+        preceding_markers = [mk for mk in markers if mk.end() <= m.start()]
+        if not preceding_markers:
+            continue
+        nearest = preceding_markers[-1]
+        if m.start() - nearest.end() > WS_2B_MARKER_WINDOW:
+            continue
+        any_in_scope = True
+        window_start = max(0, nearest.start() - WS_2B_PREDICATE_WINDOW)
+        window_end = nearest.start()
+        if not WS_2B_PROSE_PREDICATE.search(body[window_start:window_end]):
+            return _fail(
+                line=line_of_offset(body, m.start()),
+                trigger=m.group(0),
+                reason="no prose predicate naming the block marker within 400 chars before the marker",
+            )
+    if not any_in_scope:
+        return _na("no `If present|If absent` occurrence within 500 chars after a marker")
+    return _pass(reason="all in-scope occurrences paired with preceding prose predicate")
+
+
+def check_RD_5b(body: str) -> dict:
+    """RD-5b step-naming consistency.
+
+    PASS: body uses ≤1 step-naming scheme (no ambiguity possible).
+    NA: body uses ≥2 schemes AND has a mapping clause with a mapping verb +
+        2+ scheme tokens within 200 chars. (NA, not PASS, to match
+        CLAR-3 / AH-2b pattern where doesn't-apply == NA.)
+    FAIL: body uses ≥2 schemes AND has no such mapping clause.
+    """
+    schemes = rd_5b_schemes_present(body)
+    if len(schemes) <= 1:
+        if not schemes:
+            return _na("no step-naming scheme detected in body")
+        return _na(f"single scheme ({schemes[0]}) — no ambiguity possible")
+    if rd_5b_has_mapping_clause(body):
+        return _na(f"{len(schemes)} schemes present but mapping clause resolves ambiguity")
+    return _fail(
+        schemes=schemes,
+        reason=f"{len(schemes)} step-naming schemes present without mapping clause",
+    )
+
+
 def check_AH_2b(body: str) -> dict:
     triggers = list(AH_2B_TRIGGER.finditer(body))
     if not triggers:
@@ -971,6 +1038,8 @@ BINARY_ITEM_IDS: list[str] = [
     "CLAR-2",
     "CLAR-3",
     "CLAR-4",
+    "WS-2b",
+    "RD-5b",
     "CE-X",
     "COMP-X",
     "COMP-Y",
@@ -1014,6 +1083,10 @@ def _run_check(
             return check_CLAR_3(body)
         if item_id == "CLAR-4":
             return check_CLAR_4(body)
+        if item_id == "WS-2b":
+            return check_WS_2b(body)
+        if item_id == "RD-5b":
+            return check_RD_5b(body)
         if item_id == "CE-X":
             return check_CE_X(body)
         if item_id == "COMP-X":

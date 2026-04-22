@@ -28,7 +28,9 @@ BUDGETS: dict[str, int] = {
     # agentic overlay R1-R11 (R4b HITL-surface-manipulation, R11 cascading
     # containment) + broadened R9 scope (memory-write poisoning, OWASP
     # ASI06). MCPTox arXiv:2508.14925 + OWASP ASI2026.
-    "scoring-rubric.md": 7000,
+    # Issue #70: +WS-2b, WS-4 dim-pin note, RD-5b binary entries for
+    # residual interpretive-flipper closure.
+    "scoring-rubric.md": 8000,
     # Issue #61: Tier-0 same-turn combination section (OWASP ASI02 Tool
     # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
     # 2026 incl. CVSS 9.6 RCE).
@@ -38,7 +40,8 @@ BUDGETS: dict[str, int] = {
     # Evaluation guides — dense checklists, legitimately >500.
     # Opus 4.7 tokenizer ~35% larger than 4.6 — bumped per plan rev4.
     # Issue #69: +CLAR-3/4, SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b rows
-    "skill-evaluation-guide.md": 1400,
+    # Issue #70: +WS-2b, RD-5b rows + WS-4 dim-pin amendment.
+    "skill-evaluation-guide.md": 1500,
     # P0.1: 15 fields + Opus 4.7 SAMP-1/2.
     # Issue #69: +SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b rows.
     "agent-evaluation-guide.md": 2100,

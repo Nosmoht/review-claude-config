@@ -14,6 +14,7 @@ from merge_findings import (  # noqa: E402
     BINARY_ITEM_IDS,
     ITEM_DIMENSION,
     NARRATIVE_PARENT_IDS,
+    canonicalize_perspective_ids,
     layer0_dedup,
     layer1_5_binary_boundary_cap,
     layer1_owner_weighted_grade,
@@ -573,18 +574,19 @@ class TestMergeWithBinaryVerdicts:
                             "line_range": "89",
                             "evidence": "bare pronoun perspective-side",
                         },
-                        # A non-binary finding that must survive.
+                        # A non-binary finding that must survive (PD-1 is not
+                        # in BINARY_ITEM_IDS or NARRATIVE_PARENT_IDS).
                         {
-                            "id": "WS-2:hand-crafted/ws/v1",
-                            "dimension": "Clarity",
-                            "checklist_item": "WS-2",
+                            "id": "PD-1:hand-crafted/pd/v1",
+                            "dimension": "Context Engineering",
+                            "checklist_item": "PD-1",
                             "severity": "Medium",
                             "primary_focus": True,
                             "owner_conflict": False,
                             "hint_owner": None,
                             "path": "skills/foo/SKILL.md",
                             "line_range": "120",
-                            "evidence": "conditional without criteria",
+                            "evidence": "stable knowledge inlined in body",
                         },
                     ],
                 }
@@ -621,9 +623,9 @@ class TestMergeWithBinaryVerdicts:
         clar2 = [f for f in result["findings"] if f.get("checklist_item") == "CLAR-2"]
         assert len(clar2) == 1
         assert clar2[0]["perspective"] == "binary-evaluator"
-        # WS-2 finding (non-binary) preserved.
-        ws2 = [f for f in result["findings"] if f.get("checklist_item") == "WS-2"]
-        assert len(ws2) == 1
+        # PD-1 finding (non-binary, non-narrative-parent) preserved.
+        pd1 = [f for f in result["findings"] if f.get("checklist_item") == "PD-1"]
+        assert len(pd1) == 1
         # Dropped count is 1 (perspective CLAR-2).
         assert result["dropped_perspective_findings"] == 1
 
@@ -705,3 +707,171 @@ class TestMergeWithBinaryVerdicts:
         assert ids1 == ids2
         assert "CLAR-3:skills/foo/SKILL.md:Clarity/v1" in ids1
         assert "COMP-W:skills/foo/SKILL.md:Completeness/v1" in ids1
+
+
+class TestCanonicalizePerspectiveIds:
+    """Dim-pin rewrite for perspective findings — issue #70."""
+
+    def test_ws4_safety_rewritten_to_clarity(self):
+        finding = {
+            "id": "WS-4:skills/foo/SKILL.md:Safety/clarity",
+            "dimension": "Safety",
+            "checklist_item": "WS-4",
+            "path": "skills/foo/SKILL.md",
+            "severity": "High",
+        }
+        result = canonicalize_perspective_ids([finding])
+        assert len(result) == 1
+        assert result[0]["dimension"] == "Clarity"
+        assert result[0]["id"] == "WS-4:skills/foo/SKILL.md:Clarity/v1"
+
+    def test_unpinned_item_passes_through(self):
+        finding = {
+            "id": "PD-1:skills/foo/SKILL.md:Context Engineering/clarity",
+            "dimension": "Context Engineering",
+            "checklist_item": "PD-1",
+            "path": "skills/foo/SKILL.md",
+        }
+        result = canonicalize_perspective_ids([finding])
+        assert result[0]["id"] == finding["id"]
+        assert result[0]["dimension"] == finding["dimension"]
+
+    def test_finding_without_path_passes_through(self):
+        finding = {
+            "id": "WS-4:???/v1",
+            "dimension": "Safety",
+            "checklist_item": "WS-4",
+            "path": "",
+        }
+        result = canonicalize_perspective_ids([finding])
+        assert result[0]["id"] == finding["id"]  # unchanged — path empty
+
+    def test_runa_runb_flip_converges(self):
+        runA = {
+            "id": "WS-4:skills/rv/SKILL.md:Clarity/rA",
+            "dimension": "Clarity",
+            "checklist_item": "WS-4",
+            "path": "skills/rv/SKILL.md",
+        }
+        runB = {
+            "id": "WS-4:skills/rv/SKILL.md:Safety/rB",
+            "dimension": "Safety",
+            "checklist_item": "WS-4",
+            "path": "skills/rv/SKILL.md",
+        }
+        # After canonicalise, both IDs converge to the pinned form.
+        A = canonicalize_perspective_ids([runA])[0]
+        B = canonicalize_perspective_ids([runB])[0]
+        assert A["id"] == B["id"]
+        assert A["id"] == "WS-4:skills/rv/SKILL.md:Clarity/v1"
+
+
+class TestNarrativeParentDropExtended:
+    """Issue #70: WS-2, WS-4, RD-5 perspective findings drop when binary
+    evaluator is present."""
+
+    def _baseline_certs(self, session_dir: pathlib.Path) -> None:
+        for name in ("clarity", "correctness", "integration"):
+            (session_dir / f"{name}.json").write_text(
+                json.dumps(
+                    {
+                        "perspective": name,
+                        "dimensions": {
+                            "Clarity": "A",
+                            "Completeness": "A",
+                            "Prompt Engineering": "A",
+                            "Context Engineering": "A",
+                            "Goal Alignment": "A",
+                            "Safety": "A",
+                            "Metadata": "A",
+                        },
+                        "weighted_score": 95.0,
+                        "artifact_frontmatter": {"allowed_tools": ["Read"]},
+                        "findings": (
+                            [
+                                {
+                                    "id": f"WS-2:x.md:Clarity/{name}",
+                                    "dimension": "Clarity",
+                                    "checklist_item": "WS-2",
+                                    "severity": "Medium",
+                                    "primary_focus": True,
+                                    "path": "x.md",
+                                    "line_range": "12",
+                                    "evidence": "narrative WS-2",
+                                },
+                                {
+                                    "id": f"WS-4:x.md:Safety/{name}",
+                                    "dimension": "Safety",
+                                    "checklist_item": "WS-4",
+                                    "severity": "High",
+                                    "primary_focus": True,
+                                    "path": "x.md",
+                                    "line_range": "30",
+                                    "evidence": "narrative WS-4",
+                                },
+                                {
+                                    "id": f"RD-5:x.md:Clarity/{name}",
+                                    "dimension": "Clarity",
+                                    "checklist_item": "RD-5",
+                                    "severity": "Medium",
+                                    "primary_focus": True,
+                                    "path": "x.md",
+                                    "line_range": "50",
+                                    "evidence": "narrative RD-5",
+                                },
+                            ]
+                            if name == "clarity"
+                            else []
+                        ),
+                    }
+                )
+            )
+
+    def test_ws2_ws4_rd5_all_dropped_when_binary_present(self, tmp_path: pathlib.Path):
+        self._baseline_certs(tmp_path)
+        (tmp_path / "binary_verdicts.json").write_text(
+            json.dumps(_verdicts_doc())  # all-PASS verdicts
+        )
+        result = merge_directory(tmp_path)
+        items_present = {f.get("checklist_item") for f in result["findings"]}
+        assert "WS-2" not in items_present
+        assert "WS-4" not in items_present
+        assert "RD-5" not in items_present
+        assert result["dropped_perspective_findings"] == 3
+
+    def test_ws2_ws4_rd5_preserved_when_binary_missing(self, tmp_path: pathlib.Path):
+        self._baseline_certs(tmp_path)
+        # No binary_verdicts.json → apply_caps=False → narrative drop skipped.
+        result = merge_directory(tmp_path)
+        items_present = {f.get("checklist_item") for f in result["findings"]}
+        assert "WS-2" in items_present
+        assert "WS-4" in items_present
+        assert "RD-5" in items_present
+
+
+class TestLayer1_5ClarityCapsForIssue70:
+    """WS-2b and RD-5b grade-boundary caps on Clarity — issue #70."""
+
+    def test_ws_2b_fail_caps_clarity_at_c(self):
+        graces = {"Clarity": "A"}
+        doc = _verdicts_doc(WS_2b="FAIL")
+        result, caps = layer1_5_binary_boundary_cap(graces, doc)
+        assert result["Clarity"] == "C"
+        assert any(c["item"] == "WS-2b" and c["applied"] for c in caps)
+
+    def test_rd_5b_fail_caps_clarity_at_c(self):
+        graces = {"Clarity": "A"}
+        doc = _verdicts_doc(RD_5b="FAIL")
+        result, caps = layer1_5_binary_boundary_cap(graces, doc)
+        assert result["Clarity"] == "C"
+        assert any(c["item"] == "RD-5b" and c["applied"] for c in caps)
+
+    def test_ws_2b_pass_no_cap(self):
+        graces = {"Clarity": "A"}
+        doc = _verdicts_doc(WS_2b="PASS")
+        result, caps = layer1_5_binary_boundary_cap(graces, doc)
+        assert result["Clarity"] == "A"
+        # WS-2b entry present but applied=False.
+        for c in caps:
+            if c["item"] == "WS-2b":
+                assert c["applied"] is False
