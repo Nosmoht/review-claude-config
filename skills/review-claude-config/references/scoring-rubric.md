@@ -1,7 +1,7 @@
 ---
 name: scoring-rubric
 description: A-F grading criteria for evaluating Claude Code skills, agents, and rules across type-appropriate dimensions
-last_refreshed: 2026-04-20
+last_refreshed: 2026-04-22
 ---
 
 # Scoring Rubric
@@ -28,9 +28,9 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 - **F**: Only describes the goal, not how to achieve it. No output specification.
 
 ### 3. Prompt Engineering (15%)
-- **A**: Uses structured output, role priming, few-shot examples, explicit constraints, verification criteria, and evidence-first wording.
+- **A**: Structured output via tool-calling or schema directives (not prefill), role priming, 3-5 canonical few-shot examples, explicit constraints, verification criteria, evidence-first wording; no hedges ("try to", "if possible", "as appropriate") in reasoning-model directives.
 - **B**: 3+ techniques effective; output and constraints explicit; minor gaps.
-- **C**: Uses 1-2 techniques or uses them ineffectively. *if the item relies entirely on implicit model behavior without any explicit technique, it's C or below.*
+- **C**: Uses 1-2 techniques or uses them ineffectively. *Test: PE-1 ✗ (CoT scaffolding aimed at reasoning-class models) OR PE-2 ✗ (hedge in directive) OR body relies entirely on implicit model behavior → C or below.*
 - **D**: 1 technique inconsistent; output partially defined; mostly implicit.
 - **F**: Raw instructions with no prompting techniques. No output format, no examples, no constraints.
 
@@ -140,7 +140,12 @@ justification (when applied) are logged in the report certificate.
 ### Sampling-Param Migration (PE/Metadata) — Opus 4.7
 
 - **SAMP-1 (PE-body)**: skill/agent body free of hardcoded `temperature`/`top_p`/`top_k` (regex `/\b(temperature|top_p|top_k)\s*[:=]/i`). FAIL caps PE at C.
-- **SAMP-2 (Metadata frontmatter)**: frontmatter override block free of removed sampling params. FAIL is hard F (runtime 400-error on Opus 4.7).
+- **SAMP-2 (Metadata frontmatter)**: frontmatter override block free of removed sampling params. FAIL is hard F (runtime 400-error on Opus 4.7). Doubly justified on Opus 4.7 (2026-04-16): native-thinking models return HTTP 400 on non-default sampling params.
+
+### Reasoning-Model Anti-Patterns (PE B/C discriminator) — issue #63
+
+- **PE-1 CoT-Scaffolding**: body (code-fenced exemplars excluded) free of explicit step-by-step reasoning scaffolding (regex `/\b(think\s+step\s+by\s+step|reason\s+(step\s+by\s+step|carefully\s+about)|let'?s\s+think(\s+(about|through))?)\b/i`). FAIL caps PE at C. Source: `research/prompt-engineering/prompt-engineering-techniques.md` §Opus 4.7.
+- **PE-2 Hedge-Free-Directives**: body (code-fenced exemplars excluded) free of hedge phrases in directives (regex `/\b(try\s+to|if\s+possible|as\s+appropriate|when\s+useful)\b/i`). FAIL caps PE at C. Source: `research/prompt-engineering/prompt-engineering-techniques.md` §Opus 4.7.
 
 ### Tool-Grant Alignment (Safety B/C discriminator) — issue #69
 

@@ -62,11 +62,14 @@ from rubric_patterns import (  # noqa: E402
     AGENTIC_WRITE_TOOLS,
     BARE_PRONOUN_VERB,
     FUZZY_QUANTIFIER,
+    PE_1_PATTERN,
+    PE_2_PATTERN,
     has_loop,
     is_third_person,
     passes_clar1,
     passes_clar2,
     passes_comp_w,
+    strip_code,
 )
 
 SCHEMA_VERSION = 1
@@ -781,6 +784,30 @@ def check_SAMP_2(fm_raw: str) -> dict:
     return _na("no sampling param in frontmatter")
 
 
+def check_PE_1(body: str) -> dict:
+    """CoT-scaffolding in body prose (code-fenced exemplars excluded)."""
+    stripped = strip_code(body)
+    match = PE_1_PATTERN.search(stripped)
+    if match:
+        return _fail(
+            line=line_of_offset(body, body.find(match.group(0))) if match.group(0) in body else None,
+            match=match.group(0),
+        )
+    return {"verdict": "PASS", "evidence": {"reason": "no CoT scaffolding in prose"}}
+
+
+def check_PE_2(body: str) -> dict:
+    """Hedges in directives (code-fenced exemplars excluded)."""
+    stripped = strip_code(body)
+    match = PE_2_PATTERN.search(stripped)
+    if match:
+        return _fail(
+            line=line_of_offset(body, body.find(match.group(0))) if match.group(0) in body else None,
+            match=match.group(0),
+        )
+    return {"verdict": "PASS", "evidence": {"reason": "no hedge in directive prose"}}
+
+
 def check_SP_2b(body: str, fm: dict) -> dict:
     tools = tools_list(fm)
     if not tools:
@@ -951,6 +978,8 @@ BINARY_ITEM_IDS: list[str] = [
     "COMP-W",
     "SAMP-1",
     "SAMP-2",
+    "PE-1",
+    "PE-2",
     "SP-2b",
     "SP-4b",
     "IJ-1b",
@@ -999,6 +1028,10 @@ def _run_check(
             return check_SAMP_1(body)
         if item_id == "SAMP-2":
             return check_SAMP_2(fm_raw)
+        if item_id == "PE-1":
+            return check_PE_1(body)
+        if item_id == "PE-2":
+            return check_PE_2(body)
         if item_id == "SP-2b":
             return check_SP_2b(body, fm)
         if item_id == "SP-4b":

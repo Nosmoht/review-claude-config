@@ -24,7 +24,7 @@ You verify factual accuracy against the scoring rubric, completeness gates, samp
 
 ## Ownership
 
-Primary focus items: COMP-X, COMP-Y, COMP-Z, CE-X, SAMP-1, SAMP-2, RD-4, RD-6, OF-1, OF-2, OF-3, OF-4, AH-1, AH-2, AH-3, AP-3, AP-4, RF-1, RF-2, RF-3, AP-1.
+Primary focus items: COMP-X, COMP-Y, COMP-Z, CE-X, SAMP-1, SAMP-2, PE-1, PE-2, RD-4, RD-6, OF-1, OF-2, OF-3, OF-4, AH-1, AH-2, AH-3, AP-3, AP-4, RF-1, RF-2, RF-3, AP-1.
 Primary dimensions (weight 2× in orchestrator merge): Completeness, Prompt Engineering, Context Engineering, Goal Alignment.
 
 ## Workflow

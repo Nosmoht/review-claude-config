@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-04
+last_refreshed: 2026-04-22
 ---
 
 # Prompt Engineering Techniques: Evidence-Based Summary
@@ -167,3 +167,39 @@ New Tier 1 findings from 2025-2026 research (arXiv + Anthropic official docs). E
 | Adaptive thinking | Not covered | Replaces budget_tokens in Claude 4.6; general instruction beats prescriptive steps |
 | Subagent orchestration | Not covered | Native in Claude 4.6; skills need guardrails against overuse |
 | Specificity × model size | Specificity sweet spot | Smaller models benefit more; frontier models tolerate ambiguity better |
+
+---
+
+## Opus 4.7 Prompting Guidance (Added 2026-04-22)
+
+**Source:** [Anthropic Prompting Best Practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices) (2026-04), [Few-shot Dilemma, arXiv:2509.13196](https://arxiv.org/html/2509.13196v1), [JSONSchemaBench, arXiv:2501.10868](https://arxiv.org/abs/2501.10868), [StructEval, arXiv:2505.20139](https://arxiv.org/html/2505.20139v1).
+
+Opus 4.7 (released 2026-04-16, CLI v2.1.111) reasons natively at higher effort and interprets prompts more literally. Several techniques previously effective now underperform or actively weaken instructions.
+
+### Techniques demoted for reasoning-class models (Claude 4.6+, Opus 4.7)
+
+**Chain-of-Thought scaffolding** `[Proven result]` — Explicit "think step by step" / "reason carefully about X" / "let's think through X" directives produce no measurable improvement on 4.7 and add tokens. The model already reasons at high effort without scaffolding; prescriptive reasoning steps fight against native thinking. Smaller models (Haiku 4.5 and below) still benefit from CoT — keep scaffolding for explicitly-pinned smaller-model workflows. *Rubric impact:* `scoring-rubric.md` §"Reasoning-Model Anti-Patterns" PE-1 detects scaffolding in skill/agent bodies.
+
+**Length hedges in directives** `[Proven result]` — Phrases like "try to", "if possible", "as appropriate", "when useful" weaken instructions on 4.7. The model interprets hedges as explicit permission to skip the directive when inconvenient. Replace with concrete triggers or remove. *Rubric impact:* `scoring-rubric.md` §"Reasoning-Model Anti-Patterns" PE-2 detects hedges in bodies; code-fenced exemplars are excluded so anti-pattern catalogs can still quote the phrases for detection purposes.
+
+**Prefill for output formatting** `[Deprecated]` — Assistant-turn prefills are deprecated on 4.7. Use system-prompt directives, XML tags, or tool-calling / structured outputs instead.
+
+### Techniques reinforced on 4.7
+
+**Tool-calling / structured outputs** `[Proven result]` — Unconstrained JSON output fails 8-15% in production versus <0.2% with Tool Use or JSON Schema (JSONSchemaBench, StructEval). Prefer tool-calling when the task has a well-formed output contract; prefer JSON Schema when output is data-only; use prefill-to-JSON only as a last resort.
+
+**Few-shot cap at 3-5** `[Proven result]` — Excess examples degrade accuracy; ≥6 examples measurably harms performance on reasoning-class models (Few-shot Dilemma). Already codified in `engineering-baseline.md` §Few-Shot Examples; rubric A-tier now names the cap explicitly.
+
+### SAMP-1 / SAMP-2 doubly justified
+
+Opus 4.7 returns **HTTP 400** when `temperature`, `top_p`, or `top_k` parameters are set via API — native-thinking models disallow sampling overrides. SAMP-1 (body-level) now guards against both stale prompt-level advice (3.x/4.x pre-native-thinking era) AND runtime-breaking frontmatter overrides. SAMP-2 (frontmatter-level) escalates to hard F because it causes a runtime 400-error.
+
+### Actionable Deltas (2026-04-22)
+
+| Area | Prior guidance | Update for Opus 4.7 |
+|---|---|---|
+| CoT scaffolding | "Improves reasoning for multi-step tasks" (+6% on HELM) | Remove for reasoning-class models (4.6+); retain for Haiku 4.5 and smaller |
+| Hedges in directives | (not covered) | Remove from all directive sentences — interpreted as weak permission to skip |
+| Prefill for JSON | Deprecated in 4.6 | Confirmed deprecated; use tool-calling or JSON Schema instead |
+| Sampling params | SAMP-1/SAMP-2 regex in rubric | Runtime HTTP 400-error on 4.7; SAMP-2 = hard F |
+| Few-shot count | 3-5 per Anthropic Claude 4 docs | Upper bound tightened; ≥6 actively degrades on reasoning-class models |
