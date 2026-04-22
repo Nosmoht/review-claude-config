@@ -65,7 +65,10 @@ BUDGETS: dict[str, int] = {
     # Structured references
     "reference-patterns.md": 800,
     "cross-skill-dependencies.md": 600,
-    "review-report-contract.md": 600,
+    # Issue #71 added §"Finding Determinism" defining the deterministic vs
+    # advisory class split — load-bearing policy contract for downstream
+    # consumers (apply-*, review-analytics, check-repo-health).
+    "review-report-contract.md": 800,
     "report-template.md": 700,
     # Boundary exemplars — PASS/FAIL pairs reduce verdict variance (BARS).
     # P0.1 added 8 new exemplar pairs; P0.5 added META/CE-X/COMP-X/Y/Z;
@@ -79,11 +82,13 @@ BUDGETS: dict[str, int] = {
     # wiring, skip-contract, Alt-A vs Alt-B rationale. merge-rules adds
     # Layer-1.5 boundary-cap table (20 rules), binary-finding synthesis,
     # perspective-finding dropping (binary + narrative parents), and the
-    # missing/malformed/crashed degradation paths. Both files are JIT-only
+    # missing/malformed/crashed degradation paths. Issue #71 added the
+    # §"Convergence Policy" section + scoped the Determinism Invariant
+    # paragraph to the deterministic subset. Both files are JIT-only
     # (not in shared prefix), so size growth costs one load per
     # /review-skill invocation, not per perspective dispatch.
     "perspective-dispatch-protocol.md": 1700,
-    "merge-rules.md": 2300,
+    "merge-rules.md": 2500,
     # Optional extractions pre-declared (created if parent guide overflows).
     # Loaded JIT: opus-4.7 only when model: opus-4-7 detected.
     "opus-4.7-migration-checks.md": 800,  # P0.1 extraction target

@@ -131,8 +131,8 @@ Artifact: same skill reviewed twice without changes.
 
 Expected review behavior:
 - Both reports contain `finding_id` values in recommendation headings.
-- Every High/Medium finding appears with the same `finding_id` in both runs.
-- The finding delta table shows all findings as `recurring` — zero `new`, zero `fixed`.
+- Every High/Medium finding **whose `checklist_item` is in the deterministic subset** (see `skills/review-skill/references/merge-rules.md` §"Convergence Policy") appears with the same `finding_id` in both runs. Advisory findings may differ.
+- The finding delta table shows all deterministic-subset findings as `recurring` — zero `new`, zero `fixed` within the deterministic subset. Advisory `new`/`fixed` entries are tolerated.
 - `finding_id` format matches `{checklist_item}:{path}:{dimension}/v1`.
 
 ## Case 10 — Baseline Version Lock
@@ -261,11 +261,14 @@ Expected meta-evaluation behavior:
 defects: N/A (tests analytics convergence detection, not finding detection)
 
 Artifact set: two synthetic review reports for the same skill path:
-- Report A: finding_ids `[WS-2:path:Clarity/v1, SP-2:path:Safety/v1]`, grades Clarity=C, Safety=C
-- Report B: finding_ids `[WS-2:path:Clarity/v1, AH-3:path:Compl/v1]`, grades Clarity=C, Safety=B
+- Report A: finding_ids `[META-1a:path:Metadata/v1, SP-2:path:Safety/v1]`, grades Metadata=C, Safety=C
+- Report B: finding_ids `[META-1a:path:Metadata/v1, AH-2b:path:Safety/v1]`, grades Metadata=C, Safety=B
+
+Both `META-1a`, `SP-2`, and `AH-2b` are in the deterministic subset (binary or narrative-parent), so deltas on them are convergence-blocking under the post-#71 scoped policy.
 
 Expected analytics behavior:
-- C18-1: Analytics View 4 identifies `SP-2` as `fixed` and `AH-3` as `new`
-- C18-2: `WS-2` classified as `recurring`
-- C18-3: Convergence verdict is "Not converged" (SP-2 differs between reports)
-- C18-4: Grade variance for Safety reported as 1 (C→B)
+- C18-1: Analytics View 4 identifies `SP-2` as `fixed` and `AH-2b` as `new`.
+- C18-2: `META-1a` classified as `recurring`.
+- C18-3: Convergence verdict is "Not converged" — `SP-2` differs between reports and is in the deterministic subset (NARRATIVE_PARENT).
+- C18-4: Grade variance for Safety reported as 1 (C→B).
+- C18-5: If both differing finding_ids were advisory (e.g. `WS-1`, `RF-1`), verdict would be "Converged" under the post-#71 scoped policy. View 4 may still report "Not converged" until the analytics scope filter ships in #72 — see the banner in `skills/review-analytics/SKILL.md` View 4.

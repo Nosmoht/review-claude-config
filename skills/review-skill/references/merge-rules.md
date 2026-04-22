@@ -120,12 +120,23 @@ For each item with `verdict == "FAIL"` in `binary_verdicts.json`, `synthesize_bi
 
 Ordered deterministically by `id` for byte-stable output.
 
+## Convergence Policy
+
+`/review-skill` guarantees Jaccard = 1.0 on H+M finding_ids for the **deterministic subset** only:
+
+- `BINARY_ITEM_IDS` — synthesized from `binary_verdicts.json` with byte-identical `id = "{item_id}:{artifact_path}:{dimension}/v1"`.
+- `NARRATIVE_PARENT_IDS` — dropped pre-dedup so supersedence is deterministic.
+
+Findings outside this subset (advisory items like `WS-1`, `OF-3`, `OF-4`, `PE-4`, `CE-3`, `PD-1`, `RF-1`, etc.) are emitted by perspective Haiku agents and may vary run-to-run. They surface in the merged cert at whatever severity the perspective reports, but they are **advisory** under the convergence gate — they do not block iteration and they do not count against Jaccard on the deterministic subset.
+
+Downstream consumers (`/apply-skill-review-findings`, `/review-analytics`, `/check-repo-health` freshness) MUST treat advisory findings as non-blocking. Deterministic findings (synthesized or narrative-parent-dropped) carry the convergence guarantee.
+
 ## Perspective Finding Dropping
 
 Before Layer 0 dedup, `merge_directory()` drops perspective findings whose `checklist_item` matches one of:
 
-- The 26 binary items (`BINARY_ITEM_IDS` in `merge_findings.py`) — prevents double-counting with synthesized findings.
-- The 11 narrative parents the rubric supersedes (`NARRATIVE_PARENT_IDS`: `AH-2, SP-2, SP-4, IJ-1, RL-1, RL-3, RL-4, RL-9, META-1, META-2, META-3`) — prevents Haiku-class perspective agents from re-litigating rubric-superseded surface.
+- The 28 binary items (`BINARY_ITEM_IDS` in `merge_findings.py`) — prevents double-counting with synthesized findings.
+- The 14 narrative parents the rubric supersedes (`NARRATIVE_PARENT_IDS`: `AH-2, IJ-1, META-1, META-2, META-3, RD-5, RL-1, RL-3, RL-4, RL-9, SP-2, SP-4, WS-2, WS-4`) — prevents Haiku-class perspective agents from re-litigating rubric-superseded surface.
 
 Counted in `dropped_perspective_findings`.
 
@@ -183,4 +194,4 @@ Merged JSON (schema — see script source for authoritative fields):
 
 ## Determinism invariant
 
-Given identical input files, Python >= 3.9, `scripts/merge_findings.py` produces byte-identical output. Convergence test on same artifact across two runs must yield same `finding_id` set at High/Medium severity (≤1-letter grade variance permitted only on non-owned dimensions).
+Given identical input files, Python >= 3.9, `scripts/merge_findings.py` produces byte-identical output **on the deterministic subset** (binary-synthesized + narrative-parent-dropped). Convergence test on same artifact across two runs must yield identical `finding_id` set at High/Medium severity **for items in the deterministic subset only**, per §"Convergence Policy" above. Advisory findings may vary; ≤1-letter grade variance permitted only on non-owned dimensions.

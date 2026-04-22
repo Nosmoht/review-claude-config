@@ -172,6 +172,8 @@ For each artifact with 2+ reports, analyze finding-level stability:
 
 3. For each artifact with 3+ reports, compute max grade variance per dimension (difference between highest and lowest grade across all reports).
 
+> **Scope note (pending issue #72):** this view currently compares all H+M finding_ids without filtering to the deterministic subset defined in `skills/review-skill/references/merge-rules.md` §"Convergence Policy". Until the demote follow-up ships, advisory findings can flip the verdict to "Not converged" even when the deterministic subset is stable. Treat verdicts as authoritative only on artifacts whose findings are exclusively in the deterministic subset; on artifacts with advisory findings, cross-check the deterministic subset manually via `merged.json`.
+
 4. Convergence verdict per artifact:
    - **Converged** — latest two reports share all High/Medium finding_ids AND max grade variance ≤1 per dimension AND no dimension is null in latest where previous had a non-null grade
    - **Not converged** — any High/Medium finding_id differs OR dimension variance >1 OR null-dimension regression
