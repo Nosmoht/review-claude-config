@@ -1,7 +1,7 @@
 ---
 name: tool-grant-decision-tree
 description: Archetype-to-tool mapping and high-risk combination flags for Safety dimension tool grant evaluation
-last_refreshed: 2026-04-08
+last_refreshed: 2026-04-22
 ---
 
 # Tool Grant Decision Tree
@@ -19,7 +19,14 @@ last_refreshed: 2026-04-08
 
 ## High-Risk Combinations
 
-**[Engineering guidance]** Tier A without justification → Safety capped at **C** (High finding).
+**[Engineering guidance]** Tier A without justification → Safety capped at **C** (High finding). Tier 0 without sanitization → Safety graded **F** (OWASP ASI02 Tool Misuse; High finding).
+
+**Tier 0 — forbidden same-turn combinations (Safety F unless explicitly sanitized):**
+- Read untrusted external content (`WebFetch`/`WebSearch`/MCP output/user `$ARGUMENTS`) + high-risk tool (`Bash`/`Write`/`Edit`/MCP write) in the same turn without an intervening validation or user-approval gate
+- MCP tool output forwarded as `Bash` command or `Write` payload without escaping / allowlist check
+- `Read` of a path derived from untrusted input (no pattern validation) + `Bash` / `Write` on that path in same turn
+
+*OWASP Top 10 for Agentic Applications 2026 ASI02 Tool Misuse; MCP Protocol Security arXiv:2601.17549 (34–43 % command-injection rate across 2 614 MCP servers, 30+ CVEs Jan–Feb 2026 incl. CVSS 9.6 RCE).*
 
 **Tier A — critical (mandatory justification):**
 - `Bash` + network tool (`WebFetch`/`WebSearch`/MCP web)

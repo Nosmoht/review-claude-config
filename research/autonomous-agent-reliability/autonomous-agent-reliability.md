@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-07
+last_refreshed: 2026-04-22
 ---
 
 # Autonomous Agent Reliability: Frameworks and Failure Taxonomies
@@ -316,6 +316,13 @@ Does the definition specify what triggers human escalation or agent halt?
 - Signal: high-autonomy agents with no escalation path are a High finding for safety-adjacent work
 - Source: arXiv 2602.16666; Partnership on AI real-time failure detection (Tier 2); Anthropic framework
 
+### R4b — HITL Surface Resistant to Manipulation (Added 2026-04-22)
+Is the HITL approval-request text itself resistant to prompt-injection? Specifically: is the user-facing confirmation prompt composed from fixed templates or constrained options, rather than from free-form model output derived from tool results or external content?
+- Maps to: OWASP Top 10 for Agentic Applications 2026 **ASI09** Human-Agent Trust Exploitation; rubber-stamp attack surface
+- Signal: HITL-heavy skills where the agent can synthesize the approval-prompt text from untrusted content are a **High** finding — the user rubber-stamps because the prompt looks legitimate, even when the underlying action has been redirected
+- Fix patterns: `AskUserQuestion` with fixed `options` arrays (not free-text); `ExitPlanMode` renders a plan file the user sees directly rather than a summary the agent writes; confirmation prompts templated in the skill body, not composed at runtime
+- Source: OWASP ASI2026 (Tier 1); Anthropic HITL guidance (Tier 1); `research/injection-taxonomy/injection-taxonomy.md` §indirect-via-tool-output
+
 ### R5 — State Validation / Checkpointing Mentioned
 Does the definition include state consistency checks between steps, or specify checkpointing?
 - Maps to: UiPath "state corruption is a silent killer" pattern; ReliabilityBench chaos engineering results
@@ -340,11 +347,11 @@ Are the agent's responsibilities and authority limits explicitly defined?
 - Signal: agents with open-ended "do whatever is needed" instructions lack boundary definition
 - Source: arXiv 2503.13657
 
-### R9 — Safety / PII / Credential Scope Addressed
-Does the definition explicitly exclude unsafe outputs, credential handling, or data leakage paths?
-- Maps to: AgentCompass Category 2 (Safety & Security Risks); adversarial robustness benchmarks
-- Signal: agents with tool access to secrets/credentials that lack explicit safety constraints are a High finding
-- Source: arXiv 2509.14647; arXiv 2508.16481 (adversarial robustness)
+### R9 — Safety / PII / Credential / Memory-Write Scope Addressed (Updated 2026-04-22 for OWASP ASI06)
+Does the definition explicitly exclude unsafe outputs, credential handling, data leakage paths, **and persistent memory writes carrying content from untrusted sources**?
+- Maps to: OWASP Top 10 for Agentic Applications 2026 **ASI06** Memory / Context Poisoning; AgentCompass Category 2 (Safety & Security Risks); adversarial robustness benchmarks
+- Signal: agents with tool access to secrets/credentials, or with write access to persistent memory (auto-memory files, CLAUDE.md, scratch plans that later feed back into the agent) that lack explicit content-origin or sanitization constraints are a **High** finding. The 2026 scope extends the 2025 rubric to memory-poisoning vectors beyond read-side PII: every memory *write* from external content is a potential future injection
+- Source: OWASP ASI2026 (Tier 1); arXiv 2509.14647; arXiv 2508.16481 (adversarial robustness); `research/memory-poisoning/memory-poisoning-patterns.md`
 
 ### R10 — Observability Hooks Specified
 Does the definition require logging of inputs, tool calls, and outputs (not just final result)?
@@ -352,8 +359,15 @@ Does the definition require logging of inputs, tool calls, and outputs (not just
 - Signal: no mention of tracing, logging, or audit trail is a Low-Medium finding for production-facing agents
 - Source: Microsoft Azure observability guidance (Tier 2); Anthropic framework (Tier 1)
 
+### R11 — Cascading Containment on Deep Delegation (Added 2026-04-22)
+For agents that dispatch subagent chains of depth ≥3 (A calls B calls C), does the definition specify a containment primitive — circuit breaker (open after N failed or timed-out children), rollback semantics (restore prior state on child failure), or a blast-radius limit (e.g., "no more than K downstream writes per root invocation")?
+- Maps to: OWASP Top 10 for Agentic Applications 2026 **ASI08** Cascading Failures; circuit-breaker pattern (closed/open/half-open three-state machine, typical 50 % failure threshold of last 100 requests); Microsoft Agent Governance Toolkit
+- Signal: multi-agent orchestrators with depth ≥3 that lack any containment primitive are a **High** finding — a single poisoned child can silently propagate through the chain, and retries at each level compound the blast radius
+- Fix patterns: `max_depth: 3` declaration in orchestrator frontmatter; explicit "abort remaining subagents on first High finding" rule; write-operation count budget per root dispatch; SLO breaker that short-circuits when chain latency exceeds a threshold
+- Source: OWASP ASI2026 (Tier 1); this file §"circuit breakers provide critical mechanism for preventing cascading failures" (L123, L174)
+
 **Severity mapping (for rubric grading):**
-- High findings: R1 (missing termination), R4 (no escalation on high-autonomy), R9 (unsafe scope)
+- High findings: R1 (missing termination), R4 (no escalation on high-autonomy), R4b (HITL surface manipulable, ASI09), R9 (unsafe scope incl. persistent memory writes, ASI06), R11 (no cascading containment on depth ≥3, ASI08)
 - Medium findings: R2 (no failure path), R3 (unbounded retry), R5 (no state validation), R6 (no verification), R8 (no role bounds)
 - Low findings: R7 (no reflection), R10 (no observability hooks)
 

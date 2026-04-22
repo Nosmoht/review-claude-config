@@ -51,13 +51,13 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 - **F**: Goal stated in description but body doesn't support achieving it.
 
 ### 6. Safety (10%; 15% with Write/Bash/Edit)
-- **A**: Least-privilege tool scoping per archetype (`tool-grant-decision-tree.md`), explicit guardrails for destructive actions, stop conditions, confirmation gates; failure path defined for every external dependency; stop condition prevents infinite recursion.
+- **A**: Least-privilege tool scoping per archetype (`tool-grant-decision-tree.md`), explicit guardrails for destructive actions, stop conditions, confirmation gates; failure path defined for every external dependency; stop condition prevents infinite recursion; MCP tools consumed only from pinned / integrity-verified / allowlisted sources; no Tier-0 untrusted-input + high-risk-tool same-turn combination.
 - **B**: Least-privilege with one exception; gates present; one failure path implicit.
-- **C**: Tools broader than needed or guardrails implicit; unmitigated Tier A combination caps Safety at C. *Test: item modifies/deletes user data without explicit confirmation → C or below.*
+- **C**: Tools broader than needed or guardrails implicit; unmitigated Tier A combination caps Safety at C; consuming MCP tool descriptions from an unpinned / unverified source caps Safety at C (MCPTox arXiv:2508.14925 — up to 72.8 % tool-poisoning attack success without integrity check). *Test: item modifies/deletes user data without explicit confirmation → C or below.*
 - **D**: Multiple tools too broad; no gates; some stop conditions missing.
-- **F**: Unrestricted tools with no guardrails. No stop conditions.
+- **F**: Unrestricted tools with no guardrails. No stop conditions. Tier-0 combination (untrusted external content + high-risk tool in same turn without sanitization).
 
-> **Agentic overlay** (applies when item has multi-step workflows, subagent delegation, loop/retry logic, or Write/Bash/Edit tools): R1-R10 reliability checks apply per `autonomous-agent-reliability.md` §Quality Rubric Checks. High-severity checks (R1: termination conditions, R4: escalation/HITL, R9: safety/PII scope) are B/C discriminators — missing any High check caps Safety at C. Grade mapping: **A** = all 10 addressed; **B** = all High checks addressed, ≤2 Medium implicit; **C-F** = inherit base grades, each missing High check shifts one grade down.
+> **Agentic overlay** (applies when item has multi-step workflows, subagent delegation, loop/retry logic, or Write/Bash/Edit tools): R1–R11 reliability checks apply per `autonomous-agent-reliability.md` §Quality Rubric Checks. High-severity checks — R1 (termination conditions), R4 (escalation/HITL path defined), R4b (HITL-surface resistant to prompt-injection of the approval-request text itself; OWASP ASI09), R9 (safety/PII/credential scope AND persistent-memory-write scope; OWASP ASI06), R11 (cascading-containment for delegation chains ≥3 agents via circuit breaker, rollback, or blast-radius limit; OWASP ASI08) — are B/C discriminators, missing any High check caps Safety at C. Grade mapping: **A** = all 11 addressed; **B** = all High checks addressed, ≤2 Medium implicit; **C-F** = inherit base grades, each missing High check shifts one grade down.
 
 > **Execution diagnostics:** RD-6 (tool availability probe) contributes to Safety; RD-4 (error handling for tool unavailability and unexpected output) contributes to Completeness; RD-5 (explicit step dependencies) contributes to Clarity.
 

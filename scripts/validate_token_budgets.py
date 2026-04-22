@@ -24,7 +24,15 @@ BUDGETS: dict[str, int] = {
     # Issue #63: +PE-1 CoT-Scaffolding / PE-2 Hedge-Free-Directives binary
     # items + Opus 4.7 reasoning-model anti-pattern section + SAMP-2 hard-F
     # rationale sentence (2026-04-22 rubric refresh for Opus 4.7 GA).
-    "scoring-rubric.md": 6800,
+    # Issue #61: +MCP source-integrity C-cap + Tier-0 F-cap + extended
+    # agentic overlay R1-R11 (R4b HITL-surface-manipulation, R11 cascading
+    # containment) + broadened R9 scope (memory-write poisoning, OWASP
+    # ASI06). MCPTox arXiv:2508.14925 + OWASP ASI2026.
+    "scoring-rubric.md": 7000,
+    # Issue #61: Tier-0 same-turn combination section (OWASP ASI02 Tool
+    # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
+    # 2026 incl. CVSS 9.6 RCE).
+    "tool-grant-decision-tree.md": 800,
     "engineering-baseline.md": 3500,  # P0.5 lowers to 2,600 post-refresh
     "signal-catalog.md": 1000,
     # Evaluation guides — dense checklists, legitimately >500.
