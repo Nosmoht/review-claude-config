@@ -766,6 +766,87 @@ class TestCanonicalizePerspectiveIds:
         assert A["id"] == "WS-4:skills/rv/SKILL.md:Clarity/v1"
 
 
+class TestAgentItemDimensionPinning:
+    """Issue #76: agent-rubric items get dim-pinned via AGENT_ITEM_DIMENSION
+    when artifact_type='agent', preventing Haiku dim-drift on agent reviews.
+    Namespace collisions (AP-2/AP-3/AP-4) intentionally omitted."""
+
+    def test_agent_only_item_dim_pinned(self):
+        from merge_findings import AGENT_ITEM_DIMENSION, get_item_dim
+
+        # Pick one agent-rubric item per dimension to sanity-check the table.
+        cases = [
+            ("SF-2", "Clarity"),
+            ("TC-3", "Completeness"),
+            ("DA-2a", "Context Engineering"),
+            ("AF-3", "Prompt Engineering"),
+            ("TV-2", "Safety"),
+            ("MS-1", "Metadata"),
+        ]
+        for item_id, expected_dim in cases:
+            assert AGENT_ITEM_DIMENSION[item_id] == expected_dim
+            assert get_item_dim(item_id, "agent") == expected_dim
+            # On a skill artifact the item is unknown — fall through to None.
+            assert get_item_dim(item_id, "skill") is None
+
+    def test_canonicalize_agent_finding_dim_pinned(self):
+        finding = {
+            "id": "TC-3:agents/foo.md:Metadata/haiku",
+            "dimension": "Metadata",  # Haiku dim-drift
+            "checklist_item": "TC-3",
+            "path": "agents/foo.md",
+            "severity": "Medium",
+        }
+        result = canonicalize_perspective_ids([finding], artifact_type="agent")
+        assert result[0]["dimension"] == "Completeness"
+        assert result[0]["id"] == "TC-3:agents/foo.md:Completeness/v1"
+
+    def test_canonicalize_skill_finding_unaffected_by_agent_table(self):
+        # Same ID under skill artifact_type must not pick up agent-rubric dim.
+        finding = {
+            "id": "TC-3:skills/foo/SKILL.md:Safety/haiku",
+            "dimension": "Safety",
+            "checklist_item": "TC-3",
+            "path": "skills/foo/SKILL.md",
+        }
+        result = canonicalize_perspective_ids([finding], artifact_type="skill")
+        # TC-3 is not in skill ITEM_DIMENSION — passes through unchanged.
+        assert result[0]["dimension"] == "Safety"
+        assert result[0]["id"] == finding["id"]
+
+    def test_namespace_collision_items_omitted(self):
+        # AP-2 / AP-3 / AP-4 differ by dimension across rubrics; we leave them
+        # unpinned in both tables so neither side mis-pins. Preserves pre-#76
+        # fall-through behaviour on these three IDs.
+        from merge_findings import AGENT_ITEM_DIMENSION
+
+        for item_id in ("AP-2", "AP-3", "AP-4"):
+            assert item_id not in AGENT_ITEM_DIMENSION, f"{item_id} must stay unpinned"
+            assert item_id not in ITEM_DIMENSION, f"{item_id} must stay unpinned"
+
+    def test_narrative_parent_items_omitted(self):
+        # IJ-1 / RL-1 / RL-3 / RL-4 / RL-9 are dropped before canonicalize
+        # runs, so pinning has no effect. Keep AGENT_ITEM_DIMENSION sparse.
+        from merge_findings import AGENT_ITEM_DIMENSION
+
+        for item_id in ("IJ-1", "RL-1", "RL-3", "RL-4", "RL-9"):
+            assert item_id not in AGENT_ITEM_DIMENSION, f"{item_id} is a narrative parent — must not pin"
+
+    def test_default_artifact_type_preserves_skill_behaviour(self):
+        # Callers that do not thread artifact_type get "skill" semantics —
+        # backward compatible with pre-#76 code paths.
+        finding = {
+            "id": "WS-4:skills/foo/SKILL.md:Safety/old",
+            "dimension": "Safety",
+            "checklist_item": "WS-4",
+            "path": "skills/foo/SKILL.md",
+        }
+        # No artifact_type arg — default "skill" — WS-4 canonicalizes.
+        result = canonicalize_perspective_ids([finding])
+        assert result[0]["dimension"] == "Clarity"
+        assert result[0]["id"] == "WS-4:skills/foo/SKILL.md:Clarity/v1"
+
+
 class TestNarrativeParentDropExtended:
     """Issue #70: WS-2, WS-4, RD-5 perspective findings drop when binary
     evaluator is present."""

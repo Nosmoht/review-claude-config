@@ -104,6 +104,10 @@ NARRATIVE_PARENT_IDS = frozenset(
 # Used for (a) finding-ID canonicalisation in canonicalize_perspective_ids()
 # so Haiku agents cannot produce dim-drifted IDs (issue #70: WS-4 Clarity↔Safety flip),
 # and (b) BINARY_CAPS + synthesize_binary_findings() lookups.
+#
+# SKILL-RUBRIC entries (below). For agent-rubric items that do not collide with
+# skill IDs, see AGENT_ITEM_DIMENSION — get_item_dim() dispatches between them
+# on artifact_type. Issue #76.
 ITEM_DIMENSION: dict[str, str] = {
     "META-1a": "Metadata",
     "META-2": "Metadata",
@@ -135,6 +139,84 @@ ITEM_DIMENSION: dict[str, str] = {
     "RL-4b": "Safety",
     "RL-9b": "Safety",
 }
+
+# Agent-rubric dimension pins for non-binary perspective-owned items. Namespace
+# is DISJOINT from the skill-rubric ITEM_DIMENSION entries above by construction
+# — only agent-rubric IDs that (a) do not collide with skill-rubric IDs on
+# dimension, and (b) are not in NARRATIVE_PARENT_IDS, are listed here.
+#
+# Collisions deliberately OMITTED (same ID, different dimension per rubric —
+# canonicalization on either would mis-pin the other; preserve current
+# unpinned fall-through):
+#   AP-2 (skill=Metadata, agent=Safety)
+#   AP-3 (skill=Prompt Engineering, agent=Metadata)
+#   AP-4 (skill=Completeness, agent=Prompt Engineering)
+#
+# Narrative-parent IDs deliberately OMITTED (dropped before canonicalize, so
+# dim pinning has no effect): IJ-1, RL-1, RL-3, RL-4, RL-9.
+#
+# Source: skills/review-agent/references/agent-evaluation-guide.md Dim column.
+# Issue #76. Extending this table to include TV-4 / AF-5 / AF-6 as binary
+# items + their BINARY_CAPS entries is #74 Phase 2.
+AGENT_ITEM_DIMENSION: dict[str, str] = {
+    # Clarity (2)
+    "SF-2": "Clarity",
+    "RL-7": "Clarity",
+    # Completeness (9)
+    "DA-4": "Completeness",
+    "TC-1": "Completeness",
+    "TC-2": "Completeness",
+    "TC-3": "Completeness",
+    "RL-2": "Completeness",
+    "RL-5": "Completeness",
+    "RL-6": "Completeness",
+    "RL-10": "Completeness",
+    "RT-4": "Completeness",
+    # Prompt Engineering (1)
+    "AF-3": "Prompt Engineering",
+    # Context Engineering (5)
+    "DA-2a": "Context Engineering",
+    "DA-2b": "Context Engineering",
+    "SF-1": "Context Engineering",
+    "RT-5": "Context Engineering",
+    "AF-2": "Context Engineering",
+    # Safety (7)
+    "TV-2": "Safety",
+    "TV-3": "Safety",
+    "RL-8": "Safety",
+    "IJ-2": "Safety",
+    "GV-1": "Safety",
+    "GV-2": "Safety",
+    "AF-1": "Safety",
+    "AF-4": "Safety",
+    "AF-5": "Safety",
+    # Metadata (9)
+    "MS-1": "Metadata",
+    "DA-1": "Metadata",
+    "DA-5": "Metadata",
+    "TV-1": "Metadata",
+    "TV-4": "Metadata",
+    "TV-5": "Metadata",
+    "TV-6": "Metadata",
+    "AF-6": "Metadata",
+    "AF-7": "Metadata",
+}
+
+
+def get_item_dim(item_id: str, artifact_type: str = "skill") -> str | None:
+    """Resolve an item's pinned dimension for the given artifact type.
+
+    Agent artifacts consult AGENT_ITEM_DIMENSION first; if the item is not
+    there (e.g., a universal binary item like SP-2b or a namespace-collision
+    item like AP-3), fall back to ITEM_DIMENSION. Skill artifacts use only
+    ITEM_DIMENSION. Issue #76.
+    """
+    if artifact_type == "agent":
+        dim = AGENT_ITEM_DIMENSION.get(item_id)
+        if dim is not None:
+            return dim
+    return ITEM_DIMENSION.get(item_id)
+
 
 # Grade-boundary cap table. Each entry: FAIL on `item` caps `dimension` at
 # `cap_grade` (cannot be better). Source: scoring-rubric.md grade-boundary
@@ -173,9 +255,9 @@ BINARY_CAPS: list[tuple[str, str, str]] = [
 ]
 
 
-def canonicalize_perspective_ids(findings: list[dict]) -> list[dict]:
+def canonicalize_perspective_ids(findings: list[dict], artifact_type: str = "skill") -> list[dict]:
     """Rewrite ``dimension`` + ``id`` on perspective findings whose
-    ``checklist_item`` is pinned in ``ITEM_DIMENSION``.
+    ``checklist_item`` is pinned by :func:`get_item_dim`.
 
     Rewrite rule: ``id = f"{checklist_item}:{path}:{pinned_dim}/v1"`` using
     ``finding['checklist_item']`` and ``finding['path']`` as authoritative
@@ -185,12 +267,16 @@ def canonicalize_perspective_ids(findings: list[dict]) -> list[dict]:
     collapse in Layer-0 dedup. Findings without a pinned ``checklist_item``
     or without a ``path`` pass through unchanged.
 
-    Issue #70.
+    ``artifact_type`` routes the lookup: agent artifacts consult
+    :data:`AGENT_ITEM_DIMENSION` first. Default ``"skill"`` preserves pre-#76
+    behaviour for callers that do not thread artifact_type through.
+
+    Issue #70; extended in #76.
     """
     rewritten: list[dict] = []
     for f in findings:
         item = f.get("checklist_item") or ""
-        pinned_dim = ITEM_DIMENSION.get(item)
+        pinned_dim = get_item_dim(item, artifact_type)
         path = f.get("path") or ""
         if not pinned_dim or not path:
             rewritten.append(f)
@@ -483,6 +569,10 @@ def merge_directory(session_dir: pathlib.Path) -> dict:
     verdicts_doc, binary_status = load_binary_verdicts(session_dir)
     artifact_path = _infer_artifact_path(available_certs, verdicts_doc)
     apply_caps = binary_status in ("present", "error")
+    # Issue #76: resolve artifact_type from the binary evaluator output (source
+    # of truth — written by classify_artifact(). Missing/legacy verdicts_doc →
+    # default "skill" (preserves pre-#76 behaviour).
+    artifact_type = (verdicts_doc or {}).get("artifact_type") or "skill"
 
     # Collect perspective findings with two handling rules (issue #72):
     #   1. Drop findings whose checklist_item is in the deterministic subset
@@ -519,7 +609,8 @@ def merge_directory(session_dir: pathlib.Path) -> dict:
     # Canonicalise IDs on pinned-dim items before synthesis + dedup so
     # perspective-emitted findings share IDs across runs even if Haiku
     # reported different dimensions on identical evidence (issue #70).
-    all_findings = canonicalize_perspective_ids(all_findings)
+    # artifact_type routing adds agent-rubric item pins (issue #76).
+    all_findings = canonicalize_perspective_ids(all_findings, artifact_type)
 
     # Append deterministic findings synthesized from binary verdicts.
     binary_findings = synthesize_binary_findings(verdicts_doc, artifact_path) if apply_caps else []
