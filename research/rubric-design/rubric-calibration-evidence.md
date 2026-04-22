@@ -278,6 +278,92 @@ CLAR-* failures are C-caps, not D/F: the workflow is still followable, but step-
 
 No items dropped. CLAR-1 and CLAR-2 are both directly supported by the Tier-1 sources above; no contradiction with Anthropic docs or other rubric items was surfaced during research.
 
+## Issue #61 — Safety MCP Tool-Poisoning + OWASP ASI Extensions
+
+### Problem
+
+2026 Q2 MCP-security research exposed three gap classes in the Safety rubric before commit 14d3fe0: (1) no MCP-source-integrity requirement for Grade A, letting skills consume unpinned tool descriptions without grade impact; (2) no Tier-0 same-turn combination class for untrusted-input + high-risk-tool without sanitization; (3) agentic overlay covered only R1–R10 and missed the OWASP ASI09 rubber-stamp-HITL surface and ASI08 cascading-failure containment for deep delegation chains. `R9` also understated persistent memory-write scope (ASI06).
+
+### Rubric Changes (landed in `scoring-rubric.md:53-62` and `tool-grant-decision-tree.md:22-29`)
+
+1. **MCP source integrity (Grade A clause + C cap)** — A requires "MCP tools consumed only from pinned / integrity-verified / allowlisted sources"; unpinned/unverified MCP consumption caps Safety at C.
+2. **R4b HITL-surface resistance** — agentic High check added: approval-prompt text is composed from fixed templates or constrained options, not free-form model output derived from tool results or external content. Maps to ASI09.
+3. **R11 Cascading containment** — agentic High check added for delegation chains of depth ≥3: circuit breaker OR rollback semantics OR blast-radius limit must be declared. Maps to ASI08.
+4. **R9 memory-write scope** — existing High check extended: Safety/PII/credential scope AND persistent-memory-write scope. Maps to ASI06.
+5. **Tier-0 same-turn combination (Safety F)** — `tool-grant-decision-tree.md` adds Tier-0 forbidden class: untrusted external content (WebFetch/WebSearch/MCP output/raw `$ARGUMENTS`) + high-risk tool (Bash/Write/Edit/MCP write) in the same turn without validation/approval gate → Safety F. Maps to ASI02.
+
+### Grade Boundary
+
+| Change | Condition | Grade impact |
+|---|---|---|
+| MCP source integrity | all MCP-consuming skills specify pinning / integrity check / allowlist | A-eligible |
+| MCP source integrity | unpinned/unverified MCP consumption | Safety cap at C |
+| R4b | HITL-heavy skill uses fixed-template/constrained-option approval prompts | B-retention |
+| R4b | HITL approval text synthesized from untrusted content | Safety cap at C (High check missing) |
+| R11 | delegation depth ≥3 declares circuit breaker / rollback / blast-radius limit | B-retention |
+| R11 | depth-≥3 chain with no containment primitive | Safety cap at C |
+| R9 memory | persistent-memory-write scope explicitly addressed alongside PII/cred scope | B-retention |
+| R9 memory | memory-write surface unaddressed | one-grade shift per missing High check |
+| Tier-0 | untrusted-input + high-risk-tool + sanitization/approval gate present | A/B per base grade |
+| Tier-0 | unsanitized same-turn combination | Safety F (hard floor) |
+
+Caps compose multiplicatively: a skill missing both R4b and R11 on an agentic pipeline is capped at C (two High checks missing = two-grade shift from A = C under the `agentic overlay` grade mapping).
+
+### BOUNDARY PASS/FAIL exemplars
+
+**MCP-1 MCP-Source-Integrity**
+- Observable: every MCP server referenced in `mcpServers` frontmatter or body is paired with a pinning/integrity/allowlist statement within the same file.
+- PASS: `"mcpServers: [{name: 'stripe', url: 'https://mcp.stripe.com', sha256: 'a1b2...', allowlist_tools: ['create_invoice', 'list_customers']}]"`.
+- FAIL (boundary): `"mcpServers: ['filesystem', 'github']"` — named but no version pin, no integrity attestation, no tool allowlist.
+- FAIL (egregious): body calls `mcp__arbitrary_server__*` with no `mcpServers` declaration at all.
+- Verification: regex — for each `mcp__<server>__` reference in body OR each entry in `mcpServers` frontmatter, require ≥1 match within the same file of `/(pinned|sha256|sha-256|version\s*[:=]|revision\s*[:=]|integrity|allowlist|allowed\s+tools|trusted\s+source|signed)/i`. Source: MCPTox arXiv:2508.14925 (2025-08) — 72.8 % tool-poisoning attack success on o1-mini, 70.2 % on Phi-4 across 45 servers / 353 tools / 1,312 cases when source integrity is not gated.
+
+**R4b HITL-Surface-Resistance**
+- Observable: every AskUserQuestion/confirmation/approval prompt is composed from either a hardcoded template string OR an enum of fixed options — not interpolated from tool outputs, `$ARGUMENTS`, MCP responses, or WebFetch content.
+- PASS: `"AskUserQuestion('Delete the file at {validated_path}?', options=['Yes','No'])"` — path is validated (`MCP-1`-style) before interpolation, prompt text is fixed.
+- FAIL (boundary): `"AskUserQuestion(f'Proceed with {tool_output.action_description}?', ...)"` — prompt text carries free-form model/tool output that the agent can craft to rubber-stamp.
+- FAIL (egregious): no confirmation step at all on a destructive agentic path (separate R4 FAIL, not R4b).
+- Verification: regex on approval-prompt construction — detect `/(AskUserQuestion|confirm|approve|prompt)/` within 400 chars of `/(f"|f'|\${|\.format\(|\+\s*[a-z_]+|str\()/` where the interpolated variable is NOT inside a whitelist of pre-validated identifiers (e.g., `path_validated`, `allowlisted_name`). Source: OWASP Top 10 for Agentic Applications 2026 **ASI09** Human-Agent Trust Exploitation — "rubber-stamp attack surface" where model-crafted approval text exploits habitual user trust.
+
+**R11 Cascading-Containment**
+- Observable: for agents declaring `Agent` or `Task` tools where the body indicates ≥3 levels of delegation (root → child → grandchild), the file contains at least one of: (a) circuit-breaker token (`circuit.breaker`, `open.*after.*failed`, half-open state), (b) rollback/compensating-action token, (c) numeric blast-radius limit (max downstream writes/invocations per root).
+- PASS: `"If any grandchild times out 3 times in a rolling 100-invocation window, open the circuit breaker on that sub-agent for 60 s."`
+- PASS (rollback): `"On grandchild failure, revert the parent's draft state before the dispatch; re-queue under human review."`
+- FAIL (boundary): chain of `Agent → Agent → Agent` with only `maxTurns: 20` on each — per-agent cap but no cross-level containment.
+- FAIL (egregious): unbounded delegation depth with no per-chain budget, no circuit breaker, no rollback.
+- Verification: two-step — (1) detect chain depth ≥3 via count of Agent/Task dispatches transitively reachable from the body; (2) require ≥1 match of `/(circuit\s*breaker|rolling\s*window|open.*after\s+\d+|half[-\s]?open|rollback|compensating|revert|blast.radius|max\s+(downstream|child|descendant)\s+(writes?|invocations?|calls?))/i`. Source: OWASP Top 10 for Agentic Applications 2026 **ASI08** Cascading Failures; `research/autonomous-agent-reliability/autonomous-agent-reliability.md:362-365` citing the circuit-breaker three-state pattern (closed/open/half-open, typical 50 % failure threshold of last 100 requests).
+
+**R9-memory Persistent-Memory-Write-Scope**
+- Observable: skills/agents with `memory:` frontmatter (`user`/`project`/`local`) OR any `Write`-to-memory-path pattern include a scope rule naming what MAY be persisted, what MUST NOT be persisted, and a boundary predicate.
+- PASS: `"Memory writes are project-scoped; credentials, secrets matching /[A-Za-z0-9_-]{20,}/, and user PII (email, phone) are stripped before persist. No user-scoped memory modifications."`
+- FAIL (boundary): `"memory: project"` with no scope rule in the body — field declared, behavior undefined.
+- FAIL (egregious): agent with `memory: user` that writes arbitrary tool output to memory without filtering.
+- Verification: when `memory:` frontmatter is present OR body contains `Write` on a `memory/` path, require ≥1 match of `/(must not persist|do not (store|persist|write)|redact|strip|filter|scoped to|boundary predicate|only.*(projects?|session)|never.*credentials?|never.*PII)/i` within the file. Source: OWASP Top 10 for Agentic Applications 2026 **ASI06** Memory and Context Poisoning; `research/memory-poisoning/memory-poisoning-patterns.md` 3 poisoning vectors (instruction injection, stale accumulation, contradiction insertion).
+
+**Tier-0 Same-Turn-Combination-Sanitized**
+- Observable: when the body pairs a source of untrusted input (WebFetch/WebSearch/MCP output/`$ARGUMENTS`) with a high-risk tool (Bash/Write/Edit/MCP write) in the same sequential step, an intervening validation or approval gate is declared between them.
+- PASS: `"Fetch the URL; validate response body matches the expected schema (Pydantic model); if valid, present AskUserQuestion preview before Write."`
+- PASS (allowlist): `"MCP call returns a filename; assert filename matches /^[a-z0-9._-]+$/ AND is one of the 12 allowlisted reports; then Bash('cat ' + shell_quote(filename))."`
+- FAIL (boundary): `"Fetch the URL; parse JSON; Bash('rm ' + json['filename'])."` — JSON parsed but filename is not validated before Bash consumes it.
+- FAIL (egregious): `"Forward $ARGUMENTS directly to Bash."` — zero gate between untrusted input and shell.
+- Verification: sequential-scan — for each adjacent pair `(source, sink)` where `source ∈ {WebFetch, WebSearch, MCP-output, raw $ARGUMENTS}` and `sink ∈ {Bash, Write, Edit, MCP-write}`, require an intervening match of `/(validate|schema|Pydantic|assert.*match|regex|allowlist|AskUserQuestion|preview|confirm|approval\s+gate|shell_quote|escape)/i` OR the source is transformed into a named validated variable before reaching the sink. Source: MCP Protocol Security arXiv:2601.17549 (2026) — 34-43 % command-injection rate across 2,614 MCP servers, 30+ CVEs Jan-Feb 2026 incl. CVSS 9.6 RCE; OWASP Top 10 for Agentic Applications 2026 **ASI02** Tool Misuse.
+
+### Evidence
+
+- [arXiv:2508.14925 — MCPTox](https://arxiv.org/abs/2508.14925) (2025-08) — 45 MCP servers, 353 tools, 1,312 attack cases; tool-poisoning attack success up to 72.8 % (o1-mini) and 70.2 % (Phi-4). Claude-3.7-Sonnet refusal rate <3 % — frontier-model alignment is insufficient; source integrity gating is the lever. **Tier 1**.
+- [arXiv:2601.17549 — MCP Protocol Security](https://arxiv.org/html/2601.17549) (2026) — protocol-level defects amplify attack success by 23-41 %; 34-43 % command-injection rate measured across 2,614 MCP servers; 30+ CVEs Jan-Feb 2026 including CVSS 9.6 RCE. **Tier 1**.
+- **OWASP Top 10 for Agentic Applications 2026** (ASI01–ASI10) — ASI02 Tool Misuse, ASI06 Memory/Context Poisoning, ASI08 Cascading Failures, ASI09 Human-Agent Trust Exploitation are the four new framework entries referenced by this issue. **Tier 1** (standards body).
+- `research/autonomous-agent-reliability/autonomous-agent-reliability.md:319-327` (R4b) and `:362-368` (R11) — distilled wording for the agentic overlay checks. **Tier 1 derived**.
+- `research/tool-least-privilege/tool-least-privilege-agents.md` — 5-tier high-risk tool combination checklist; Tier 0 forbidden class now codified in `tool-grant-decision-tree.md:22-29`.
+
+### Non-change: OWASP 2026 PDF exact-wording verification deferred
+
+The original issue Validation block requested fetching the OWASP Top 10 for Agentic Applications 2026 PDF for authoritative "Least-Agency" and "Strong Observability" phrasing before codifying. The rubric landed using paraphrased framework references (ASI02/06/08/09 mapped to rubric clauses); direct-quote verification is deferred until the PDF is reliably fetchable from a Tier-1 source. Split into a follow-up if verbatim wording alignment becomes a discriminator on real reviews.
+
+### Non-change: `/run-eval-cases` regression deferred
+
+Issue #61 Validation also requested `/run-eval-cases` against MCP skills and agentic chains. Only `docs/review-eval-cases.md` exists as the case inventory; no MCP-specific case is in the enumeration yet. A dedicated follow-up should add a case pair for (a) an MCP-consuming skill with pinned vs unpinned declaration, and (b) a depth-≥3 agent chain with and without containment primitive. Not a blocker for #61 close: the rubric is now operationally testable via real reviews (`/review-mcp-server`, `/review-agent`) on any MCP/agent artifact in the wild.
+
 ## Canonical Item Template (applied to all items above)
 
 ```
@@ -305,6 +391,9 @@ Tier 1:
 - [arXiv:2603.29231 — Beyond pass@1 Reliability Framework](https://arxiv.org/abs/2603.29231)
 - [arXiv:2509.25370 — AgentErrorTaxonomy / AgentDebug](https://arxiv.org/abs/2509.25370)
 - arXiv:2503.13657 — MAST
+- [arXiv:2508.14925 — MCPTox](https://arxiv.org/abs/2508.14925)
+- [arXiv:2601.17549 — MCP Protocol Security](https://arxiv.org/html/2601.17549)
+- OWASP Top 10 for Agentic Applications 2026 (ASI01–ASI10)
 
 Tier 2:
 - Anthropic Skill Creator Blog, Jan 2026
