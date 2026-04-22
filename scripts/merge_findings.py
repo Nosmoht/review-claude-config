@@ -484,12 +484,20 @@ def merge_directory(session_dir: pathlib.Path) -> dict:
     artifact_path = _infer_artifact_path(available_certs, verdicts_doc)
     apply_caps = binary_status in ("present", "error")
 
-    # Collect perspective findings, dropping any whose checklist_item is in
-    # the binary-evaluator's scope or the narrative-parent supersede set.
-    # This prevents double-counting with synthesize_binary_findings() output
-    # and removes Haiku re-litigation of rubric-superseded narrative items.
+    # Collect perspective findings with two handling rules (issue #72):
+    #   1. Drop findings whose checklist_item is in the deterministic subset
+    #      (BINARY_ITEM_IDS | NARRATIVE_PARENT_IDS) — prevents double-counting
+    #      with synthesize_binary_findings() output and removes Haiku
+    #      re-litigation of rubric-superseded narrative items.
+    #   2. Demote remaining (advisory) findings from High/Medium to Low so
+    #      they surface for reviewer triage but do not block convergence.
+    #      Issue #71 scoped the convergence gate to the deterministic subset;
+    #      #72 makes advisory H+M unreachable by construction.
+    # Fail-safe: when apply_caps is False (binary evaluator missing/malformed),
+    # neither drop nor demote fires — perspectives retain full authority.
     all_findings: list[dict] = []
     dropped_perspective_findings = 0
+    demoted_perspective_findings = 0
     for persp, cert in available_certs.items():
         for f in cert.get("findings", []):
             item = f.get("checklist_item") or ""
@@ -498,6 +506,14 @@ def merge_directory(session_dir: pathlib.Path) -> dict:
                 continue
             finding = dict(f)
             finding.setdefault("perspective", persp)
+            # Case-insensitive match to demote off-spec severity labels too
+            # (e.g. Haiku emitting "HIGH" or "high"). Canonical spec is
+            # "High" / "Medium" / "Low"; other strings are treated as Low-rank
+            # elsewhere (SEVERITY_RANK.get default) but should still demote.
+            sev = (finding.get("severity") or "").strip().lower()
+            if apply_caps and sev in ("high", "medium"):
+                finding["severity"] = "Low"
+                demoted_perspective_findings += 1
             all_findings.append(finding)
 
     # Canonicalise IDs on pinned-dim items before synthesis + dedup so
@@ -567,6 +583,7 @@ def merge_directory(session_dir: pathlib.Path) -> dict:
         "binary_verdicts_applied": binary_verdicts_applied,
         "boundary_caps_applied": caps_applied,
         "dropped_perspective_findings": dropped_perspective_findings,
+        "demoted_perspective_findings": demoted_perspective_findings,
     }
 
 

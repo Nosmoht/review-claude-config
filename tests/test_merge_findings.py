@@ -875,3 +875,218 @@ class TestLayer1_5ClarityCapsForIssue70:
         for c in caps:
             if c["item"] == "WS-2b":
                 assert c["applied"] is False
+
+
+def _perspective_cert(perspective: str, findings: list[dict]) -> str:
+    """Helper: build a full perspective certificate JSON body for merge tests."""
+    return json.dumps(
+        {
+            "perspective": perspective,
+            "dimensions": {
+                "Clarity": "B",
+                "Completeness": "B",
+                "Prompt Engineering": "B",
+                "Context Engineering": "B",
+                "Goal Alignment": "B",
+                "Safety": "B",
+                "Metadata": "B",
+            },
+            "weighted_score": 85.0,
+            "artifact_frontmatter": {"allowed_tools": ["Read"]},
+            "findings": findings,
+        }
+    )
+
+
+def _write_perspectives(tmp_path: pathlib.Path, findings_by_persp: dict[str, list[dict]]) -> None:
+    """Helper: write three perspective certs + a present-but-empty binary verdicts doc."""
+    for name in ("clarity", "correctness", "integration"):
+        (tmp_path / f"{name}.json").write_text(
+            _perspective_cert(name, findings_by_persp.get(name, []))
+        )
+    (tmp_path / "binary_verdicts.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_path": "skills/foo/SKILL.md",
+                "artifact_type": "skill",
+                "verdicts": {},
+                "stats": {"pass": 0, "fail": 0, "na": 0, "runner_error": 0},
+            }
+        )
+    )
+
+
+class TestAdvisoryDemote:
+    """Issue #72 — advisory perspective findings are demoted to Low severity.
+
+    Deterministic-subset findings (checklist_item in BINARY_ITEM_IDS or
+    NARRATIVE_PARENT_IDS) stay dropped. Advisory findings (anything outside
+    the subset) at High/Medium are forced to Low so the H+M convergence
+    gate is satisfiable by construction.
+    """
+
+    def _advisory_finding(self, severity: str, item: str = "WS-1") -> dict:
+        return {
+            "id": f"{item}:x.md:Clarity/v1",
+            "dimension": "Clarity",
+            "checklist_item": item,
+            "severity": severity,
+            "primary_focus": True,
+            "owner_conflict": False,
+            "hint_owner": None,
+            "path": "x.md",
+            "line_range": "10-12",
+            "evidence": f"advisory evidence for {item} {severity}",
+        }
+
+    def test_advisory_high_demoted_to_low(self, tmp_path: pathlib.Path):
+        _write_perspectives(
+            tmp_path, {"clarity": [self._advisory_finding("High", "WS-1")]}
+        )
+        result = merge_directory(tmp_path)
+        assert result["demoted_perspective_findings"] == 1
+        # Finding is preserved in the merged cert, not dropped.
+        kept = [f for f in result["findings"] if f.get("checklist_item") == "WS-1"]
+        assert len(kept) == 1
+        assert kept[0]["severity"] == "Low"
+
+    def test_advisory_medium_demoted_to_low(self, tmp_path: pathlib.Path):
+        _write_perspectives(
+            tmp_path, {"correctness": [self._advisory_finding("Medium", "OF-3")]}
+        )
+        result = merge_directory(tmp_path)
+        assert result["demoted_perspective_findings"] == 1
+        kept = [f for f in result["findings"] if f.get("checklist_item") == "OF-3"]
+        assert len(kept) == 1
+        assert kept[0]["severity"] == "Low"
+
+    def test_advisory_low_unchanged(self, tmp_path: pathlib.Path):
+        _write_perspectives(
+            tmp_path, {"integration": [self._advisory_finding("Low", "RF-1")]}
+        )
+        result = merge_directory(tmp_path)
+        assert result["demoted_perspective_findings"] == 0
+        kept = [f for f in result["findings"] if f.get("checklist_item") == "RF-1"]
+        assert len(kept) == 1
+        assert kept[0]["severity"] == "Low"
+
+    def test_deterministic_still_dropped(self, tmp_path: pathlib.Path):
+        # BINARY item — dropped (not demoted).
+        binary_finding = self._advisory_finding("High", "META-1a")
+        # NARRATIVE_PARENT item — also dropped.
+        parent_finding = self._advisory_finding("High", "SP-2")
+        _write_perspectives(
+            tmp_path,
+            {"clarity": [binary_finding], "integration": [parent_finding]},
+        )
+        result = merge_directory(tmp_path)
+        assert result["dropped_perspective_findings"] == 2
+        assert result["demoted_perspective_findings"] == 0
+        items = {f.get("checklist_item") for f in result["findings"]}
+        assert "META-1a" not in items
+        assert "SP-2" not in items
+
+    def test_mixed_drop_and_demote_counters(self, tmp_path: pathlib.Path):
+        findings = [
+            self._advisory_finding("High", "META-1a"),  # drop (binary)
+            self._advisory_finding("High", "WS-2"),  # drop (narrative parent)
+            self._advisory_finding("High", "WS-1"),  # demote (advisory High)
+            self._advisory_finding("Medium", "OF-4"),  # demote (advisory Medium)
+            self._advisory_finding("Low", "PD-1"),  # keep as-is
+        ]
+        _write_perspectives(tmp_path, {"clarity": findings})
+        result = merge_directory(tmp_path)
+        assert result["dropped_perspective_findings"] == 2
+        assert result["demoted_perspective_findings"] == 2
+        items = {f.get("checklist_item") for f in result["findings"]}
+        assert items == {"WS-1", "OF-4", "PD-1"}
+        # All kept findings end up at Low severity.
+        for f in result["findings"]:
+            assert f["severity"] == "Low"
+
+    def test_fail_safe_no_demote_when_evaluator_missing(self, tmp_path: pathlib.Path):
+        # Write perspectives WITHOUT binary_verdicts.json — triggers fail-safe
+        # (apply_caps=False). Neither drop nor demote fires; perspective
+        # severities pass through unchanged.
+        for name in ("clarity", "correctness", "integration"):
+            (tmp_path / f"{name}.json").write_text(
+                _perspective_cert(
+                    name,
+                    [self._advisory_finding("High", "WS-1")] if name == "clarity" else [],
+                )
+            )
+        result = merge_directory(tmp_path)
+        assert result["binary_evaluator_status"] == "missing"
+        assert result["dropped_perspective_findings"] == 0
+        assert result["demoted_perspective_findings"] == 0
+        kept = [f for f in result["findings"] if f.get("checklist_item") == "WS-1"]
+        assert len(kept) == 1
+        assert kept[0]["severity"] == "High"  # untouched under fail-safe
+
+    def test_offspec_severity_case_insensitive_demote(self, tmp_path: pathlib.Path):
+        # Haiku may emit 'HIGH' or 'high'; demote handles case-insensitively.
+        findings = [
+            {**self._advisory_finding("Medium", "OF-3"), "severity": "HIGH"},
+            {**self._advisory_finding("Medium", "OF-4"), "severity": "high"},
+            {**self._advisory_finding("Medium", "PE-4"), "severity": "Medium"},
+        ]
+        _write_perspectives(tmp_path, {"clarity": findings})
+        result = merge_directory(tmp_path)
+        assert result["demoted_perspective_findings"] == 3
+        for f in result["findings"]:
+            assert f["severity"] == "Low"
+
+    def test_multi_perspective_advisory_agreement_preserved(self, tmp_path: pathlib.Path):
+        # Three perspectives emit the same advisory High on the same line.
+        # After demote-then-dedup the collapsed finding is Low severity, but
+        # the `perspectives` list should preserve the 3-way agreement signal.
+        f = {
+            "id": "WS-1:x.md:Clarity/v1",
+            "dimension": "Clarity",
+            "checklist_item": "WS-1",
+            "severity": "High",
+            "primary_focus": True,
+            "owner_conflict": False,
+            "hint_owner": None,
+            "path": "x.md",
+            "line_range": "10-12",
+            "evidence": "identical advisory evidence",
+        }
+        _write_perspectives(
+            tmp_path,
+            {"clarity": [dict(f)], "correctness": [dict(f)], "integration": [dict(f)]},
+        )
+        result = merge_directory(tmp_path)
+        assert result["demoted_perspective_findings"] == 3
+        kept = [g for g in result["findings"] if g.get("checklist_item") == "WS-1"]
+        assert len(kept) == 1
+        assert kept[0]["severity"] == "Low"
+        # 3-way agreement is preserved regardless of order of demote vs dedup.
+        assert len(kept[0].get("perspectives", [])) == 3
+
+    def test_synthesized_binary_findings_not_demoted(self, tmp_path: pathlib.Path):
+        # Binary verdicts producing synthesized High findings must not be
+        # demoted — they are added AFTER the perspective loop.
+        for name in ("clarity", "correctness", "integration"):
+            (tmp_path / f"{name}.json").write_text(_perspective_cert(name, []))
+        (tmp_path / "binary_verdicts.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "artifact_path": "skills/foo/SKILL.md",
+                    "artifact_type": "skill",
+                    "verdicts": {
+                        "CLAR-1": {
+                            "verdict": "FAIL",
+                            "evidence": {"line": 42, "match": "ambiguous"},
+                        }
+                    },
+                    "stats": {"pass": 0, "fail": 1, "na": 0, "runner_error": 0},
+                }
+            )
+        )
+        result = merge_directory(tmp_path)
+        assert result["demoted_perspective_findings"] == 0
+        high = [f for f in result["findings"] if f.get("severity") == "High"]
+        assert any(f.get("checklist_item") == "CLAR-1" for f in high)

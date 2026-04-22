@@ -84,11 +84,13 @@ BUDGETS: dict[str, int] = {
     # perspective-finding dropping (binary + narrative parents), and the
     # missing/malformed/crashed degradation paths. Issue #71 added the
     # §"Convergence Policy" section + scoped the Determinism Invariant
-    # paragraph to the deterministic subset. Both files are JIT-only
+    # paragraph to the deterministic subset. Issue #72 renamed
+    # §"Perspective Finding Dropping" → §"Perspective Finding Handling"
+    # with the drop/demote/fail-safe contract. Both files are JIT-only
     # (not in shared prefix), so size growth costs one load per
     # /review-skill invocation, not per perspective dispatch.
     "perspective-dispatch-protocol.md": 1700,
-    "merge-rules.md": 2500,
+    "merge-rules.md": 3000,
     # Optional extractions pre-declared (created if parent guide overflows).
     # Loaded JIT: opus-4.7 only when model: opus-4-7 detected.
     "opus-4.7-migration-checks.md": 800,  # P0.1 extraction target

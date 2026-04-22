@@ -127,18 +127,26 @@ Ordered deterministically by `id` for byte-stable output.
 - `BINARY_ITEM_IDS` — synthesized from `binary_verdicts.json` with byte-identical `id = "{item_id}:{artifact_path}:{dimension}/v1"`.
 - `NARRATIVE_PARENT_IDS` — dropped pre-dedup so supersedence is deterministic.
 
-Findings outside this subset (advisory items like `WS-1`, `OF-3`, `OF-4`, `PE-4`, `CE-3`, `PD-1`, `RF-1`, etc.) are emitted by perspective Haiku agents and may vary run-to-run. They surface in the merged cert at whatever severity the perspective reports, but they are **advisory** under the convergence gate — they do not block iteration and they do not count against Jaccard on the deterministic subset.
+Findings outside this subset (advisory items like `WS-1`, `OF-3`, `OF-4`, `PE-4`, `CE-3`, `PD-1`, `RF-1`, etc.) are emitted by perspective Haiku agents and may vary run-to-run. They surface in the merged cert at **Low severity** (demoted from whatever the perspective reported — see §"Perspective Finding Handling") and are **advisory** under the convergence gate: they do not block iteration and they do not appear at H+M so Jaccard on H+M is = 1.0 by construction.
 
 Downstream consumers (`/apply-skill-review-findings`, `/review-analytics`, `/check-repo-health` freshness) MUST treat advisory findings as non-blocking. Deterministic findings (synthesized or narrative-parent-dropped) carry the convergence guarantee.
 
-## Perspective Finding Dropping
+## Perspective Finding Handling
 
-Before Layer 0 dedup, `merge_directory()` drops perspective findings whose `checklist_item` matches one of:
+Before Layer 0 dedup, `merge_directory()` applies two rules to perspective-emitted findings:
+
+**1. Drop** — when the finding's `checklist_item` is in the deterministic subset:
 
 - The 28 binary items (`BINARY_ITEM_IDS` in `merge_findings.py`) — prevents double-counting with synthesized findings.
 - The 14 narrative parents the rubric supersedes (`NARRATIVE_PARENT_IDS`: `AH-2, IJ-1, META-1, META-2, META-3, RD-5, RL-1, RL-3, RL-4, RL-9, SP-2, SP-4, WS-2, WS-4`) — prevents Haiku-class perspective agents from re-litigating rubric-superseded surface.
 
 Counted in `dropped_perspective_findings`.
+
+**2. Demote** — when the finding is NOT in the deterministic subset AND its severity is `High` or `Medium`, force `severity = "Low"` (issue #72). This keeps advisory findings visible for reviewer triage while removing them from the H+M convergence-blocking surface. Advisory `Low` findings pass through unchanged.
+
+Counted in `demoted_perspective_findings`.
+
+**Fail-safe:** when `apply_caps` is False (binary evaluator missing/malformed/crashed, see §"Missing or malformed `binary_verdicts.json`"), **neither rule fires** — perspectives retain full authority over their findings. Rationale: if the deterministic-subset classification cannot be applied consistently, treating any finding as "advisory" would silently downgrade what may be genuine High-severity signals.
 
 ## Missing or malformed `binary_verdicts.json`
 
@@ -188,7 +196,8 @@ Merged JSON (schema — see script source for authoritative fields):
   "binary_evaluator_status": "present|missing|malformed|crashed|error",
   "binary_verdicts_applied": {"CLAR-2": "FAIL", "META-4": "PASS", ...},
   "boundary_caps_applied": [{"item": "CLAR-2", "dimension": "Clarity", "cap_grade": "C", "grade_before_cap": "A", "applied": true}, ...],
-  "dropped_perspective_findings": 2
+  "dropped_perspective_findings": 2,
+  "demoted_perspective_findings": 5
 }
 ```
 

@@ -65,6 +65,8 @@ Classify recommendations:
 
 Filter dispatchable recommendations into two groups: **High/Medium** recommendations and **Low** recommendations.
 
+> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-skill/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time and appear in the Low group. No behavior change here — the severity filter already handles this correctly.
+
 If no High/Medium dispatchable recommendations exist:
 - if dispatchable Low recommendations exist, skip to **Step 2a: Low Impact Offer**
 - otherwise present any manual-only findings as manual follow-up items and stop
