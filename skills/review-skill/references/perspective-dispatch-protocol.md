@@ -1,7 +1,7 @@
 ---
 name: perspective-dispatch-protocol
-description: Protocol for /review-skill to dispatch 3 perspective sub-agents with KV-cache-friendly shared-prefix construction
-last_refreshed: 2026-04-20
+description: Protocol for /review-skill to dispatch 3 perspective sub-agents with KV-cache-friendly shared-prefix construction plus pre-dispatch deterministic binary evaluation
+last_refreshed: 2026-04-22
 ---
 
 # Perspective Dispatch Protocol
@@ -20,6 +20,18 @@ Each perspective Agent-tool invocation carries 4 blocks with 3 `cache_control` b
 | 4 Artifact | `## Item Under Review` label + full artifact content | 2,000–4,000 | uncached | per call |
 
 Total per call ≈ 11–12K Opus-4.7 tokens. Above 4,096 floor for Opus cache, well below context-rot 60% threshold.
+
+## Pre-Dispatch Binary Evaluation (step b.0)
+
+Before the three perspective Agent-tool calls, `/review-skill` invokes `scripts/rubric_binary_evaluator.py` once per artifact. Stdout JSON is persisted to `${CLAUDE_PLUGIN_DATA}/audit/perspectives/<session_id>/binary_verdicts.json`.
+
+The verdicts document is **NOT injected into the 4-block perspective prompt** (Alt-A design). Instead it is consumed by the merge layer (§"Merge + Escalation Invocation") to synthesize deterministic findings and apply Layer-1.5 grade caps. Rationale:
+
+- Avoids dual source of truth — perspective agents cannot second-guess evaluator verdicts.
+- Preserves byte-stable Block 1 / Block 2 cache layout (no per-artifact JSON leaking into the cached blocks).
+- Saves ~18K tokens across a 4-run retest (versus Alt-B: injecting verdicts into every perspective prompt).
+
+Perspective agents are instructed (in their workflow step 3) to skip emitting findings for the 26 binary items + their narrative parents (`AH-2, SP-2, SP-4, IJ-1, RL-1, RL-3, RL-4, RL-9, META-1, META-2, META-3`). Agents still score dimension grades; Layer 1.5 applies deterministic caps on top of those grades.
 
 ## Dispatch Order
 
@@ -56,12 +68,14 @@ File name is derived strictly from the orchestrator's constants `clarity|correct
 
 ## Merge + Escalation Invocation
 
-Bash-invoke:
-1. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_findings.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>` → merged cert JSON.
+Bash-invoke (three scripts total now that the deterministic binary evaluator is wired in):
+
+0. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rubric_binary_evaluator.py <artifact-path>` → `binary_verdicts.json` (pre-dispatch; see §"Pre-Dispatch Binary Evaluation" above).
+1. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_findings.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>` → merged cert JSON (now reads `binary_verdicts.json` from the same dir and applies Layer 1.5 caps).
 2. Write merged cert to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json`.
 3. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/escalation_decision.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json [--deep]` → `{escalation_required, reasons}`.
 
-Bash is allowed here because the `policy_gate.py` PreToolUse hook allowlists exactly these two script invocations. All other Bash is denied.
+Command-level gating is enforced by `.claude/settings.local.json` (`Bash(python3 *)` permission); `hooks/policy_gate.py` is opt-in level-based (L1-L5) and applies no command-level allowlist when no `${CLAUDE_PLUGIN_DATA}/policy.json` is present.
 
 ## Output Certificate (Phase 3)
 

@@ -27,14 +27,17 @@ You verify step ordering, conditional specificity, step-dependency declarations,
 Primary focus items: WS-1, WS-2, WS-3, WS-4, RD-5, PD-1, PD-2, PD-3.
 Primary dimensions (weight 2× in orchestrator merge): Clarity.
 
+Binary items (CLAR-1..4) are evaluated deterministically by `scripts/rubric_binary_evaluator.py` before your dispatch; do NOT emit findings for them. See Workflow step 3.
+
 ## Workflow
 
 1. Read the shared prefix (scoring rubric + engineering baseline + source-quality criteria) and the per-type evaluation guide + boundary exemplars passed in your prompt.
 2. Read the artifact under review (labeled `## Item Under Review`).
-3. For each primary focus item: emit PASS/FAIL with evidence (quote from the artifact + path/line). Primary-focus FAILs are High-severity findings.
-4. For every other checklist item in the per-type evaluation guide: emit PASS/FAIL briefly. Non-primary FAILs carry `primary_focus: false` and `owner_conflict: true` with `hint_owner` set to the responsible sibling perspective (correctness or integration).
-5. Score all 7 dimensions A–F per the rubric. For primary dimensions (Clarity), evidence must cite ≥1 primary-focus item result. For non-primary dimensions, brief single-line justification.
-6. Emit certificate.
+3. Skip emitting findings for any checklist item marked binary in `scoring-rubric.md` §"Binary-Verifiable Rubric Items" (26 items: META-1a/2/3a/3b/4, CLAR-1..4, CE-X, COMP-X/Y/Z/W, SAMP-1/2, PE-1/2, SP-2b/4b, IJ-1b, RL-1b/3b/4b/9b, AH-2b). Also skip the narrative parent items the rubric supersedes: AH-2, SP-2, SP-4, IJ-1, RL-1, RL-3, RL-4, RL-9, META-1, META-2, META-3. These are evaluated deterministically by the merge layer; your emissions for them are dropped.
+4. For each remaining primary focus item (WS-1/2/3/4, RD-5, PD-1/2/3): emit PASS/FAIL with evidence (quote from the artifact + path/line). Primary-focus FAILs are High-severity findings.
+5. For every other non-skipped checklist item: emit PASS/FAIL briefly. Non-primary FAILs carry `primary_focus: false` and `owner_conflict: true` with `hint_owner` set to the responsible sibling perspective (correctness or integration).
+6. Score all 7 dimensions A–F per the rubric. Assume binary items PASS for grading purposes — the merge layer applies deterministic boundary caps on top of your grades. For primary dimensions (Clarity), evidence must cite ≥1 non-binary primary-focus item result.
+7. Emit certificate.
 
 ## Output contract
 

@@ -1,7 +1,7 @@
 ---
 name: merge-rules
-description: Deterministic merge rules (Layer 0-4) applied by scripts/merge_findings.py on perspective certificates
-last_refreshed: 2026-04-20
+description: Deterministic merge rules (Layer 0-4 + binary boundary caps) applied by scripts/merge_findings.py on perspective certificates
+last_refreshed: 2026-04-22
 ---
 
 # Merge Rules
@@ -80,6 +80,66 @@ avg = sum(weighted) / count(weighted)
 grade = {A if avg >= 90, B if avg >= 80, C if avg >= 70, D if avg >= 60, else F}
 ```
 
+## Layer 1.5 — Binary Boundary Caps
+
+Read after Layer 1 computes owner-weighted dimension grades. Applies deterministic grade caps from `binary_verdicts.json` (produced by `scripts/rubric_binary_evaluator.py` pre-dispatch, step b.0 in `/review-skill` Phase 2b).
+
+**Monotone:** caps only downgrade; never raise a grade.
+**Idempotent:** repeated application converges (capped grade is fixed point).
+
+Cap table (each row: FAIL on `item` caps `dimension` at `cap_grade`):
+
+| Item | Dimension | Cap | Rubric source |
+|---|---|---|---|
+| CLAR-1 / CLAR-2 / CLAR-3 / CLAR-4 | Clarity | C | §Ambiguity Markers grade boundary |
+| COMP-W | Completeness | C | §Verification Criteria (MAST-F14) |
+| AH-2b | Completeness | C | §Argument Handling grade boundary |
+| CE-X | Context Engineering | C | §Observation-Masking Parity gate |
+| PE-1 / PE-2 | Prompt Engineering | C | §Reasoning-Model Anti-Patterns |
+| SAMP-1 | Prompt Engineering | C | §Sampling-Param Migration |
+| SAMP-2 | Metadata | **F** | §Sampling-Param Migration (runtime 400 on Opus 4.7) |
+| META-2 | Metadata | C | §Trigger-Consistency grade boundary |
+| META-4 | Metadata | C | §Trigger-Consistency (third-person discovery risk) |
+| SP-2b / SP-4b / IJ-1b | Safety | C | §Tool-Grant Alignment grade boundary |
+| RL-1b / RL-3b / RL-4b / RL-9b | Safety | C | §Agentic Reliability Binary Items grade boundary |
+
+Caps not covered here (e.g. the narrative META-1 = D/F rule requiring META-1a AND META-1b joint FAIL) are NOT applied deterministically when only one half of the OR-pair is binary-evaluated; they remain perspective-owned.
+
+Python reference: `scripts/merge_findings.py` `layer1_5_binary_boundary_cap()`.
+
+## Binary Finding Synthesis
+
+For each item with `verdict == "FAIL"` in `binary_verdicts.json`, `synthesize_binary_findings()` emits one High-severity finding with:
+
+- `id = "{item_id}:{artifact_path}:{dimension}/v1"` — byte-identical across runs (Jaccard=1.0 on binary subset by construction).
+- `perspective = "binary-evaluator"` — synthetic source, distinct from `clarity|correctness|integration`.
+- `primary_focus = true`, `owner_conflict = false`, `hint_owner = null`.
+- `evidence` — composed from evaluator output (`line`, `match`, `trigger`, `missing`, `reason`).
+- `current` — evidence text (anchor for `/apply-skill-review-findings` manual-only routing).
+- `recommended` — pointer to the BOUNDARY PASS exemplar in `scoring-rubric.md`.
+
+Ordered deterministically by `id` for byte-stable output.
+
+## Perspective Finding Dropping
+
+Before Layer 0 dedup, `merge_directory()` drops perspective findings whose `checklist_item` matches one of:
+
+- The 26 binary items (`BINARY_ITEM_IDS` in `merge_findings.py`) — prevents double-counting with synthesized findings.
+- The 11 narrative parents the rubric supersedes (`NARRATIVE_PARENT_IDS`: `AH-2, SP-2, SP-4, IJ-1, RL-1, RL-3, RL-4, RL-9, META-1, META-2, META-3`) — prevents Haiku-class perspective agents from re-litigating rubric-superseded surface.
+
+Counted in `dropped_perspective_findings`.
+
+## Missing or malformed `binary_verdicts.json`
+
+If `binary_verdicts.json` is absent, malformed, or has top-level `status == "crashed"`:
+
+- `binary_evaluator_status` recorded as `"missing" | "malformed" | "crashed"`.
+- Layer 1.5 is skipped entirely (`boundary_caps_applied: []`).
+- Perspective findings on binary/narrative-parent items are **NOT** dropped (fail-safe: evaluator silent ≠ perspective wrong).
+- `synthesize_binary_findings()` emits nothing.
+
+If `status == "error"` (evaluator exit 2 with `runner_error > 0`), verdicts are still trusted — items that actually ran produce verdicts and caps; items that runner-errored silently degrade to NA per the evaluator contract.
+
 ## Layer 2 — Max-severity tiebreak
 
 When multiple perspectives emit findings on the same Layer-0 group with different severities, the collapsed finding takes `max(severity)` per rank `High > Medium > Low`.
@@ -113,7 +173,11 @@ Merged JSON (schema — see script source for authoritative fields):
   "weighted_score": 82.5,
   "findings": [...],
   "owner_conflicts": [...],
-  "perspective_scores": {"clarity": 80.0, "correctness": 85.0, "integration": 82.5}
+  "perspective_scores": {"clarity": 80.0, "correctness": 85.0, "integration": 82.5},
+  "binary_evaluator_status": "present|missing|malformed|crashed|error",
+  "binary_verdicts_applied": {"CLAR-2": "FAIL", "META-4": "PASS", ...},
+  "boundary_caps_applied": [{"item": "CLAR-2", "dimension": "Clarity", "cap_grade": "C", "grade_before_cap": "A", "applied": true}, ...],
+  "dropped_perspective_findings": 2
 }
 ```
 

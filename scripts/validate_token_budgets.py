@@ -70,11 +70,17 @@ BUDGETS: dict[str, int] = {
     "boundary-exemplars.md": 1700,
     # P1.2 — 3-tier structured-output recovery contract
     "report-parser-contract.md": 1000,
-    # P1.1 — multi-perspective review (JIT-loaded by /review-skill orchestrator only)
-    # Dense protocol + merge-rules spec; 1,200 accommodates Layer-0-to-Layer-4
-    # pseudocode + per-block cache-breakpoint layout without loss of fidelity.
-    "perspective-dispatch-protocol.md": 1200,
-    "merge-rules.md": 1200,
+    # P1.1 — multi-perspective review (JIT-loaded by /review-skill orchestrator only).
+    # Issue #68/#69 wiring (2026-04-22): perspective-dispatch-protocol adds
+    # §"Pre-Dispatch Binary Evaluation" documenting rubric_binary_evaluator
+    # wiring, skip-contract, Alt-A vs Alt-B rationale. merge-rules adds
+    # Layer-1.5 boundary-cap table (20 rules), binary-finding synthesis,
+    # perspective-finding dropping (binary + narrative parents), and the
+    # missing/malformed/crashed degradation paths. Both files are JIT-only
+    # (not in shared prefix), so size growth costs one load per
+    # /review-skill invocation, not per perspective dispatch.
+    "perspective-dispatch-protocol.md": 1700,
+    "merge-rules.md": 2300,
     # Optional extractions pre-declared (created if parent guide overflows).
     # Loaded JIT: opus-4.7 only when model: opus-4-7 detected.
     "opus-4.7-migration-checks.md": 800,  # P0.1 extraction target

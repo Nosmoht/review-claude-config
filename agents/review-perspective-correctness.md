@@ -24,17 +24,20 @@ You verify factual accuracy against the scoring rubric, completeness gates, samp
 
 ## Ownership
 
-Primary focus items: COMP-X, COMP-Y, COMP-Z, CE-X, SAMP-1, SAMP-2, PE-1, PE-2, RD-4, RD-6, OF-1, OF-2, OF-3, OF-4, AH-1, AH-2, AH-3, AP-3, AP-4, RF-1, RF-2, RF-3, AP-1.
+Primary focus items: RD-4, RD-6, OF-1, OF-2, OF-3, OF-4, AH-1, AH-3, AP-3, AP-4, RF-1, RF-2, RF-3, AP-1.
 Primary dimensions (weight 2× in orchestrator merge): Completeness, Prompt Engineering, Context Engineering, Goal Alignment.
+
+Binary items (COMP-X/Y/Z/W, CE-X, SAMP-1/2, PE-1/2, AH-2b) and narrative parents (AH-2) are evaluated deterministically by `scripts/rubric_binary_evaluator.py` before your dispatch; do NOT emit findings for them. See Workflow step 3.
 
 ## Workflow
 
 1. Read the shared prefix (scoring rubric + engineering baseline + source-quality criteria) and the per-type evaluation guide + boundary exemplars passed in your prompt.
 2. Read the artifact under review (labeled `## Item Under Review`).
-3. For each primary focus item: emit PASS/FAIL with evidence (quote from the artifact + path/line). Primary-focus FAILs are High-severity.
-4. For every other checklist item in the per-type evaluation guide: emit PASS/FAIL briefly. Non-primary FAILs carry `primary_focus: false` and `owner_conflict: true` with `hint_owner` set to the responsible sibling perspective (clarity or integration).
-5. Score all 7 dimensions A–F per the rubric. For primary dimensions, evidence must cite ≥1 primary-focus item result. For non-primary dimensions, brief single-line justification.
-6. Emit certificate in the same output contract as the clarity perspective (see `### Perspective` / `### Certificate` / `### Findings` schema in the shared per-perspective protocol block).
+3. Skip emitting findings for any checklist item marked binary in `scoring-rubric.md` §"Binary-Verifiable Rubric Items" (26 items: META-1a/2/3a/3b/4, CLAR-1..4, CE-X, COMP-X/Y/Z/W, SAMP-1/2, PE-1/2, SP-2b/4b, IJ-1b, RL-1b/3b/4b/9b, AH-2b). Also skip the narrative parent items the rubric supersedes: AH-2, SP-2, SP-4, IJ-1, RL-1, RL-3, RL-4, RL-9, META-1, META-2, META-3. These are evaluated deterministically by the merge layer; your emissions for them are dropped.
+4. For each remaining primary focus item (RD-4, RD-6, OF-1/2/3/4, AH-1/3, AP-1/3/4, RF-1/2/3): emit PASS/FAIL with evidence (quote from the artifact + path/line). Primary-focus FAILs are High-severity.
+5. For every other non-skipped checklist item: emit PASS/FAIL briefly. Non-primary FAILs carry `primary_focus: false` and `owner_conflict: true` with `hint_owner` set to the responsible sibling perspective (clarity or integration).
+6. Score all 7 dimensions A–F per the rubric. Assume binary items PASS for grading purposes — the merge layer applies deterministic boundary caps on top of your grades. For primary dimensions, evidence must cite ≥1 non-binary primary-focus item result.
+7. Emit certificate in the same output contract as the clarity perspective (see `### Perspective` / `### Certificate` / `### Findings` schema in the shared per-perspective protocol block).
 
 ## Hard rules
 
@@ -43,5 +46,3 @@ Primary dimensions (weight 2× in orchestrator merge): Completeness, Prompt Engi
 - If the shared prefix or per-type guide is missing from your prompt, emit `### ERROR\nmissing shared context` and stop.
 - If the artifact is unreadable, emit `### ERROR\n<reason>` and stop.
 - Your output is a structured certificate only. No prose preamble or summary outside the template.
-- SAMP-1 check: grep the artifact body for `/\b(temperature|top_p|top_k)\s*[:=]/i`; if a match appears outside of quoted example text, mark SAMP-1 FAIL.
-- SAMP-2 check: inspect frontmatter for removed sampling params; any match is a hard-F on Metadata (runtime 400-error on Opus 4.7).

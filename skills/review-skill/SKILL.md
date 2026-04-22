@@ -105,7 +105,19 @@ Applied when standalone AND user did NOT pass `--single-perspective`.
 
 Load `references/perspective-dispatch-protocol.md` and `references/merge-rules.md` JIT. Those files contain the authoritative recipe; the sub-steps below are the orchestration sequence.
 
-**Context budget / masking strategy.** The multi-perspective dispatch produces ≥ 15 tool-call turns (3 Agent calls + up to 10 reference Reads + 2 Bash invocations + 3 Writes). Masking is achieved by **non-re-retrieval via disk-based handoff**: intermediate perspective certificates (≤ 4 K tokens each) are written to disk in b.4 and thereafter referenced only by path. The merge in b.5 consumes `merged.json` produced by a deterministic script, not the raw perspective output in the conversation history. No LLM summarisation step is used, so no summarisation justification is required per CE-X.
+**Context budget / masking strategy.** The multi-perspective dispatch produces ≥ 16 tool-call turns (1 pre-dispatch Bash + 3 Agent calls + up to 10 reference Reads + 2 Bash invocations + 3 Writes). Masking is achieved by **non-re-retrieval via disk-based handoff**: intermediate perspective certificates (≤ 4 K tokens each) are written to disk in b.4 and thereafter referenced only by path. The merge in b.5 consumes `merged.json` produced by a deterministic script, not the raw perspective output in the conversation history. No LLM summarisation step is used, so no summarisation justification is required per CE-X.
+
+**b.0 — Deterministic binary evaluation.** (produces: `binary_verdicts.json`)
+
+Invoke `Bash("python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rubric_binary_evaluator.py <artifact-path>")`. Capture stdout JSON and write it to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/binary_verdicts.json` using the Write tool.
+
+Exit-code handling (exception to the "Bash script failure" rule under §Error Handling — see Named Failure Classes):
+
+- exit 0 — stats.runner_error == 0; write the full verdicts JSON, proceed to b.1.
+- exit 2 — stats.runner_error > 0 but partial verdicts are present; write the JSON, proceed to b.1. The evaluator status will be labeled `"error"` in the merged cert but verdicts still apply.
+- exit 1 — global crash; do NOT abort the review. Write a `{"status": "crashed", "verdicts": {}}` stub to `binary_verdicts.json` and proceed to b.1. The merge layer will skip Layer 1.5 caps (see `references/merge-rules.md` §"Missing or malformed `binary_verdicts.json`") and perspective findings on binary items are NOT dropped.
+
+Verdicts are consumed only by b.5 merge — they are NOT injected into the perspective prompts constructed in b.1.
 
 **b.1 — Build shared prefix + per-type block + per-perspective suffixes.**
 
@@ -128,9 +140,9 @@ If any Agent tool call errors, times out, or the `subagent_type` is not one of t
 
 For each returned perspective certificate, use the Write tool to persist it at `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/<perspective>.json`. File names are derived strictly from the orchestrator's constants `clarity|correctness|integration` — never from sub-agent output — to prevent path injection. Missing certificates write a `{"status": "missing"}` stub. b.5 must not begin until all three b.4 writes have completed (either with a real certificate or with a `missing`/`timeout`/`skipped` stub).
 
-**b.5 — Merge findings via deterministic script.** (depends on: b.4 completed; produces: `merged.json`)
+**b.5 — Merge findings via deterministic script.** (depends on: b.0 and b.4 completed; produces: `merged.json`)
 
-Invoke `Bash("python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_findings.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>")`. `policy_gate.py` allowlists only this exact invocation pattern and the escalation script below. Write the script's stdout JSON to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json`.
+Invoke `Bash("python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_findings.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>")`. The merge script reads the three perspective certificates PLUS `binary_verdicts.json` (produced in b.0), synthesizes deterministic findings for each binary FAIL, applies Layer 1.5 grade caps, and drops perspective findings on binary items + narrative parents (see `references/merge-rules.md`). Write the script's stdout JSON to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json`.
 
 **b.6 — Decide escalation via deterministic script.** (depends on: b.5 merged.json exists and is valid JSON)
 
@@ -296,6 +308,11 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 ### Named failure classes
 
 - **Bash script failure** (`merge_findings.py` or `escalation_decision.py` exits non-zero OR writes stdout that does not parse as JSON): emit `## ERROR <script>: <exit-code or stderr>` and stop. Exception: when `escalation_decision.py` specifically fails, do **not** abort — treat as `escalation_required: false, reasons: ["script-error"]` and set `escalation_script_error: true` in the certificate so the user can re-run with `/review-skill --deep <path>`.
+- **`rubric_binary_evaluator.py` exit-code-specific rules** (overrides the generic "Bash script failure" rule above for this script):
+  - exit 0 — success; write verdicts file, proceed.
+  - exit 2 — partial verdicts present; write verdicts file, proceed. Merged cert records `binary_evaluator_status: "error"`.
+  - exit 1 — global crash; write a `{"status": "crashed", "verdicts": {}}` stub to `binary_verdicts.json`, proceed. Merge layer skips Layer 1.5 caps and retains perspective findings on binary items.
+  - In all three branches the review continues; the evaluator never aborts the dispatch.
 - **Write failure in b.4** (perspective certificate persist): log the failure, continue, and return the perspective certificate content inline in the certificate output. Mark `write_failed: true, failed_perspectives: [...]` in the certificate.
 - **Write failure in Phase 4** (report persist): log the failure, return the certificate inline to the user, and skip the commit-suggestion step. Mark `write_failed: true` in the output footer.
 - **Agent call timeout** (b.2 or b.3 exceeds 5 min): treat the perspective as missing; write `{"status": "missing", "reason": "timeout"}` stub to its audit path; set `degraded_mode: true`; proceed to b.5. If ≥2 perspectives time out, `merge_findings.py` produces degraded-mode output — downstream consumers must branch accordingly.
@@ -304,7 +321,7 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 
 - **Read-only on the analyzed skill.** Never modify the skill being reviewed. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` and `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/`.
 - **Credential scope (PII/secret redaction).** Before writing content quoted from the analyzed skill to any audit or report path: (1) truncate `evidence` / `current` blocks at 500 characters, (2) redact token-like substrings matching `/[A-Za-z0-9_\-]{20,}/` with `<REDACTED>`, (3) skip writes entirely when the analyzed path matches `**/*.env`, `**/.ssh/**`, or `**/credentials.*` — emit a `{"status": "skipped", "reason": "credential-scope"}` stub instead.
-- **Tier A tool justification:** Write + WebSearch/WebFetch + Agent + Bash are present because: (1) Write is restricted to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` and `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/` only, (2) WebSearch/WebFetch are for domain research, not file modification, (3) Agent is restricted via `hooks/policy_gate.py` PreToolUse allowlist to `subagent_type ∈ {review-perspective-clarity, review-perspective-correctness, review-perspective-integration}`; any other subagent_type is denied, (4) Bash is allowlisted by the same hook to exactly `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_findings.py ...` and `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/escalation_decision.py ...`; any other command is denied, (5) read-only Hard Rule above prevents write-to-analyzed-file risk.
+- **Tier A tool justification:** Write + WebSearch/WebFetch + Agent + Bash are present because: (1) Write is restricted to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` and `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/` only, (2) WebSearch/WebFetch are for domain research, not file modification, (3) Agent is used exclusively for the three review-perspective-* sub-agents (any other `subagent_type` is a protocol violation), (4) Bash is used for exactly three `python3` invocations — `scripts/rubric_binary_evaluator.py` (b.0 pre-dispatch), `scripts/merge_findings.py` (b.5), `scripts/escalation_decision.py` (b.6); command-level permission is enforced by `.claude/settings.local.json` `"Bash(python3 *)"`. `hooks/policy_gate.py` is an opt-in level-based (L1-L5) audit hook and applies no command-level allowlist when no `$CLAUDE_PLUGIN_DATA/policy.json` is present, (5) read-only Hard Rule above prevents write-to-analyzed-file risk.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present the full certificate before any follow-up actions.**
