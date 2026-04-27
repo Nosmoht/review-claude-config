@@ -1,6 +1,6 @@
 ---
 name: detector-rules
-description: #45551 detector rules for MCP OAuth credential-store corruption (macOS Team-plan race) with adversarial robustness specs
+description: Detector rules for MCP OAuth credential-store corruption (Claude Code issue #45551, macOS Team-plan race) with adversarial robustness specs
 last_refreshed: 2026-04-19
 ---
 
