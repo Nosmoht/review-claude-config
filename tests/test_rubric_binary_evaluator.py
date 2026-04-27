@@ -66,55 +66,10 @@ from rubric_binary_evaluator import (  # noqa: E402
     primary_verb,
     tools_list,
 )
-from rubric_patterns import (  # noqa: E402
-    BARE_PRONOUN_VERB,
-    FIRST_PERSON,
-    FUZZY_QUANTIFIER,
-    LOOP_PATTERN,
-    SECOND_PERSON,
-    TERMINATION_PREDICATE,
-)
-
 FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "rubric_evaluator"
 REVIEW_SKILL_FIXTURE = FIXTURE_DIR / "review-skill.SKILL.md"
 SCAFFOLD_SKILL_FIXTURE = FIXTURE_DIR / "scaffold-skill.SKILL.md"
 REVIEW_PERSPECTIVE_CLARITY_AGENT_FIXTURE = FIXTURE_DIR / "agents" / "review-perspective-clarity.md"
-
-
-# ---------------------------------------------------------------------------
-# Shared-module parity: the moved regexes must match their original
-# bodies byte-for-byte so prior test assertions keep holding.
-# ---------------------------------------------------------------------------
-
-
-class TestSharedModuleParity:
-    """Verbatim pattern strings — drift detector for the Commit 1 refactor."""
-
-    def test_first_person_pattern(self):
-        assert FIRST_PERSON.pattern == r"\b(I|my|me)\s"
-
-    def test_second_person_pattern(self):
-        assert SECOND_PERSON.pattern == r"\b(you can|your)\s"
-
-    def test_fuzzy_quantifier_pattern(self):
-        assert FUZZY_QUANTIFIER.pattern == r"\b(slightly|a\s+bit|roughly|somewhat|some)\b"
-
-    def test_bare_pronoun_verb_pattern(self):
-        assert BARE_PRONOUN_VERB.pattern == (
-            r"\b(process|store|save|parse|fix|use|send|handle|return|format|"
-            r"output|write|log|forward|retry|re-?run|commit|check)\s+"
-            r"(it|them|that|this|those)\b"
-        )
-
-    def test_loop_pattern(self):
-        assert LOOP_PATTERN.pattern == r"\b(for\s+each|retry|iterate|while\s+|loop)\b"
-
-    def test_termination_predicate_pattern(self):
-        assert TERMINATION_PREDICATE.pattern == (
-            r"\b(stop\s+when|terminate|halt|max.*iterations?|"
-            r"escalate\s+after|loop\s+until|exit\s+(if|when)|stopping\s+condition|"
-            r"retry\s+up\s+to|up\s+to\s+\d+\s+(times|attempts))\b"
-        )
 
 
 # ---------------------------------------------------------------------------

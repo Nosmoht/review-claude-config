@@ -8,7 +8,13 @@ import sys
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hooks"))
-from policy_gate import _classify_tool, _load_policy, _check_overrides, main
+from policy_gate import (
+    DEFAULT_POLICY,
+    _check_overrides,
+    _classify_tool,
+    _load_policy,
+    main,
+)
 
 
 class TestClassifyTool:
@@ -66,9 +72,32 @@ class TestLoadPolicy:
         assert policy[5] == "ask"
 
     def test_malformed_json_returns_default(self, tmp_path):
-        (tmp_path / "policy.json").write_text("not json")
+        """Malformed JSON triggers the except branch and falls back to
+        DEFAULT_POLICY.
+
+        Asserting against the imported DEFAULT_POLICY object (rather than the
+        literal value) prevents a future widening of the default from making
+        this test silently pass on the wrong code path.
+        """
+        (tmp_path / "policy.json").write_text("{ not valid json")
         policy, overrides = _load_policy(str(tmp_path))
-        assert policy[4] == "ask"  # default
+        assert policy == DEFAULT_POLICY
+        assert overrides == []
+
+    def test_valid_rules_override_defaults(self, tmp_path):
+        """Companion to test_malformed_json_returns_default: when JSON parses
+        cleanly and contains rules, the *parsed* policy must surface
+        non-default values. Together with the malformed-input test this
+        triangulates that the except branch is the only code path that yields
+        DEFAULT_POLICY on a present-but-broken file.
+        """
+        (tmp_path / "policy.json").write_text(
+            '{"rules": [{"level": "L4", "action": "deny"}], "overrides": []}'
+        )
+        policy, overrides = _load_policy(str(tmp_path))
+        # L4 action came from the file, NOT from DEFAULT_POLICY[4] which is "ask".
+        assert policy[4] == "deny"
+        assert policy != DEFAULT_POLICY
 
 
 class TestCheckOverrides:

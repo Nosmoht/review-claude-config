@@ -15,3 +15,11 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.report]
+# Calibrated 2026-04-27 against actual repo coverage (88% total). Threshold
+# at 85% leaves a 3-point margin so new lightly-tested code does not
+# immediately break CI, while preventing silent regressions below the
+# current floor. Bump deliberately as coverage on the lower modules
+# (verify_hook_events, escalation_decision, audit_rotator) improves.
+fail_under = 85
