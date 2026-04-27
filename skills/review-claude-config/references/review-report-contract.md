@@ -72,3 +72,13 @@ Single-item and batch reports share the same schemas. `schema_version` stays `1`
 ## Dimensions
 
 Full reports: `clarity`, `completeness`, `prompt_engineering`, `context_engineering`, `goal_alignment`, `safety`, `metadata`. Rules/MCP/Settings: non-applicable → `null`.
+
+## Sidecar Emission
+
+Producers MAY emit a structured `findings.json` sidecar alongside the Markdown report. When emitted, the sidecar is the authoritative machine-parsable input for `apply-*-review-findings`; the Markdown report becomes the human-readable surface.
+
+- **Sibling naming:** `<report-prefix>.findings.json` next to `<report-prefix>.md`. Example: `2026-04-27T120000-review-skill.md` ↔ `2026-04-27T120000-review-skill.findings.json`.
+- **Schema:** `skills/review-claude-config/references/schemas/findings-list.schema.json` (top-level wrapper) referencing `finding.schema.json` (per-finding shape). Required wrapper keys: `generated_by`, `findings`. Optional: `schema_version`, `session_id`, `artifact_path`, `artifact_type`.
+- **Emit conditions:** `/review-skill` emits the sidecar in **multi-perspective standalone mode only** (i.e., not `--single-perspective`, not orchestrated mode). `/review-agent`, `/review-rule`, and `/review-claude-config` do not yet emit sidecars; consumers must tolerate absence.
+- **Empty findings:** `findings: []` is a valid clean-review state. Consumers MUST surface this as "no findings" and stop, not fall back to Markdown parsing.
+- **Atomicity:** producers write the sidecar via tmp-file + rename. Consumers that hit a parse error MUST treat it as missing-or-malformed and fall back to Markdown.

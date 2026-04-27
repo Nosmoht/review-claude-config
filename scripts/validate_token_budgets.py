@@ -68,7 +68,11 @@ BUDGETS: dict[str, int] = {
     # Issue #71 added §"Finding Determinism" defining the deterministic vs
     # advisory class split — load-bearing policy contract for downstream
     # consumers (apply-*, review-analytics, check-repo-health).
-    "review-report-contract.md": 800,
+    # Issue #81 P0.1b added §"Sidecar Emission" defining the findings.json
+    # sidecar contract (sibling naming, schema reference, emit conditions,
+    # empty-vs-malformed semantics, atomicity) — required surface for the
+    # apply-* migration off the Markdown-heading regex parse.
+    "review-report-contract.md": 1200,
     "report-template.md": 700,
     # Boundary exemplars — PASS/FAIL pairs reduce verdict variance (BARS).
     # P0.1 added 8 new exemplar pairs; P0.5 added META/CE-X/COMP-X/Y/Z;
