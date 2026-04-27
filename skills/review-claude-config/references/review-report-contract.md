@@ -82,3 +82,14 @@ Producers MAY emit a structured `findings.json` sidecar alongside the Markdown r
 - **Emit conditions:** `/review-skill` emits the sidecar in **multi-perspective standalone mode only** (i.e., not `--single-perspective`, not orchestrated mode). `/review-agent`, `/review-rule`, and `/review-claude-config` do not yet emit sidecars; consumers must tolerate absence.
 - **Empty findings:** `findings: []` is a valid clean-review state. Consumers MUST surface this as "no findings" and stop, not fall back to Markdown parsing.
 - **Atomicity:** producers write the sidecar via tmp-file + rename. Consumers that hit a parse error MUST treat it as missing-or-malformed and fall back to Markdown.
+- **Applyability gate (consumer contract):** before classifying a finding as Dispatchable, consumers MUST verify `current` is a literal substring of the artifact file (Read the file, simple substring check). Findings whose `current` is empty or non-substring drop to Manual-only. This catches synthesized-binary findings (whose `current` is the composed evidence string, never present in the file verbatim) and whitespace-drifted perspective findings, preventing corrupted Edit replacements.
+
+### Batch sidecars
+
+Future emission of a sidecar for `/review-claude-config` (multi-item batch) follows the same wrapper but covers all items:
+
+- One sidecar per batch report. `findings` is a single flat array; per-finding `path` keys back to `summary[*].path` for type lookup.
+- `artifact_path` and `artifact_type` SHOULD be omitted (the wrapper covers heterogeneous artifacts).
+- Consumers that need per-type grouping (orchestrators) MUST match `findings[*].path` against the report's frontmatter `summary[*].path` to derive each finding's `type`. Findings whose `path` does not match any `summary` entry MUST be marked Manual-only with reason "Path not in report scope".
+
+This shape is reserved; no producer emits batch sidecars yet.

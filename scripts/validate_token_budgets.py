@@ -70,9 +70,10 @@ BUDGETS: dict[str, int] = {
     # consumers (apply-*, review-analytics, check-repo-health).
     # Issue #81 P0.1b added §"Sidecar Emission" defining the findings.json
     # sidecar contract (sibling naming, schema reference, emit conditions,
-    # empty-vs-malformed semantics, atomicity) — required surface for the
+    # empty-vs-malformed semantics, atomicity, batch-sidecar reservation,
+    # applyability-gate consumer obligation) — required surface for the
     # apply-* migration off the Markdown-heading regex parse.
-    "review-report-contract.md": 1200,
+    "review-report-contract.md": 1500,
     "report-template.md": 700,
     # Boundary exemplars — PASS/FAIL pairs reduce verdict variance (BARS).
     # P0.1 added 8 new exemplar pairs; P0.5 added META/CE-X/COMP-X/Y/Z;
