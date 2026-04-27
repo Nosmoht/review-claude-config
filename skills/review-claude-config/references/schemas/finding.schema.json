@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Nosmoht/review-claude-config/blob/main/skills/review-claude-config/references/schemas/finding.schema.json",
+  "title": "Review Finding",
+  "description": "A single review finding emitted by /review-skill or /review-agent multi-perspective merge. Authoritative shape produced by scripts/merge_findings.py — synthesize_binary_findings() and layer0_dedup().",
+  "type": "object",
+  "required": ["id", "checklist_item", "dimension", "severity", "evidence"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable canonical identifier — byte-identical across runs by construction. Format: '{checklist_item}:{path}:{dimension}/v{n}' for deterministic findings; perspective-emitted findings use checklist_item-based ids after canonicalization."
+    },
+    "checklist_item": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Rubric item id (e.g. 'CLAR-1', 'COMP-X', 'SAMP-2'). Source: skills/review-claude-config/references/scoring-rubric.md."
+    },
+    "dimension": {
+      "type": "string",
+      "enum": [
+        "Clarity",
+        "Completeness",
+        "Prompt Engineering",
+        "Context Engineering",
+        "Goal Alignment",
+        "Safety",
+        "Metadata"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["High", "Medium", "Low"],
+      "description": "Canonical case — 'High'/'Medium'/'Low'. Off-spec spellings ('HIGH', 'high') are normalised to Low at merge time before this schema applies."
+    },
+    "evidence": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Concrete quote, line cite, or pattern match — never abstract reasoning."
+    },
+    "primary_focus": {
+      "type": "boolean",
+      "description": "True when this finding is in the perspective's primary-focus list per agents/review-perspective-*.md ownership tables."
+    },
+    "owner_conflict": {
+      "type": "boolean",
+      "description": "True when ≥2 perspectives flagged the same item with different owners — surfaced separately for reviewer triage."
+    },
+    "hint_owner": {
+      "type": ["string", "null"]
+    },
+    "path": {
+      "type": "string",
+      "description": "Path to the artifact (relative to repo root)."
+    },
+    "line_range": {
+      "type": "string",
+      "description": "String, not number — empty when not line-anchored, or e.g. '12-18'."
+    },
+    "why": {
+      "type": "string"
+    },
+    "validation": {
+      "type": "string",
+      "description": "Concrete re-check the reviewer can perform to confirm the fix landed."
+    },
+    "current": {
+      "type": "string"
+    },
+    "recommended": {
+      "type": "string"
+    },
+    "perspective": {
+      "type": "string",
+      "description": "Which perspective emitted this finding. 'binary-evaluator' marks deterministically synthesized findings."
+    },
+    "perspectives": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Set when ≥2 perspectives independently flagged the same finding (post-dedup)."
+    }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "severity": { "const": "High" } },
+        "required": ["severity"]
+      },
+      "then": {
+        "required": ["id", "checklist_item", "dimension", "severity", "evidence", "current", "recommended"],
+        "description": "High-severity findings must include Current/Recommended blocks for the apply pipeline."
+      }
+    }
+  ]
+}

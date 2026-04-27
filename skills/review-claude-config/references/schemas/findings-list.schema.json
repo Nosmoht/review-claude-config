@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Nosmoht/review-claude-config/blob/main/skills/review-claude-config/references/schemas/findings-list.schema.json",
+  "title": "Findings Sidecar",
+  "description": "Structured, schema-validated representation of review findings. Written by scripts/merge_findings.py via --findings-out. Consumed by apply-* skills as the authoritative machine-parsable contract (the Markdown report.md is human-readable only).",
+  "type": "object",
+  "required": ["generated_by", "findings"],
+  "properties": {
+    "generated_by": {
+      "type": "string",
+      "description": "Producer name — 'merge_findings', 'review-skill', 'review-agent', etc."
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Optional session correlation id for tracing."
+    },
+    "artifact_path": {
+      "type": "string"
+    },
+    "artifact_type": {
+      "type": "string",
+      "enum": ["skill", "agent", "rule", "hook", "mcp-server", "plugin", "settings", "claude-md", "research", "reference", "unknown"]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "finding.schema.json"
+      }
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "SemVer of the producer contract — bump on breaking changes."
+    }
+  },
+  "additionalProperties": true
+}

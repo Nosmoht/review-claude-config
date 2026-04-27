@@ -678,16 +678,72 @@ def merge_directory(session_dir: pathlib.Path) -> dict:
     }
 
 
+def write_findings_sidecar(result: dict, out_path: pathlib.Path, session_id: str | None = None) -> None:
+    """Write the schema-validated findings.json sidecar.
+
+    Format conforms to schemas/findings-list.schema.json. The sidecar is a
+    machine-parsable counterpart to the human-readable report.md — apply-*
+    skills consume this file rather than regex-parsing the Markdown.
+
+    Atomic write via temp + rename to prevent partial-read by a concurrent
+    consumer.
+    """
+    payload = {
+        "generated_by": "merge_findings",
+        "schema_version": "1.0.0",
+        "findings": result.get("findings", []),
+    }
+    if session_id is not None:
+        payload["session_id"] = session_id
+    artifact_path = ""
+    for f in result.get("findings", []):
+        if isinstance(f, dict) and f.get("path"):
+            artifact_path = f["path"]
+            break
+    if artifact_path:
+        payload["artifact_path"] = artifact_path
+
+    tmp_path = out_path.with_suffix(out_path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    tmp_path.replace(out_path)
+
+
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("Usage: merge_findings.py <session-perspectives-dir>", file=sys.stderr)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Merge perspective certificates into a deterministic verdict.")
+    parser.add_argument(
+        "session_dir",
+        type=pathlib.Path,
+        help="directory containing <perspective>.json certificates",
+    )
+    parser.add_argument(
+        "--findings-out",
+        type=pathlib.Path,
+        default=None,
+        help=(
+            "optional path to write a schema-validated findings.json sidecar "
+            "(see schemas/findings-list.schema.json). The merged stdout JSON is "
+            "always emitted regardless of this flag."
+        ),
+    )
+    args = parser.parse_args()
+
+    if not args.session_dir.is_dir():
+        print(f"Not a directory: {args.session_dir}", file=sys.stderr)
         return 2
-    session_dir = pathlib.Path(sys.argv[1])
-    if not session_dir.is_dir():
-        print(f"Not a directory: {session_dir}", file=sys.stderr)
-        return 2
-    result = merge_directory(session_dir)
+
+    result = merge_directory(args.session_dir)
     print(json.dumps(result, indent=2, sort_keys=True))
+
+    if args.findings_out is not None:
+        try:
+            session_id = args.session_dir.name if args.session_dir.name else None
+            write_findings_sidecar(result, args.findings_out, session_id=session_id)
+        except OSError as e:
+            print(f"merge_findings: failed to write {args.findings_out}: {e}", file=sys.stderr)
+            return 2
+
     return 0
 
 
