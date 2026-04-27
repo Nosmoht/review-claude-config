@@ -38,7 +38,6 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    if: hashFiles('tests/**/*.py') != ''
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
