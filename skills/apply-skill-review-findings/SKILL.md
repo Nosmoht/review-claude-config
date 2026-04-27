@@ -45,7 +45,9 @@ If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `$CLAUDE_PLUGIN_DA
 
 Read the report file. If the file does not exist or `generated_by` is not `review-skill`, report the error and stop.
 
-### Step 2: Parse and Filter
+### Step 2: Load Findings
+
+> This step runs in standalone mode only. Orchestrated mode bypasses Step 2 entirely — recommendations come from the inline `## Items to Fix` Markdown block in the orchestration prompt (see Mode Detection above).
 
 Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`.
 - Prefer `skills/review-claude-config/references/review-report-contract.md` when present.
@@ -53,19 +55,60 @@ Locate the canonical review contract via Glob: `**/review-claude-config/referenc
 
 Read that file as the forward-looking report contract. Extract the YAML frontmatter to get: `date`, `target`, and `summary` (list of items with paths and grades).
 
+#### Step 2.1: Sidecar discovery
+
+Derive the findings.json sidecar path deterministically:
+- Resolve the report path to absolute via `Bash("realpath <report-path>")` (handles relative vs absolute mismatch).
+- Require it to end in `.md`. If not, skip sidecar discovery — go directly to the Markdown back-compat path (Step 2.3).
+- Sidecar path = `<report-path>` with the trailing `.md` removed and `.findings.json` appended. Example: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/2026-04-27T120000-review-skill.md` → `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/2026-04-27T120000-review-skill.findings.json`.
+
+Attempt to Read the sidecar:
+- **File missing** → log `"no sidecar at <path> — using Markdown body"` (legitimate for `--single-perspective`, orchestrated mode, or pre-#81 legacy reports) and fall through to Markdown back-compat (Step 2.3).
+- **File present, JSON parse fails** → log `"sidecar parse failed at <path> — falling back to Markdown"` and fall through to Step 2.3.
+- **File present, JSON parses, but `generated_by` or `findings` keys missing/non-list** → log `"sidecar schema mismatch at <path> — falling back to Markdown"` and fall through to Step 2.3.
+- **File present, parses cleanly, `findings: []`** → this is the clean-review state (no findings to apply). Surface "No findings — review was clean." in the summary and stop. Do NOT fall back to Markdown (the sidecar is authoritative for this report).
+- **File present, parses cleanly, `findings: [...]` non-empty** → continue to Step 2.2.
+
+#### Step 2.2: Map sidecar findings
+
+The sidecar conforms to `skills/review-claude-config/references/schemas/findings-list.schema.json`. Each finding object carries `id`, `checklist_item`, `dimension`, `severity` (`High|Medium|Low`), `evidence`, and — for High severity — `current` plus `recommended`. Optional keys per finding: `why`, `validation`, `path`, `line_range`.
+
+Map each sidecar finding into the local recommendation model:
+- **title** — `checklist_item` + a short fragment from `evidence` (truncate to ~60 chars)
+- **impact** — `severity` (`High`/`Medium`/`Low`)
+- **file path** — finding `path`; fall back to the report frontmatter `summary[0].path` when `path` is missing
+- **evidence** — finding `evidence`
+- **why it matters** — finding `why` (when absent, surface the `checklist_item`'s rubric reference; never blank)
+- **validation** — finding `validation` (when absent, surface "Manual re-verification recommended"; never blank)
+- **current** — finding `current` (may be empty)
+- **recommended** — finding `recommended` (may be empty)
+
+Continue to Step 2.4 (applyability gate).
+
+#### Step 2.3: Markdown back-compat path (legacy reports without a sidecar)
+
 Parse the report body using consumer compatibility rules:
 - modern headings may use `####`
 - historical headings may use `###`
 - historical reports may omit `Evidence`, `Why it matters`, or `Validation`
-- only recommendations with both `Current` and `Recommended` are dispatchable for edits
+- recommendations carry `Current` and `Recommended` blocks when dispatchable
 
-Classify recommendations:
-- **Dispatchable**: includes `Current` and `Recommended`
-- **Manual-only**: lacks one or both rewrite anchors
+Apply the same defensive defaults as the sidecar path: when `Why it matters` is absent surface the rubric reference; when `Validation` is absent surface "Manual re-verification recommended". Log a one-line note in the Phase 2 summary: "Loaded findings from Markdown body (sidecar absent — legacy report)."
 
-Filter dispatchable recommendations into two groups: **High/Medium** recommendations and **Low** recommendations.
+#### Step 2.4: Applyability gate
 
-> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-skill/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time and appear in the Low group. No behavior change here — the severity filter already handles this correctly.
+For each mapped recommendation, verify it can drive a real Edit:
+1. If `current` or `recommended` is empty → mark **Manual-only** (reason: "Missing rewrite anchors").
+2. Read the target file at the recommendation's file path.
+3. If `current` does NOT appear as a literal substring of the file content → mark **Manual-only**. Distinguish the reason for the user:
+   - `current` matches the synthesized-evidence shape (starts with `line ` and contains one of `; match=`, `; trigger=`, `; missing=`) → reason: `"Synthesized evidence summary, not a literal source quote (binary item)"`.
+   - Otherwise → reason: `"Anchor text not found (whitespace, encoding, or quoting drift?)"`.
+   This is the load-bearing gate that catches synthesized binary findings (whose `current` is the composed evidence string, e.g. `"line 12; match='slightly more'"`, never present in the file) and whitespace-drifted perspective findings.
+4. Otherwise → mark **Dispatchable**.
+
+Filter Dispatchable into **High/Medium** and **Low** groups.
+
+> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-skill/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time. After Step 2.4, synthesized binary findings (currently emitting non-substring `current`) also fall to Manual-only by construction. Auto-dispatchable Highs are perspective-emitted findings that survive the demote — typically a small set; the rest of the workflow treats them normally.
 
 If no High/Medium dispatchable recommendations exist:
 - if dispatchable Low recommendations exist, skip to **Step 2a: Low Impact Offer**
@@ -93,6 +136,8 @@ Locate shared commit conventions via Glob: `**/apply-review-findings/references/
 
 ## Phase 2 -- Present Summary
 
+Surface any Step 2 log lines first (one line each): "Loaded findings from sidecar `<path>`", "sidecar expected at `<path>` but missing — fell back to Markdown", "sidecar parse failed at `<path>` — fell back to Markdown", or "Sidecar `findings: []` — review was clean, nothing to apply".
+
 Show a summary table of all dispatchable findings:
 
 ```
@@ -108,10 +153,13 @@ If manual-only findings are present, also show:
 ```
 ## Manual Follow-Up
 
-| # | Recommendation | Impact | Reason |
-|---|----------------|--------|--------|
-| 1 | Clarify rubric language | Medium | Missing Current/Recommended anchors |
+| # | Recommendation | Impact | Reason | Why it matters |
+|---|----------------|--------|--------|----------------|
+| 1 | Clarify rubric language | Medium | Missing Current/Recommended anchors | `WS-2b`: conditionals lack measurable criteria |
+| 2 | Tighten step boundary | High  | Anchor text not found in artifact (synthesized evidence) | Binary item `CLAR-1` FAIL — see scoring-rubric.md BOUNDARY exemplar |
 ```
+
+The Manual Follow-Up `Why it matters` column gives the user actionable context for findings that cannot drive an automatic Edit; it is the same `why` value mapped in Step 2.2/2.3.
 
 Confirm via AskUserQuestion (header: "Apply findings"):
 - Option 1 label: "Apply N findings" (Recommended) — description: `"Process High/Medium recommendations with preview for each"`

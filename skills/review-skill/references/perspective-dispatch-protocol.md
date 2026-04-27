@@ -71,7 +71,7 @@ File name is derived strictly from the orchestrator's constants `clarity|correct
 Bash-invoke (three scripts total now that the deterministic binary evaluator is wired in):
 
 0. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rubric_binary_evaluator.py <artifact-path>` → `binary_verdicts.json` (pre-dispatch; see §"Pre-Dispatch Binary Evaluation" above).
-1. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_findings.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>` → merged cert JSON (now reads `binary_verdicts.json` from the same dir and applies Layer 1.5 caps).
+1. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_findings.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id> --findings-out $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/findings.json` → merged cert JSON to stdout (reads `binary_verdicts.json` from the same dir and applies Layer 1.5 caps), plus a schema-validated `findings.json` sidecar per `skills/review-claude-config/references/schemas/findings-list.schema.json` for downstream `/apply-skill-review-findings` consumption.
 2. Write merged cert to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json`.
 3. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/escalation_decision.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json [--deep]` → `{escalation_required, reasons}`.
 
