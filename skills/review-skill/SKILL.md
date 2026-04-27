@@ -16,6 +16,9 @@ Evaluate a single Claude Code skill for quality across 7 evidence-based dimensio
 ## Argument Handling
 
 - `$ARGUMENTS` is the path to a SKILL.md file.
+- Optional flag `--compare-with <prior-merged.json>` — if present, after the new merge completes (b.5), invoke `scripts/check_convergence.py` against the prior `merged.json` and include the result in the Phase 3 certificate (b.8). Use to verify run-to-run convergence per the deterministic-subset contract in CLAUDE.md "Iterate reviews until convergence" rule.
+- Optional flag `--deep` — forces Opus-tier escalation upfront (see Mode Detection).
+- Optional flag `--single-perspective` — reverts to legacy single-perspective scoring.
 - If `$ARGUMENTS` is empty, prompt the user: "Provide the path to a SKILL.md file to review." and stop.
 - Validate the file exists and contains YAML frontmatter with a `name` field (required for skills).
 - If the file does not look like a skill, report the error and stop.
@@ -152,6 +155,16 @@ Invoke `Bash("python3 ${CLAUDE_PLUGIN_ROOT}/scripts/escalation_decision.py $CLAU
 
 If `merged.status == "failure"` (all 3 perspectives null): abort with `## ERROR\nall perspectives failed: <missing_perspectives>`. If `merged.degraded_mode == true` (1-2 perspectives missing): proceed with emit but include `degraded_mode: true` + `missing_perspectives: [...]` in the certificate. Downstream consumers (`/apply-skill-review-findings`) must branch on this flag.
 
+**b.8 — Convergence check vs. prior run.** (optional, depends on b.7; fires only when `--compare-with <prior>` was passed)
+
+If the user supplied `--compare-with <prior-merged.json>`, invoke `Bash("python3 ${CLAUDE_PLUGIN_ROOT}/scripts/check_convergence.py <prior-merged.json> $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json")`. Capture the script's stdout JSON. Exit-code handling:
+
+- `0` (converged) — record `convergence: {converged: true, ...}` in the cert.
+- `1` (not converged) — record `convergence: {converged: false, ...}`. Append `ESC-5` to escalation reasons (re-run signal) unless ESC-5 was already raised by b.6.
+- `2` (script error) — record `convergence: {converged: null, error: "<stderr>"}`. Do NOT abort; surface the issue in the cert and continue.
+
+When `--compare-with` is absent, b.8 is skipped silently — no convergence section appears in Phase 3.
+
 ## Phase 3 — Output
 
 Return the report in this EXACT format:
@@ -262,6 +275,21 @@ Example:
 
 ### Owner-Conflict Signals (multi-perspective mode only)
 [Findings with owner_conflict=true listed separately from graded findings. Each shows: checklist_item, hint_owner, evidence, and which perspective flagged it.]
+
+### Convergence (multi-perspective mode only — present only when `--compare-with` was supplied)
+
+```yaml
+convergence:
+  converged: [true|false|null]   # null = script error
+  deterministic_added_finding_ids: [list]    # H/M findings present in new but not prior
+  deterministic_removed_finding_ids: [list]  # H/M findings present in prior but not new
+  max_grade_variance: <int>                  # max letter distance per dimension
+  null_dimensions_added: [list]              # dimensions lost between runs
+  prior: <path>                              # echo of --compare-with argument
+  error: "<message>"                         # only when converged: null
+```
+
+When `converged: false`, the per-finding diff lists give the reviewer a precise picture of what flapped. The merged.json itself is not modified — the convergence section is summary metadata.
 
 ### Escalation (multi-perspective mode only)
 escalation_required: [true|false]
