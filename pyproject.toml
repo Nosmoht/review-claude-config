@@ -14,6 +14,22 @@ dev = [
     "ruff>=0.4",
 ]
 
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# This repo is a Claude Code plugin + scripts collection, not a Python
+# package. `pip install -e .` is used purely to materialize the runtime
+# dependencies (pyyaml, jsonschema) into the venv used by CI and Makefile
+# — there is no importable top-level package. Declaring empty package /
+# py-modules lists tells setuptools to skip auto-discovery, which would
+# otherwise reject the build because of the 5 top-level directories
+# (Plans, agents, hooks, research, skills) that look like Python
+# packages but are not.
+packages = []
+py-modules = []
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
