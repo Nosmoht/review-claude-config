@@ -45,7 +45,9 @@ If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `$CLAUDE_PLUGIN_DA
 
 Read the report file. If the file does not exist or `generated_by` is not `review-agent`, report the error and stop.
 
-### Step 2: Parse and Filter
+### Step 2: Load Findings
+
+> This step runs in standalone mode only. Orchestrated mode bypasses Step 2 entirely — recommendations come from the inline `## Items to Fix` Markdown block in the orchestration prompt (see Mode Detection above).
 
 Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`.
 - Prefer `skills/review-claude-config/references/review-report-contract.md` when present.
@@ -53,19 +55,52 @@ Locate the canonical review contract via Glob: `**/review-claude-config/referenc
 
 Read that file as the forward-looking report contract. Extract the YAML frontmatter to get: `date`, `target`, and `summary`.
 
+#### Step 2.1: Sidecar discovery
+
+Resolve the report path to absolute via `Bash("realpath <report-path>")`. Require it to end in `.md`; otherwise skip sidecar discovery and use the Markdown fallback (Step 2.3). Sidecar path = `<report-path>` with the trailing `.md` removed and `.findings.json` appended.
+
+Try to Read the sidecar. Five outcomes:
+- **File missing** → log `"no sidecar at <path> — using Markdown body"` (legitimate for `--single-perspective`, orchestrated mode, or pre-#81 legacy reports — `/review-agent` does not yet emit sidecars) and fall through to Step 2.3.
+- **JSON parse fails** → log `"sidecar parse failed at <path> — falling back to Markdown"` and fall through to Step 2.3.
+- **`generated_by` or `findings` keys missing/non-list** → log `"sidecar schema mismatch at <path> — falling back to Markdown"` and fall through to Step 2.3.
+- **`findings: []`** → clean-review state. Surface "No findings — review was clean." and stop. Do NOT fall back to Markdown.
+- **`findings: [...]` non-empty** → continue to Step 2.2.
+
+#### Step 2.2: Map sidecar findings
+
+The sidecar conforms to `skills/review-claude-config/references/schemas/findings-list.schema.json`. Map each finding to the local recommendation model:
+- **title** — `checklist_item` + a short fragment from `evidence` (truncate to ~60 chars)
+- **impact** — `severity` (`High`/`Medium`/`Low`)
+- **file path** — finding `path`; fall back to `summary[0].path` (the canonical agent path per Phase 3 step 1) when `path` is missing
+- **evidence** — finding `evidence`
+- **why it matters** — finding `why` (when absent, surface the rubric-item reference; never blank)
+- **validation** — finding `validation` (when absent, surface "Manual re-verification recommended"; never blank)
+- **current** — finding `current`
+- **recommended** — finding `recommended`
+
+Continue to Step 2.4 (applyability gate).
+
+#### Step 2.3: Markdown back-compat path
+
 Parse the report body using consumer compatibility rules:
 - modern headings may use `####`
 - historical headings may use `###`
 - historical reports may omit `Evidence`, `Why it matters`, or `Validation`
-- only recommendations with both `Current` and `Recommended` are dispatchable for edits
+- recommendations carry `Current` and `Recommended` blocks when dispatchable
 
-Classify recommendations:
-- **Dispatchable**: includes `Current` and `Recommended`
-- **Manual-only**: lacks one or both rewrite anchors
+Apply the same defensive defaults as the sidecar path. Log a one-line note: "Loaded findings from Markdown body (sidecar absent — legacy report)."
 
-Filter dispatchable recommendations into two groups: **High/Medium** recommendations and **Low** recommendations.
+#### Step 2.4: Applyability gate
 
-> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-skill/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time and appear in the Low group. No behavior change here — the severity filter already handles this correctly.
+For each mapped recommendation, verify it can drive a real Edit:
+1. If `current` or `recommended` is empty → mark **Manual-only** (reason: "Missing rewrite anchors").
+2. Read the target agent file.
+3. If `current` does NOT appear as a literal substring of the file content → mark **Manual-only**. Distinguish reasons: synthesized-evidence shape (`current` starts with `line ` and contains `; match=` / `; trigger=` / `; missing=`) → "Synthesized evidence summary, not a literal source quote (binary item)"; otherwise → "Anchor text not found (whitespace, encoding, or quoting drift?)".
+4. Otherwise → mark **Dispatchable**.
+
+Filter Dispatchable into **High/Medium** and **Low** groups.
+
+> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-skill/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time. After Step 2.4, synthesized binary findings (currently emitting non-substring `current`) also fall to Manual-only by construction. Auto-dispatchable Highs are perspective-emitted findings that survive the demote — typically a small set; the rest of the workflow treats them normally.
 
 If no High/Medium dispatchable recommendations exist:
 - if dispatchable Low recommendations exist, skip to **Step 2a: Low Impact Offer**
@@ -93,6 +128,8 @@ Locate shared commit conventions via Glob: `**/apply-review-findings/references/
 
 ## Phase 2 -- Present Summary
 
+Surface any Step 2 log lines first (one line each).
+
 Show a summary table of all dispatchable findings:
 
 ```
@@ -108,10 +145,12 @@ If manual-only findings are present, also show:
 ```
 ## Manual Follow-Up
 
-| # | Recommendation | Impact | Reason |
-|---|----------------|--------|--------|
-| 1 | Clarify escalation policy | Medium | Missing Current/Recommended anchors |
+| # | Recommendation | Impact | Reason | Why it matters |
+|---|----------------|--------|--------|----------------|
+| 1 | Clarify escalation policy | Medium | Missing Current/Recommended anchors | `RL-1`: termination predicate missing |
 ```
+
+The `Why it matters` column gives the user actionable context for findings that cannot drive an automatic Edit.
 
 Confirm via AskUserQuestion (header: "Apply findings"):
 - Option 1 label: "Apply N findings" (Recommended) — description: `"Process High/Medium recommendations with preview for each"`

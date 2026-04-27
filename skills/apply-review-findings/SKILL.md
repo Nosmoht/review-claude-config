@@ -23,13 +23,45 @@ If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `$CLAUDE_PLUGIN_DA
 
 Read the report file. If the file does not exist or `generated_by` is not one of `review-claude-config`, `review-skill`, `review-agent`, `review-rule`, report the error and stop.
 
-### 2. Parse recommendations
+**Single-item report nudge (UX):** If `items_reviewed == 1` and `generated_by` is one of `review-skill` / `review-agent` / `review-rule`, tell the user: "This is a single-item report — `/apply-<type>-review-findings <report-path>` is the more direct entry point. Continue here anyway?" (AskUserQuestion, header: "Single-item report"). On "Use per-type applier" (Recommended): tell the user the exact command and stop. On "Continue with orchestrator": proceed to Step 2.
+
+### 2. Load findings
 
 Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`.
 - Prefer `skills/review-claude-config/references/review-report-contract.md` when present.
 - Otherwise use the sibling `.claude/skills/review-claude-config/references/review-report-contract.md` copy.
 
 Read that file as the forward-looking parse contract. Extract the YAML frontmatter fields defined there: `date`, `target`, `generated_by`, and `summary` (list of items with paths, types, and grades).
+
+#### 2.1 Sidecar discovery
+
+Resolve `<report-path>` to absolute via `Bash("realpath <report-path>")`. Require it to end in `.md`; otherwise skip sidecar discovery and use the Markdown fallback (Step 2.3). Sidecar path = `<report-path>` with the trailing `.md` removed and `.findings.json` appended.
+
+Try to Read the sidecar. Five outcomes:
+- **File missing** → log `"no sidecar at <path> — using Markdown body"` and fall through to Step 2.3.
+- **JSON parse fails** → log `"sidecar parse failed at <path> — falling back to Markdown"` and fall through to Step 2.3.
+- **`generated_by` or `findings` keys missing/non-list** → log `"sidecar schema mismatch at <path> — falling back to Markdown"` and fall through to Step 2.3.
+- **`findings: []`** → clean-review state. Surface "No findings — review was clean." and stop. Do NOT fall back to Markdown.
+- **`findings: [...]` non-empty** → continue to Step 2.2.
+
+#### 2.2 Map sidecar findings
+
+The sidecar conforms to `skills/review-claude-config/references/schemas/findings-list.schema.json`. Each finding object carries `id`, `checklist_item`, `dimension`, `severity` (`High|Medium|Low`), `evidence`, optionally `current`, `recommended`, `why`, `validation`, `path`, `line_range`.
+
+Map each sidecar finding into the orchestration model:
+- **title** — `checklist_item` + a short fragment from `evidence` (truncate to ~60 chars)
+- **impact** — `severity`
+- **file path** — finding `path`; fall back to `summary[0].path` only when the report carries exactly one item (`items_reviewed == 1`). For multi-item batch reports, a missing `path` is unrecoverable.
+- **type** — looked up from the report frontmatter `summary` array by matching the finding's `path` against `summary[*].path` (exact match). If no match, mark this finding **Manual-only** with reason `"Path not in report scope"` and skip type inference. Per-type appliers in orchestrated mode reject paths outside `summary`, so dispatching with an inferred type would be silently dropped — the Manual-only path surfaces the issue to the user instead.
+- **evidence** — finding `evidence`
+- **why it matters** — finding `why` (when absent, surface the rubric-item reference; never blank)
+- **validation** — finding `validation` (when absent, surface "Manual re-verification recommended"; never blank)
+- **current** — finding `current`
+- **recommended** — finding `recommended`
+
+Continue to Step 2.4 (applyability gate).
+
+#### 2.3 Markdown back-compat path
 
 Parse the report body using consumer compatibility rules:
 - modern recommendation headings may use `####`
@@ -41,13 +73,19 @@ Parse the report body using consumer compatibility rules:
 
 Example extraction: Given heading "#### 2. Add confirmation gate (Impact: High, Category: Safety)" with Evidence/Why it matters/Validation plus Current/Recommended blocks, extract: title="Add confirmation gate", impact=High, category=Safety, evidence=<text>, why=<text>, validation=<text>, item=<from nearest item heading or frontmatter summary>.
 
-After parsing, classify each recommendation:
-- **Dispatchable**: contains both `Current` and `Recommended`, so a specialized applier can attempt an edit
-- **Manual-only**: valid review finding, but lacks one or both rewrite anchors
+Apply the same defensive defaults as the sidecar path (never blank `Why it matters` / `Validation` previews). Log a one-line note in the Step 3 summary: "Loaded findings from Markdown body (sidecar absent — legacy report)."
 
-Split dispatchable recommendations into two groups: **High/Medium** and **Low**.
+#### 2.4 Applyability gate
 
-> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-skill/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time and appear in the Low group. No behavior change here — the severity filter already handles this correctly.
+For each mapped recommendation, verify it can drive a real Edit before dispatching:
+1. If `current` or `recommended` is empty → mark **Manual-only** (reason: "Missing rewrite anchors").
+2. Read the recommendation's target file.
+3. If `current` does NOT appear as a literal substring of the file content → mark **Manual-only**. Distinguish reasons: synthesized-evidence shape (`current` starts with `line ` and contains `; match=` / `; trigger=` / `; missing=`) → "Synthesized evidence summary, not a literal source quote (binary item)"; otherwise → "Anchor text not found (whitespace, encoding, or quoting drift?)".
+4. Otherwise → mark **Dispatchable**.
+
+Split Dispatchable into **High/Medium** and **Low** groups. Group remaining Dispatchable by item `type` for the per-type dispatch (Step 4–5).
+
+> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-skill/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time. After Step 2.4, synthesized binary findings (currently emitting non-substring `current`) also fall to Manual-only by construction. The orchestrator dispatches only Dispatchable recommendations; per-type appliers receive only edit-ready inputs in orchestrated mode.
 
 If no dispatchable High or Medium recommendations are found:
 - if dispatchable Low recommendations exist, skip to **Step 2a: Low Impact Offer**
@@ -71,6 +109,8 @@ If no dispatchable recommendations exist at all, show any manual-only findings a
 
 ### 3. Present summary
 
+Surface any Step 2 log lines first (one line each): "Loaded findings from sidecar `<path>`", "no sidecar at `<path>` — using Markdown body", "sidecar parse failed at `<path>` — falling back to Markdown", "sidecar schema mismatch at `<path>` — falling back to Markdown", or "Sidecar `findings: []` — review was clean, nothing to apply".
+
 Show a summary table of all dispatchable findings before making any changes:
 
 ```
@@ -87,10 +127,13 @@ Then show a manual-only summary when applicable:
 ```
 ## Manual Follow-Up
 
-| # | Item | Type | Recommendation | Impact | Reason |
-|---|------|------|----------------|--------|--------|
-| 1 | review-skill | Skill | Clarify workflow policy | Medium | Missing Current/Recommended anchors |
+| # | Item | Type | Recommendation | Impact | Reason | Why it matters |
+|---|------|------|----------------|--------|--------|----------------|
+| 1 | review-skill | Skill | Clarify workflow policy | Medium | Missing Current/Recommended anchors | `WS-2b`: conditionals lack measurable criteria |
+| 2 | my-agent | Agent | Tighten step boundary | High | Synthesized evidence summary | Binary item `CLAR-1` FAIL — see scoring-rubric.md BOUNDARY exemplar |
 ```
+
+The Manual Follow-Up `Why it matters` column gives the user actionable context for findings that cannot drive an automatic Edit.
 
 If there are no dispatchable findings and at least one manual-only finding, stop after showing the manual follow-up section.
 
