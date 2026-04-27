@@ -15,12 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/ruff-action@v3
+      - uses: actions/setup-python@v6
         with:
-          args: check hooks/ scripts/
-      - uses: astral-sh/ruff-action@v3
-        with:
-          args: format --check hooks/ scripts/
+          python-version: "3.11"
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+      - name: Ruff check (matches Makefile `make lint`)
+        run: ruff check hooks/ scripts/
+      - name: Ruff format check (matches Makefile `make format`)
+        run: ruff format --check hooks/ scripts/
 
   schema-validate:
     name: Schema Validation
