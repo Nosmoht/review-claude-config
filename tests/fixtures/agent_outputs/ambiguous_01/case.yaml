@@ -1,0 +1,35 @@
+case_id: ambiguous_01
+category: ambiguous
+artifact_path: skills/example-ambiguous-skill/SKILL.md
+provenance:
+  source: synthesised
+  captured_at: 2026-04-27
+  rubric_sha: deeff6a533cc747dbd246cb714b8264d960ddd03
+  rationale: |
+    Tests detection of two simultaneous ambiguity classes — unbound pronoun
+    (WS-1) and vague conditional (WS-2). A clarity agent must emit both as
+    High findings; merging via merge_findings.layer1_5_binary_boundary_cap
+    later caps Clarity at C.
+expected:
+  perspective: clarity
+  error_present: false
+  dimensions:
+    Clarity: C
+    Completeness: B
+    Prompt Engineering: B
+    Context Engineering: B
+    Goal Alignment: B
+    Safety: B
+    Metadata: B
+  findings:
+    count: 2
+    severity_counts:
+      High: 2
+    must_include_checklist_items: [WS-1, WS-2]
+    must_not_include_checklist_items: []
+attack:
+  class: null
+notes: |
+  Synthesised. Models a realistic agent emission for a SKILL.md where one
+  step references "the file" with no antecedent and another uses "if
+  relevant" without a concrete predicate.

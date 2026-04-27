@@ -1,0 +1,40 @@
+case_id: clear_antecedent_05
+category: clear_antecedent
+artifact_path: skills/example-haiku-style-skill/SKILL.md
+provenance:
+  source: synthesised
+  captured_at: 2026-04-27
+  rubric_sha: deeff6a533cc747dbd246cb714b8264d960ddd03
+  rationale: |
+    Exercises three lenient-parser branches the strictly-formatted
+    synthesised fixtures bypass: (1) two-paragraph prose preamble before
+    `### Perspective`, (2) indented `Why it matters:` field label (4-space
+    sub-list nesting), (3) indented continuation lines under `Recommended:`
+    that contain bullet-style markdown sub-list markers. Adds coverage on
+    the parser's tolerance surface beyond what the two real captures
+    provide on their own.
+expected:
+  perspective: clarity
+  error_present: false
+  dimensions:
+    Clarity: C
+    Completeness: B
+    Prompt Engineering: B
+    Context Engineering: B
+    Goal Alignment: B
+    Safety: B
+    Metadata: B
+  findings:
+    count: 1
+    severity_counts:
+      High: 1
+    must_include_checklist_items: [WS-1]
+    must_not_include_checklist_items: []
+attack:
+  class: null
+notes: |
+  Synthesised. Compared to clear_antecedent_03 (clean format, A-grade
+  pristine skill) and clear_antecedent_04 (clean format, single Medium),
+  this fixture deliberately introduces formatting irregularities the
+  parser must tolerate. If a future parser refactor breaks preamble or
+  indent handling, this case fails first.

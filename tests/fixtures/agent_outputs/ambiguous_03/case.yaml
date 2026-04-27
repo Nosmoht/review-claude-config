@@ -1,0 +1,30 @@
+case_id: ambiguous_03
+category: ambiguous
+artifact_path: skills/example-fuzzy-quantifiers-skill/SKILL.md
+provenance:
+  source: synthesised
+  captured_at: 2026-04-27
+  rubric_sha: deeff6a533cc747dbd246cb714b8264d960ddd03
+  rationale: |
+    Models the WS-1 fuzzy-quantifier ambiguity class — "roughly", "about",
+    "some". These are also detectable by the deterministic CLAR-1 binary
+    item, so a real run would receive a deterministic FAIL via
+    rubric_binary_evaluator.py + a narrative WS-1 finding from the
+    perspective. This fixture only covers the perspective-level finding.
+expected:
+  perspective: clarity
+  error_present: false
+  dimensions:
+    Clarity: C
+  findings:
+    count: 1
+    severity_counts:
+      High: 1
+    must_include_checklist_items: [WS-1]
+    must_not_include_checklist_items: []
+attack:
+  class: null
+notes: |
+  Synthesised. Single finding bundles three fuzzy-quantifier violations
+  with one Recommended. Real Haiku output sometimes emits one finding per
+  violation and sometimes bundles — both are valid against the parser.

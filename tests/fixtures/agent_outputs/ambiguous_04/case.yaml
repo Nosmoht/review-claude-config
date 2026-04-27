@@ -1,0 +1,27 @@
+case_id: ambiguous_04
+category: ambiguous
+artifact_path: skills/example-missing-step-deps-skill/SKILL.md
+provenance:
+  source: synthesised
+  captured_at: 2026-04-27
+  rubric_sha: deeff6a533cc747dbd246cb714b8264d960ddd03
+  rationale: |
+    Models the RD-5 step-dependency violation — workflow steps reference
+    prior outputs without naming the producing step. Common in skills that
+    grew organically and never declared inter-step contracts.
+expected:
+  perspective: clarity
+  error_present: false
+  dimensions:
+    Clarity: C
+  findings:
+    count: 1
+    severity_counts:
+      High: 1
+    must_include_checklist_items: [RD-5]
+    must_not_include_checklist_items: []
+attack:
+  class: null
+notes: |
+  Synthesised. The Recommended block illustrates the canonical fix shape
+  with explicit Inputs/Output/Action declarations.

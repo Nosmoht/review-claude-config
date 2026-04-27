@@ -1,0 +1,33 @@
+case_id: clear_antecedent_04
+category: clear_antecedent
+artifact_path: skills/example-single-finding-skill/SKILL.md
+provenance:
+  source: synthesised
+  captured_at: 2026-04-27
+  rubric_sha: deeff6a533cc747dbd246cb714b8264d960ddd03
+  rationale: |
+    Mostly-clean skill with a single Medium finding. Exercises the
+    minimal-finding-count edge case and the parser's preamble tolerance
+    (this fixture begins with a Haiku-style prose preamble).
+expected:
+  perspective: clarity
+  error_present: false
+  dimensions:
+    Clarity: B
+    Completeness: B
+    Prompt Engineering: A
+    Context Engineering: B
+    Goal Alignment: A
+    Safety: A
+    Metadata: A
+  findings:
+    count: 1
+    severity_counts:
+      Medium: 1
+    must_include_checklist_items: [WS-1]
+    must_not_include_checklist_items: []
+attack:
+  class: null
+notes: |
+  Synthesised. The Medium finding flags an unresolved pronoun — a realistic
+  WS-1 violation that a clarity agent should detect on a near-clean skill.

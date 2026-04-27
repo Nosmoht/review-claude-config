@@ -1,0 +1,36 @@
+case_id: clear_antecedent_02
+category: clear_antecedent
+artifact_path: skills/review-skill/SKILL.md
+provenance:
+  source: capture
+  session_id: 5e3bae55-227c-4b6e-97a3-52ea656a4013
+  line_offset: 91
+  captured_at: 2026-04-27
+  rubric_sha: deeff6a533cc747dbd246cb714b8264d960ddd03
+  agent_dispatch: skill-quality:review-perspective-clarity
+expected:
+  perspective: clarity
+  error_present: false
+  dimensions:
+    Clarity: C
+    Completeness: C
+    Prompt Engineering: B
+    Context Engineering: B
+    Goal Alignment: A
+    Safety: C
+    Metadata: A
+  findings:
+    count: 6
+    severity_counts:
+      High: 2
+      Medium: 2
+      Low: 2
+    must_include_checklist_items: [RD-5, COMP-X, RL-9]
+    must_not_include_checklist_items: []
+attack:
+  class: null
+notes: |
+  Real Haiku-class dispatch reviewing skills/review-skill/SKILL.md. Output is
+  larger than pilot 01 (~30 KB) and contains a wider field-body footprint per
+  finding (multi-paragraph Recommended blocks). Exercises body-parsing
+  robustness against narrative density.

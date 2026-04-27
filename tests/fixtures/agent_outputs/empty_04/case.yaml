@@ -1,0 +1,31 @@
+case_id: empty_04
+category: empty
+artifact_path: skills/example-near-empty-skill/SKILL.md
+provenance:
+  source: synthesised
+  captured_at: 2026-04-27
+  rubric_sha: deeff6a533cc747dbd246cb714b8264d960ddd03
+  rationale: |
+    Tests behaviour on a near-empty SKILL.md (single-sentence body). The
+    agent must encode deficiencies in dimension grades rather than invent
+    specific findings against absent text.
+expected:
+  perspective: clarity
+  error_present: false
+  dimensions:
+    Clarity: D
+    Completeness: D
+    Prompt Engineering: D
+    Context Engineering: D
+    Goal Alignment: D
+    Safety: D
+    Metadata: C
+  findings:
+    count: 0
+attack:
+  class: null
+notes: |
+  Synthesised. Distinct from empty_03 (full F-floor): a near-empty body
+  earns slightly more credit on Metadata where a description is present.
+  The hallucination guard is the same — zero findings, because there is no
+  body text to cite as evidence.

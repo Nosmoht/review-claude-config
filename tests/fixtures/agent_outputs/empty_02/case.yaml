@@ -1,0 +1,23 @@
+case_id: empty_02
+category: empty
+artifact_path: skills/example-incomplete-prompt/SKILL.md
+provenance:
+  source: synthesised
+  captured_at: 2026-04-27
+  rubric_sha: deeff6a533cc747dbd246cb714b8264d960ddd03
+  rationale: |
+    Tests the agent's other ERROR shortcut path (per
+    agents/review-perspective-clarity.md Hard Rule: "If the shared prefix
+    or per-type guide is missing from your prompt, emit
+    `### ERROR\\nmissing shared context` and stop.")
+expected:
+  perspective: clarity
+  error_present: true
+  findings:
+    count: 0
+attack:
+  class: null
+notes: |
+  Synthesised. Distinct from empty_01: this case models a malformed
+  orchestrator dispatch (missing rubric/baseline blocks), not a missing
+  artifact. Both must route through the same ERROR contract.

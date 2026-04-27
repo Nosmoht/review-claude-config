@@ -1,0 +1,31 @@
+case_id: empty_03
+category: empty
+artifact_path: skills/example-frontmatter-only/SKILL.md
+provenance:
+  source: synthesised
+  captured_at: 2026-04-27
+  rubric_sha: deeff6a533cc747dbd246cb714b8264d960ddd03
+  rationale: |
+    Tests how the agent grades a SKILL.md with valid frontmatter but an
+    empty body. The agent is expected to grade every dimension F (no
+    evidence to support any higher grade) and emit zero findings — there
+    is no body content to cite as evidence.
+expected:
+  perspective: clarity
+  error_present: false
+  dimensions:
+    Clarity: F
+    Completeness: F
+    Prompt Engineering: F
+    Context Engineering: F
+    Goal Alignment: F
+    Safety: F
+    Metadata: F
+  findings:
+    count: 0
+attack:
+  class: null
+notes: |
+  Synthesised. The hallucination guard: with no body content the agent must
+  NOT invent grades or findings. F across the board with zero findings is
+  the safe behaviour.

@@ -89,7 +89,11 @@
       },
       "then": {
         "required": ["id", "checklist_item", "dimension", "severity", "evidence", "current", "recommended"],
-        "description": "High-severity findings must include Current/Recommended blocks for the apply pipeline."
+        "properties": {
+          "current": { "minLength": 1 },
+          "recommended": { "minLength": 1 }
+        },
+        "description": "High-severity findings must include non-empty Current/Recommended blocks for the apply pipeline. Empty strings would slip past the bare `required` check while violating the apply contract."
       }
     }
   ]
