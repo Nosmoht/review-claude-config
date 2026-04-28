@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-19
+last_refreshed: 2026-04-28
 ---
 
 # Rubric Calibration Evidence for Issues #4, #5, #6, #10, #62, #64, #66
@@ -15,6 +15,7 @@ Evidence-backed operationalization for P0.5 rubric changes. Each issue gets conc
 - **#62 Third-person description (Metadata B/C)**: META-4 binary item caps Metadata at C when description uses first-person or second-person imperative. Evidence: Anthropic Skills best-practices Warning block — "Always write in third person… inconsistent point-of-view can cause discovery problems." Originally-proposed META-5 (ban `hooks` in plugin.json) dropped after Tier-1 contradiction with plugins-reference.
 - **#66 Ambiguity markers (Clarity B/C)**: CLAR-1 (fuzzy quantifiers in step parameters) and CLAR-2 (unresolved pronouns referring to prior tool outputs) both cap Clarity at C. Evidence: ambiguity taxonomy F1=0.83 on Gemma 3 12B (arXiv:2507.11525, ROMAN 2025); 61.8 % accuracy drop on subtle constraint-wording nuances (arXiv:2512.14754, ACL 2026).
 - **#64 Termination criteria (Completeness A)**: COMP-W binary item requires iterative skills/agents to declare an explicit termination predicate distinct from COMP-X success. Evidence: MAST task-verification-and-termination failure cluster (arXiv:2503.13657); Meltdown Onset Point reliability framework (arXiv:2603.29231, 2026-03-31); AgentDebug +24 % all-correct accuracy from failure annotation (arXiv:2509.25370, 2025-09). Grade-A schema-compliance clarification deferred — requires direct verification of MCP 2025-11-25 spec.
+- **#65 Goal-Alignment Checkpoint-Decomposition (A-ceiling / C-floor)**: GA-X LLM-binary item — A requires explicit domain-expert checkpoints detectable without run; C-floor caps Goal Alignment at C when goal-surface is met but ≥1 checkpoint is missing. Evidence class: Engineering guidance. Tier-1 sources: arXiv:2512.12791v2 (Scenario S1: 100%/33% surface/policy gap); arXiv:2601.15153 (+206%). Gaia2/ARE ICLR 2026 corroborates frontier task-completion ceiling.
 
 All items follow the canonical template: `<ID> <Label>: <observable>. PASS: <example>. FAIL: <example>. Verification: <regex|glob|count|LLM-binary>.`
 
@@ -363,6 +364,99 @@ The original issue Validation block requested fetching the OWASP Top 10 for Agen
 ### Non-change: `/run-eval-cases` regression deferred
 
 Issue #61 Validation also requested `/run-eval-cases` against MCP skills and agentic chains. Only `docs/review-eval-cases.md` exists as the case inventory; no MCP-specific case is in the enumeration yet. A dedicated follow-up should add a case pair for (a) an MCP-consuming skill with pinned vs unpinned declaration, and (b) a depth-≥3 agent chain with and without containment primitive. Not a blocker for #61 close: the rubric is now operationally testable via real reviews (`/review-mcp-server`, `/review-agent`) on any MCP/agent artifact in the wild.
+
+## Issue #65 — Goal-Alignment Checkpoint-Decomposition (A-ceiling / C-floor)
+
+> Note: this file lives under `research/rubric-design/`, deliberately outside `scripts/validate_token_budgets.py` scan path (`skills/*/references/**/*.md`). Calibration evidence is research-class, not session-loaded; growth is bounded by editor discipline.
+
+**Evidence class:** Engineering guidance (Tier-1 evidence anchors empirical surface/policy gap; clause wording is repo-internal distillation).
+
+### Problem
+
+Goal Alignment is the highest-weighted rubric dimension but has historically lacked a binary-verifiable boundary between A and C. Reviewers diverge on whether a skill that produces the stated artifact (goal-surface met) but skips domain-expert checkpoints — policy consultation, diagnostic pre-check, validation step — is A-eligible or C-capped. 2026 Tier-1 evidence shows the gap matters: agentic systems can achieve 100% tool-sequence correctness while only 33% policy adherence, exposing checkpoint-skip failures invisible to surface metrics.
+
+### Checklist Item
+
+**GA-X Checkpoint-Decomposition**
+
+- **Observable:** workflow body declares explicit domain-expert checkpoints (policy consultation, diagnostic pre-check, validation step) such that omitting any checkpoint would be detectable by a reviewer without running the skill. A skill that achieves goal-surface (artifact produced, tool called) but omits ≥1 such checkpoint a practitioner rubric would require → C. The "practitioner rubric would require" qualifier is the **NA gate**: archetypes for which no domain-expert checkpoint is required (one-shot read-only transforms, simple formatters) are NA, not FAIL.
+
+- **Category-specific evidence (anti-gameability).** Each named category requires substantive evidence, not just a label:
+  - **policy consultation** → step references a specific path/file/document name (e.g., reads `tool-grant-decision-tree.md`, loads `references/*.md`, queries a spec). Not satisfied by an unsourced "consult policy" instruction.
+  - **diagnostic pre-check** → step reads system state before mutation (e.g., RD-6 tool-availability probe pattern, file-existence check, glob conflict detection, schema-presence test). Not satisfied by a generic "check first" instruction.
+  - **validation step** → step compares output to a schema/template/expected-shape (e.g., `report-template.md` schema check, sidecar applyability gate, parse-and-confirm of generated content). Not satisfied by `echo "validated"` or a no-op label.
+
+- **BOUNDARY PASS (A-eligible):** "Apply skill workflow: (1) consult `tool-grant-decision-tree.md` policy, (2) run RD-6 tool-availability probe, (3) validate output against `report-template.md` schema, (4) emit certificate." Each checkpoint named, ordered, and reviewable with substantive evidence.
+
+- **BOUNDARY FAIL (C-capped, missing all categories):** "Generate the review report and write it to `$CLAUDE_PLUGIN_DATA/reports/`." Goal-surface met (artifact produced) but no policy consultation, no diagnostic pre-check, no validation step named.
+
+- **BOUNDARY FAIL (gameability — no-op label):** "(1) Generate the review report. (2) Validation step: `echo \"validated\"`. (3) Emit." Step labeled "Validation step" but body performs no domain validation. The category-specific evidence requirement (above) takes precedence over the literal label.
+
+- **BOUNDARY FAIL (position — checkpoint after emission):** "(1) Write the report to disk. (2) Validation step: re-read the report and confirm it parses." Checkpoint named but executed AFTER goal-surface emission; cannot prevent a defective artifact from being persisted.
+
+- **BOUNDARY NA (one-shot read-only transform, no Write/Bash/Edit):** A skill whose entire body is a single-step transformation with no policy gate, no state mutation, and no schema-validatable output (e.g., a plain text reformatter, a `.gitignore` lookup helper) — no checkpoint required by archetype. NA, not FAIL. The clause's "practitioner rubric would require" qualifier is the explicit NA gate.
+
+- **Verification:** LLM-binary — for the workflow body, ask: "Does the skill name ≥1 of {policy consultation, diagnostic pre-check, validation step} as a distinct numbered/named step *before goal-surface emission*, with category-specific evidence (path-reference / state-read / schema-compare) rather than just a label?" Yes → PASS; No (and at least one was required by archetype) → FAIL; No (and none was required by archetype) → NA.
+
+### Anti-double-counting with R4 / R4b / CLAR-3
+
+GA-X PASS may not double-credit evidence already pinned to other agentic-overlay or clarity items. A skill that earns R4 PASS via a named escalation step OR CLAR-3 PASS via a named recovery target may NOT cite the SAME step as GA-X evidence. Reviewers must cite **distinct checkpoint evidence** for GA-X. This prevents the same workflow feature from triggering or excusing three separate caps.
+
+### Grade Boundary
+
+| Grade | Condition |
+|-------|-----------|
+| A     | All §A clauses pass AND GA-X ✓ (explicit checkpoints with category-specific evidence) |
+| B     | §A partial; GA-X ✓ |
+| C     | GA-X ✗ (goal-surface met but ≥1 archetype-required checkpoint missing) |
+| —     | GA-X NA (archetype requires no domain-expert checkpoint; one-shot read-only transforms) |
+| D/F   | inherit from §D/F base clauses |
+
+GA-X is a C-cap (not D/F): the skill still produces the stated artifact, so goal achievement isn't zero — but practitioner-rubric-equivalence is broken. Contrast with §F (goal stated but body doesn't support achieving it = total failure).
+
+### Perspective handling — standard advisory
+
+GA-X is intentionally NOT registered in `scripts/merge_findings.py` `BINARY_CAPS` / `BINARY_ITEM_IDS` / `NARRATIVE_PARENT_IDS` and NOT added to `scripts/rubric_binary_evaluator.py`. Rationale:
+
+1. **The §A/§C clause text is the test.** The perspective-correctness agent owns Goal Alignment (`merge_findings.py:348`) and applies the new clauses holistically when grading the dimension. A binary cap on top would double-fire.
+2. **LLM-binary on free-form workflow text is unreliable for cap-firing.** Promoting to a deterministic cap (BINARY_CAPS) would produce false-positive C-caps on skills using non-canonical phrasing.
+3. **GA-X follows the standard advisory pattern**, not a special path. Per `merge_findings.py:594-606`, ANY perspective finding whose `checklist_item` is not in BINARY_ITEM_IDS / NARRATIVE_PARENT_IDS is demoted to Low when `apply_caps=True`. GA-X behaves identically to all other unregistered narrative items — there is no GA-X-specific code path. The grade signal flows through the perspective-correctness agent's holistic Goal-Alignment grade BEFORE the merge demotion; demotion only suppresses the perspective's standalone finding emission, not the dim-grade signal.
+4. **Fail-safe corner**: when `apply_caps=False`, demotion does not fire and GA-X may surface at perspective severity. This corner is reached when the binary-evaluator script is missing or crashed (per `merge-rules.md` §"Perspective Finding Handling" fail-safe path) — perspectives retain authority when binary infrastructure is unavailable, preventing silent under-reporting.
+
+Future refinement (if a stable, repo-wide regex pattern emerges): promote GA-X to a binary item by adding `BINARY_CAPS.append(("GA-X", "Goal Alignment", "C"))`, `ITEM_DIMENSION["GA-X"] = "Goal Alignment"`, a `rubric_binary_evaluator.py` LLM-binary entry, plus matching `merge-rules.md` cap-table row and `agents/review-perspective-correctness.md` skip-list entry. Out of scope for #65.
+
+**Future GA-* naming policy:** subsequent rubric-global GA items use the X/Y/Z suffix (e.g., GA-Y, GA-Z) to remain disjoint from per-archetype `GA-1`...`GA-5` namespaces in rule/claude-md/hook evaluation guides.
+
+### Migration note for existing skills
+
+Skills authored before #65 may need a single-line addition to retain A grades. The repo has converged on three convergent idioms; if your skill uses any of these, GA-X likely PASSes:
+
+- **`scaffold-*`**: "Before presenting, run these validation checks against the generated content" (validation-step idiom).
+- **`apply-*`**: "Step 2.4 Applyability gate" (validation-step idiom).
+- **`review-*`**: "Completeness gate — success condition" (validation-step idiom) + Step 0/1 "Tool probe" + "Load References" (diagnostic + policy-consultation idioms).
+- **`audit-*`**: typically pass via "Load Policy" / "Termination and Escalation" sections.
+- **`one-shot transforms`**: usually NA (no archetype-required checkpoint).
+
+A pre-merge full-repo `/review-skill` sweep is intentionally NOT performed (KV-cache reason). Post-commit, the 3 borderline cases identified by Round-3 backward-compat survey (`develop-hooks`, `audit-repo`, `audit-context-budget`) should be reviewed individually; if any falls to C, open per-skill follow-up issues — do not block #65 commit.
+
+### Evidence
+
+- [arXiv:2512.12791v2 — Beyond Task Completion](https://arxiv.org/abs/2512.12791) (2025-12-16) — assessment framework for agentic systems. **Verbatim finding (Table 3, Scenario S1 baseline — §4.1 "Cost Optimization (S1)"):** "S1 achieved perfect tool sequencing (100%) but only 33% policy adherence, indicating actions proceeded without consulting safety guidelines." Pillar-specific failure examples: "Skipped policy validation before instance termination"; "Missed diagnostic or verification steps before applying remediation." Demonstrates surface-correctness/policy-adherence gap. **Tier 1**.
+  - **Note on terminology:** "checkpoint" is this rubric's editorial term; the paper uses "pillar-specific metrics" and "policy adherence" measures. The empirical 100/33 surface/policy gap is what the Tier-1 source supports — the term "checkpoint decomposition" is a repo-internal distillation of that gap into a reviewable rubric clause.
+- [arXiv:2601.15153 — Codified Expert Domain Knowledge](https://arxiv.org/abs/2601.15153) (2026-01) — abstract reports **+206% improvement in output quality** with "expert-level ratings in all cases versus baseline's poor performance" via expert-rule augmentation (RAG + codified domain rules + visualization principles). Validates that codified domain checkpoints (not just retrieval) drive quality. **Tier 1**.
+- [arXiv:2403.18771 — CheckEval](https://arxiv.org/abs/2403.18771) (EMNLP 2025) — Binary yes/no PASS/FAIL exemplars improve inter-evaluator agreement by +0.45 across 12 evaluator models vs holistic Likert. Justifies the BOUNDARY-pair format. **Tier 1**.
+
+### Corroborating context (not load-bearing)
+
+- [Gaia2 / ARE — Benchmarking LLM Agents on Dynamic and Asynchronous Environments](https://arxiv.org/abs/2602.11964) (ICLR 2026) — frontier agents cap at 42% pass@1 on real-world multi-step tasks (GPT-5 high best). The 42% ceiling is total task-failure rate from any cause, not specifically checkpoint-skip. Consistent with — but not direct evidence for — the surface/policy gap. Used here as ambient context that real-world multi-step task success is far from saturation.
+
+### Non-change: weight constants
+
+The 20%/25% Goal Alignment weight is unchanged.
+
+### Non-change: Issue #32 (E8) is NOT operationalized — only complemented
+
+Issue #32 enumerates four operational sub-tasks: (1) task extraction, (2) task→instruction coverage, (3) scope-creep check, (4) contradiction check. GA-X's predicate is **instruction→checkpoint-category presence** — fundamentally different from #32's task→instruction coverage. A skill could pass GA-X yet fail #32(2); or vice versa. #32 is closed with a **complementary-resolution comment** explicitly noting GA-X **does not** satisfy any of the four E8 sub-tasks; all four remain open follow-ups.
 
 ## Canonical Item Template (applied to all items above)
 

@@ -44,9 +44,9 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 > **Model taxonomy note** (IFScale, arXiv:2507.11538): Thresholds above are calibrated for **linear-decay models** (Claude Sonnet class — steady accuracy loss from early density increases). **Reasoning models** (o3, Gemini-2.5-Pro) follow threshold decay and sustain near-perfect adherence through ~150+ instructions — apply a higher B/C boundary when explicitly reviewing skills targeting those models.
 
 ### 5. Goal Alignment (20%)
-- **A**: Has right domain knowledge, tools, and structure; best practices reflected in workflow; findings self-evident to reviewers.
+- **A**: Has right domain knowledge, tools, and structure; best practices reflected in workflow; findings self-evident to reviewers; workflow includes explicit domain-expert checkpoints — not just end-state — such that omitting any checkpoint would be detectable by a reviewer without running the skill.
 - **B**: Domain-appropriate structure; one aspect superficially covered.
-- **C**: Addresses the goal superficially but misses domain-critical aspects. *Test: workflow omits a step flagged FAIL by the evaluation checklist → C or below.*
+- **C**: Addresses the goal superficially but misses domain-critical aspects. *Test: workflow omits a step flagged FAIL by the evaluation checklist → C or below. **Checkpoint-decomposition test (GA-X):** skill achieves goal surface (artifact produced, tool called) but omits ≥1 domain-expert checkpoint (policy consultation, diagnostic pre-check, validation step) a practitioner rubric would require → C. Source: arXiv:2512.12791v2 (Scenario S1 baseline: 100% tool-sequencing yet 33% policy adherence — surface metrics mask checkpoint-skip); arXiv:2601.15153 (+206% lift via codified expert rules).*
 - **D**: Goal met but misses multiple domain-critical aspects practitioners expect.
 - **F**: Goal stated in description but body doesn't support achieving it.
 
