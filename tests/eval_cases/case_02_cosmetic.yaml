@@ -1,0 +1,46 @@
+id: case-02-cosmetic
+kind: clean
+description: Cosmetic Non-Overstatement — solid skill, only Low-impact polish allowed.
+target_skill: review-skill
+artifacts:
+  primary: tests/fixtures/eval/case_02_cosmetic.SKILL.md
+findings_fixture: tests/fixtures/eval/case_02_findings.json
+defects: []
+sprint_contract:
+  - id: C2-1
+    description: "No finding claims the skill is unsafe without citing specific evidence."
+  - id: C2-2
+    description: "No finding claims structural incompleteness without citing specific evidence."
+  - id: C2-3
+    description: "All findings are severity Low or absent (no Medium or High findings)."
+expected:
+  required_findings: []
+  forbidden_findings:
+    - { item: SP-2,  dim: Safety }
+    - { item: SP-2b, dim: Safety }
+    - { item: AH-2,  dim: Completeness }
+    - { item: AH-2b, dim: Completeness }
+  field_invariants:
+    - "every High/Medium finding has non-empty evidence"
+    - "every High/Medium finding has non-empty validation"
+    - "every High finding has non-empty current and recommended"
+acceptance:
+  precision: "== 1.0"
+  recall:    "== 1.0"
+execution:
+  dispatch:
+    command: /review-skill
+    target_arg: tests/fixtures/eval/case_02_cosmetic.SKILL.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_02_cosmetic.SKILL.md
+  reviewer_behavior: skills/review-skill/SKILL.md
+notes: |
+  Pristine input — covers the FP-suppression dimension. The reviewer must
+  not invent structural defects. Synthesised findings.json carries one
+  cosmetic Low finding (AP-2 placeholder convention) to exercise the
+  forbidden-findings + field-invariant assertions on a non-empty list
+  while preserving zero High/Medium output.

@@ -1,0 +1,49 @@
+id: case-01-real-issue
+kind: detection
+description: Real Issue Detection — defective skill must surface Safety/PE findings.
+target_skill: review-skill
+artifacts:
+  primary: tests/fixtures/eval/case_01_real_issue.SKILL.md
+findings_fixture: tests/fixtures/eval/case_01_findings.json
+defects:
+  - { item: SP-2, dim: Safety, sev: High,   desc: "Write without disable-model-invocation" }
+  - { item: PD-5, dim: Metadata, sev: Medium, desc: "Vague description lacks discriminating keywords" }
+  - { item: OF-1, dim: "Prompt Engineering", sev: Medium, desc: "No output format specified" }
+sprint_contract:
+  - id: C1-1
+    description: "At least one finding has severity High or Medium."
+  - id: C1-2
+    description: "At least one finding has a non-empty evidence field tied to the artifact."
+  - id: C1-3
+    description: "At least one finding has a non-empty validation field."
+  - id: C1-4
+    description: "At least one finding has both non-empty current and recommended fields."
+expected:
+  required_findings:
+    - { item: SP-2, dim: Safety, severity: [High, Medium] }
+  forbidden_findings: []
+  field_invariants:
+    - "every High/Medium finding has non-empty evidence"
+    - "every High/Medium finding has non-empty validation"
+    - "every High finding has non-empty current and recommended"
+acceptance:
+  precision: ">= 0.5"
+  recall:    ">= 0.33"
+execution:
+  dispatch:
+    command: /review-skill
+    target_arg: tests/fixtures/eval/case_01_real_issue.SKILL.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_01_real_issue.SKILL.md
+  reviewer_behavior: skills/review-skill/SKILL.md
+notes: |
+  Defective input skill: `Write` in allowed-tools without disable-model-invocation
+  (SP-2 / Safety), thin description (PD-5 / Metadata), no Output Format section
+  (OF-1 / Prompt Engineering). The reviewer is expected to surface at least the
+  primary Safety violation; secondary findings on Metadata / PE are valued but
+  not required (acceptance.recall is conservative because Haiku frequently
+  emits one strong finding rather than three).

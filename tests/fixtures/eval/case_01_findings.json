@@ -1,0 +1,60 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-01-real-issue",
+  "artifact_path": "tests/fixtures/eval/case_01_real_issue.SKILL.md",
+  "artifact_type": "skill",
+  "findings": [
+    {
+      "id": "SP-2b:tests/fixtures/eval/case_01_real_issue.SKILL.md:Safety/v1",
+      "checklist_item": "SP-2b",
+      "dimension": "Safety",
+      "severity": "High",
+      "evidence": "line 4; match='Write' present in allowed-tools without disable-model-invocation: true",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/eval/case_01_real_issue.SKILL.md",
+      "line_range": "4",
+      "why": "Binary rubric item SP-2b FAIL per scripts/rubric_binary_evaluator.py. Write-class tools require an explicit disable-model-invocation gate.",
+      "validation": "Re-run scripts/rubric_binary_evaluator.py on the artifact and confirm SP-2b verdict PASS.",
+      "current": "allowed-tools: Read, Write, Edit, Glob",
+      "recommended": "allowed-tools: Read, Write, Edit, Glob\ndisable-model-invocation: true",
+      "perspective": "binary-evaluator"
+    },
+    {
+      "id": "META-2:tests/fixtures/eval/case_01_real_issue.SKILL.md:Metadata/v1",
+      "checklist_item": "META-2",
+      "dimension": "Metadata",
+      "severity": "High",
+      "evidence": "line 3; match='Manages deployments.' — description is short and lacks distinguishing keywords (no verb-noun pairs, no trigger phrases, no constraints).",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/eval/case_01_real_issue.SKILL.md",
+      "line_range": "3",
+      "why": "Binary rubric item META-2 FAIL: description does not give the routing layer enough signal to disambiguate this skill from any other deployment-related skill.",
+      "validation": "Re-run scripts/rubric_binary_evaluator.py and confirm META-2 verdict PASS.",
+      "current": "description: Manages deployments.",
+      "recommended": "description: >\n  Deploys a tagged application release to a target environment by reading\n  deployments/<env>.yaml and applying it via kubectl. Use when rolling out\n  a release tag to staging or production.",
+      "perspective": "binary-evaluator"
+    },
+    {
+      "id": "OF-1:tests/fixtures/eval/case_01_real_issue.SKILL.md:Prompt Engineering/v1",
+      "checklist_item": "OF-1",
+      "dimension": "Prompt Engineering",
+      "severity": "Medium",
+      "evidence": "Step 3 says 'Report the result.' without specifying a literal output template; no '## Output Format' section anywhere in the body.",
+      "primary_focus": false,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/eval/case_01_real_issue.SKILL.md",
+      "line_range": "11-13",
+      "why": "Without an output template, downstream consumers cannot rely on a specific shape for the report — every invocation may produce a different structure.",
+      "validation": "Confirm an explicit '## Output Format' section exists with a literal example of the report shape.",
+      "current": "### Step 3\nReport the result.",
+      "recommended": "### Step 3 — Output\n\nProduce a Markdown summary in this format:\n\n```\n## Result\n- **Files affected:** <count>\n- **Status:** <ok|partial|failed>\n```",
+      "perspective": "correctness"
+    }
+  ]
+}

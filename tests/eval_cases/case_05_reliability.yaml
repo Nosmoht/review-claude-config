@@ -1,0 +1,48 @@
+id: case-05-reliability-pattern
+kind: detection
+description: Reliability pattern detection — agent with unchecked external dependencies must trigger Safety + Completeness findings.
+target_skill: review-agent
+artifacts:
+  primary: tests/fixtures/eval/case_05_reliability_agent.md
+findings_fixture: tests/fixtures/eval/case_05_findings.json
+defects:
+  - { item: RL-1, dim: Safety, sev: High, desc: "No termination condition for recursion/retries" }
+  - { item: RL-2, dim: Completeness, sev: High, desc: "No failure path for external dependencies" }
+sprint_contract:
+  - id: C5-1
+    description: "At least one High or Medium Safety finding citing missing failure path or stop condition."
+  - id: C5-2
+    description: "At least one High or Medium finding citing missing chain-level completeness or failure to propagate stub-dependency state."
+  - id: C5-3
+    description: "At least one Evidence field tied to specific workflow text showing an unchecked dependency call."
+  - id: C5-4
+    description: "At least one Recommended block includes a concrete reliability pattern (circuit breaker, progressive fallback, or bounded execution)."
+expected:
+  required_findings:
+    - { item: RL-1b, dim: Safety, severity: [High, Medium] }
+    - { item: RL-2,  dim: Completeness, severity: [High, Medium] }
+  forbidden_findings: []
+  field_invariants:
+    - "every High/Medium finding has non-empty evidence"
+    - "every High/Medium finding has non-empty validation"
+    - "every High finding has non-empty current and recommended"
+acceptance:
+  precision: ">= 0.8"
+  recall:    ">= 0.8"
+execution:
+  dispatch:
+    command: /review-agent
+    target_arg: tests/fixtures/eval/case_05_reliability_agent.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_05_reliability_agent.md
+  reviewer_behavior: skills/review-agent/SKILL.md
+notes: |
+  Agent target (not skill). Two simultaneous reliability defects: RL-1
+  (recursion/fan-out without bound) and RL-2 (external dependency without
+  failure path). The synthesised findings.json maps RL-1 → RL-1b
+  (binary-evaluator) and RL-2 → perspective-emitted finding. Both must
+  surface to satisfy the sprint contract.

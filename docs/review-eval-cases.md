@@ -1,58 +1,26 @@
 # Review Eval Cases
 
-Manual regression cases for the prompt/context-first review flow. Use these when changing the rubric, shared baseline, reviewer prompts, analytics logic, or scaffold workflow.
+Regression cases for the prompt/context-first review flow. Use these when changing the rubric, shared baseline, reviewer prompts, analytics logic, or scaffold workflow.
+
+## Source of truth
+
+**Cases C1–C5 are pinned in YAML** under `tests/eval_cases/case_*.yaml`. Each YAML carries the synthetic artifact path, sprint-contract criteria, expected findings, acceptance precision/recall thresholds, dispatch instructions, and fix-target mapping. `/run-eval-cases` reads those YAMLs as its source of truth; `tests/test_eval_cases.py` enforces the schema and replays detection/clean cases against synthesised `findings.json` fixtures programmatically.
+
+| YAML | Kind | Description |
+|---|---|---|
+| [`case_01_real_issue.yaml`](../tests/eval_cases/case_01_real_issue.yaml) | detection | Real Issue, Should Be Caught |
+| [`case_02_cosmetic.yaml`](../tests/eval_cases/case_02_cosmetic.yaml) | clean | Cosmetic Difference, Should Not Be Overstated |
+| [`case_03_analytics_rename.yaml`](../tests/eval_cases/case_03_analytics_rename.yaml) | behavior_analytics | Analytics Rename/Move Candidate |
+| [`case_04_scaffold_registration.yaml`](../tests/eval_cases/case_04_scaffold_registration.yaml) | behavior_scaffold | Scaffold Registration Targets |
+| [`case_05_reliability.yaml`](../tests/eval_cases/case_05_reliability.yaml) | detection | Reliability Pattern Detection |
+
+Cases C6–C18 below remain as narrative specifications — they enumerate gaps that a future YAML migration should close (see issue #22).
 
 ## Defect Annotation Convention
 
 Cases that test finding detection include a `defects:` block listing expected defects. Each defect has `{item, dim, sev, desc}`. Cases testing behavior (not detection) have `defects: N/A`. Clean-artifact cases have `defects: []`. Used by `/run-eval-cases` for FP/FN precision/recall measurement.
 
-## Case 1 — Real Issue, Should Be Caught
-
-Artifact: a skill with `Write` in `allowed-tools`, no `disable-model-invocation: true`, vague description, and no output format.
-
-defects:
-- {item: SP-2, dim: Safety, sev: High, desc: "Write without disable-model-invocation"}
-- {item: PD-5, dim: Meta, sev: Medium, desc: "Vague description lacks discriminating keywords"}
-- {item: OF-1, dim: PE, sev: Medium, desc: "No output format specified"}
-
-Expected review behavior:
-- Surfaces at least one High or Medium finding.
-- Includes `Evidence:` tied to the exact text.
-- Includes `Validation:` that can be checked by a follow-up review.
-- Recommends a concrete rewrite in `Current:`/`Recommended:` format.
-
-## Case 2 — Cosmetic Difference, Should Not Be Overstated
-
-Artifact: a skill with solid workflow, correct argument handling, correct tool set, and a clear output format — with only one slightly awkward (but functionally correct) sentence in the workflow body.
-
-defects: []
-
-Expected review behavior:
-- Does not invent structural defects.
-- Keeps findings Low impact or omits them entirely.
-- Avoids claiming that the artifact is unsafe or incomplete without evidence.
-
-## Case 3 — Analytics Rename/Move Candidate
-
-defects: N/A (tests analytics behavior, not finding detection)
-
-Artifact set: two reports where a primitive disappears at one path and a similar one appears at another path.
-
-Expected analytics behavior:
-- Tracks stable items by `type + path`.
-- Flags the new path as a rename/move candidate instead of silently merging by `name`.
-- Uses `name` as display label only.
-
-## Case 4 — Scaffold Registration Targets
-
-defects: N/A (tests scaffold behavior, not finding detection)
-
-Artifact: `scaffold-skill plugin foo` vs `scaffold-skill maintenance foo`.
-
-Expected scaffold behavior:
-- Plugin mode writes under `skills/` and updates only existing command/architecture sections in `README.md` and `CLAUDE.md`.
-- Maintenance mode writes under `.claude/skills/` and updates only `CLAUDE.md`.
-- Neither mode refers to `## Skills`, `## File Structure`, or `## Installation` as registration targets.
+The C1–C5 narrative sections were removed when those cases moved to YAML. The C6–C18 sections below preserve the narrative format pending a follow-up migration.
 
 ## Case 6 — Cross-Run Consistency
 
@@ -85,22 +53,6 @@ Expected review behavior:
 - **AP-4 PASS**: Does NOT flag the MUST in the safety guardrail section — the safety/guardrail exemption applies.
 - **Existing items unaffected**: DA-1 through DA-4, TC-1, TC-2, AP-1 through AP-3 and all other existing checks do not regress.
 - Overall grade reflects new FAIL findings without dropping more than one letter grade below what the structural quality alone would produce.
-
-## Case 5 — Reliability Pattern Detection
-
-defects:
-- {item: RL-1, dim: Safety, sev: High, desc: "No termination condition for recursion/retries"}
-- {item: RL-2, dim: Compl, sev: High, desc: "No failure path for external dependencies"}
-
-Artifact: an agent that spawns subagents or calls external dependencies (MCP tools, WebFetch, subprocess tools) with no failure path defined, no stop condition for recursion/retries, and continues execution even when dependencies return stub data or fail silently.
-
-Expected review behavior:
-- Surfaces at least one High or Medium finding from Safety dimension citing missing "failure path defined for every external dependency" or missing "stop condition prevents infinite recursion."
-- Surfaces at least one High or Medium finding citing missing chain-level completeness (failure to propagate [INCOMPLETE] or stub-dependency states) — dimension label may be Safety, Completeness, or Workflow.
-- Includes `Evidence:` tied to exact workflow text showing unchecked dependency calls.
-- Includes `Validation:` that can be checked by inspecting failure scenarios or recursion bounds.
-- Recommends concrete reliability patterns in `Current:`/`Recommended:` format (circuit breakers, progressive fallback, bounded execution with thresholds/timeouts).
-
 
 ## Case 8 — Tool Grant Least-Privilege Detection
 

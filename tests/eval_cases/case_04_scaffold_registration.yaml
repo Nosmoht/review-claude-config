@@ -1,0 +1,51 @@
+id: case-04-scaffold-registration
+kind: behavior_scaffold
+description: Scaffold registration verification — plugin and maintenance modes write to correct targets.
+target_skill: scaffold-skill
+defects: N/A
+sprint_contract:
+  - id: C4-P1
+    description: "Plugin mode: SKILL.md written under `skills/<name>/` (not `.claude/skills/`)."
+  - id: C4-P2
+    description: "Plugin mode: README.md updated under `## Command Families` (not `## Skills`, `## File Structure`, or `## Installation`)."
+  - id: C4-P3
+    description: "Plugin mode: CLAUDE.md updated under `## Commands`."
+  - id: C4-M1
+    description: "Maintenance mode: SKILL.md written under `.claude/skills/<name>/` (not top-level `skills/`)."
+  - id: C4-M2
+    description: "Maintenance mode: CLAUDE.md updated under `## Commands` only; README.md not modified."
+acceptance: null
+scenarios:
+  - mode: plugin
+    name: eval-test-scaffold
+    expected_writes_under: skills/
+    expected_doc_updates:
+      README.md: "## Command Families"
+      CLAUDE.md: "## Commands"
+    forbidden_doc_targets:
+      README.md: ["## Skills", "## File Structure", "## Installation"]
+  - mode: maintenance
+    name: eval-test-scaffold-maint
+    expected_writes_under: .claude/skills/
+    expected_doc_updates:
+      CLAUDE.md: "## Commands"
+    forbidden_doc_targets:
+      README.md: ["any"]
+execution:
+  dispatch:
+    command: /scaffold-skill
+    target_arg: "{mode} {name}"
+  timeout_seconds: 90
+  cleanup_required: true
+  cleanup:
+    - "rm -rf skills/eval-test-scaffold"
+    - "rm -rf .claude/skills/eval-test-scaffold-maint"
+    - "revert any doc changes introduced by the scaffold runs"
+fix_target:
+  reviewer_behavior: skills/scaffold-skill/SKILL.md
+notes: |
+  Behavior case — exercises /scaffold-skill in both modes. Each scenario
+  has its own expected_writes_under + expected_doc_updates contract.
+  Cleanup is mandatory because the scaffold modifies shared files
+  (README.md, CLAUDE.md) — /run-eval-cases reverts both files after
+  verification regardless of pass/fail.

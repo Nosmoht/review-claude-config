@@ -1,0 +1,32 @@
+id: case-03-analytics-rename
+kind: behavior_analytics
+description: Analytics rename/move detection — diff-tracking by type+path, not by name alone.
+target_skill: review-analytics
+artifacts:
+  report_a: tests/fixtures/eval/case_03_report_a.md
+  report_b: tests/fixtures/eval/case_03_report_b.md
+defects: N/A
+sprint_contract:
+  - id: C3-1
+    description: "Items are tracked by `type + path`, not by `name` alone."
+  - id: C3-2
+    description: "The new path (`skills/foo-baz/SKILL.md`) is flagged as a rename/move candidate."
+  - id: C3-3
+    description: "Items with different paths are not silently merged even when `name` matches."
+acceptance: null
+execution:
+  dispatch:
+    command: /review-analytics
+    target_arg: ".claude/eval-temp/"
+    setup: "stage report_a + report_b under target_arg before dispatch"
+  timeout_seconds: 60
+fix_target:
+  reviewer_behavior: skills/review-analytics/SKILL.md
+notes: |
+  Behavior case — exercises analytics rename/move heuristic. The two
+  reports describe the same artifact (name=foo-bar) at different paths
+  (foo-bar/SKILL.md vs foo-baz/SKILL.md), simulating a directory rename.
+  The /review-analytics skill must surface the move as a candidate
+  rename rather than silently collapsing both reports under the shared
+  name. No findings.json contract — the assertion target is the analytics
+  report's narrative output, evaluated by /run-eval-cases.

@@ -1,0 +1,26 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-02-cosmetic",
+  "artifact_path": "tests/fixtures/eval/case_02_cosmetic.SKILL.md",
+  "artifact_type": "skill",
+  "findings": [
+    {
+      "id": "AP-2:tests/fixtures/eval/case_02_cosmetic.SKILL.md:Metadata/v1",
+      "checklist_item": "AP-2",
+      "dimension": "Metadata",
+      "severity": "Low",
+      "evidence": "Step 4 'Summarize' output template uses '- **Target:** [path]' — square-bracket placeholders are conventional but a fenced angle-bracket form ('<path>') is slightly more discoverable.",
+      "primary_focus": false,
+      "owner_conflict": true,
+      "hint_owner": "integration",
+      "path": "tests/fixtures/eval/case_02_cosmetic.SKILL.md",
+      "line_range": "32-37",
+      "why": "Cosmetic preference only — both forms are valid. Surfaced for completeness.",
+      "validation": "If the project standardises on angle-brackets, swap; otherwise leave.",
+      "current": "- **Target:** [path]",
+      "recommended": "- **Target:** <path>",
+      "perspective": "correctness"
+    }
+  ]
+}

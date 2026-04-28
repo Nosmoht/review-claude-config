@@ -1,0 +1,43 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-05-reliability",
+  "artifact_path": "tests/fixtures/eval/case_05_reliability_agent.md",
+  "artifact_type": "agent",
+  "findings": [
+    {
+      "id": "RL-1b:tests/fixtures/eval/case_05_reliability_agent.md:Safety/v1",
+      "checklist_item": "RL-1b",
+      "dimension": "Safety",
+      "severity": "High",
+      "evidence": "Step 1 spawns three subagents and Step 2 calls WebFetch; no termination condition or recursion-depth bound is declared anywhere in the body.",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/eval/case_05_reliability_agent.md",
+      "line_range": "13-22",
+      "why": "Binary rubric item RL-1b FAIL — agentic skill must declare a termination condition for any recursion / unbounded fan-out path.",
+      "validation": "Re-run scripts/rubric_binary_evaluator.py and confirm RL-1b verdict PASS after a stop condition is added.",
+      "current": "Launch three subagents via the Agent tool, one per data source: ...\nCollect all three results.",
+      "recommended": "Launch three subagents in parallel (max-depth: 1, max-total: 3). Each subagent has a 30s timeout. After all three return or 60s elapses, proceed with whatever subset returned.",
+      "perspective": "binary-evaluator"
+    },
+    {
+      "id": "RL-2:tests/fixtures/eval/case_05_reliability_agent.md:Completeness/v1",
+      "checklist_item": "RL-2",
+      "dimension": "Completeness",
+      "severity": "High",
+      "evidence": "Step 2 calls WebFetch to https://reference.example.com/catalog; no failure path is declared. Step 3 merges results unconditionally — if WebFetch returns an error, the merge silently proceeds with stub data.",
+      "primary_focus": false,
+      "owner_conflict": true,
+      "hint_owner": "integration",
+      "path": "tests/fixtures/eval/case_05_reliability_agent.md",
+      "line_range": "23-29",
+      "why": "External dependency calls without explicit failure handling produce deceptive completeness — downstream consumers cannot distinguish the WebFetch-succeeded case from the WebFetch-failed-and-fell-back case.",
+      "validation": "Add a conditional path for WebFetch failure that either fails the workflow loudly or marks the merged record with status='partial'.",
+      "current": "Use WebFetch to retrieve https://reference.example.com/catalog for metadata enrichment.\n\n### Step 3: Merge results\n\nCombine the three agent outputs with the WebFetch content into a single merged dataset.",
+      "recommended": "### Step 2: Fetch supplementary content\n\nUse WebFetch to retrieve https://reference.example.com/catalog for metadata enrichment. **On failure** (HTTP error, timeout, empty body): record `enrichment_status: failed` and skip Step 3's catalog merge.\n\n### Step 3: Merge results\n\nCombine the three agent outputs. If `enrichment_status == ok`, layer the WebFetch catalog on top; otherwise emit the merged record with `enrichment_status: failed` so downstream consumers can decide whether to use it.",
+      "perspective": "correctness"
+    }
+  ]
+}
