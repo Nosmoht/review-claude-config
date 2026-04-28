@@ -1,0 +1,298 @@
+---
+calibration_version: 2026-04-28
+generated_at: 2026-04-28
+rubric_baseline_version: 2026-04-22
+methodology: |
+  17 fresh single-perspective fallback /review-skill runs (multi-perspective Agent
+  dispatch unavailable in session). 1 artifact (A2 review-skill) reuses existing
+  post-2026-04-22 multi-perspective merged report (RunA). Each fresh run executed
+  scripts/rubric_binary_evaluator.py + applied scoring-rubric.md anchors + Layer
+  1.5 binary boundary caps from merge-rules.md. Methodology consistency caveat:
+  A2 is multi-perspective merged; A1, A3, M1-M12, F1-F3 are single-perspective
+  fallback. Disclosed in residual-risks of evidence section.
+
+scores:
+  - id: A1
+    artifact: skills/review-claude-config/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: B
+    score: 86.0
+    clarity: A
+    completeness: C
+    prompt_engineering: B
+    context_engineering: A
+    goal_alignment: A
+    safety: D
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155222-review-skill.md
+
+  - id: A2
+    artifact: skills/review-skill/SKILL.md
+    type: skill
+    method: multi-perspective-existing-runA
+    overall: B
+    score: 84.5
+    clarity: C
+    completeness: C
+    prompt_engineering: B
+    context_engineering: A
+    goal_alignment: A
+    safety: C
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-22T161232Z-review-skill-runA.md
+
+  - id: A3
+    artifact: skills/scaffold-skill/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: C
+    score: 77.5
+    clarity: C
+    completeness: D
+    prompt_engineering: B
+    context_engineering: C
+    goal_alignment: B
+    safety: C
+    metadata: B
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155247Z-review-skill.md
+
+  - id: M1
+    artifact: skills/audit-repo/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: B
+    score: 83.5
+    clarity: A
+    completeness: C
+    prompt_engineering: A
+    context_engineering: B
+    goal_alignment: B
+    safety: D
+    metadata: B
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155235Z-review-skill.md
+
+  - id: M2
+    artifact: skills/check-repo-health/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: A
+    score: 90.0
+    clarity: A
+    completeness: C
+    prompt_engineering: A
+    context_engineering: A
+    goal_alignment: A
+    safety: C
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T15-53-03Z-review-skill.md
+
+  - id: M3
+    artifact: skills/audit-context-budget/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: C
+    score: 77.5
+    clarity: C
+    completeness: C
+    prompt_engineering: B
+    context_engineering: C
+    goal_alignment: B
+    safety: D
+    metadata: B
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155400Z-review-skill.md
+
+  - id: M4
+    artifact: skills/develop-hooks/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: C
+    score: 79.0
+    clarity: C
+    completeness: C
+    prompt_engineering: B
+    context_engineering: B
+    goal_alignment: B
+    safety: D
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T15-52-32Z-review-skill.md
+
+  - id: M5
+    artifact: skills/scaffold-agent/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: B
+    score: 81.0
+    clarity: C
+    completeness: C
+    prompt_engineering: B
+    context_engineering: A
+    goal_alignment: B
+    safety: D
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T15-56-34Z-review-skill.md
+
+  - id: M6
+    artifact: skills/scaffold-rule/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: C
+    score: 74.0
+    clarity: C
+    completeness: C
+    prompt_engineering: A
+    context_engineering: A
+    goal_alignment: B
+    safety: C
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155624Z-review-skill.md
+
+  - id: M7
+    artifact: skills/audit-mcp-auth/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: B
+    score: 81.0
+    clarity: C
+    completeness: C
+    prompt_engineering: A
+    context_engineering: A
+    goal_alignment: A
+    safety: D
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155648Z-review-skill.md
+
+  - id: M8
+    artifact: skills/audit-trust-chain/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: C
+    score: 75.75
+    clarity: C
+    completeness: D
+    prompt_engineering: B
+    context_engineering: B
+    goal_alignment: B
+    safety: F
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155626Z-review-skill.md
+
+  - id: M9
+    artifact: skills/classify-trace-errors/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: B
+    score: 81.5
+    clarity: B
+    completeness: C
+    prompt_engineering: B
+    context_engineering: B
+    goal_alignment: B
+    safety: C
+    metadata: C
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155700Z-review-skill.md
+
+  - id: M10
+    artifact: skills/audit-policy-compliance/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: C
+    score: 77.35
+    clarity: C
+    completeness: D
+    prompt_engineering: B
+    context_engineering: B
+    goal_alignment: C
+    safety: C
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155651Z-review-skill.md
+
+  - id: M11
+    artifact: skills/scaffold-mcp-server/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: B
+    score: 80.5
+    clarity: C
+    completeness: C
+    prompt_engineering: B
+    context_engineering: B
+    goal_alignment: B
+    safety: C
+    metadata: B
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155640Z-review-skill.md
+
+  - id: M12
+    artifact: skills/audit-memory-hygiene/SKILL.md
+    type: skill
+    method: single-perspective-fallback
+    overall: B
+    score: 85.5
+    clarity: A
+    completeness: C
+    prompt_engineering: A
+    context_engineering: A
+    goal_alignment: A
+    safety: C
+    metadata: A
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T155706-review-skill.md
+
+  - id: F1
+    artifact: tests/fixtures/eval/case_01_real_issue.SKILL.md
+    type: synth-fixture
+    method: single-perspective-fallback
+    overall: F
+    score: 53.0
+    clarity: D
+    completeness: F
+    prompt_engineering: F
+    context_engineering: F
+    goal_alignment: F
+    safety: F
+    metadata: D
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T154644Z-review-skill.md
+
+  - id: F2
+    artifact: tests/fixtures/eval/case_05_reliability_agent.md
+    type: synth-fixture
+    method: single-perspective-fallback
+    overall: F
+    score: 50.0
+    clarity: F
+    completeness: F
+    prompt_engineering: F
+    context_engineering: F
+    goal_alignment: F
+    safety: F
+    metadata: F
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T154745Z-review-skill.md
+
+  - id: F3
+    artifact: tests/fixtures/calibration/clear_f_03_kitchen_sink.SKILL.md
+    type: synth-fixture
+    method: single-perspective-fallback
+    overall: F
+    score: 50.0
+    clarity: F
+    completeness: F
+    prompt_engineering: F
+    context_engineering: F
+    goal_alignment: F
+    safety: F
+    metadata: F
+    report: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T154847Z-review-skill.md
+
+distribution_summary:
+  overall:
+    A: 1
+    B: 7
+    C: 7
+    D: 0
+    F: 3
+  notable_observations:
+    - "3-A anchor proposals NOT validated by rubric: A1=B, A2=B, A3=C (all diverge from proposed A)"
+    - "M2 (check-repo-health) emerged as A despite mid-band proposal — empirically the only A in 18-set"
+    - "Safety dimension dominated by D-grade caps (8 of 18 = 44% D-grade Safety) — driven by RL-9b/SP-2b/SP-4b/IJ-1b binary FAILs"
+    - "Completeness dimension dominated by C-grade (13 of 18 = 72% C-grade Completeness) — likely COMP-X review-skill clause threshold"
+    - "F-anchors converge to F as engineered — anchor agreement structurally guaranteed (Round-2 V9 disclosed)"
+---

@@ -1,13 +1,14 @@
 ---
 name: scoring-rubric
 description: A-F grading criteria for evaluating Claude Code skills, agents, and rules across type-appropriate dimensions
-last_refreshed: 2026-04-22
+last_refreshed: 2026-04-28
+calibration_version: 2026-04-28
 ---
 
 # Scoring Rubric
 
 ## Grade Scale
-A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<60)=Failing.
+A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<60)=Failing. `[Application-checked — N=18, single-rater, calibration_version=2026-04-28]` (see `research/rubric-design/rubric-calibration-evidence.md` §"Grade Boundary Calibration (issue #29)" — application-consistency only, not criterion validity).
 
 **Grade derivation:** A=0 FAILs; B=≤25% (no High); C=any High or >25%; D=>50% High; F=>50% total. Cite evidence before grading.
 

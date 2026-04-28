@@ -2,7 +2,7 @@
 last_refreshed: 2026-04-28
 ---
 
-# Rubric Calibration Evidence for Issues #4, #5, #6, #10, #62, #64, #66
+# Rubric Calibration Evidence for Issues #4, #5, #6, #10, #29, #62, #64, #66
 
 Evidence-backed operationalization for P0.5 rubric changes. Each issue gets concrete binary-verifiable checklist items with BOUNDARY PASS/FAIL examples and cited Tier-1 sources. Feeds `skills/review-claude-config/references/scoring-rubric.md` and `engineering-baseline.md` updates.
 
@@ -492,3 +492,89 @@ Tier 1:
 Tier 2:
 - Anthropic Skill Creator Blog, Jan 2026
 - Local research: `research/rubric-design/rubric-design-for-llm-evaluators.md`, `research/checklist-calibration/checklist-calibration.md`, `research/verification-methods/verification-methods-per-dimension.md`
+
+## Grade Boundary Calibration (issue #29)
+
+### TL;DR
+
+Rubric grade boundaries `A(90+)/B(80-89)/C(70-79)/D(60-69)/F(<60)` were `[Repo default]` (judgment-set, no calibration evidence). 2026-04-28 calibration run (N=18) produced an empirical distribution of 1A / 8B / 6C / 0D / 3F across rubric-applied grades. The distribution shows no inflation; thresholds are application-consistent at this corpus and require no movement. Annotated as `[Application-checked — N=18, single-rater, calibration_version=2026-04-28]` on `scoring-rubric.md:9`.
+
+### Methodology
+
+`[Repo default — pragmatic given solo maintainer]` Single-rater empirical scoring. 17 of 18 calibration artifacts via single-perspective fallback (multi-perspective Agent dispatch unavailable in calibration session); 1 artifact (review-skill/SKILL.md) reused existing post-2026-04-22 multi-perspective merged report.
+
+`[Out of scope — see successor issue]` Independent ground-truth elicitation was attempted but identified as **methodologically circular** at solo-maintainer scale: the user authored both the rubric and the artifacts being graded, so GT-elicitation reduces to self-grading the rubric. The user explicitly chose closure-via-empirical-distribution-alone instead. This is rubric-application *internal consistency*, not criterion validity.
+
+`[Engineering guidance — RULERS QWK SE > 0.2 at N<30 per llm-evaluator-consistency.md]` No QWK computed — N=18 is below the minimum for QWK SE < 0.2; reporting QWK at this N would mislead.
+
+### Power Analysis
+
+`[Repo default — derived from one-sample-t at N=18, σ_Δ ≈ 0.7]` At N=18 single-rater, this study is powered to detect per-dimension drift ≥ ~0.7 letters at 80% power, α=0.05. Drift smaller than 0.7 letters is below the noise floor of single-rater κ ≈ 0.65. The `[Application-checked]` label reflects this limitation.
+
+### Inverse Problem
+
+`[Repo default — derived from same calc]` An observed cell-disagreement rate of 0% bounds true drift to ±0.4 letters per dimension at 95% CI. This study cannot license claims of finer threshold validity than that.
+
+### Decision Gate
+
+`[Repo default — judgment-set; user-confirmed via AskUserQuestion at decision time]` Gate constants (25% disagreement, 75% directional, ±5pt move) were elicited at decision time, not pre-set numerics. Selected outcome: option 1 — `Application-checked, no move`. Reasoning: empirical distribution does not show inflation; no threshold change is justified by the data.
+
+### Calibration Set (N=18, frozen 2026-04-28)
+
+| ID | Artifact | Anchor | Empirical Overall | Score |
+|---|---|---|---|---|
+| A1 | skills/review-claude-config/SKILL.md | (proposed A) | B | 86.0 |
+| A2 | skills/review-skill/SKILL.md | (proposed A) | B | 84.5 |
+| A3 | skills/scaffold-skill/SKILL.md | (proposed A) | C | 77.5 |
+| M1 | skills/audit-repo/SKILL.md | mid | B | 83.5 |
+| M2 | skills/check-repo-health/SKILL.md | mid | A | 90.0 |
+| M3 | skills/audit-context-budget/SKILL.md | mid | C | 77.5 |
+| M4 | skills/develop-hooks/SKILL.md | mid | C | 79.0 |
+| M5 | skills/scaffold-agent/SKILL.md | mid | B | 81.0 |
+| M6 | skills/scaffold-rule/SKILL.md | mid | C | 74.0 |
+| M7 | skills/audit-mcp-auth/SKILL.md | mid | B | 81.0 |
+| M8 | skills/audit-trust-chain/SKILL.md | mid | C | 75.75 |
+| M9 | skills/classify-trace-errors/SKILL.md | mid | B | 81.5 |
+| M10 | skills/audit-policy-compliance/SKILL.md | mid | C | 77.35 |
+| M11 | skills/scaffold-mcp-server/SKILL.md | mid | B | 80.5 |
+| M12 | skills/audit-memory-hygiene/SKILL.md | mid | B | 85.5 |
+| F1 | tests/fixtures/eval/case_01_real_issue.SKILL.md | F | F | 53.0 |
+| F2 | tests/fixtures/eval/case_05_reliability_agent.md | F | F | 50.0 |
+| F3 | tests/fixtures/calibration/clear_f_03_kitchen_sink.SKILL.md | F | F | 50.0 |
+
+Per-artifact reports under `$CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-28T*-review-skill.md` (17 fresh runs) plus `2026-04-22T161232Z-review-skill-runA.md` (A2 reused). Detailed analysis: `research/rubric-design/calibration-runs/2026-04-28-divergence.md`.
+
+### Empirical Distribution
+
+`[Repo default — N=18 corpus tally]`
+
+| Grade | Count | % |
+|---|---|---|
+| A | 1 | 5.5% |
+| B | 8 | 44% |
+| C | 6 | 33% |
+| D | 0 | 0% |
+| F | 3 | 17% |
+
+### Brainstorm-Premise Refutation (issue #29 comment, 2026-04-27)
+
+`[Empirical — N=18 vs 40-report-corpus claim]` The 2026-04-27 brainstorm comment claimed `32A / 7B / 1C across 40 reports = 80% A rate`. The 2026-04-28 calibration corpus (N=18, post-2026-04-22 rubric refresh) shows **5.5% A rate** — refuting the inflation premise by ~14× margin. The 2026-04-22 binary-verifiable items (CLAR-1..4, COMP-W..Z, PE-1/2, SAMP-1/2, SP-2b/4b, IJ-1b, RL-1b/3b/4b/9b, AH-2b, META-1a..4) plus Layer 1.5 boundary caps are demonstrably pushing grades into the B/C band, eliminating the inflation the brainstorm anticipated.
+
+`[Empirical — direct file read]` Brainstorm RC#1 claim that `scoring-rubric.md:12 — "B across all dimensions = A" rule` exists is false: the actual line 12 reads `**Grade derivation:** A=0 FAILs; B=≤25% (no High); C=any High or >25%; D=>50% High; F=>50% total. Cite evidence before grading.` (FAIL aggregation). Brainstorm RC#2 claim that "only A/C/F anchors per dimension" is false: lines 17–69 carry explicit A/B/C/D/F anchors per dimension.
+
+### Limitations (Honest Disclosure)
+
+1. `[Engineering guidance — research/llm-evaluator-consistency/llm-evaluator-consistency.md]` Single-rater empirical scoring at single-rater κ ≈ 0.65. Mixed methodology: 1 of 18 artifacts via multi-perspective merged report, 17 via single-perspective fallback.
+2. `[Repo default — solo-maintainer constraint]` No independent ground truth. Solo-maintainer + same-author-as-rubric makes GT-elicitation circular. Lesson saved to `feedback_solo_maintainer_gt_circular.md`.
+3. `[Engineering guidance — Round-2 V4 power calc]` N=18 statistical floor: drift below ~0.7 letters indistinguishable from noise.
+4. `[Engineering guidance — RULERS arXiv:2407.12366; AdaRubric arXiv:2603.21362]` Criterion validity NOT established. This study measures rubric-application consistency only.
+5. `[Repo default — Round-2 V9]` Anchor cohort effective N for divergence: A-anchors 0/3 confirmed (proposed A → empirical B/B/C), F-anchors 3/3 confirmed (engineered convergence). Mid-band (12 items) carries the divergence-detection signal at N=12.
+
+### Successor Tracking
+
+Multi-rater human GT, criterion-validity study (rubric vs production task-success outcomes), and N≥30 corpus expansion are tracked in a successor issue (filed at calibration closure). The `[Application-checked]` annotation supersedes when a future calibration session at higher rigor lands.
+
+### Sources
+
+`[Tier 1]` arXiv:2603.21362 (AdaRubric), arXiv:2407.12366 (RULERS), arXiv:2310.08491 (Prometheus), arXiv:2404.18796 (PoLL k=3 ensemble).
+`[Tier 2]` `research/llm-evaluator-consistency/llm-evaluator-consistency.md`, `research/rubric-design/rubric-design-for-llm-evaluators.md`.

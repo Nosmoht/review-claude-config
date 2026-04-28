@@ -17,7 +17,7 @@ loop-TRIGGER marker in ``is_agentic()`` detection. The two constants
 are therefore INTENTIONALLY DIFFERENT: ``LOOP_PATTERN`` does not list
 ``until`` and is byte-identical to the original pattern that shipped in
 tests/test_comp_w_termination.py. ``AGENTIC_LOOP_PATTERN`` adds
-``until`` per scoring-rubric.md L172.
+``until`` per scoring-rubric.md L181.
 
 Any rubric revision that changes this semantic MUST update both
 constants in the same commit. ``TestSharedModuleParity`` pins the
@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import re
 
-# META-4 Third-Person Description (scoring-rubric.md L107).
+# META-4 Third-Person Description (scoring-rubric.md L108).
 # First-person is case-sensitive on capital I (lowercase i appears in
 # English words like "is", "in", so \bI\s only catches standalone I).
 FIRST_PERSON = re.compile(r"\b(I|my|me)\s")
@@ -44,7 +44,7 @@ def is_third_person(description: str) -> bool:
     return True
 
 
-# CLAR-1 Fuzzy-Quantifier-Free (scoring-rubric.md L113).
+# CLAR-1 Fuzzy-Quantifier-Free (scoring-rubric.md L114).
 FUZZY_QUANTIFIER = re.compile(
     r"\b(slightly|a\s+bit|roughly|somewhat|some)\b",
     re.IGNORECASE,
@@ -71,7 +71,7 @@ def passes_clar2(text: str) -> bool:
     return BARE_PRONOUN_VERB.search(text) is None
 
 
-# COMP-W Termination Criteria (scoring-rubric.md L129).
+# COMP-W Termination Criteria (scoring-rubric.md L133).
 # LOOP_PATTERN does NOT include `until` (see module-level asymmetry note).
 LOOP_PATTERN = re.compile(
     r"\b(for\s+each|retry|iterate|while\s+|loop)\b",
@@ -101,7 +101,7 @@ def passes_comp_w(body: str) -> bool:
     return has_termination(body)
 
 
-# Agentic-detection patterns (scoring-rubric.md L172).
+# Agentic-detection patterns (scoring-rubric.md L181).
 # Branch 1: dispatch verbs — case-sensitive (Agent/Task are Anthropic
 # tool names in PascalCase; subagent is lowercase convention).
 AGENTIC_DISPATCH_PATTERN = re.compile(r"\b(Agent|Task|subagent)\b")

@@ -1,0 +1,160 @@
+---
+calibration_version: 2026-04-28
+generated_at: 2026-04-28
+rubric_baseline_version: 2026-04-22
+rubric_last_refreshed: 2026-04-22
+notes: |
+  Manifest of post-refresh empirical-side data availability for the 18-artifact
+  calibration set in issue #29. Pre-2026-04-22 reports excluded (graded against
+  different rubric). Convergence/meta reports excluded (not single-artifact reviews).
+  Path-hygiene: $CLAUDE_PLUGIN_DATA literal token used; pre-Write grep guard active.
+
+corpus_state:
+  reports_dir: $CLAUDE_PLUGIN_DATA/reports/review-claude-config/
+  total_reports: 6
+  post_refresh_review_skill_reports: 2
+  excluded_pre_refresh: 1
+  excluded_meta_reports: 3
+
+calibration_set:
+  - id: A1
+    artifact: skills/review-claude-config/SKILL.md
+    type: skill
+    anchor_proposal: A
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: A2
+    artifact: skills/review-skill/SKILL.md
+    type: skill
+    anchor_proposal: A
+    existing_reports:
+      - $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-22T161232Z-review-skill-runA.md
+      - $CLAUDE_PLUGIN_DATA/reports/review-claude-config/2026-04-22T161233Z-review-skill-runB.md
+    needs_fresh_run: false
+
+  - id: A3
+    artifact: skills/scaffold-skill/SKILL.md
+    type: skill
+    anchor_proposal: A
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M1
+    artifact: skills/audit-repo/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M2
+    artifact: skills/check-repo-health/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M3
+    artifact: skills/audit-context-budget/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M4
+    artifact: skills/develop-hooks/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M5
+    artifact: skills/scaffold-agent/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M6
+    artifact: skills/scaffold-rule/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M7
+    artifact: skills/audit-mcp-auth/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M8
+    artifact: skills/audit-trust-chain/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M9
+    artifact: skills/classify-trace-errors/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M10
+    artifact: skills/audit-policy-compliance/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M11
+    artifact: skills/scaffold-mcp-server/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: M12
+    artifact: skills/audit-memory-hygiene/SKILL.md
+    type: skill
+    anchor_proposal: mid-band
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: F1
+    artifact: tests/fixtures/eval/case_01_real_issue.SKILL.md
+    type: synth-fixture
+    anchor_proposal: F
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: F2
+    artifact: tests/fixtures/eval/case_05_reliability_agent.md
+    type: synth-fixture
+    anchor_proposal: F
+    existing_report: null
+    needs_fresh_run: true
+
+  - id: F3
+    artifact: tests/fixtures/calibration/clear_f_03_kitchen_sink.SKILL.md
+    type: synth-fixture
+    anchor_proposal: F
+    existing_report: null
+    needs_fresh_run: true
+
+cost_estimate:
+  fresh_runs_needed: 17
+  per_run_tokens_multi_perspective: 60000
+  per_run_tokens_single_rater_agent: 25000
+  total_tokens_multi_perspective: 1020000
+  total_tokens_single_rater_agent: 425000
+  recommendation: single_rater_agent_dispatch_in_parallel
+  rationale: |
+    Plan section 1.4 specifies single-perspective for empirical-side data
+    (removes perspective-merge variance). Parallel general-purpose Agent
+    dispatch with rubric reading + per-dim grade output is the cheapest
+    methodologically-equivalent path. Each Agent runs in isolated context.
+---

@@ -502,7 +502,7 @@ def tools_list(fm: dict) -> list[str]:
 
 
 def is_agentic(body: str, tools: list[str]) -> bool:
-    """Three-branch disjunction per scoring-rubric.md L172."""
+    """Three-branch disjunction per scoring-rubric.md L181."""
     if AGENTIC_DISPATCH_PATTERN.search(body):
         return True
     if AGENTIC_LOOP_PATTERN.search(body):
