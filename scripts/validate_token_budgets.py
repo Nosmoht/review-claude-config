@@ -34,7 +34,9 @@ BUDGETS: dict[str, int] = {
     # (sycophancy / goal-misgen / spec-gaming clusters).
     # Issue #93: +WS-6/7/8 Clarity linguistic-failure cluster
     # (oLMpics / HANS / Kassner-Ettinger).
-    "scoring-rubric.md": 8700,
+    # Issue #96: +COMP-V/COMP-Sel Completeness benchmarks
+    # (IFEval / FollowBench / ComplexBench).
+    "scoring-rubric.md": 9100,
     # Issue #61: Tier-0 same-turn combination section (OWASP ASI02 Tool
     # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
     # 2026 incl. CVSS 9.6 RCE).
