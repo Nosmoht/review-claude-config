@@ -4,7 +4,8 @@ description: >
   Evaluates a single SKILL.md across 7 quality dimensions and produces an
   optimization certificate. Use when asked to 'review skill' or dispatched by
   /review-claude-config. Do NOT use for agents or rules — use /review-agent or
-  /review-rule.
+  /review-rule. Does NOT apply findings — use /apply-skill-review-findings to
+  implement recommendations.
 argument-hint: <path-to-SKILL.md>
 allowed-tools: Read, Write, Glob, WebSearch, WebFetch, Agent, Bash
 ---
@@ -44,9 +45,9 @@ domain_cache: |
 
 ### Step 0: Tool Availability Checks
 
-Attempt a trivial WebSearch (e.g., "Claude Code documentation"). If it fails, set `websearch_available = false`. Goal Alignment will be scored from model knowledge only, marked `[no web verification]`.
+Attempt a trivial WebSearch (e.g., "Claude Code documentation") with a 30-second timeout. If it fails or times out, set `websearch_available = false` and fall back to model-knowledge-only Goal-Alignment scoring. Goal Alignment will be scored from model knowledge only, marked `[no web verification]`.
 
-Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fails, set `webfetch_available = false`.
+Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com") with a 30-second timeout. If it fails or times out, set `webfetch_available = false` and fall back to skipping the optional URL fetch in Step A.
 
 Attempt a trivial Bash probe: `Bash("echo ok")`. If it fails, set `bash_available = false`. In standalone mode when `bash_available = false`: skip b.5 and b.6 (merge + escalation scripts); emit the three unmerged perspective certificates directly in the Phase 3 output and include `degraded_mode: true, missing_perspectives: ["merge-script-unavailable"]`. This applies even when all three perspective calls succeed, because without merge there is no owner-weighted dimension grade.
 
@@ -61,7 +62,7 @@ Use Glob to find the files if the path is not immediately known: `**/review-clau
 
 Also load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`.
 
-**If any of these files is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
+**If any of these files is not found, set `status: failure`, emit the error "Required reference not found. Ensure review-claude-config is installed as a sibling skill.", and stop.**
 
 Read the type-specific evaluation guide from this skill's own directory:
 - `references/skill-evaluation-guide.md`
@@ -70,6 +71,8 @@ When the skill declares Write, Bash, Edit, or MCP tools in `allowed-tools`: also
 
 ## Phase 2 — Evaluation
 
+Phase 2 contains two top-level sub-steps (Step A and Step B); when running multi-perspective dispatch (the default), Step B further decomposes into the granular steps b.0 through b.8.
+
 ### Step A: Goal Inference + Domain Research
 
 1. Read the skill file and infer its primary goal/domain in one sentence.
@@ -77,7 +80,7 @@ When the skill declares Write, Bash, Edit, or MCP tools in `allowed-tools`: also
    - First, check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the skill's domain to a universal cache entry.
    - If `CACHED` (entry exists, ≤90 days old): read the cache file and use as primary domain knowledge. At most 1 supplemental WebSearch query if the cache lacks coverage for this skill's specific area.
    - If `STALE` (≥90 days): perform 1 WebSearch query to refresh.
-   - If no cache entry matches: extract domain keywords from the skill's description and content, then perform 1-2 targeted WebSearch queries (technology + workflow + quality aspect, not generic "best practices"). If `webfetch_available`, fetch the most relevant URL.
+   - If no cache entry matches: extract domain keywords from the skill's description and content, then perform 1-2 targeted WebSearch queries (technology + workflow + quality aspect, not generic "best practices"). If `webfetch_available == true` AND a single most-relevant URL is identified by the WebSearch results, fetch that URL with a 30-second timeout; on timeout or fetch error, fall back to model-knowledge-only Goal-Alignment scoring without the URL content. Otherwise (no URL identified, or `webfetch_available == false`) skip WebFetch.
    - If neither cache nor WebSearch available: use model knowledge only, marked `[no external verification]`.
    - Apply source quality criteria (loaded above or from shared reference materials in orchestrated mode): discard marketing/opinion/outdated content, prefer Tier 1-2 sources, cross-validate claims used in Goal Alignment scoring.
 3. Synthesize: what should a high-quality skill in this domain include?
@@ -92,7 +95,7 @@ Score using the rubric as the PRIMARY basis. The skill evaluation guide provides
 
 **Scoring procedure:**
 
-1. Work through the full checklist in `references/skill-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item (ID PD-1 through IJ-1). RD-1 through RD-6 are reliability diagnostic checks — their FAILs are surfaced in the `### Reliability Diagnostics` output section and contribute to the mapped dimension grade (RD-1/2/3 → Metadata; RD-4 → Completeness; RD-5 → Clarity; RD-6 → Safety). For RD-3, Glob for sibling `SKILL.md` files in the same plugin directory and compare trigger phrases.
+1. Work through the full checklist in `references/skill-evaluation-guide.md` exactly once: for each of the items PD-1 through IJ-1 (the finite, enumerated list ending at IJ-1), record a PASS, FAIL, or NA verdict. RD-1 through RD-6 are reliability diagnostic checks — their FAILs are surfaced in the `### Reliability Diagnostics` output section and contribute to the mapped dimension grade (RD-1/2/3 → Metadata; RD-4 → Completeness; RD-5 → Clarity; RD-6 → Safety). For RD-3, Glob for sibling `SKILL.md` files in the same plugin directory and compare trigger phrases.
 2. **Completeness gate — success condition.** Review is complete when ALL of the following hold (binary, not judgement-based):
    - Every checklist item (PD-1 through IJ-1) has a PASS/FAIL/NA verdict. Count verdicts; if `verdict_count != expected_count`, list the missing item IDs explicitly and evaluate each before proceeding. Do not advance until `verdict_count == expected_count`.
    - Every dimension has at least one non-NA item with a cited checklist ID.
@@ -112,7 +115,7 @@ Load `references/perspective-dispatch-protocol.md` and `references/merge-rules.m
 
 **b.0 — Deterministic binary evaluation.** (produces: `binary_verdicts.json`)
 
-Invoke `Bash("python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rubric_binary_evaluator.py <artifact-path>")`. Capture stdout JSON and write it to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/binary_verdicts.json` using the Write tool.
+Invoke `Bash("python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rubric_binary_evaluator.py <artifact-path>")`. Capture the stdout JSON and write the captured JSON to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/binary_verdicts.json` using the Write tool.
 
 Exit-code handling (exception to the "Bash script failure" rule under §Error Handling — see Named Failure Classes):
 
@@ -131,17 +134,17 @@ Verdicts are consumed only by b.5 merge — they are NOT injected into the persp
 
 **b.2 — Launch Clarity perspective SYNCHRONOUSLY.** (depends on: b.1 shared prefix + per-perspective block 3a constructed)
 
-Invoke `Agent(subagent_type="review-perspective-clarity", prompt=block1+block2+block3a+block4)` with a maximum wait of 5 minutes. If no response is received within 5 minutes, write a `{"status": "missing", "reason": "timeout"}` stub to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/clarity.json` and proceed to b.3. Awaiting first-token return on success also primes breakpoints 1 and 2 in the KV cache.
+Invoke `Agent(subagent_type="review-perspective-clarity", prompt=block1+block2+block3a+block4)` with a maximum wait of 5 minutes. If no response is received within 5 minutes, write a `{"status": "missing", "reason": "timeout"}` stub to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/clarity.json` and continue to b.3 (fall back to merging the remaining perspective certificates). Awaiting first-token return on success also primes breakpoints 1 and 2 in the KV cache.
 
 **b.3 — Launch Correctness + Integration perspectives in PARALLEL.** (depends on: b.2 returned or timed out)
 
-In a single tool-use batch, issue two Agent calls with per-call 5-minute timeouts: `Agent(subagent_type="review-perspective-correctness", prompt=block1+block2+block3b+block4)` and `Agent(subagent_type="review-perspective-integration", prompt=block1+block2+block3c+block4)`. For any call that exceeds 5 minutes without response, write a `{"status": "missing", "reason": "timeout"}` stub for that perspective.
+In a single tool-use batch, issue two Agent calls with per-call 5-minute timeouts: `Agent(subagent_type="review-perspective-correctness", prompt=block1+block2+block3b+block4)` and `Agent(subagent_type="review-perspective-integration", prompt=block1+block2+block3c+block4)`. For any call that exceeds 5 minutes without response, write a `{"status": "missing", "reason": "timeout"}` stub for that perspective and fall back to merging the remaining certificates.
 
-If any Agent tool call errors, times out, or the `subagent_type` is not one of the three perspective names, the `policy_gate.py` PreToolUse hook denies the call. Collect errors per perspective; do not abort the whole dispatch.
+If any Agent tool call errors, times out, or the `subagent_type` is not one of the three perspective names, the `policy_gate.py` PreToolUse hook denies the call. Collect errors per perspective and write a `{"status": "missing", "reason": "denied"}` stub to that perspective's audit path; do not abort the whole dispatch — fall back to continuing with the surviving perspectives.
 
 **b.4 — Write perspective certificates to audit-disk.** (depends on: b.2 and b.3 returning or timing out; produces: 3 files under `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/`)
 
-For each of the 3 returned perspective certificates (clarity, correctness, integration), use the Write tool to persist the certificate at `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/<perspective>.json`. The cert is produced by `scripts/perspective_certificate_parser.py::parse_perspective_certificate`, which converts the agent's Markdown grade-table into the canonical shape (see `references/merge-rules.md` §"Inputs" for the JSON example; the parser is the authoritative producer, the example illustrates the output). The grade map MUST be persisted under the top-level key `dimensions` (the parser's output key) — `merge_findings.py:357` reads `cert.get("dimensions", {})`, so any other alias (e.g., `grades`) defaults every dimension to F at the merge layer. File names are derived strictly from the orchestrator's constants `clarity|correctness|integration` — never from sub-agent output — to prevent path injection. Missing certificates write a `{"status": "missing"}` stub. b.5 must not begin until all three b.4 writes have completed (either with a real certificate or with a `missing`/`timeout`/`skipped` stub).
+For each of the 3 returned perspective certificates (clarity, correctness, integration) — max 3 iterations, stop when all three audit-paths are written or stubbed — use the Write tool to persist the certificate at `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/<perspective>.json`. The cert is produced by `scripts/perspective_certificate_parser.py::parse_perspective_certificate`, which converts the agent's Markdown grade-table into the canonical shape (see `references/merge-rules.md` §"Inputs" for the JSON example; the parser is the authoritative producer, the example illustrates the output). The grade map MUST be persisted under the top-level key `dimensions` (the parser's output key) — `merge_findings.py:357` reads `cert.get("dimensions", {})`, so any other alias (e.g., `grades`) defaults every dimension to F at the merge layer. File names are derived strictly from the orchestrator's constants `clarity|correctness|integration` — never from sub-agent output — to prevent path injection. Missing certificates write a `{"status": "missing"}` stub. b.5 must not begin until all three b.4 writes have completed; once every slot holds either a real certificate or a `{"status": "missing"}` stub (covering timed-out, denied, or skipped perspectives), continue to b.5.
 
 **b.5 — Merge findings via deterministic script.** (depends on: b.0 and b.4 completed; produces: `merged.json` + `findings.json`)
 
@@ -153,7 +156,7 @@ Invoke `Bash("python3 ${CLAUDE_PLUGIN_ROOT}/scripts/escalation_decision.py $CLAU
 
 **b.7 — Handle degraded mode.** (depends on: b.5 merged.json parsed)
 
-If `merged.status == "failure"` (all 3 perspectives null): abort with `## ERROR\nall perspectives failed: <missing_perspectives>`. If `merged.degraded_mode == true` (1-2 perspectives missing): proceed with emit but include `degraded_mode: true` + `missing_perspectives: [...]` in the certificate. Downstream consumers (`/apply-skill-review-findings`) must branch on this flag.
+If `merged.status == "failure"` (all 3 perspectives null): set `status: failure`, emit `## ERROR\nall perspectives failed: <missing_perspectives>`, and stop (terminal state — no certificate produced). If `merged.degraded_mode == true` (1-2 perspectives missing): fall back to emitting the certificate with `degraded_mode: true` + `missing_perspectives: [...]` included. Downstream consumers (`/apply-skill-review-findings`) must branch on this flag.
 
 **b.8 — Convergence check vs. prior run.** (optional, depends on b.7; fires only when `--compare-with <prior>` was passed)
 
@@ -161,7 +164,7 @@ If the user supplied `--compare-with <prior-merged.json>`, invoke `Bash("python3
 
 - `0` (converged) — record `convergence: {converged: true, ...}` in the cert.
 - `1` (not converged) — record `convergence: {converged: false, ...}`. Append `ESC-5` to escalation reasons (re-run signal) unless ESC-5 was already raised by b.6.
-- `2` (script error) — record `convergence: {converged: null, error: "<stderr>"}`. Do NOT abort; surface the issue in the cert and continue.
+- `2` (script error) — record `convergence: {converged: null, error: "<stderr>"}`. Do NOT abort the review; fall back to surfacing the script-error in the cert and continue to Phase 3.
 
 When `--compare-with` is absent, b.8 is skipped silently — no convergence section appears in Phase 3.
 
@@ -221,7 +224,7 @@ See `references/boundary-exemplars.md` for the canonical B-vs-C boundary per dim
 
 ### Recommendations
 
-Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`. Prefer the `skills/` copy when present; otherwise use the sibling `.claude/skills/` copy. Use that contract's shared recommendation schema below. Keep the skill-specific category vocabulary below.
+Locate the canonical review contract via Glob: `**/review-claude-config/references/review-report-contract.md`. Prefer the `skills/` copy when present; otherwise use the sibling `.claude/skills/` copy. Apply the shared recommendation schema from the located contract below. Keep the skill-specific category vocabulary below.
 
 #### 1. [Title] (Impact: [High/Medium/Low], Category: [Workflow|Prompt|Context|Safety|Metadata|Trigger|Output])
 **Evidence:** [Quote or summarize the exact text that caused the issue, with path or section reference]
@@ -267,10 +270,10 @@ Example:
 - owner_conflict: false · hint_owner: null
 - path: skills/foo/SKILL.md · line_range: 42-48
 - **Evidence:** "Await first-token return before proceeding — this primes breakpoints 1 and 2."
-- **Why:** RL-1 requires an explicit termination predicate; no timeout defined.
+- **Why:** RL-1 requires an explicit termination predicate; no upper-bound wait is specified.
 - **Validation:** Body contains `<= N minutes` or step-cap per Agent call.
 - **Current:** Invoke Agent(...). Await first-token return.
-- **Recommended:** Invoke Agent(...) with max wait 5 min; on timeout write `{"status": "missing"}` stub.
+- **Recommended:** Invoke Agent(...) with max wait 5 min; on expiry, fall back to writing a `{"status": "missing"}` stub.
 ```
 
 ### Owner-Conflict Signals (multi-perspective mode only)
@@ -336,7 +339,7 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 
 ### Named failure classes
 
-- **Bash script failure** (`merge_findings.py` or `escalation_decision.py` exits non-zero OR writes stdout that does not parse as JSON): emit `## ERROR <script>: <exit-code or stderr>` and stop. Exception: when `escalation_decision.py` specifically fails, do **not** abort — treat as `escalation_required: false, reasons: ["script-error"]` and set `escalation_script_error: true` in the certificate so the user can re-run with `/review-skill --deep <path>`.
+- **Bash script failure** (`merge_findings.py` or `escalation_decision.py` exits non-zero OR writes stdout that does not parse as JSON): emit `## ERROR <script>: <exit-code or stderr>` and stop. Exception: when `escalation_decision.py` specifically fails, do **not** abort — fall back to treating the run as `escalation_required: false, reasons: ["script-error"]` and set `escalation_script_error: true` in the certificate so the user can re-run with `/review-skill --deep <path>`.
 - **`rubric_binary_evaluator.py` exit-code-specific rules** (overrides the generic "Bash script failure" rule above for this script):
   - exit 0 — success; write verdicts file, proceed.
   - exit 2 — partial verdicts present; write verdicts file, proceed. Merged cert records `binary_evaluator_status: "error"`.
@@ -344,7 +347,7 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
   - In all three branches the review continues; the evaluator never aborts the dispatch.
 - **Write failure in b.4** (perspective certificate persist): log the failure, continue, and return the perspective certificate content inline in the certificate output. Mark `write_failed: true, failed_perspectives: [...]` in the certificate.
 - **Write failure in Phase 4** (report persist): log the failure, return the certificate inline to the user, and skip the commit-suggestion step. Mark `write_failed: true` in the output footer.
-- **Agent call timeout** (b.2 or b.3 exceeds 5 min): treat the perspective as missing; write `{"status": "missing", "reason": "timeout"}` stub to its audit path; set `degraded_mode: true`; proceed to b.5. If ≥2 perspectives time out, `merge_findings.py` produces degraded-mode output — downstream consumers must branch accordingly.
+- **Agent call timeout** (b.2 or b.3 exceeds 5 min): fall back to treating the perspective as missing — write a `{"status": "missing", "reason": "expired"}` stub to its audit path, set `degraded_mode: true`, and continue to b.5. If ≥2 perspectives time out, `merge_findings.py` produces degraded-mode output — downstream consumers must branch accordingly.
 
 ## Hard Rules
 
