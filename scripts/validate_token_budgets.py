@@ -46,7 +46,7 @@ BUDGETS: dict[str, int] = {
     # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
     # 2026 incl. CVSS 9.6 RCE).
     "tool-grant-decision-tree.md": 800,
-    "engineering-baseline.md": 4200,  # +500 for #92 GA techniques + #93 linguistic-failure + #97 CoVe
+    "engineering-baseline.md": 4350,  # +#92 GA + #93 linguistic-failure + #97 CoVe + #46 Dynamic Tool Loadout upgrade
     "signal-catalog.md": 1000,
     # Evaluation guides — dense checklists, legitimately >500.
     # Opus 4.7 tokenizer ~35% larger than 4.6 — bumped per plan rev4.

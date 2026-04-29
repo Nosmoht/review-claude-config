@@ -36,7 +36,7 @@ class TestGetBudget:
         assert get_budget(tmp_path / "scoring-rubric.md") == 10100
 
     def test_baseline(self, tmp_path):
-        assert get_budget(tmp_path / "engineering-baseline.md") == 4200
+        assert get_budget(tmp_path / "engineering-baseline.md") == 4350
 
     def test_signal_catalog(self, tmp_path):
         assert get_budget(tmp_path / "signal-catalog.md") == 1000
