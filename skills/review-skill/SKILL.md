@@ -21,7 +21,7 @@ Evaluate a single Claude Code skill for quality across 7 evidence-based dimensio
 - Optional flag `--deep` — forces Opus-tier escalation upfront (see Mode Detection).
 - Optional flag `--single-perspective` — reverts to legacy single-perspective scoring.
 - If `$ARGUMENTS` is empty, prompt the user: "Provide the path to a SKILL.md file to review." and stop.
-- Validate the file exists and contains YAML frontmatter with a `name` field (required for skills).
+- Validate the `$ARGUMENTS` path argument: confirm the file exists, the path conforms to the `*.md` pattern, and the file contains YAML frontmatter with a `name` field (required for skills).
 - If the file does not look like a skill, report the error and stop.
 
 ## Mode Detection
@@ -101,6 +101,8 @@ Score using the rubric as the PRIMARY basis. The skill evaluation guide provides
    - Every dimension has at least one non-NA item with a cited checklist ID.
    - The certificate table in Phase 3 has exactly 7 dimension rows plus Overall.
    - Every High or Medium finding carries non-empty `Evidence`, `Why it matters`, and `Validation` blocks.
+   - Every High/Medium finding cites ≥1 verbatim evidence quote from the artifact under review (evidence-citation predicate).
+   - When `--compare-with <prior>` is supplied, the deterministic finding_id set must be identical across runs and `<= 1 letter Δ` max_grade_variance per dimension (convergence predicate).
 3. Score each dimension using the rubric, referencing checklist results as evidence. Justification lines in the certificate must cite at least one checklist ID (e.g., "WS-2 FAIL: conditionals use 'if needed' without criteria").
 4. **Self-check before emit.** Recompute the weighted score (grade-value × weight per dimension, summed). Verify the weights sum to exactly 100%. Verify the row count equals 7 dimensions + Overall. Verify every High/Medium finding has non-empty Evidence and Validation. If any check fails, correct the certificate before emitting.
 5. The completed checklist is an internal working artifact — do not include it verbatim in the output certificate.
