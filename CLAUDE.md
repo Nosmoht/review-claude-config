@@ -69,6 +69,7 @@ This is the authoritative maintainer command inventory for the repo.
 - `/review-analytics [folder] [--validation]`
 - `/sync-research-index [folder]`
 - `/refresh-engineering-baseline`
+- `/refresh-evidence-coverage [dimension|all]` - quartärly (90-day) re-audit of `docs/dimension-evidence-coverage.md`
 - `/run-eval-cases [case-number|all]`
 - `/validate-primitive-dependencies [folder]`
 - `/maintain-evidence-layer [--scope all|labels|freshness|contradictions|tiers]`
@@ -153,6 +154,7 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 - `last_refreshed` is hard-enforced only for `engineering-baseline.md`; `session_check.py` also provides opportunistic freshness warnings for all other `*.md` files in `skills/review-claude-config/references/`, reporting only the single oldest stale file (>90 days)
 - WebFetch is optional; skills must degrade gracefully to WebSearch-only when needed
 - Baseline updates happen only through `/refresh-engineering-baseline`
+- Evidence-coverage matrix re-audited every 90 days via `/refresh-evidence-coverage`; per-dimension `last_audited:` field in `docs/dimension-evidence-coverage.md` is the authoritative timestamp
 - Baseline refresh covers only `Prompt Engineering`, `Context Engineering`, and `Tool Design`
 - Artifact identity is `type + path`; analytics series identity is `repo + generated_by + type + path`; `name` is display-only
 - Commit format: `type(scope): description`

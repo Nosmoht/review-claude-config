@@ -17,15 +17,15 @@ Inventory of Tier-1 arXiv / peer-reviewed / foundation-lab sources backing each 
 
 ## Coverage Table
 
-| Dimension | Weight | Tier-1 sources | Rubric items | Grounded items | Coverage score | Status |
-|---|---|---|---|---|---|---|
-| Clarity | 15% | 4 | 7 | 6 | 0.88 | Strong |
-| Completeness | 15% | 5 | 5 | 5 | 1.00 | Strong |
-| Prompt Engineering | 15% | 3 | 5 | 3 | 0.67 | Adequate |
-| Context Engineering | 15% | 8+ | 5 | 5 | 1.00 | Strong |
-| Goal Alignment | 20% | 2 | 2 | 2 | 1.00 (narrow) | **Narrow** |
-| Safety | 10-15% | 10+ | 8 | 8 | 1.00 | Strong |
-| Metadata | 5-10% | 0 arXiv (1 Anthropic) | 6 | 1 | 0.29 | **Weak** |
+| Dimension | Weight | Tier-1 sources | Rubric items | Grounded items | Coverage score | Status | Last audited |
+|---|---|---|---|---|---|---|---|
+| Clarity | 15% | 8 | 11 | 10 | 0.92 | Strong | 2026-04-29 |
+| Completeness | 15% | 7 | 7 | 7 | 1.00 | Strong | 2026-04-29 |
+| Prompt Engineering | 15% | 4 | 5 | 4 | 0.83 | Strong | 2026-04-29 |
+| Context Engineering | 15% | 9+ | 6 | 6 | 1.00 | Strong | 2026-04-29 |
+| Goal Alignment | 20% | 8 | 5 | 5 | 1.00 | Strong | 2026-04-29 |
+| Safety | 10-15% | 13+ | 9 | 9 | 1.00 | Strong | 2026-04-29 |
+| Metadata | 5-10% | 3 arXiv + 1 Anthropic | 7 | 3 | 0.50 | Adequate | 2026-04-29 |
 
 Score is high for several dimensions because few items exist, not because evidence is broad. The "Status" column reflects qualitative judgment about *coverage breadth* (how many failure-modes are addressed at all), not just *grounding depth* (how well existing items are sourced).
 

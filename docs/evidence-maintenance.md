@@ -102,6 +102,44 @@ Run an evidence-layer maintenance pass when any of these happen:
 
 ## Ongoing Maintenance
 
-- keep [`engineering-baseline.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/engineering-baseline.md) explicitly evidence-classified
+- keep [`engineering-baseline.md`](../skills/review-claude-config/references/engineering-baseline.md) explicitly evidence-classified
 - keep the baseline refresh path aligned with the canonical evidence contract and shared source-quality criteria
-- keep maintainer guidance files such as [`CLAUDE.md`](/home/nos-ai/workspace/review-claude-config/CLAUDE.md) consistent with the active evidence vocabulary and runtime behavior
+- keep maintainer guidance files such as [`CLAUDE.md`](../CLAUDE.md) consistent with the active evidence vocabulary and runtime behavior
+
+## Quartärly Evidence-Coverage Cadence
+
+The `docs/dimension-evidence-coverage.md` matrix is a maintained living artifact, re-audited every 90 days (matches the `domain-cache` rhythm). The audit looks for new Tier-1 sources per dimension that have appeared since the last audit and integrates them into rubric or research files.
+
+### Cadence
+
+- **Period**: 90 days. Set the next audit's target date when each audit completes.
+- **Trigger**: maintainer runs `/refresh-evidence-coverage [dimension]` (skill at `skills/refresh-evidence-coverage/`). Without arguments, the skill iterates all 7 dimensions.
+- **Out of scope**: auto-running via CI. Refresh is maintainer-triggered, like `/refresh-engineering-baseline`.
+
+### Per-Dimension Search Strategy
+
+| Dimension | Primary search anchors | Last anchored to |
+|---|---|---|
+| Clarity | "LLM linguistic robustness", "negation/quantifier reasoning benchmark", "psycholinguistic diagnostics" | Truong / oLMpics / HANS / Kassner-Ettinger |
+| Completeness | "instruction-following benchmark", "constraint composition", "verifiable instructions" | AgentIF / IFScale / IFEval / FollowBench / ComplexBench |
+| Prompt Engineering | "prompt engineering techniques empirical", "few-shot scaling", "verification chain LLM" | CoVe (Dhuliawala) |
+| Context Engineering | "long-context attention bias", "lost-in-the-middle", "context-rot benchmark" | Liu et al. + Ms-PoE |
+| Goal Alignment | "sycophancy LLM", "goal misgeneralization RL", "specification gaming reasoning models" | Sharma / Langosco-Shah / Bondarenko |
+| Safety | "tool misuse benchmark", "indirect prompt injection agent", "agent adversarial robustness" | ToolEmu / AgentDojo / InjecAgent + MAST + Progent |
+| Metadata | "tool selection accuracy similar tools", "skill routing benchmark", "description disambiguation" | MetaTool / ToolLLM / Gorilla |
+
+### Audit Output
+
+Each audit produces:
+1. Updated `last_audited:` per-dimension date in `docs/dimension-evidence-coverage.md`
+2. New research files for any qualifying Tier-1 sources discovered (under `research/<domain>/`)
+3. Optional rubric/baseline updates if the new sources operationalize a failure mode (separate atomic commits per the existing rubric-edit discipline)
+4. CLAUDE.md research-references entries for new files
+5. Follow-up issue per dimension where the audit surfaced new sources but operationalization is non-trivial — defer per the #91-cycle pattern
+
+### Tier-1 Filter (recap)
+
+Per the global `web-research.md` rule and `skills/review-claude-config/references/source-quality-criteria.md`:
+- arXiv preprints, peer-reviewed conference/journal papers, RFCs/specs, foundation-lab publications (Anthropic / DeepMind / OpenAI / CNCF / OWASP)
+- ≥50 citations OR ≤18 months old (foundational papers exempt from freshness rule)
+- 2+ independent sources per claim (web-research rule)
