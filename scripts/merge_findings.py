@@ -743,9 +743,7 @@ def merge_directory(session_dir: pathlib.Path, repo_root: pathlib.Path | None = 
         # session_dir lives outside the repo (the typical $CLAUDE_PLUGIN_DATA
         # path).
         repo_root = find_repo_root(session_dir) or find_repo_root(pathlib.Path(os.getcwd()))
-    merged_findings, false_positive_dropped = filter_false_positive_missing_primitive(
-        merged_findings, repo_root
-    )
+    merged_findings, false_positive_dropped = filter_false_positive_missing_primitive(merged_findings, repo_root)
 
     dimensions = [
         "Clarity",
@@ -796,7 +794,8 @@ def merge_directory(session_dir: pathlib.Path, repo_root: pathlib.Path | None = 
         "owner_conflicts": conflicts,
         "perspective_scores": {
             p: round(
-                cert["weighted_score"] if cert.get("weighted_score") is not None
+                cert["weighted_score"]
+                if cert.get("weighted_score") is not None
                 else compute_weighted_score(cert.get("dimensions") or {}, weights),
                 2,
             )
