@@ -1,6 +1,6 @@
 {
   "name": "skill-quality",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Evidence-based quality review and gap analysis for Claude Code skills, agents, and rules. Injects quality guidelines when editing SKILL.md files and provides /review-claude-config, /review-skill, /review-agent, /review-rule, /suggest-skills, and /audit-repo globally.",
   "author": {
     "name": "ntbc"
