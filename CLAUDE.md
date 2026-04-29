@@ -189,6 +189,7 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 - [Claude Code Plugin System](research/claude-code/plugin-system.md) — `.claude-plugin/plugin.json` manifest schema, marketplace distribution, skill/agent namespacing, `claude plugin validate` CLI, top-5 failure modes. Load when reviewing plugin manifests, scaffolding new plugins, or writing `/review-plugin`.
 - [Command Naming Conventions: Evidence-Based Findings](research/command-naming/command-naming-conventions.md) — verb-noun CLI convention; slash command brevity evidence; plugin naming patterns. Load when scaffolding new commands or reviewing command naming.
 - [Scientific Research Dossier](docs/scientific-research-dossier.md) — repo-level evidence synthesis with theme matrix; tracks which research themes are covered. Load when planning new research or checking overall evidence state.
+- [Dimension Evidence Coverage Matrix](docs/dimension-evidence-coverage.md) — per-dimension Tier-1 evidence inventory + gap ranking for the 7 review dimensions; quartärly re-audited (cadence per #99). Load when planning gap-driven research or before opening dimension-specific evidence issues.
 
 ### Prompt & Context Engineering
 - [Prompt Engineering Techniques: Evidence-Based Summary](research/prompt-engineering/prompt-engineering-techniques.md) — evidence-backed PE techniques: few-shot (largest gains), CoT, role priming, output constraints. Load when reviewing Prompt Engineering dimension or writing new skills.
