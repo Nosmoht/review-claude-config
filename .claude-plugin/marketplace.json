@@ -1,0 +1,22 @@
+{
+  "name": "ntbc-plugins",
+  "owner": { "name": "ntbc", "email": "thomas.krahn.tk@gmail.com" },
+  "metadata": {
+    "description": "Personal Claude Code plugin catalog",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "skill-quality",
+      "source": {
+        "source": "github",
+        "repo": "Nosmoht/review-claude-config",
+        "ref": "main"
+      },
+      "description": "Evidence-based quality review and gap analysis for Claude Code skills, agents, and rules.",
+      "version": "1.0.0",
+      "category": "review",
+      "tags": ["review", "quality", "skills", "agents"]
+    }
+  ]
+}

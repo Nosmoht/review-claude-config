@@ -4,7 +4,7 @@ Maintainer operating guide for this repository (Clarity, Completeness, Prompt En
 
 ## Architecture
 
-- **Plugin surface**: `skills/`, `agents/`, and `hooks/`, installed via `claude --plugin-dir`. `agents/` contains top-level perspective agents (`review-perspective-{clarity,correctness,integration}`) dispatched by `/review-skill` in multi-perspective mode (P1.1 pilot).
+- **Plugin surface**: `skills/`, `agents/`, and `hooks/`, distributed via personal marketplace (`Nosmoht/review-claude-config` → `ntbc-plugins/skill-quality`); `claude --plugin-dir` is the dev override that takes precedence. `agents/` contains top-level perspective agents (`review-perspective-{clarity,correctness,integration}`) dispatched by `/review-skill` in multi-perspective mode (P1.1 pilot).
 - **Shared references**: `skills/review-claude-config/references/`, including the rubric, baseline, evidence contract, source-quality criteria, and review-report contract
 - **Domain cache**: `skills/review-claude-config/references/domain-cache/`, contains 7 universal methodology entries (context-engineering, research-sourcing, etc.) maintained on the repo's 90-day rhythm. Domain-specific knowledge is researched at runtime via WebSearch, not pre-cached
 - **Repo-internal skills**: `.claude/skills/` for maintenance utilities not needed globally
@@ -168,8 +168,9 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 | `test` | `make test` | `pytest tests/ -v --tb=short` |
 | `test-cov` | `make test-cov` | `pytest tests/ -v --tb=short --cov=hooks --cov=scripts` |
 - Local-dev venv: `.venv/` at repo root; the Makefile auto-detects `.venv/bin/python` when present and falls back to `python3` (CI path). Recreate via `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"` if missing or corrupt.
+- Domain-cache entries are read-only at runtime; maintainer refresh is hand-edit + commit in source repo (90-day cadence). Runtime researcher findings surface as `### Domain Cache Drift` in the review report — copy into the relevant `references/domain-cache/{key}.md` to refresh.
 - Audit-fix chain: commit review report first, then commit fixes
-- Review, suggest, and audit skills are read-only on analyzed files except for reports (`$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`) and domain cache
+- Review, suggest, and audit skills are read-only on analyzed files except for reports (`$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`)
 - Apply skills and `scaffold-skill` modify files and require confirmation gates
 
 ## Research References
