@@ -155,7 +155,7 @@ Check for domain documentation:
 
 Gaps: [list missing domain docs — e.g., no glossary, no API spec]
 
-COMPLETION: You are done when all 5 categories (A through E) have a report section. If a category cannot be fully scanned due to repo size or access issues, report what you found and note the limitation.
+COMPLETION: You are done when all 5 categories (A through E) have a report section AND each section either (a) cites ≥1 specific path or filename from the target repo, OR (b) explicitly states "no instances found" together with the search pattern (Glob / Bash command) that was attempted. A bare section heading or a generic statement without paths or attempted-pattern is INCOMPLETE — re-run that category. If a category cannot be fully scanned due to repo size or access issues, report what you found, name the limitation, and state which paths or patterns remain uncovered.
 ```
 
 If the scan agent fails entirely, report the error to the user and stop.
@@ -241,7 +241,7 @@ Based on repo characteristics:
 | Exploration + edit | [N]K |
 | Multi-file refactor | [N]K |
 
-COMPLETION: You are done when all 5 metrics (A through E) have a report section. If a metric cannot be computed, report "N/A" with explanation.
+COMPLETION: You are done when all 5 metrics (A through E) have a report section AND each section either (a) reports concrete numeric values per the metric's exact format table (file paths + line counts for A; computed score + breakdown for B; toolchain + verbosity classification for C; package + cross-import counts for D; per-task-type token estimates for E), OR (b) reports "N/A" with the specific cause (e.g., "Bash command X failed", "no monorepo markers found", "Glob pattern Y returned 0 matches"). A bare section heading or a placeholder like `[N]` left unfilled is INCOMPLETE — re-run that metric. If a metric cannot be computed, name the failing command or pattern, not just "N/A".
 ```
 
 If the analyzer agent fails, report partial results and continue.

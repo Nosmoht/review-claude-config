@@ -45,7 +45,7 @@ Three flagship skills audited against the new GA-Y / GA-Z / GA-S items:
 | Skill | GA-Y (Premise Verification) | GA-Z (Function-Level Goal) | GA-S (Anti-Gaming) | Result |
 |---|---|---|---|---|
 | `skills/review-skill/SKILL.md` | PASS — line 24 explicit `$ARGUMENTS` validation (file exists, `*.md` pattern, YAML frontmatter with `name` field) | PASS — success criteria include "every High/Medium finding cites ≥1 verbatim quote (evidence-citation predicate)" + convergence predicate | PASS — review-class with mandatory evidence-grounding + cross-run convergence | All pass |
-| `skills/audit-repo/SKILL.md` | PASS — line 19 "Validate the folder exists and contains files" | **FAIL** — completion criterion at line 158: "You are done when all 5 categories (A through E) have a report section" is form-only; no requirement that findings cite paths or quote evidence | NA (audit-class, advisory only) | **GA-Z fail** |
+| `skills/audit-repo/SKILL.md` | PASS — line 19 "Validate the folder exists and contains files" | FAIL → PASS (fixed in #100): completion criteria at lines 158 + 244 now require either ≥1 path/filename citation per category OR explicit "no instances found" with attempted Glob/Bash pattern | NA (audit-class, advisory only) | Resolved |
 | `skills/scaffold-skill/SKILL.md` | NEEDS-FOLLOW-UP — `$ARGUMENTS` parsed at line 20 but full validation chain not inspected in initial scan | NEEDS-FOLLOW-UP | NA (scaffold-class) | Partial |
 
 **Action:** GA-Z violation in `audit-repo` triggers a follow-up issue to add evidence-citation requirement to its completion criteria (path quoted per category, or per-finding citation). Tracked separately to keep this PR scoped to introduction-of-rubric-items.
