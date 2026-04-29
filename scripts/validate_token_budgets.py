@@ -41,7 +41,8 @@ BUDGETS: dict[str, int] = {
     # Issue #94: +CE-CP Critical-Instruction-Placement (Liu et al. LiM).
     # Issue #98: +META-3c Discriminating-Keyword-Presence
     # (MetaTool / ToolLLM / Gorilla — description disambiguation).
-    "scoring-rubric.md": 10100,
+    # Issue #89: +WS-5b binary check (WS-5 promotion to deterministic).
+    "scoring-rubric.md": 10300,
     # Issue #61: Tier-0 same-turn combination section (OWASP ASI02 Tool
     # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
     # 2026 incl. CVSS 9.6 RCE).

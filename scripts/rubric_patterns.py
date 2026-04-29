@@ -173,6 +173,24 @@ WS_2B_PROSE_PREDICATE = re.compile(
 WS_2B_MARKER_WINDOW = 500  # chars from block marker end to If clause start
 WS_2B_PREDICATE_WINDOW = 400  # chars before marker for prose predicate
 
+# WS-5b Negation + Positive-Whitelist binary check (issue #89, promoted from
+# WS-5 narrative). Truong et al. arXiv:2306.08189 — LLMs are negation-insensitive;
+# pair every prohibition with an adjacent positive whitelist within 200 chars.
+# Step 1 trigger: NEVER / DO NOT / MUST NOT followed by an optional verb-class
+# token, then a colon-or-space-separated comma-list (≥2 items).
+WS_5B_NEGATIVE_LIST = re.compile(
+    r"\b(NEVER|DO NOT|MUST NOT)\b\s+"
+    r"(use|run|invoke|execute|call|include|emit|write|read|allow|permit)?"
+    r"[:\s]+\S+(?:\s*,\s*\S+)+"
+)
+# Step 2 whitelist signal within ±200 chars of the trigger match.
+WS_5B_POSITIVE_WHITELIST = re.compile(
+    r"\b(ALLOWED|allowed|permitted|use\s+only|read[-\s]?only|operations\s+only|whitelist)\b[:\s]"
+    r"|\b(only|exclusively)\s+(read|allow|permit|use)\b",
+    re.IGNORECASE,
+)
+WS_5B_WINDOW = 200  # chars before AND after the negative-list match
+
 
 def passes_ws_2b(body: str) -> bool:
     """Return True when every `If present / If absent` occurrence in body is

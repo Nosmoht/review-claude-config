@@ -77,6 +77,9 @@ from rubric_patterns import (  # noqa: E402
     WS_2B_MARKER_WINDOW,
     WS_2B_PREDICATE_WINDOW,
     WS_2B_PROSE_PREDICATE,
+    WS_5B_NEGATIVE_LIST,
+    WS_5B_POSITIVE_WHITELIST,
+    WS_5B_WINDOW,
     has_loop,
     is_third_person,
     passes_clar1,
@@ -336,7 +339,7 @@ NON_BINARY_ITEMS: list[str] = [
     "WS-2",
     "WS-3",
     "WS-4",
-    "WS-5",
+    "WS-5",  # narrative parent; superseded by WS-5b — dropped in merge layer (issue #89)
     "WS-6",
     "WS-7",
     "WS-8",
@@ -1012,6 +1015,31 @@ def check_WS_2b(body: str) -> dict:
     return _pass(reason="all in-scope occurrences paired with preceding prose predicate")
 
 
+def check_WS_5b(body: str) -> dict:
+    """WS-5b negation paired with adjacent positive whitelist (issue #89).
+
+    PASS: every NEVER / DO NOT / MUST NOT + verb-list match in
+        ``strip_code(body)`` has a positive-whitelist signal within ±200 chars.
+    FAIL: at least one such match lacks an adjacent whitelist signal.
+    NA: no NEVER / DO NOT / MUST NOT verb-list patterns in body.
+    """
+    stripped = strip_code(body)
+    matches = list(WS_5B_NEGATIVE_LIST.finditer(stripped))
+    if not matches:
+        return _na("no NEVER/DO NOT/MUST NOT + verb-list patterns in body")
+    for m in matches:
+        before = max(0, m.start() - WS_5B_WINDOW)
+        after = min(len(stripped), m.end() + WS_5B_WINDOW)
+        window = stripped[before:after]
+        if not WS_5B_POSITIVE_WHITELIST.search(window):
+            return _fail(
+                line=line_of_offset(stripped, m.start()),
+                trigger=m.group(0)[:80],
+                reason="negative imperative + verb-list lacks positive whitelist within 200 chars",
+            )
+    return _pass(reason="all negative imperatives paired with positive whitelist")
+
+
 def check_RD_5b(body: str) -> dict:
     """RD-5b step-naming consistency.
 
@@ -1070,6 +1098,7 @@ BINARY_ITEM_IDS: list[str] = [
     "CLAR-3",
     "CLAR-4",
     "WS-2b",
+    "WS-5b",
     "RD-5b",
     "CE-X",
     "COMP-X",
@@ -1123,6 +1152,8 @@ def _run_check(
             return check_CLAR_4(body)
         if item_id == "WS-2b":
             return check_WS_2b(body)
+        if item_id == "WS-5b":
+            return check_WS_5b(body)
         if item_id == "RD-5b":
             return check_RD_5b(body)
         if item_id == "CE-X":

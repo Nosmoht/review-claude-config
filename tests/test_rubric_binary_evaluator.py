@@ -59,6 +59,7 @@ from rubric_binary_evaluator import (  # noqa: E402
     check_SP_2b,
     check_SP_4b,
     check_WS_2b,
+    check_WS_5b,
     evaluate,
     is_agentic,
     needs_rl9b,
@@ -721,6 +722,51 @@ class TestWS2b:
         assert check_WS_2b(body)["verdict"] == "NA"
 
 
+class TestWS5b:
+    """WS-5b negation paired with positive whitelist — issue #89."""
+
+    def test_no_negation_list_na(self):
+        body = "Regular skill body with no NEVER or DO NOT lists anywhere."
+        assert check_WS_5b(body)["verdict"] == "NA"
+
+    def test_single_token_after_negation_na(self):
+        # Spec requires verb-list (≥2 comma-separated items); single token
+        # without commas does not trigger.
+        body = "Do NOT panic."
+        assert check_WS_5b(body)["verdict"] == "NA"
+
+    def test_negation_with_whitelist_passes(self):
+        # Single-token list per spec regex (\S+ requires no inner whitespace).
+        body = (
+            "DO NOT use rm, mv, dd, sed. ALLOWED: ls, cat, grep — read-only "
+            "operations only."
+        )
+        assert check_WS_5b(body)["verdict"] == "PASS"
+
+    def test_negation_with_only_pattern_passes(self):
+        body = (
+            "NEVER write rm, mv, dd, sudo in this skill — only read "
+            "and only use git for inspection."
+        )
+        assert check_WS_5b(body)["verdict"] == "PASS"
+
+    def test_negation_without_whitelist_fails(self):
+        body = (
+            "NEVER use rm, mv, dd, sed in this workflow. "
+            "The agent should be careful with destructive operations."
+        )
+        result = check_WS_5b(body)
+        assert result["verdict"] == "FAIL"
+        assert "lacks positive whitelist" in result["evidence"]["reason"]
+
+    def test_must_not_with_whitelist_passes(self):
+        body = (
+            "MUST NOT call: api, db, kafka, redis. "
+            "Use only the file system and stdin."
+        )
+        assert check_WS_5b(body)["verdict"] == "PASS"
+
+
 class TestRD5b:
     """RD-5b step-naming consistency — issue #70."""
 
@@ -845,10 +891,10 @@ class TestSchemaStability:
             assert "evidence" in v, f"{item_id} missing evidence"
             assert isinstance(v["evidence"], dict)
 
-    def test_stats_counts_sum_to_28(self):
+    def test_stats_counts_sum_to_29(self):
         result = evaluate(REVIEW_SKILL_FIXTURE)
         s = result["stats"]
-        assert s["pass"] + s["fail"] + s["na"] == 28
+        assert s["pass"] + s["fail"] + s["na"] == 29
 
 
 REVIEW_SKILL_EXPECTED = {
@@ -862,6 +908,7 @@ REVIEW_SKILL_EXPECTED = {
     "CLAR-3": "FAIL",
     "CLAR-4": "PASS",
     "WS-2b": "PASS",
+    "WS-5b": "NA",
     "RD-5b": "FAIL",
     "CE-X": "PASS",
     "COMP-X": "FAIL",
@@ -893,6 +940,7 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "CLAR-3": "NA",
     "CLAR-4": "NA",
     "WS-2b": "NA",
+    "WS-5b": "NA",
     "RD-5b": "NA",
     "CE-X": "NA",
     "COMP-X": "NA",  # Issue #74: skill-review-semantics only; agent TC-3 pending #75/#76.
@@ -924,6 +972,7 @@ SCAFFOLD_SKILL_EXPECTED = {
     "CLAR-3": "FAIL",
     "CLAR-4": "NA",
     "WS-2b": "NA",
+    "WS-5b": "NA",
     "RD-5b": "NA",
     "CE-X": "FAIL",
     "COMP-X": "FAIL",
@@ -962,7 +1011,7 @@ class TestEndToEndFixtures:
         assert fixture.exists(), f"fixture missing: {fixture}"
         result = evaluate(fixture)
         assert result["stats"]["runner_error"] == 0
-        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 28
+        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 29
         actual = {k: v["verdict"] for k, v in result["verdicts"].items()}
         assert actual == expected
 
@@ -998,21 +1047,21 @@ class TestRepoWideSmokeStrict:
         result = evaluate(path)
         assert result["stats"]["runner_error"] == 0
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 28
+        assert total == 29
 
 
 class TestRepoWideSmokeLenient:
-    """Every skills/*/SKILL.md evaluator invocation returns 28 verdicts;
+    """Every skills/*/SKILL.md evaluator invocation returns 29 verdicts;
     runner_error per skill is logged but not asserted."""
 
-    def test_all_skills_produce_28_verdicts(self):
+    def test_all_skills_produce_29_verdicts(self):
         skills = sorted((REPO_ROOT / "skills").glob("*/SKILL.md"))
         assert len(skills) >= 10, "expected multiple skill targets"
         errors: list[tuple[str, int]] = []
         for p in skills:
             result = evaluate(p)
             total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-            assert total == 28, f"{p}: total {total} != 28"
+            assert total == 29, f"{p}: total {total} != 29"
             if result["stats"]["runner_error"]:
                 errors.append((str(p), result["stats"]["runner_error"]))
         # Surface drift without failing the suite: errors are reported
@@ -1058,9 +1107,9 @@ class TestRunnerErrorHandling:
         p.write_text("", encoding="utf-8")
         result = evaluate(p)
         assert result["stats"]["runner_error"] == 0
-        # All 28 items produce verdicts (mostly NA/FAIL for missing content).
+        # All 29 items produce verdicts (mostly NA/FAIL for missing content).
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 28
+        assert total == 29
 
     def test_no_frontmatter_no_crash(self, tmp_path):
         p = tmp_path / "body-only.md"

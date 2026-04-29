@@ -57,6 +57,7 @@ BINARY_ITEM_IDS = frozenset(
         "CLAR-3",
         "CLAR-4",
         "WS-2b",
+        "WS-5b",
         "RD-5b",
         "CE-X",
         "COMP-X",
@@ -97,6 +98,7 @@ NARRATIVE_PARENT_IDS = frozenset(
         "META-3",
         "WS-2",  # superseded by WS-2b (issue #70)
         "WS-4",  # dim-pinned to Clarity via ITEM_DIMENSION + dropped here
+        "WS-5",  # superseded by WS-5b (issue #89)
         "RD-5",  # superseded by RD-5b (issue #70)
     ]
 )
@@ -121,6 +123,7 @@ ITEM_DIMENSION: dict[str, str] = {
     "CLAR-4": "Clarity",
     "WS-2b": "Clarity",
     "WS-4": "Clarity",
+    "WS-5b": "Clarity",
     "RD-5b": "Clarity",
     "CE-X": "Context Engineering",
     "COMP-X": "Completeness",

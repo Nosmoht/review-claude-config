@@ -20,7 +20,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | WS-2b | `If present / If absent` near a `---marker---` has a preceding prose predicate naming the block? (binary check — see scoring-rubric.md) | Clarity |
 | WS-3 | Parallel vs sequential steps explicitly marked? | Clarity |
 | WS-4 | Stop conditions and recovery actions defined? (dim-pinned Clarity; evaluated via CLAR-3 + drop-from-merge per issue #70) | Clarity |
-| WS-5 | `NEVER`/`DO NOT`/`MUST NOT` + verb-list paired with adjacent positive whitelist within 200 chars? Source: arXiv:2306.08189 (LLMs negation-insensitive). | Clarity |
+| WS-5 | `NEVER`/`DO NOT`/`MUST NOT` + verb-list paired with adjacent positive whitelist within 200 chars? (binary check WS-5b — see scoring-rubric.md) Source: arXiv:2306.08189 (LLMs negation-insensitive). | Clarity |
 | WS-6 | Bare relative comparator (`more/fewer/older/newer/larger/smaller than`) anchored to numeric value or unit within 80 chars? Source: arXiv:1912.13283 (oLMpics — quantifier reasoning context-dependent). | Clarity |
 | WS-7 | Token-presence-triggered classification/routing paired with semantic verification (regex, schema, structured-field) within 200 chars? Source: arXiv:1902.01007 (McCoy HANS — lexical-overlap heuristic). | Clarity |
 | WS-8 | Multi-source-context step (≥2 references loaded) names a distractor-isolation marker (focus-on / ignore / scope-to)? Source: arXiv:1911.03343 (Kassner mispriming); arXiv:1907.13528 (Ettinger). | Clarity |
