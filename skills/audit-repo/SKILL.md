@@ -67,8 +67,7 @@ SCAN LIMITS:
 - Read at most 50 lines per file
 - Scan at most 4 directory levels deep
 - Cap file listings at 500 files per directory
-- BASH RESTRICTIONS: Only read-only commands allowed (find, wc, ls).
-  NEVER use: rm, mv, cp, tee, >, >>, mkdir, touch, or any write command.
+- BASH RESTRICTIONS: Read-only operations only. ALLOWED commands: find, ls, wc, grep, head, tail, sort, uniq, cat (for ≤50 lines).
 
 ERROR HANDLING:
 - If a Glob pattern returns no results, report "NOT FOUND" for that item within the category.
@@ -173,8 +172,7 @@ You are analyzing a repository for token efficiency. Return metrics only.
 SCAN LIMITS:
 - Read at most 50 lines per file
 - Scan at most 4 directory levels deep
-- BASH RESTRICTIONS: Only read-only commands allowed (find, wc, ls).
-  NEVER use: rm, mv, cp, tee, >, >>, mkdir, touch, or any write command.
+- BASH RESTRICTIONS: Read-only operations only. ALLOWED commands: find, ls, wc, grep, head, tail, sort, uniq, cat (for ≤50 lines).
 
 ERROR HANDLING:
 - If a Glob pattern returns no results, report "NOT FOUND" for that item within the category.
