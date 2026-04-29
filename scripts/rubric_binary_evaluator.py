@@ -340,6 +340,8 @@ NON_BINARY_ITEMS: list[str] = [
     "WS-6",
     "WS-7",
     "WS-8",
+    # Metadata trigger-consistency (issue #98 — letter-suffix, narrative)
+    "META-3c",
     # Reference files
     "RF-1",
     "RF-2",

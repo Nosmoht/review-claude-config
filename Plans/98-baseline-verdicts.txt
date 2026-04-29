@@ -1,0 +1,68 @@
+# Description-Collision Audit (threshold Jaccard >= 0.3)
+# Total skills: 32
+
+## Per-Skill META-3b Verdict (current threshold: shared >= 2)
+| Skill | Verdict | Worst sibling | Shared tokens |
+|-------|---------|---------------|---------------|
+| skills/apply-agent-review-findings/SKILL.md | PASS (counter-ref) | skills/apply-rule-review-findings/SKILL.md | ['after', 'agent', 'applies', 'apply-review-findings', 'delegated'] |
+| skills/apply-audit-findings/SKILL.md | PASS (counter-ref) | skills/review-claude-md/SKILL.md | ['after', 'audit-repo', 'claude', 'review', 'rules'] |
+| skills/apply-review-findings/SKILL.md | PASS (counter-ref) | skills/apply-agent-review-findings/SKILL.md | ['after', 'applies', 'findings', 'report', 'reports'] |
+| skills/apply-rule-review-findings/SKILL.md | PASS (counter-ref) | skills/apply-agent-review-findings/SKILL.md | ['after', 'agent', 'applies', 'apply-review-findings', 'delegated'] |
+| skills/apply-skill-review-findings/SKILL.md | PASS (counter-ref) | skills/apply-agent-review-findings/SKILL.md | ['after', 'agent', 'applies', 'apply-review-findings', 'delegated'] |
+| skills/audit-context-budget/SKILL.md | PASS (counter-ref) | skills/review-claude-md/SKILL.md | ['after', 'agents', 'audit-repo', 'claude', 'context'] |
+| skills/audit-mcp-auth/SKILL.md | PASS (counter-ref) | skills/audit-memory-hygiene/SKILL.md | ['asked', 'audit', 'audits', 'check', 'credential'] |
+| skills/audit-memory-hygiene/SKILL.md | PASS (counter-ref) | skills/audit-policy-compliance/SKILL.md | ['asked', 'audit', 'audits', 'check', 'claude'] |
+| skills/audit-policy-compliance/SKILL.md | PASS (counter-ref) | skills/audit-trust-chain/SKILL.md | ['asked', 'audit', 'audits', 'check', 'claude'] |
+| skills/audit-repo/SKILL.md | PASS (counter-ref) | skills/apply-audit-findings/SKILL.md | ['claude', 'intervention', 'matrix', 'primitives', 'skills'] |
+| skills/audit-trust-chain/SKILL.md | PASS (counter-ref) | skills/audit-policy-compliance/SKILL.md | ['asked', 'audit', 'audits', 'check', 'claude'] |
+| skills/check-repo-health/SKILL.md | PASS (counter-ref) | skills/validate-primitive-dependencies/SKILL.md | ['before', 'integrity', 'quality', 'review-claude-config', 'skill'] |
+| skills/classify-trace-errors/SKILL.md | FAIL | skills/review-session-trace/SKILL.md | ['analyze', 'asked', 'audit', 'claude', 'code'] |
+| skills/develop-hooks/SKILL.md | PASS (counter-ref) | skills/review-hook/SKILL.md | ['hook', 'hooks', 'json', 'script'] |
+| skills/review-agent/SKILL.md | PASS (counter-ref) | skills/review-rule/SKILL.md | ['across', 'asked', 'dimensions', 'dispatched', 'evaluates'] |
+| skills/review-analytics/SKILL.md | PASS (counter-ref) | skills/check-repo-health/SKILL.md | ['freshness', 'integrity', 'quality', 'trends'] |
+| skills/review-claude-config/SKILL.md | PASS (counter-ref) | skills/review-skill/SKILL.md | ['agents', 'asked', 'produces', 'quality', 'review'] |
+| skills/review-claude-md/SKILL.md | PASS (counter-ref) | skills/review-rule/SKILL.md | ['across', 'agents', 'alignment', 'asked', 'clarity'] |
+| skills/review-hook/SKILL.md | PASS (counter-ref) | skills/review-mcp-server/SKILL.md | ['across', 'agents', 'alignment', 'asked', 'completeness'] |
+| skills/review-mcp-server/SKILL.md | PASS (counter-ref) | skills/review-settings/SKILL.md | ['across', 'agents', 'alignment', 'asked', 'completeness'] |
+| skills/review-plugin/SKILL.md | PASS (counter-ref) | skills/review-settings/SKILL.md | ['across', 'agents', 'alignment', 'asked', 'claude'] |
+| skills/review-rule/SKILL.md | PASS (counter-ref) | skills/review-claude-md/SKILL.md | ['across', 'agents', 'alignment', 'asked', 'clarity'] |
+| skills/review-session-trace/SKILL.md | FAIL | skills/classify-trace-errors/SKILL.md | ['analyze', 'asked', 'audit', 'claude', 'code'] |
+| skills/review-settings/SKILL.md | PASS (counter-ref) | skills/review-mcp-server/SKILL.md | ['across', 'agents', 'alignment', 'asked', 'completeness'] |
+| skills/review-skill/SKILL.md | PASS (counter-ref) | skills/review-agent/SKILL.md | ['across', 'asked', 'dimensions', 'dispatched', 'evaluates'] |
+| skills/run-eval-cases/SKILL.md | PASS (counter-ref) | skills/apply-audit-findings/SKILL.md | ['after', 'review', 'skills'] |
+| skills/scaffold-agent/SKILL.md | PASS (counter-ref) | skills/scaffold-rule/SKILL.md | ['adding', 'agents', 'claude', 'creates', 'project'] |
+| skills/scaffold-mcp-server/SKILL.md | PASS (counter-ref) | skills/audit-mcp-auth/SKILL.md | ['entry', 'json', 'mcp'] |
+| skills/scaffold-rule/SKILL.md | PASS (counter-ref) | skills/scaffold-agent/SKILL.md | ['adding', 'agents', 'claude', 'creates', 'project'] |
+| skills/scaffold-skill/SKILL.md | PASS (counter-ref) | skills/scaffold-agent/SKILL.md | ['adding', 'agents', 'creates', 'rules', 'scaffold-rule'] |
+| skills/suggest-skills/SKILL.md | FAIL | skills/audit-repo/SKILL.md | ['analyzes', 'claude', 'code', 'setting', 'skills'] |
+| skills/validate-primitive-dependencies/SKILL.md | PASS (counter-ref) | skills/check-repo-health/SKILL.md | ['before', 'integrity', 'quality', 'review-claude-config', 'skill'] |
+
+## High-Overlap Pairs (Jaccard >= 0.3)
+| Pair | Jaccard | Counter-ref present? |
+|------|---------|----------------------|
+| skills/apply-agent-review-findings/SKILL.md ↔ skills/apply-rule-review-findings/SKILL.md | 0.87 | True |
+| skills/apply-agent-review-findings/SKILL.md ↔ skills/apply-skill-review-findings/SKILL.md | 0.80 | True |
+| skills/apply-rule-review-findings/SKILL.md ↔ skills/apply-skill-review-findings/SKILL.md | 0.80 | True |
+| skills/classify-trace-errors/SKILL.md ↔ skills/review-session-trace/SKILL.md | 0.30 | False |
+| skills/review-agent/SKILL.md ↔ skills/review-rule/SKILL.md | 0.40 | True |
+| skills/review-agent/SKILL.md ↔ skills/review-skill/SKILL.md | 0.32 | True |
+| skills/review-claude-md/SKILL.md ↔ skills/review-hook/SKILL.md | 0.36 | True |
+| skills/review-claude-md/SKILL.md ↔ skills/review-mcp-server/SKILL.md | 0.34 | True |
+| skills/review-claude-md/SKILL.md ↔ skills/review-rule/SKILL.md | 0.46 | True |
+| skills/review-claude-md/SKILL.md ↔ skills/review-settings/SKILL.md | 0.38 | True |
+| skills/review-hook/SKILL.md ↔ skills/review-mcp-server/SKILL.md | 0.54 | True |
+| skills/review-hook/SKILL.md ↔ skills/review-plugin/SKILL.md | 0.44 | True |
+| skills/review-hook/SKILL.md ↔ skills/review-rule/SKILL.md | 0.41 | True |
+| skills/review-hook/SKILL.md ↔ skills/review-settings/SKILL.md | 0.52 | True |
+| skills/review-mcp-server/SKILL.md ↔ skills/review-plugin/SKILL.md | 0.52 | True |
+| skills/review-mcp-server/SKILL.md ↔ skills/review-rule/SKILL.md | 0.38 | True |
+| skills/review-mcp-server/SKILL.md ↔ skills/review-settings/SKILL.md | 0.77 | True |
+| skills/review-plugin/SKILL.md ↔ skills/review-rule/SKILL.md | 0.31 | True |
+| skills/review-plugin/SKILL.md ↔ skills/review-settings/SKILL.md | 0.61 | True |
+| skills/review-rule/SKILL.md ↔ skills/review-settings/SKILL.md | 0.37 | True |
+| skills/review-rule/SKILL.md ↔ skills/review-skill/SKILL.md | 0.33 | True |
+
+# Flagged pairs: 21
+
+## Counter-Reference Regex Coverage
+# Skills with counter-ref pattern in own description: 24 / 32
