@@ -15,12 +15,15 @@ from merge_findings import (  # noqa: E402
     ITEM_DIMENSION,
     NARRATIVE_PARENT_IDS,
     canonicalize_perspective_ids,
+    filter_false_positive_missing_primitive,
+    find_repo_root,
     layer0_dedup,
     layer1_5_binary_boundary_cap,
     layer1_owner_weighted_grade,
     load_binary_verdicts,
     merge_directory,
     overlap_ratio,
+    primitive_exists,
     synthesize_binary_findings,
     tokenize,
 )
@@ -1171,3 +1174,183 @@ class TestAdvisoryDemote:
         assert result["demoted_perspective_findings"] == 0
         high = [f for f in result["findings"] if f.get("severity") == "High"]
         assert any(f.get("checklist_item") == "CLAR-1" for f in high)
+
+
+class TestFindRepoRoot:
+    def test_finds_real_repo(self):
+        # The actual repo root has agents/, skills/, hooks/, scripts/.
+        result = find_repo_root(REPO_ROOT / "tests" / "fixtures")
+        assert result == REPO_ROOT
+
+    def test_returns_none_outside_any_repo(self, tmp_path: pathlib.Path):
+        # tmp_path has no agents/skills/hooks/scripts subdirs.
+        result = find_repo_root(tmp_path, max_levels=2)
+        assert result is None
+
+    def test_finds_self_when_at_root(self, tmp_path: pathlib.Path):
+        (tmp_path / "agents").mkdir()
+        result = find_repo_root(tmp_path)
+        assert result == tmp_path.resolve()
+
+
+class TestPrimitiveExists:
+    def test_flat_md_form(self):
+        # agents/review-perspective-clarity.md exists.
+        assert primitive_exists(REPO_ROOT, "review-perspective-clarity") is True
+
+    def test_nested_skill_form(self):
+        # skills/review-skill/SKILL.md exists.
+        assert primitive_exists(REPO_ROOT, "review-skill") is True
+
+    def test_python_script_form(self):
+        # scripts/merge_findings.py exists.
+        assert primitive_exists(REPO_ROOT, "merge_findings") is True
+
+    def test_strips_plugin_namespace(self):
+        # `skill-quality:review-perspective-clarity` should resolve to the bare name.
+        assert primitive_exists(REPO_ROOT, "skill-quality:review-perspective-clarity") is True
+
+    def test_unknown_returns_false(self):
+        assert primitive_exists(REPO_ROOT, "this-primitive-definitely-does-not-exist") is False
+
+    def test_strips_extension(self):
+        assert primitive_exists(REPO_ROOT, "review-perspective-clarity.md") is True
+
+
+class TestFalsePositiveFilter:
+    """Filter drops findings whose evidence asserts non-existence of a primitive
+    that actually resolves to a file in the repo. Issue #X (verify-before-fail
+    gate brittleness on Haiku)."""
+
+    def _finding(self, evidence: str, item: str = "RD-1") -> dict:
+        return {
+            "id": f"{item}:x.md:Metadata/v1",
+            "checklist_item": item,
+            "perspective": "integration",
+            "severity": "High",
+            "evidence": evidence,
+        }
+
+    def test_drops_finding_with_brace_expansion(self):
+        finding = self._finding(
+            "subagent_type='review-perspective-{clarity,correctness,integration}' "
+            "agents do not exist"
+        )
+        kept, dropped = filter_false_positive_missing_primitive([finding], REPO_ROOT)
+        assert kept == []
+        assert len(dropped) == 1
+        reason = dropped[0]["false_positive_reason"]
+        assert "review-perspective-clarity" in reason
+
+    def test_drops_finding_with_single_existing_name(self):
+        finding = self._finding("agent review-perspective-clarity does not exist")
+        kept, dropped = filter_false_positive_missing_primitive([finding], REPO_ROOT)
+        assert len(kept) == 0
+        assert len(dropped) == 1
+
+    def test_keeps_finding_with_genuinely_missing_primitive(self):
+        finding = self._finding("subagent_type=truly-imaginary-agent-xyz does not exist")
+        kept, dropped = filter_false_positive_missing_primitive([finding], REPO_ROOT)
+        assert len(kept) == 1
+        assert dropped == []
+
+    def test_keeps_finding_without_missing_claim(self):
+        finding = self._finding("review-perspective-clarity is correctly invoked")
+        kept, dropped = filter_false_positive_missing_primitive([finding], REPO_ROOT)
+        assert len(kept) == 1
+        assert dropped == []
+
+    def test_no_op_when_repo_root_is_none(self):
+        finding = self._finding("review-perspective-clarity does not exist")
+        kept, dropped = filter_false_positive_missing_primitive([finding], None)
+        assert len(kept) == 1
+        assert dropped == []
+
+    def test_no_op_when_repo_root_does_not_exist(self):
+        finding = self._finding("review-perspective-clarity does not exist")
+        kept, dropped = filter_false_positive_missing_primitive(
+            [finding], pathlib.Path("/nonexistent/path")
+        )
+        assert len(kept) == 1
+        assert dropped == []
+
+    def test_handles_doesnt_exist_apostrophe_form(self):
+        finding = self._finding("agent review-perspective-clarity doesn't exist")
+        kept, dropped = filter_false_positive_missing_primitive([finding], REPO_ROOT)
+        assert kept == []
+        assert len(dropped) == 1
+
+
+class TestPerspectiveScoresPopulation:
+    """Issue #Y — perspective_scores must populate from cert dimensions when
+    the cert lacks an explicit weighted_score field."""
+
+    def test_uses_explicit_weighted_score_when_present(self, tmp_path: pathlib.Path):
+        _write_perspectives(tmp_path, {"clarity": []})
+        result = merge_directory(tmp_path)
+        # _perspective_cert hard-codes weighted_score=85.0
+        assert result["perspective_scores"] == {
+            "clarity": 85.0,
+            "correctness": 85.0,
+            "integration": 85.0,
+        }
+
+    def test_computes_from_dimensions_when_no_weighted_score(self, tmp_path: pathlib.Path):
+        # Build a cert with dimensions but NO weighted_score field.
+        cert = {
+            "perspective": "clarity",
+            "dimensions": {
+                "Clarity": "A",
+                "Completeness": "A",
+                "Prompt Engineering": "A",
+                "Context Engineering": "A",
+                "Goal Alignment": "A",
+                "Safety": "A",
+                "Metadata": "A",
+            },
+            "artifact_frontmatter": {"allowed_tools": ["Read"]},
+            "findings": [],
+        }
+        (tmp_path / "clarity.json").write_text(json.dumps(cert))
+        # Other two missing -> degraded mode.
+        result = merge_directory(tmp_path)
+        # Should compute from dimensions; weights with no Write/Bash/Edit -> Safety=10%, Metadata=10%
+        # All A (95) * 1.0 weight sum = 95.0
+        assert result["perspective_scores"]["clarity"] == 95.0
+
+
+class TestMergeDirectoryWithRepoRoot:
+    """Filter wires through merge_directory's optional repo_root argument."""
+
+    def test_explicit_repo_root_filters_false_positive(self, tmp_path: pathlib.Path):
+        finding = {
+            "id": "RD-1:x.md:Metadata/v1",
+            "checklist_item": "RD-1",
+            "dimension": "Metadata",
+            "severity": "High",
+            "primary_focus": True,
+            "owner_conflict": False,
+            "hint_owner": None,
+            "path": "x.md",
+            "line_range": "1-2",
+            "evidence": (
+                "subagent_type='review-perspective-{clarity,correctness}' "
+                "agents do not exist"
+            ),
+        }
+        _write_perspectives(tmp_path, {"integration": [finding]})
+        result = merge_directory(tmp_path, repo_root=REPO_ROOT)
+        # The finding should be filtered out as a false positive.
+        rd1_remaining = [f for f in result["findings"] if f.get("checklist_item") == "RD-1"]
+        assert rd1_remaining == []
+        assert len(result["false_positive_missing_primitive_dropped"]) == 1
+
+    def test_no_repo_root_falls_back_to_session_dir_walk(self, tmp_path: pathlib.Path):
+        # tmp_path has no agents/skills siblings; find_repo_root returns None,
+        # and the cwd fallback resolves to whatever pytest is running in
+        # (the actual repo). Filter still works against repo_root.
+        _write_perspectives(tmp_path, {})
+        # Empty findings -> filter is a no-op anyway.
+        result = merge_directory(tmp_path)
+        assert "false_positive_missing_primitive_dropped" in result
+        assert result["false_positive_missing_primitive_dropped"] == []

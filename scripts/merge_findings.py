@@ -30,6 +30,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import re
 import sys
@@ -545,7 +546,123 @@ def _infer_artifact_path(available_certs: dict[str, dict], verdicts_doc: dict | 
     return ""
 
 
-def merge_directory(session_dir: pathlib.Path) -> dict:
+# Patterns for the missing-primitive false-positive filter.
+# A finding is a candidate when its evidence text includes BOTH a non-existence
+# claim AND a primitive name reference. We then check whether the named
+# primitive actually exists in the repo and drop the finding if it does.
+_MISSING_PRIMITIVE_CLAIM_RE = re.compile(
+    r"(does\s+not\s+exist|not\s+found|missing|absent|doesn'?t\s+exist|"
+    r"do\s+not\s+exist|are\s+not\s+registered|not\s+registered|not\s+present)",
+    re.IGNORECASE,
+)
+# Primary extraction: any name-like token in the evidence that could be a
+# primitive. Broad on purpose — false-negatives on the filter are safer than
+# false-positives, since unfiltered findings still surface for reviewer triage.
+_NAME_LIKE_RE = re.compile(r"[a-zA-Z][\w\-]{2,}(?::[\w\-]+)?")
+# Brace-expansion: ``review-perspective-{clarity,correctness,integration}``
+# expands to three concrete names. Common in agent prose when listing multiple
+# subagent_types compactly.
+_BRACE_EXPANSION_RE = re.compile(r"([a-zA-Z][\w\-]+)\{([^}]+)\}")
+# The directories we recognise as primitive locations in the target repo.
+_PRIMITIVE_DIRS = ("agents", "skills", "hooks", "scripts", ".claude/agents", ".claude/skills")
+
+
+def find_repo_root(start_path: pathlib.Path, max_levels: int = 20) -> pathlib.Path | None:
+    """Walk up from ``start_path`` looking for a directory that contains at
+    least one of the recognised primitive subdirs. Returns None when no such
+    ancestor is found within ``max_levels`` levels."""
+    cur = pathlib.Path(start_path).resolve()
+    for _ in range(max_levels):
+        for sub in _PRIMITIVE_DIRS:
+            if (cur / sub).is_dir():
+                return cur
+        if cur.parent == cur:
+            return None
+        cur = cur.parent
+    return None
+
+
+def primitive_exists(repo_root: pathlib.Path, raw_name: str) -> bool:
+    """True iff ``raw_name`` resolves to a file under one of the primitive
+    subdirectories of ``repo_root``. Strips a plugin-namespace prefix
+    (``<plugin>:<name>``) and tries common file extensions / nested layouts."""
+    if not raw_name:
+        return False
+    bare = raw_name.split(":")[-1].strip().rstrip(".,;:!?\"'`")
+    if not bare:
+        return False
+    # Drop any explicit extension before re-trying with our canonical set.
+    stem = bare.rsplit(".", 1)[0] if bare.endswith((".md", ".py")) else bare
+    for sub in _PRIMITIVE_DIRS:
+        base = repo_root / sub
+        if not base.is_dir():
+            continue
+        candidates = [
+            base / f"{stem}.md",
+            base / f"{stem}.py",
+            base / stem / "AGENT.md",
+            base / stem / "SKILL.md",
+        ]
+        if any(p.is_file() for p in candidates):
+            return True
+    return False
+
+
+def filter_false_positive_missing_primitive(
+    findings: list[dict], repo_root: pathlib.Path | None
+) -> tuple[list[dict], list[dict]]:
+    """Drop findings that claim a primitive does not exist when it actually does.
+
+    Some perspective agents (notably Haiku) emit ``RD-1`` / ``RD-3`` findings
+    asserting a referenced primitive (subagent_type, skill, hook, script) is
+    missing without successfully running the verification gate. When the named
+    primitive resolves to a real file in the target repo, the finding is a
+    false positive.
+
+    Returns ``(kept_findings, dropped_findings)``. The dropped list preserves
+    the original finding plus a synthesised ``false_positive_reason`` field for
+    audit transparency.
+    """
+    if repo_root is None or not repo_root.is_dir():
+        return list(findings), []
+    kept: list[dict] = []
+    dropped: list[dict] = []
+    for f in findings:
+        evidence = f.get("evidence") or ""
+        if not _MISSING_PRIMITIVE_CLAIM_RE.search(evidence):
+            kept.append(f)
+            continue
+        # Brace-expansion candidates first — more specific than free tokens.
+        candidates: list[str] = []
+        for m in _BRACE_EXPANSION_RE.finditer(evidence):
+            prefix, contents = m.group(1), m.group(2)
+            candidates.extend(f"{prefix}{part.strip()}" for part in contents.split(","))
+        # Then generic name-like tokens (covers cases without brace shorthand).
+        candidates.extend(_NAME_LIKE_RE.findall(evidence))
+        verified = [name for name in candidates if primitive_exists(repo_root, name)]
+        if not verified:
+            kept.append(f)
+            continue
+        annotated = dict(f)
+        # Cite the specific primitives whose existence contradicts the claim.
+        # De-duplicate while preserving order; cap the citation list at 5.
+        seen: set[str] = set()
+        unique_verified: list[str] = []
+        for name in verified:
+            if name not in seen:
+                seen.add(name)
+                unique_verified.append(name)
+            if len(unique_verified) >= 5:
+                break
+        annotated["false_positive_reason"] = (
+            f"primitives [{', '.join(unique_verified)}] resolve to existing "
+            f"files under {repo_root}; non-existence claim contradicted by repo state"
+        )
+        dropped.append(annotated)
+    return kept, dropped
+
+
+def merge_directory(session_dir: pathlib.Path, repo_root: pathlib.Path | None = None) -> dict:
     certs: dict[str, dict | None] = {}
     missing: list[str] = []
     for name in PERSPECTIVES:
@@ -618,6 +735,18 @@ def merge_directory(session_dir: pathlib.Path) -> dict:
 
     merged_findings = layer0_dedup(all_findings)
 
+    # Deterministic post-filter: drop missing-primitive false positives.
+    # Resolves the integration agent's verify-before-fail brittleness on Haiku.
+    if repo_root is None:
+        # Heuristic: walk up from the session_dir's resolved location looking
+        # for a recognised repo layout. Falls back to os.getcwd() when the
+        # session_dir lives outside the repo (the typical $CLAUDE_PLUGIN_DATA
+        # path).
+        repo_root = find_repo_root(session_dir) or find_repo_root(pathlib.Path(os.getcwd()))
+    merged_findings, false_positive_dropped = filter_false_positive_missing_primitive(
+        merged_findings, repo_root
+    )
+
     dimensions = [
         "Clarity",
         "Completeness",
@@ -666,15 +795,28 @@ def merge_directory(session_dir: pathlib.Path) -> dict:
         "findings": merged_findings,
         "owner_conflicts": conflicts,
         "perspective_scores": {
-            p: cert.get("weighted_score")
+            p: round(
+                cert["weighted_score"] if cert.get("weighted_score") is not None
+                else compute_weighted_score(cert.get("dimensions") or {}, weights),
+                2,
+            )
             for p, cert in available_certs.items()
-            if cert.get("weighted_score") is not None
+            if cert.get("weighted_score") is not None or cert.get("dimensions")
         },
         "binary_evaluator_status": binary_status,
         "binary_verdicts_applied": binary_verdicts_applied,
         "boundary_caps_applied": caps_applied,
         "dropped_perspective_findings": dropped_perspective_findings,
         "demoted_perspective_findings": demoted_perspective_findings,
+        "false_positive_missing_primitive_dropped": [
+            {
+                "id": d.get("id"),
+                "checklist_item": d.get("checklist_item"),
+                "perspective": d.get("perspective"),
+                "reason": d.get("false_positive_reason"),
+            }
+            for d in false_positive_dropped
+        ],
     }
 
 
@@ -727,13 +869,23 @@ def main() -> int:
             "always emitted regardless of this flag."
         ),
     )
+    parser.add_argument(
+        "--repo-root",
+        type=pathlib.Path,
+        default=None,
+        help=(
+            "repo root used by the missing-primitive false-positive filter. "
+            "Defaults to walking up from the session_dir, then to os.getcwd(). "
+            "Pass an explicit path when invoking from outside the target repo."
+        ),
+    )
     args = parser.parse_args()
 
     if not args.session_dir.is_dir():
         print(f"Not a directory: {args.session_dir}", file=sys.stderr)
         return 2
 
-    result = merge_directory(args.session_dir)
+    result = merge_directory(args.session_dir, repo_root=args.repo_root)
     print(json.dumps(result, indent=2, sort_keys=True))
 
     if args.findings_out is not None:
