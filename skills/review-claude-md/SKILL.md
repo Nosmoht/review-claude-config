@@ -70,7 +70,7 @@ Read the type-specific evaluation guide from this skill's own directory:
    - Stated purpose and audience
    - Which sections are present (Architecture, Commands, Working Guidelines, Development Conventions, etc.)
 2. Domain research (follow orchestration flags if in orchestrated mode):
-   - Check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the project type to a universal cache entry.
+   - Check the domain cache: Read `${CLAUDE_PLUGIN_ROOT}/skills/review-claude-config/references/domain-cache/INDEX.md` and match the project type to a universal cache entry.
    - If `CACHED` (≤90 days): read the cache file as primary domain knowledge.
    - If `STALE`: perform 1 WebSearch to refresh.
    - If no cache entry matches: perform 1-2 targeted WebSearch queries for "Claude Code CLAUDE.md best practices [project-type]" where [project-type] is identified in step 1 (CLAUDE.md domain is always the project type, so the query is project-type-scoped). Fetch the top result if `webfetch_available`.

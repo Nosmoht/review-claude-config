@@ -68,7 +68,7 @@ When the agent declares Write, Bash, Edit, or MCP tools in `tools:`/`disallowedT
 
 1. Read the agent file and infer its primary goal/domain in one sentence.
 2. Domain research (follow orchestration flags if in orchestrated mode):
-   - First, check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the agent's domain to a universal cache entry.
+   - First, check the domain cache: Read `${CLAUDE_PLUGIN_ROOT}/skills/review-claude-config/references/domain-cache/INDEX.md` and match the agent's domain to a universal cache entry.
    - If `CACHED` (entry exists, ≤90 days old): read the cache file and use as primary domain knowledge. At most 1 supplemental WebSearch query if the cache lacks coverage for this agent's specific area.
    - If `STALE` (≥90 days): perform 1 WebSearch query to refresh.
    - If no cache entry matches: extract domain keywords from the agent's description and content, then perform 1-2 targeted WebSearch queries (technology + workflow + quality aspect, not generic "best practices"). If `webfetch_available`, fetch the most relevant URL.

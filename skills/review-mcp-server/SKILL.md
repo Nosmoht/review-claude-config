@@ -53,7 +53,7 @@ domain_cache: |
 
 1. Read the `.mcp.json` file. Count servers. Identify project context from surrounding repo (read `CLAUDE.md` or `README.md` if available).
 2. Domain research (follow orchestration flags if in orchestrated mode):
-   - Check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match to a universal cache entry.
+   - Check the domain cache: Read `${CLAUDE_PLUGIN_ROOT}/skills/review-claude-config/references/domain-cache/INDEX.md` and match to a universal cache entry.
    - If `CACHED` (≤90 days): use cache as primary knowledge.
    - If `STALE`: perform 1 WebSearch to refresh.
    - If no cache entry matches: perform 1-2 targeted WebSearch queries (MCP server security + configuration quality, not generic "best practices"). Fetch the top result if available.

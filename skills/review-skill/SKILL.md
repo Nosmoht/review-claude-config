@@ -77,7 +77,7 @@ Phase 2 contains two top-level sub-steps (Step A and Step B); when running multi
 
 1. Read the skill file and infer its primary goal/domain in one sentence.
 2. Domain research (follow orchestration flags if in orchestrated mode):
-   - First, check the domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md` and match the skill's domain to a universal cache entry.
+   - First, check the domain cache: Read `${CLAUDE_PLUGIN_ROOT}/skills/review-claude-config/references/domain-cache/INDEX.md` and match the skill's domain to a universal cache entry.
    - If `CACHED` (entry exists, ≤90 days old): read the cache file and use as primary domain knowledge. At most 1 supplemental WebSearch query if the cache lacks coverage for this skill's specific area.
    - If `STALE` (≥90 days): perform 1 WebSearch query to refresh.
    - If no cache entry matches: extract domain keywords from the skill's description and content, then perform 1-2 targeted WebSearch queries (technology + workflow + quality aspect, not generic "best practices"). If `webfetch_available == true` AND a single most-relevant URL is identified by the WebSearch results, fetch that URL with a 30-second timeout; on timeout or fetch error, fall back to model-knowledge-only Goal-Alignment scoring without the URL content. Otherwise (no URL identified, or `webfetch_available == false`) skip WebFetch.

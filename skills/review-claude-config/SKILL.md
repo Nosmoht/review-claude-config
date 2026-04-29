@@ -111,11 +111,11 @@ Otherwise continue with the normal cache workflow below.
 
 Before dispatching analysis agents, the orchestrator performs domain cache lookup:
 
-1. **Load knowledge base index.** Read `references/domain-cache/INDEX.md`. INDEX.md contains only universal methodology entries (context-engineering, research-sourcing, etc.). Domain-specific knowledge is researched at runtime.
+1. **Load knowledge base index.** Read `${CLAUDE_PLUGIN_ROOT}/skills/review-claude-config/references/domain-cache/INDEX.md`. INDEX.md contains only universal methodology entries (context-engineering, research-sourcing, etc.). Domain-specific knowledge is researched at runtime.
 
 2. **Match items against universal cache.** For each discovered item:
    - Match against the INDEX.md entries (keys + descriptions).
-   - If a universal entry matches: check `last_refreshed` date. **CACHED** (<90 days), **STALE** (≥90 days). Read `references/domain-cache/{key}.md` on-demand. If file is missing despite being in INDEX.md, downgrade to RUNTIME_RESEARCH.
+   - If a universal entry matches: check `last_refreshed` date. **CACHED** (<90 days), **STALE** (≥90 days). Read `${CLAUDE_PLUGIN_ROOT}/skills/review-claude-config/references/domain-cache/{key}.md` on-demand. If file is missing despite being in INDEX.md, downgrade to RUNTIME_RESEARCH.
    - If no universal entry matches: extract the single most specific technology or workflow term from (1) frontmatter description, (2) parent directory name, (3) explicit technology references in body. If multiple candidates, prefer the term appearing in both description and body. Assign status **RUNTIME_RESEARCH**.
    - If no clear domain is inferable (e.g., generic "code-review"): assign `Domain: none`, `Cache Status: NONE`.
 
@@ -280,41 +280,9 @@ Identify patterns across items:
 - Missing CLAUDE.md guidance that would benefit all items
 - Where possible, cite one concrete example path per pattern so the observation is easy to verify
 
-## Phase 3.5 — Domain Cache Persistence
+## Phase 3.5 — Domain Cache Drift (read-only)
 
-After presenting all reports, confirm before writing:
-"Update domain cache with research for: [list of domain keys]?"
-
-If the user declines, skip cache persistence.
-
-1. Create the `references/domain-cache/` directory if it does not exist.
-2. Collect "Domain Cache Update" sections from researcher agents. **Only persist updates for domains already listed in INDEX.md** (universal entries). Do not create new domain-cache entries from runtime research — it is ephemeral by design.
-3. For each update, format as a cache entry file with YAML frontmatter and body (≤500 tokens of bullet content — truncate if exceeded):
-
-```yaml
----
-domain: [domain-key]
-last_refreshed: [today's date YYYY-MM-DD]
-queries:
-  - "[query 1]"
-  - "[query 2]"
-sources:
-  - url: [url]
-    title: "[title]"
-    tier: [1|2|3]
----
-
-# [Domain Name] — Domain Best Practices
-
-- [bullet 1]
-- [bullet 2]
-...
-```
-
-4. Write each entry to `references/domain-cache/{domain-key}.md`.
-5. Update `references/domain-cache/INDEX.md` — add or update rows for each written domain key. Create INDEX.md if it does not exist.
-6. If `websearch_available = false` and `webfetch_available = false`, skip this entire phase — never write cache entries from model knowledge alone.
-7. Report to user: "Updated domain cache: [list of domain keys written/updated]"
+Aggregate any "Domain Cache Update" sections from researcher agents into a `### Domain Cache Drift` block in the review report (Phase 4) — list affected universal-entry keys + 1-line summary per key. Do **not** write to `references/domain-cache/` at runtime; entries are maintainer-driven on a 90-day cadence (direct edit + commit in source repo). Skip this block entirely if `websearch_available = false` and `webfetch_available = false`.
 
 ## Phase 4 — Report Persistence
 
@@ -400,7 +368,7 @@ On "Apply review findings": invoke `/apply-review-findings` with the report path
 
 ## Hard Rules
 
-- **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md` and domain cache entries in its own `references/domain-cache/`.
+- **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`. Plugin-internal paths (skills, agents, references, domain-cache) are read-only at runtime.
 - **Domain cache entries must come from web research (WebSearch and/or WebFetch) only.** Never write cache entries based on model knowledge alone. If WebSearch is unavailable, skip cache persistence entirely.
 - **Analyze every discovered item.** Skip none in the normal mode. Validation mode is the only exception and must stay capped at the deterministic sample described above.
 - **Apply the rubric strictly.** Do not inflate grades.

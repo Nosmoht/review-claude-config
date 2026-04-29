@@ -55,7 +55,7 @@ domain_cache: |
 1. Read the settings file. Parse JSON. If parse fails → Critical finding, stop.
 2. Identify project context: read `CLAUDE.md` or `README.md` if available.
 3. Domain research:
-   - Check domain cache: Glob `**/review-claude-config/references/domain-cache/INDEX.md`.
+   - Check domain cache: Read `${CLAUDE_PLUGIN_ROOT}/skills/review-claude-config/references/domain-cache/INDEX.md`.
    - If `CACHED`: use cache. If `STALE`: refresh via WebSearch.
    - If no match: perform 1-2 targeted WebSearch queries for Claude Code settings security best practices.
    - If unavailable: use model knowledge only, marked `[no external verification]`.
