@@ -36,7 +36,9 @@ BUDGETS: dict[str, int] = {
     # (oLMpics / HANS / Kassner-Ettinger).
     # Issue #96: +COMP-V/COMP-Sel Completeness benchmarks
     # (IFEval / FollowBench / ComplexBench).
-    "scoring-rubric.md": 9100,
+    # Issue #95: +SP-IO Safety tool-misuse benchmarks
+    # (ToolEmu / AgentDojo / InjecAgent).
+    "scoring-rubric.md": 9500,
     # Issue #61: Tier-0 same-turn combination section (OWASP ASI02 Tool
     # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
     # 2026 incl. CVSS 9.6 RCE).
