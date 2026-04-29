@@ -191,6 +191,38 @@ WS_5B_POSITIVE_WHITELIST = re.compile(
 )
 WS_5B_WINDOW = 200  # chars before AND after the negative-list match
 
+# WS-6 Quantifier-Range-Anchor (issue #93). Talmor oLMpics arXiv:1912.13283 —
+# context-dependent quantifier reasoning. Comparators must be paired with
+# a numeric value or unit within 80 chars after the match.
+WS_6_COMPARATOR = re.compile(
+    r"\b(more|fewer|older|newer|larger|smaller|less|greater|higher|lower)\s+than\b",
+    re.IGNORECASE,
+)
+WS_6_ANCHOR = re.compile(
+    r"\d+"
+    r"|\bdays?\b|\bhours?\b|\bfiles?\b|\blines?\b|\btokens?\b|\bbytes?\b|\bMB\b|\bKB\b|\bchars?\b"
+    r"|exceeds|below|above\s+\d+|threshold",
+    re.IGNORECASE,
+)
+WS_6_ANCHOR_WINDOW = 80
+
+# COMP-V Verifiable-Predicate (issue #96). IFEval arXiv:2311.07911 — verifiable
+# instruction types. Each success/completion criterion must contain a
+# programmatically-verifiable component within 200 chars.
+COMP_V_TRIGGER = re.compile(
+    r"\b(complete|success|done|valid|pass(?:es|ing)?)\s+when\b",
+    re.IGNORECASE,
+)
+COMP_V_ANCHOR = re.compile(
+    r"\b\d+\b"
+    r"|\bregex\b|matches?\s+\^|matches\s+pattern"
+    r"|exit(?:\s+code)?\s*[=:]?\s*0|exit(?:s)?\s+0|returns?\s+0|\bnon[-\s]?zero\b"
+    r"|\bschema\b|\bfrontmatter\b|required\s+field|JSON\s+valid"
+    r"|`make\s+\w+`\s+(passes|succeeds|exits)|`\w+`\s+returns?",
+    re.IGNORECASE,
+)
+COMP_V_WINDOW = 200
+
 
 def passes_ws_2b(body: str) -> bool:
     """Return True when every `If present / If absent` occurrence in body is

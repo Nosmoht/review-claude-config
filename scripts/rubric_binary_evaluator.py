@@ -69,6 +69,9 @@ from rubric_patterns import (  # noqa: E402
     AGENTIC_LOOP_PATTERN,
     AGENTIC_WRITE_TOOLS,
     BARE_PRONOUN_VERB,
+    COMP_V_ANCHOR,
+    COMP_V_TRIGGER,
+    COMP_V_WINDOW,
     FUZZY_QUANTIFIER,
     PE_1_PATTERN,
     PE_2_PATTERN,
@@ -80,6 +83,9 @@ from rubric_patterns import (  # noqa: E402
     WS_5B_NEGATIVE_LIST,
     WS_5B_POSITIVE_WHITELIST,
     WS_5B_WINDOW,
+    WS_6_ANCHOR,
+    WS_6_ANCHOR_WINDOW,
+    WS_6_COMPARATOR,
     has_loop,
     is_third_person,
     passes_clar1,
@@ -340,11 +346,10 @@ NON_BINARY_ITEMS: list[str] = [
     "WS-3",
     "WS-4",
     "WS-5",  # narrative parent; superseded by WS-5b — dropped in merge layer (issue #89)
-    "WS-6",
+    # WS-6 promoted to deterministic in BINARY_ITEM_IDS (issue #93 follow-up).
     "WS-7",
     "WS-8",
-    # Metadata trigger-consistency (issue #98 — letter-suffix, narrative)
-    "META-3c",
+    # META-3c promoted to deterministic in BINARY_ITEM_IDS (issue #98 follow-up).
     # Reference files
     "RF-1",
     "RF-2",
@@ -1040,6 +1045,87 @@ def check_WS_5b(body: str) -> dict:
     return _pass(reason="all negative imperatives paired with positive whitelist")
 
 
+def check_WS_6(body: str) -> dict:
+    """WS-6 quantifier-range anchor (issue #93).
+
+    PASS: every relative comparator in body has a numeric/unit anchor within
+        80 chars after the match.
+    FAIL: at least one comparator lacks an adjacent anchor.
+    NA: no relative comparators in body.
+    """
+    stripped = strip_code(body)
+    matches = list(WS_6_COMPARATOR.finditer(stripped))
+    if not matches:
+        return _na("no relative comparators in body")
+    for m in matches:
+        after = min(len(stripped), m.end() + WS_6_ANCHOR_WINDOW)
+        window = stripped[m.end() : after]
+        if not WS_6_ANCHOR.search(window):
+            return _fail(
+                line=line_of_offset(stripped, m.start()),
+                trigger=m.group(0)[:80],
+                reason="comparator without numeric/unit anchor within 80 chars",
+            )
+    return _pass(reason="all relative comparators paired with numeric/unit anchor")
+
+
+def check_COMP_V(body: str) -> dict:
+    """COMP-V verifiable predicate (issue #96).
+
+    PASS: every success/completion criterion has a programmatically-verifiable
+        component within 200 chars after the trigger.
+    FAIL: at least one criterion lacks a verifiable anchor.
+    NA: no success/completion criterion patterns.
+    """
+    stripped = strip_code(body)
+    matches = list(COMP_V_TRIGGER.finditer(stripped))
+    if not matches:
+        return _na("no success/completion criterion in body")
+    for m in matches:
+        after = min(len(stripped), m.end() + COMP_V_WINDOW)
+        window = stripped[m.end() : after]
+        if not COMP_V_ANCHOR.search(window):
+            return _fail(
+                line=line_of_offset(stripped, m.start()),
+                trigger=m.group(0)[:80],
+                reason="success criterion lacks programmatically-verifiable component within 200 chars",
+            )
+    return _pass(reason="all success criteria anchored to verifiable components")
+
+
+def check_META_3c(path: pathlib.Path, fm: dict, artifact_type: str = "skill") -> dict:
+    """META-3c discriminating-keyword presence (issue #98).
+
+    PASS: own description has ≥1 token (after stopword filter, len > 2) NOT
+        in any sibling description.
+    FAIL: every own description token also appears in some sibling.
+    NA: artifact is not skill, no siblings, or no tokens.
+    """
+    if artifact_type != "skill":
+        return _na("META-3c scope: skill-only")
+    own_desc = str(fm.get("description", ""))
+    own_tokens = tokenize_description(own_desc)
+    if not own_tokens:
+        return _na("description absent or stopword-only")
+    siblings = find_sibling_skills(path)
+    if not siblings:
+        return _na("no sibling skills")
+    sibling_union: set[str] = set()
+    for sib in siblings:
+        try:
+            sib_fm, _ = parse_frontmatter(sib)
+        except Exception:  # noqa: BLE001
+            continue
+        sibling_union |= tokenize_description(str(sib_fm.get("description", "")))
+    unique = own_tokens - sibling_union
+    if unique:
+        return _pass(unique_tokens=sorted(unique)[:5], heuristic=True)
+    return _fail(
+        reason="every own description token appears in some sibling — no discriminator",
+        heuristic=True,
+    )
+
+
 def check_RD_5b(body: str) -> dict:
     """RD-5b step-naming consistency.
 
@@ -1092,6 +1178,7 @@ BINARY_ITEM_IDS: list[str] = [
     "META-2",
     "META-3a",
     "META-3b",
+    "META-3c",
     "META-4",
     "CLAR-1",
     "CLAR-2",
@@ -1099,8 +1186,10 @@ BINARY_ITEM_IDS: list[str] = [
     "CLAR-4",
     "WS-2b",
     "WS-5b",
+    "WS-6",
     "RD-5b",
     "CE-X",
+    "COMP-V",
     "COMP-X",
     "COMP-Y",
     "COMP-Z",
@@ -1140,6 +1229,8 @@ def _run_check(
             return check_META_3a(body, fm)
         if item_id == "META-3b":
             return check_META_3b(path, fm, artifact_type)
+        if item_id == "META-3c":
+            return check_META_3c(path, fm, artifact_type)
         if item_id == "META-4":
             return check_META_4(fm)
         if item_id == "CLAR-1":
@@ -1154,10 +1245,14 @@ def _run_check(
             return check_WS_2b(body)
         if item_id == "WS-5b":
             return check_WS_5b(body)
+        if item_id == "WS-6":
+            return check_WS_6(body)
         if item_id == "RD-5b":
             return check_RD_5b(body)
         if item_id == "CE-X":
             return check_CE_X(body)
+        if item_id == "COMP-V":
+            return check_COMP_V(body)
         if item_id == "COMP-X":
             return check_COMP_X(body, fm, artifact_type)
         if item_id == "COMP-Y":

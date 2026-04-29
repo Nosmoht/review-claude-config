@@ -891,10 +891,10 @@ class TestSchemaStability:
             assert "evidence" in v, f"{item_id} missing evidence"
             assert isinstance(v["evidence"], dict)
 
-    def test_stats_counts_sum_to_29(self):
+    def test_stats_counts_sum_to_32(self):
         result = evaluate(REVIEW_SKILL_FIXTURE)
         s = result["stats"]
-        assert s["pass"] + s["fail"] + s["na"] == 29
+        assert s["pass"] + s["fail"] + s["na"] == 32
 
 
 REVIEW_SKILL_EXPECTED = {
@@ -902,6 +902,7 @@ REVIEW_SKILL_EXPECTED = {
     "META-2": "PASS",
     "META-3a": "PASS",
     "META-3b": "PASS",
+    "META-3c": "FAIL",  # review-skill has no token unique vs all 31 siblings
     "META-4": "PASS",
     "CLAR-1": "PASS",
     "CLAR-2": "FAIL",
@@ -909,8 +910,10 @@ REVIEW_SKILL_EXPECTED = {
     "CLAR-4": "PASS",
     "WS-2b": "PASS",
     "WS-5b": "NA",
+    "WS-6": "NA",
     "RD-5b": "FAIL",
     "CE-X": "PASS",
+    "COMP-V": "PASS",
     "COMP-X": "FAIL",
     "COMP-Y": "PASS",
     "COMP-Z": "PASS",
@@ -934,6 +937,7 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "META-2": "FAIL",
     "META-3a": "PASS",
     "META-3b": "NA",  # Issue #74: skill-to-skill semantics; agent policy pending #75.
+    "META-3c": "NA",  # skill-only scope per check_META_3c
     "META-4": "PASS",
     "CLAR-1": "PASS",
     "CLAR-2": "PASS",
@@ -941,8 +945,10 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "CLAR-4": "NA",
     "WS-2b": "NA",
     "WS-5b": "NA",
+    "WS-6": "NA",
     "RD-5b": "NA",
     "CE-X": "NA",
+    "COMP-V": "NA",
     "COMP-X": "NA",  # Issue #74: skill-review-semantics only; agent TC-3 pending #75/#76.
     "COMP-Y": "PASS",
     "COMP-Z": "PASS",
@@ -966,6 +972,7 @@ SCAFFOLD_SKILL_EXPECTED = {
     "META-2": "PASS",
     "META-3a": "PASS",
     "META-3b": "FAIL",
+    "META-3c": "FAIL",
     "META-4": "PASS",
     "CLAR-1": "PASS",
     "CLAR-2": "FAIL",
@@ -973,8 +980,10 @@ SCAFFOLD_SKILL_EXPECTED = {
     "CLAR-4": "NA",
     "WS-2b": "NA",
     "WS-5b": "NA",
+    "WS-6": "PASS",
     "RD-5b": "NA",
     "CE-X": "FAIL",
+    "COMP-V": "NA",
     "COMP-X": "FAIL",
     "COMP-Y": "FAIL",
     "COMP-Z": "FAIL",
@@ -1011,7 +1020,7 @@ class TestEndToEndFixtures:
         assert fixture.exists(), f"fixture missing: {fixture}"
         result = evaluate(fixture)
         assert result["stats"]["runner_error"] == 0
-        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 29
+        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 32
         actual = {k: v["verdict"] for k, v in result["verdicts"].items()}
         assert actual == expected
 
@@ -1047,21 +1056,21 @@ class TestRepoWideSmokeStrict:
         result = evaluate(path)
         assert result["stats"]["runner_error"] == 0
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 29
+        assert total == 32
 
 
 class TestRepoWideSmokeLenient:
-    """Every skills/*/SKILL.md evaluator invocation returns 29 verdicts;
+    """Every skills/*/SKILL.md evaluator invocation returns 32 verdicts;
     runner_error per skill is logged but not asserted."""
 
-    def test_all_skills_produce_29_verdicts(self):
+    def test_all_skills_produce_32_verdicts(self):
         skills = sorted((REPO_ROOT / "skills").glob("*/SKILL.md"))
         assert len(skills) >= 10, "expected multiple skill targets"
         errors: list[tuple[str, int]] = []
         for p in skills:
             result = evaluate(p)
             total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-            assert total == 29, f"{p}: total {total} != 29"
+            assert total == 32, f"{p}: total {total} != 32"
             if result["stats"]["runner_error"]:
                 errors.append((str(p), result["stats"]["runner_error"]))
         # Surface drift without failing the suite: errors are reported
@@ -1107,9 +1116,9 @@ class TestRunnerErrorHandling:
         p.write_text("", encoding="utf-8")
         result = evaluate(p)
         assert result["stats"]["runner_error"] == 0
-        # All 29 items produce verdicts (mostly NA/FAIL for missing content).
+        # All 32 items produce verdicts (mostly NA/FAIL for missing content).
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 29
+        assert total == 32
 
     def test_no_frontmatter_no_crash(self, tmp_path):
         p = tmp_path / "body-only.md"
