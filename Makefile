@@ -1,5 +1,7 @@
 .PHONY: validate lint format schema-validate token-budget test test-cov
 
+PYTHON ?= $(shell test -x .venv/bin/python && echo .venv/bin/python || echo python3)
+
 validate: lint format schema-validate token-budget test
 
 lint:
@@ -9,13 +11,13 @@ format:
 	ruff format --check hooks/ scripts/
 
 schema-validate:
-	python3 scripts/validate_schema.py
+	$(PYTHON) scripts/validate_schema.py
 
 token-budget:
-	python3 scripts/validate_token_budgets.py
+	$(PYTHON) scripts/validate_token_budgets.py
 
 test:
-	pytest tests/ -v --tb=short
+	$(PYTHON) -m pytest tests/ -v --tb=short
 
 test-cov:
-	pytest tests/ -v --tb=short --cov=hooks --cov=scripts --cov-report=term-missing
+	$(PYTHON) -m pytest tests/ -v --tb=short --cov=hooks --cov=scripts --cov-report=term-missing
