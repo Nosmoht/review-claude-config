@@ -30,7 +30,9 @@ BUDGETS: dict[str, int] = {
     # ASI06). MCPTox arXiv:2508.14925 + OWASP ASI2026.
     # Issue #70: +WS-2b, WS-4 dim-pin note, RD-5b binary entries for
     # residual interpretive-flipper closure.
-    "scoring-rubric.md": 8000,
+    # Issue #92: +GA-Y/GA-Z/GA-S Goal Alignment evidence-grounded tests
+    # (sycophancy / goal-misgen / spec-gaming clusters).
+    "scoring-rubric.md": 8200,
     # Issue #61: Tier-0 same-turn combination section (OWASP ASI02 Tool
     # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
     # 2026 incl. CVSS 9.6 RCE).

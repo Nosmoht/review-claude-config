@@ -213,6 +213,12 @@ Load these files JIT when the task matches the trigger. Descriptions are routing
 - [Claude Code Known Issues](research/claude-code/known-issues.md) — rolling catalog of open bugs (permissions, MCP OAuth, hooks, plugin manifest git-index leak) with detector recipes per issue. Load when building or extending `/audit-policy-compliance`, `/audit-mcp-auth`, or any bug-specific detector.
 - [Injection Surface Catalog](skills/review-claude-config/references/injection-surface-catalog.md) — IJ-1 data flow path and IJ-2 raw input forwarding detection criteria. Load during Safety evaluation for IJ-* checklist items.
 
+### Goal Alignment & Failure Modes
+- [Goal Alignment Research Index](research/goal-alignment/README.md) — index of three Tier-1-evidenced GA failure-mode clusters with distinction map (sycophancy / goal-misgen / spec-gaming vs. existing GA-X). Load when reviewing Goal Alignment dimension or designing GA-* rubric items.
+- [Sycophancy in Language Models](research/goal-alignment/sycophancy.md) — Sharma et al. arXiv:2310.13548 (Anthropic ICLR 2024); SycEval cross-validation; iff-pattern for premise-verification (GA-Y). Load when evaluating skills that act on user-supplied paths/commands/claims.
+- [Goal Misgeneralization](research/goal-alignment/goal-misgeneralization.md) — Langosco et al. arXiv:2105.14111 (ICML 2022) + Shah et al. arXiv:2210.01790 (DeepMind); form-vs-function success criteria; iff-pattern for function-level verification (GA-Z). Load when evaluating success criteria of any skill.
+- [Specification Gaming](research/goal-alignment/specification-gaming.md) — Bondarenko arXiv:2502.13295 + Winning-at-All-Cost arXiv:2505.07846; gaming-resistant criteria pattern; iff-pattern for evidence-grounding (GA-S advisory). Load when reviewing self-applied review/audit/classify-class skills.
+
 ### Agent Skills & Quality
 - [Equipping Agents for the Real World with Agent Skills](research/agent-skills/anthropic-equipping-agents-with-skills.md) — three-layer progressive disclosure, skill description as routing signal, JIT file loading. Load when reviewing Metadata dimension or skill activation/description quality.
 - [Agent Definition Quality Benchmarks](research/agent-definition-quality/agent-definition-quality-benchmarks.md) — proxy evaluation dimensions for design-time agent quality; description precision and activation accuracy signals. Load when reviewing Metadata dimension or agent description quality.
