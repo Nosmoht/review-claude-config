@@ -38,7 +38,8 @@ BUDGETS: dict[str, int] = {
     # (IFEval / FollowBench / ComplexBench).
     # Issue #95: +SP-IO Safety tool-misuse benchmarks
     # (ToolEmu / AgentDojo / InjecAgent).
-    "scoring-rubric.md": 9500,
+    # Issue #94: +CE-CP Critical-Instruction-Placement (Liu et al. LiM).
+    "scoring-rubric.md": 9800,
     # Issue #61: Tier-0 same-turn combination section (OWASP ASI02 Tool
     # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
     # 2026 incl. CVSS 9.6 RCE).
