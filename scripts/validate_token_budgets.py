@@ -32,18 +32,21 @@ BUDGETS: dict[str, int] = {
     # residual interpretive-flipper closure.
     # Issue #92: +GA-Y/GA-Z/GA-S Goal Alignment evidence-grounded tests
     # (sycophancy / goal-misgen / spec-gaming clusters).
-    "scoring-rubric.md": 8200,
+    # Issue #93: +WS-6/7/8 Clarity linguistic-failure cluster
+    # (oLMpics / HANS / Kassner-Ettinger).
+    "scoring-rubric.md": 8700,
     # Issue #61: Tier-0 same-turn combination section (OWASP ASI02 Tool
     # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
     # 2026 incl. CVSS 9.6 RCE).
     "tool-grant-decision-tree.md": 800,
-    "engineering-baseline.md": 3500,  # P0.5 lowers to 2,600 post-refresh
+    "engineering-baseline.md": 4000,  # +500 for #92 GA techniques + #93 linguistic-failure techniques
     "signal-catalog.md": 1000,
     # Evaluation guides — dense checklists, legitimately >500.
     # Opus 4.7 tokenizer ~35% larger than 4.6 — bumped per plan rev4.
     # Issue #69: +CLAR-3/4, SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b rows
     # Issue #70: +WS-2b, RD-5b rows + WS-4 dim-pin amendment.
-    "skill-evaluation-guide.md": 1500,
+    # Issue #93: +WS-6/7/8 rows (linguistic-failure cluster).
+    "skill-evaluation-guide.md": 1700,
     # P0.1: 15 fields + Opus 4.7 SAMP-1/2.
     # Issue #69: +SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b rows.
     "agent-evaluation-guide.md": 2100,
