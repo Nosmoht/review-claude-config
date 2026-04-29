@@ -336,6 +336,7 @@ NON_BINARY_ITEMS: list[str] = [
     "WS-2",
     "WS-3",
     "WS-4",
+    "WS-5",
     # Reference files
     "RF-1",
     "RF-2",

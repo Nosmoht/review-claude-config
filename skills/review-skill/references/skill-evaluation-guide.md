@@ -20,6 +20,7 @@ Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 | WS-2b | `If present / If absent` near a `---marker---` has a preceding prose predicate naming the block? (binary check — see scoring-rubric.md) | Clarity |
 | WS-3 | Parallel vs sequential steps explicitly marked? | Clarity |
 | WS-4 | Stop conditions and recovery actions defined? (dim-pinned Clarity; evaluated via CLAR-3 + drop-from-merge per issue #70) | Clarity |
+| WS-5 | `NEVER`/`DO NOT`/`MUST NOT` + verb-list paired with adjacent positive whitelist within 200 chars? Source: arXiv:2306.08189 (LLMs negation-insensitive). | Clarity |
 | CLAR-3 | Every `stop/abort/refuse/bail/halt/timeout` paired with named recovery target within 200 chars? | Clarity |
 | CLAR-4 | Every numbered upstream dependency names a failure branch (inline or cross-reference)? | Clarity |
 | RF-1 | Reference files within token budgets? | CE |

@@ -17,7 +17,7 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 ### 1. Clarity (15%)
 - **A**: Explicit sequential workflow, no ambiguous conditionals, deterministic behavior across runs.
 - **B**: All steps sequenced; one conditional broad but not vague.
-- **C**: Mostly followable but some steps require interpretation. *Test: any conditional uses a bare vague predicate ("if needed", "as appropriate") without a concrete trigger, OR any step parameter uses a fuzzy quantifier ("slightly", "a bit", "some", "roughly"), OR any instruction contains an unresolved pronoun referring to prior tool output → C or below.*
+- **C**: Mostly followable but some steps require interpretation. *Test: any conditional uses a bare vague predicate ("if needed", "as appropriate") without a concrete trigger, OR any step parameter uses a fuzzy quantifier ("slightly", "a bit", "some", "roughly"), OR any instruction contains an unresolved pronoun referring to prior tool output, OR any negative imperative (`NEVER`/`DO NOT`/`MUST NOT`) + verb-list lacks adjacent positive whitelist within 200 chars (WS-5; arXiv:2306.08189) → C or below.*
 - **D**: Key dependencies implicit; multiple ambiguous conditionals remain.
 - **F**: Vague instructions like "handle appropriately" or "use best judgment" with no criteria.
 

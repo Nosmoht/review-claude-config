@@ -1,7 +1,7 @@
 ---
 name: engineering-baseline
 description: Evidence-based prompt, context, and tool design techniques for evaluating Claude Code skills and agents
-last_refreshed: 2026-04-20
+last_refreshed: 2026-04-29
 ---
 
 # Engineering Baseline
@@ -17,6 +17,8 @@ last_refreshed: 2026-04-20
 **Few-Shot Examples** `[Engineering guidance]` — Add 3-5 canonical examples when output or trigger logic is easy to misread; wrap in `<example>` tags. Optimal count is model-specific; more is not better. Check: are examples present where behavior would otherwise be ambiguous?
 
 **Constraint Specification** `[Proven result]` — State prohibitions, boundaries, and success conditions explicitly.
+
+**Positive Framing over Negative Verbots** `[Proven result]` — LLMs are systematically negation-insensitive (Truong et al. arXiv:2306.08189: cloze hit rate <0.15, NLI sub-baseline, SAR ~50% vs BERT-large 92.5%; inverse scaling — bigger models do not help). Worse, **contrasting prompts** ("don't do X — do Y") increase wrong-hit-rate as the model repeats prior-context tokens. Pattern to use: **iff-predicate** with positively enumerated checks; if a negative verbot is rhetorically necessary, pair it with an adjacent positive whitelist (operation class + allowed verbs/tools) within 200 chars. Anti-pattern: a long `NEVER use: X, Y, Z` list — replace with `ALLOWED: A, B, C` + operation class ("read-only commands only"). Check: does each prohibition carry an adjacent positive predicate the agent can verify against?
 
 **Verification Criteria** `[Engineering guidance]` — Tell the agent how to confirm correctness using checks, validators, or expected outcomes. Check: can the agent verify the output without relying only on intuition?
 
