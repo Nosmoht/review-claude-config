@@ -28,6 +28,8 @@ last_refreshed: 2026-04-29
 
 **Verification Criteria** `[Engineering guidance]` — Tell the agent how to confirm correctness using checks, validators, or expected outcomes. Check: can the agent verify the output without relying only on intuition?
 
+**Decoupled Verification** `[Engineering guidance]` — When a skill produces output containing independently-verifiable claims (facts, paths, identifiers), structure verification so it generates fact-check questions *before* re-reading the draft, then answers them with fresh tool calls (Read, Glob, Bash) rather than self-attestation. Dhuliawala et al. arXiv:2309.11495 (CoVe, ACL 2024 Findings): factored decoupled verification reduces hallucination across list-questions, MultiSpanQA, and longform generation by preventing error propagation from the original draft. Anti-pattern: "after writing the report, re-read it and confirm correctness" (anchored to draft). Pattern: "after writing, list 3-5 claims; for each, run a fresh Read/Glob to verify against source-of-truth before finalizing." Check: do verification steps re-touch the source-of-truth, not just re-read the draft?
+
 **Feedback Loops** `[Engineering guidance]` — For quality-critical work, use a validate-fix-repeat pattern instead of a single-pass instruction. Check: does the workflow include a correction loop where failure is likely?
 
 **Evidence-First Critique** `[Engineering guidance]` — In review tasks, ground findings in quotes, paths, or specific examples rather than generic quality language. Check: could another reviewer verify the claim from the artifact?
