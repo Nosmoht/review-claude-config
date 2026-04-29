@@ -5,6 +5,8 @@ description: >
   the MAST failure taxonomy. Outputs a structured error classification report
   with severity, evidence, and remediation guidance. Use when asked to
   'classify errors', 'analyze failures', or 'categorize trace errors'.
+  Do NOT use for full session-trace review or behavioral-pattern analysis —
+  use /review-session-trace instead.
 argument-hint: <path-to-trace.jsonl>
 allowed-tools: Read, Write, Glob, Grep
 ---

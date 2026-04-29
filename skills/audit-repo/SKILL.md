@@ -3,7 +3,7 @@ name: audit-repo
 description: >
   Analyzes a repo for needed Claude Code primitives and produces a prioritized
   intervention matrix. Use when setting up or diagnosing a Claude Code
-  configuration. Do NOT use to suggest skills only — use /suggest-skills.
+  configuration. Do NOT use for skill-gap suggestion only — use /suggest-skills instead.
 argument-hint: [folder]
 allowed-tools: Agent, Read, Write, Glob, Grep, WebSearch, WebFetch
 disable-model-invocation: true

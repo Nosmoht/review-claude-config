@@ -5,6 +5,8 @@ description: >
   report: tool-call distribution, error rates, retry patterns, delegation
   chains, token usage, and behavioral signals mapped to MAST failure modes.
   Use when asked to 'review trace', 'analyze session', or 'audit transcript'.
+  Do NOT use for narrow error classification against MAST taxonomy —
+  use /classify-trace-errors instead.
 argument-hint: <path-to-transcript.jsonl>
 allowed-tools: Read, Write, Glob, Grep
 ---
