@@ -64,7 +64,7 @@ last_refreshed: 2026-04-29
 
 **Stop Conditions** `[Engineering guidance]` — Define clear termination criteria for retries, loops, recursive work. For multi-step skills, define testable "done" criteria before execution — prevents marking work complete without verification.
 
-**Retry Ceilings** `[Repo default]` — When a task includes retries, keep the retry budget small and explicit so failures escalate instead of looping invisibly. Check: is there a concrete retry limit?
+**Retry Ceilings** `[Engineering guidance]` — When a task includes retries, keep the retry budget small and explicit so failures escalate instead of looping invisibly. MAST taxonomy F14 ("unterminated reasoning") arXiv:2503.13657 documents this as a primary agent-failure mode (kappa=0.88 inter-rater agreement on 1600+ traces). Operationalized as RL-3b in `scoring-rubric.md` (numeric cap within 400 chars of every retry/regenerate verb). Check: is there a concrete retry limit cited adjacent to each retry-class verb?
 
 **Idempotency Design** `[Engineering guidance]` — Make tool operations produce the same result when executed multiple times. LLM agents retry 15-30% of tool calls due to timeouts or validation errors. Check: can every create/modify/delete tool call be safely retried?
 

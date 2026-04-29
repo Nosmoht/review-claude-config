@@ -32,6 +32,9 @@ Rolling catalog of known bugs, regressions, and CVEs in Claude Code that are rel
 | [#45551](https://github.com/anthropics/claude-code/issues/45551) MCP OAuth corrupts credential store; Team-plan concurrent sessions can wipe `claudeAiOauth` keychain entry, logging out the whole workspace | OPEN | Critical | new `/audit-mcp-auth` |
 | [#44026](https://github.com/anthropics/claude-code/issues/44026) MCP toggle clears `disabledMcpServers`, process exhaustion | OPEN | High | `/review-mcp-server` or `/audit-mcp` |
 | [#43789](https://github.com/anthropics/claude-code/issues/43789) MCP OAuth tokens expire, require manual `/mcp reconnect` | OPEN | Medium | `/audit-mcp-auth` |
+| [#49133](https://github.com/anthropics/claude-code/issues/49133) MCP server failures are silent or cryptic — no surfaced error class for protocol-mismatch / timeout / handshake failures | OPEN | High | `/review-mcp-server` policy: require explicit `error_handling` block for any MCP server with auth or long-running tools |
+| Protocol-version mismatch silent timeout — when an MCP server returns an older `protocolVersion` during initialize handshake, Claude Code silently discards the response and waits ~30s before timeout. Affects skills relying on `*` (latest) protocol but pinned to older servers. | OPEN | Medium | Static check: skills that include MCP-server tools should declare an expected `protocolVersion` constraint or an explicit `timeout: <N>s` |
+| [claude-ai-mcp#217](https://github.com/anthropics/claude-ai-mcp/issues/217) Web client skips OAuth discovery — sends 3 unauthenticated POSTs (~2s apart), gets 401 each, then stops without `/register` or discovery calls. User-visible symptom: connector "fails to connect" with no diagnostic. | OPEN | High | Out-of-scope for static skill review; flag in `audit-mcp-auth` runtime check |
 
 ### Plugin System
 
