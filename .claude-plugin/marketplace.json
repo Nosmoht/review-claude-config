@@ -11,7 +11,7 @@
       "source": {
         "source": "github",
         "repo": "Nosmoht/review-claude-config",
-        "ref": "main"
+        "ref": "v1.0.0"
       },
       "description": "Evidence-based quality review and gap analysis for Claude Code skills, agents, and rules.",
       "version": "1.0.0",
