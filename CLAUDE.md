@@ -167,6 +167,7 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 | `token-budget` | `make token-budget` | `python3 scripts/validate_token_budgets.py` |
 | `test` | `make test` | `pytest tests/ -v --tb=short` |
 | `test-cov` | `make test-cov` | `pytest tests/ -v --tb=short --cov=hooks --cov=scripts` |
+- Local-dev venv: `.venv/` at repo root; the Makefile auto-detects `.venv/bin/python` when present and falls back to `python3` (CI path). Recreate via `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"` if missing or corrupt.
 - Audit-fix chain: commit review report first, then commit fixes
 - Review, suggest, and audit skills are read-only on analyzed files except for reports (`$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`) and domain cache
 - Apply skills and `scaffold-skill` modify files and require confirmation gates
