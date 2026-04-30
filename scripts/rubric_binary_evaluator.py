@@ -274,12 +274,7 @@ SAMPLING_PARAM = re.compile(r"\b(temperature|top_p|top_k)\s*[:=]", re.IGNORECASE
 SP_2B_BINDING = re.compile(
     r"(restricted to|allowlisted|limited to|scoped to|"
     r"policy[-_ ]?gate|used only for|invoked only when|"
-    r"guarded by|Read-only|read\s+only|"
-    r"(only\s+(used\s+for|file\s+\w+\s+writes|invoked|dispatched))|"
-    r"(per[-_\s](recommendation|finding|item)\s+(confirmation|approval))|"
-    r"(subagent_type\s*[:=]\s*['\"]?\w+['\"]?)|"
-    r"(after\s+(AskUserQuestion|confirm|approval))|"
-    r"optional\s+\(\s*degrade\s+gracefully\s*\))",
+    r"guarded by|Read-only|read\s+only)",
     re.IGNORECASE,
 )
 READ_ONLY_TOOLS = frozenset({"Read", "Glob", "Grep", "NotebookRead", "WebSearch"})
