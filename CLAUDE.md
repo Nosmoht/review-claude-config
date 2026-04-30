@@ -8,6 +8,7 @@ Maintainer operating guide for this repository (Clarity, Completeness, Prompt En
 - **Shared references**: `skills/review-claude-config/references/`, including the rubric, baseline, evidence contract, source-quality criteria, and review-report contract
 - **Domain cache**: `skills/review-claude-config/references/domain-cache/`, contains 7 universal methodology entries (context-engineering, research-sourcing, etc.) maintained on the repo's 90-day rhythm. Domain-specific knowledge is researched at runtime via WebSearch, not pre-cached
 - **Repo-internal skills**: `.claude/skills/` for maintenance utilities not needed globally
+- **Repo-internal agents**: `.claude/agents/` for maintenance subagents that orchestrate this repo's workflow but are NOT shipped to plugin consumers (e.g., `builder-implementer`, `builder-evaluator` driven by `/implement-issue`). Mirrors the `.claude/skills/` repo-internal convention. Plugin-distributed agents stay at top-level `agents/`. Discovered only at session start; new agents require a fresh session to register
 - **Review reports**: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` for timestamped reports organized by target repo, consumed by analytics and apply flows. Slug = `basename(target_dir)`, see `references/repo-identification.md`
 - **Self-contained knowledge**: The plugin carries all knowledge needed for quality in its own files. External services (KB server, web research) are optional enhancements — skills degrade gracefully without them. The distillation path is: `research/ → engineering-baseline.md + skill-agent-format-conventions.md → skill decisions`. Research findings must be distilled into these operational surfaces to affect plugin behavior in any repo.
 - **Runtime audit layer**: `hooks/` provides observation (PostToolUse, SubagentStart/Stop, SessionEnd) and opt-in policy enforcement (PreToolUse policy gate). Audit traces written to `$CLAUDE_PLUGIN_DATA/audit/`. Skills consume these traces for analysis.
@@ -82,6 +83,10 @@ This is the authoritative maintainer command inventory for the repo.
 - `/scaffold-rule <rule-name>`
 - `/develop-hooks [hook-type] <hook-name>`
 
+### Issue Pipeline (user-global skill, not plugin-distributed)
+
+- `/implement-issue <N>` - user-global skill at `~/.claude/skills/implement-issue/`; orchestrates the agent track defined in §Issue Lifecycle (Phases 1–8). Phase 4 dispatches `.claude/agents/builder-implementer.md` in an isolated context; Phase 7.5 dispatches `.claude/agents/builder-evaluator.md` (read-only). State transitions go through `scripts/issue-state.sh`. Available only when invoked from a session with the user's global skill installed
+
 ## Issue Tracking
 
 This repo is managed on GitHub at **Nosmoht/review-claude-config**.
@@ -92,10 +97,14 @@ This repo is managed on GitHub at **Nosmoht/review-claude-config**.
 |--------|---------|---------|
 | *(none)* | GitHub defaults | `bug`, `enhancement`, `documentation`, `invalid`, `duplicate`, `wontfix`, `question`, `good first issue`, `help wanted` |
 | `priority:` | Urgency (P0=critical → P3=low) | `priority: P0` (#b60205), `priority: P1` (#d93f0b), `priority: P2` (#fbca04), `priority: P3` (#0e8a16) |
-| `status:` | Lifecycle state | `status: in-progress` (#1d76db), `status: in-review` (#5319e7), `status: blocked` (#d93f0b) |
+| `status:` | Lifecycle state | `status: ready` (#c5def5), `status: in-progress` (#1d76db), `status: needs-review` (#fbca04), `status: in-review` (#5319e7), `status: blocked` (#d93f0b) |
 | `category:` | Domain area | `category: infrastructure`, `category: research`, `category: workflow`, `category: automation`, `category: utility-skills`, `category: primitive-coverage`, `category: eval-cases` |
 
 ### Issue Lifecycle
+
+Two parallel tracks share the same labels — pick the track based on how the issue is being worked.
+
+**Manual track** (default; maintainer drives the work directly):
 
 ```
 OPEN (new issue)
@@ -110,14 +119,36 @@ IN REVIEW    — label: status: in-review     BLOCKED — label: status: blocked
 CLOSED — remove status label, close via mcp__github__issue_write (state_reason: completed)
 ```
 
+**Agent track** (`/implement-issue` skill; gated by R1–R4 readiness predicates):
+
+```
+OPEN (triaged + acceptance criteria machine-checkable)
+  → label: status: ready          (authorizes /implement-issue to claim)
+  ↓ scripts/issue-state.sh claim
+status: in-progress                (Builder runs)
+  ↓ scripts/issue-state.sh handoff
+status: needs-review               (Evaluator runs)
+  ↓ scripts/issue-state.sh close --pr <ref>
+CLOSED                             (only on Evaluator PASS)
+  · any failure path: scripts/issue-state.sh block <reason>  → status: blocked
+```
+
+The agent track uses `status: needs-review` (machine-set by `scripts/issue-state.sh handoff` for the agent Evaluator gate); the manual track uses `status: in-review` (human peer review). The two are deliberately distinct so manual and agent flows don't collide on the same label.
+
 ### Workflow Rules
 
 - **Before starting work**: check open issues to avoid duplicates — `gh issue list --repo Nosmoht/review-claude-config`
 - **When a bug/improvement is found**: create issue immediately (`gh issue create` or `mcp__github__issue_write`)
-- **When starting work on an issue**: set `status: in-progress` via `mcp__github__issue_write` (method: update, labels: ["status: in-progress", ...existing labels])
-- **When blocked**: replace `status: in-progress` with `status: blocked`; document the blocker in an issue comment
-- **When ready for review** (PR or peer check): replace with `status: in-review`
-- **When closing**: only close when implemented, tested (`make validate`), committed, and docs updated — remove status label, close with state_reason: completed
+- **When starting manual work on an issue**: set `status: in-progress` via `mcp__github__issue_write` (method: update, labels: ["status: in-progress", ...existing labels])
+- **When staging an issue for `/implement-issue`**: triage acceptance criteria to satisfy all four readiness predicates, then add `status: ready`. The skill refuses to claim issues without this label. Manual issues do NOT need `status: ready`. Readiness predicates:
+  - **R1 — Testable acceptance criteria**: every criterion is a finite, mechanically checkable assertion (Given-When-Then, exit code, regex, HTTP shape).
+  - **R2 — Defined deliverable**: the issue names artifacts that change (file paths, behaviors, outputs) and the shape they should take.
+  - **R3 — Single interpretation path**: two competent implementers reading the issue produce the same plan.
+  - **R4 — Bounded scope**: the issue states what is in scope and (where relevant) out of scope.
+- **Track-collision rule**: an issue carries either `status: ready` (agent track) OR `status: in-progress` (manual track) — never both. To take a `status: ready` issue manually, first remove `status: ready`, then set `status: in-progress`. The agent track's `scripts/issue-state.sh claim` enforces this by requiring `status: ready` AND no assignee; a manually-claimed issue with `status: ready` left on by accident is rejected, surfacing the collision rather than silently overwriting state
+- **When blocked**: replace the active status label with `status: blocked`; document the blocker in an issue comment (the agent track does this via `scripts/issue-state.sh block <N> "<reason>"`)
+- **When ready for review** (PR or peer check, manual track): replace with `status: in-review`
+- **When closing**: only close when implemented, tested (`make validate`), committed, and docs updated — remove status label, close with state_reason: completed (agent track does this via `scripts/issue-state.sh close <N> --pr <ref>`)
 
 ## Working Guidelines
 
@@ -142,6 +173,18 @@ CLOSED — remove status label, close via mcp__github__issue_write (state_reason
 | Eval cases | `/run-eval-cases <case-numbers>` |
 | Cross-primitive references | `/validate-primitive-dependencies` |
 | Any batch of changes | `/review-claude-config .` |
+
+## Hard Constraints
+
+Diff-checkable never-violate rules. The `builder-evaluator` subagent enforces this list as its constraint sweep; humans verify the same rules at PR-merge time.
+
+1. **No hardcoded home-directory prefixes in committed content.** Use `$HOME` or `~`. The user's `block-sensitive-content.sh` PreToolUse hook also blocks Writes that contain such prefixes. Applies to scripts, config (`.mcp.json`, `settings.json`), report frontmatter, plan files, and CLAUDE.md.
+2. **No external tracker IDs** in commit messages, PR/issue bodies, code comments, or any committed file (no `NOS-`, `JIRA-`, `LIN-`, etc.). Linear is no longer in use; references are dead pointers.
+3. **`make validate` passes** before any commit lands on `main`. Never bypass with `--no-verify`.
+4. **Conventional-commit format** for every new commit: `^[a-z]+\([a-z0-9_/-]+\):\s+.+`. Body wraps at 72 chars. Self-contained — no tracker references in the body.
+5. **No `--no-verify` / `--no-gpg-sign` markers** in any commit message body or trailer. Commit signing and pre-commit hooks must run.
+6. **No mid-session edits to `skills/review-claude-config/references/scoring-rubric.md` or `skills/review-claude-config/references/engineering-baseline.md`.** These are committed BETWEEN sessions only (KV-cache invariant — see §Working Guidelines). Baseline edits go through `/refresh-engineering-baseline`. This rule is enforced by the Builder (knows session state); Evaluator surfaces it as WARNING when these files appear in a diff because session boundaries are not diff-checkable.
+7. **No internal IPs / hostnames in public artifacts.** Use placeholders (`<API-VIP>`, `<NODE-IP>`) per `~/.claude/CLAUDE.md §Sensitive Paths Convention`. Public artifacts include GitHub Issues, PR descriptions, and any committed doc. **Sweep status**: HUMAN-ONLY at PR-merge time. The Evaluator does not include this in its automated sweep because a tight RFC1918 regex (`\b(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)[0-9.]+\b`) has unacceptable false-positive rate against version strings, IDs, and timestamps. Reviewer must check manually.
 
 ## Development Conventions
 

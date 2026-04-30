@@ -31,3 +31,6 @@ dist/
 # Claude Code runtime state
 .claude/pipeline.jsonl
 .claude/reviews/
+
+# /implement-issue per-issue artifacts (plan.md, implementation-summary.md, evaluator-findings.md)
+.work/
