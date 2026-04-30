@@ -803,6 +803,40 @@ class TestRL3b:
         body = "retry the call and continue"
         assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "FAIL"
 
+    def test_negated_retry_na(self):
+        # issue #113: ``do not retry`` should not trigger RL-3b.
+        assert check_RL_3b("Do not retry on transient errors.", is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_never_regenerate_na(self):
+        # issue #113: ``never regenerate`` is a negated retry.
+        assert check_RL_3b("Never regenerate the token mid-session.", is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_adjust_no_longer_triggers_na(self):
+        # issue #113: ``adjust`` dropped from RL_3B_RETRY — option-label false positive.
+        assert check_RL_3b('Option label "Adjust" lets the user reconfigure.', is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_backtick_quoted_retry_na(self):
+        # issue #113: backtick-quoted retry tokens are documentation, not directives.
+        assert check_RL_3b("The `retry` field configures behavior.", is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_real_retry_without_cap_still_fails(self):
+        # issue #113: regression guard — non-negated, non-quoted retry still FAILs without cap.
+        body = "On error, retry the API call until success."
+        assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "FAIL"
+
+    def test_capless_regenerate_still_fails(self):
+        # issue #113: second FAIL case across a different retained token.
+        body = "If the response is malformed, regenerate the answer and continue."
+        assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "FAIL"
+
+    @pytest.mark.parametrize("token", ["retry", "regenerate", "redisplay", "ask again"])
+    def test_retained_tokens_each_trigger(self, token):
+        # issue #113: regression guard against accidental over-deletion when
+        # ``adjust`` was dropped from RL_3B_RETRY. Each retained token without a
+        # cap must still produce FAIL.
+        body = f"On error, {token} the call until success."
+        assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "FAIL"
+
 
 class TestRL4b:
     def test_non_agentic_na(self):

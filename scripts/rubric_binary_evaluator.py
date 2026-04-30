@@ -362,7 +362,8 @@ RL_1B_UNBOUNDED = re.compile(
 )
 
 # RL-3b (rubric L179).
-RL_3B_RETRY = re.compile(r"\b(retry|regenerate|redisplay|ask\s+again|adjust)\b", re.IGNORECASE)
+# issue #113: drop ``adjust`` — too generic; option-label noun, not retry semantics.
+RL_3B_RETRY = re.compile(r"\b(retry|regenerate|redisplay|ask\s+again)\b", re.IGNORECASE)
 RL_3B_CAP = re.compile(
     r"\b(max(imum)?\s*\d+|up\s+to\s+\d+|<=\s*\d+|≤\s*\d+|"
     r"after\s+\d+\s+(consecutive|failed|attempts)|"
@@ -1148,10 +1149,24 @@ def check_RL_1b(body: str, is_agentic_flag: bool) -> dict:
 def check_RL_3b(body: str, is_agentic_flag: bool) -> dict:
     if not is_agentic_flag:
         return _na("non-agentic")
-    retries = list(RL_3B_RETRY.finditer(body))
-    if not retries:
-        return _na("no retry/regenerate/redisplay/adjust token")
-    for r in retries:
+    raw_retries = list(RL_3B_RETRY.finditer(body))
+    if not raw_retries:
+        return _na("no retry/regenerate/redisplay token")
+    # issue #113: filter negated triggers (`do not retry`) and triggers inside
+    # backtick-quoted spans (mirrors check_CLAR_3 #105 / check_COMP_W #103/#104).
+    from rubric_patterns import _inside_backticks
+
+    actionable: list[re.Match[str]] = []
+    for r in raw_retries:
+        prefix_window = body[max(0, r.start() - 30) : r.start()]
+        if CLAR_3_NEGATION.search(prefix_window):
+            continue
+        if _inside_backticks(body, r.start()):
+            continue
+        actionable.append(r)
+    if not actionable:
+        return _na("only negated or backtick-quoted retry tokens")
+    for r in actionable:
         window_start = max(0, r.start() - 400)
         window_end = min(len(body), r.end() + 400)
         if not RL_3B_CAP.search(body[window_start:window_end]):
@@ -1160,7 +1175,7 @@ def check_RL_3b(body: str, is_agentic_flag: bool) -> dict:
                 retry_token=r.group(0),
                 reason="no numeric cap within 400 chars",
             )
-    return _pass(retry_count=len(retries))
+    return _pass(retry_count=len(actionable))
 
 
 def check_RL_4b(body: str, is_agentic_flag: bool) -> dict:
