@@ -62,8 +62,8 @@ Record results as rows in the tokens table.
 
 Perform four integrity sub-checks in normal mode and three deterministic sub-checks in validation mode.
 
-**5a. CLAUDE.md Research References**
-Read the `## Research References` section of CLAUDE.md. For each linked path (e.g., `research/prompt-engineering/prompt-engineering-techniques.md`), Glob to verify the file exists. Record PASS or FAIL per link.
+**5a. Research References Index**
+Read `docs/research-references.md` (the canonical research-index file). For each Markdown link entry `- [Title](path)`, resolve the path **relative to `docs/`** (e.g., `(../research/prompt-engineering/prompt-engineering-techniques.md)` → `<target>/research/prompt-engineering/prompt-engineering-techniques.md`). Glob to verify the resolved file exists. Record PASS or FAIL per link. If `docs/research-references.md` is missing entirely, record one FAIL row noting that the canonical index is absent.
 
 **5b. CLAUDE.md Architecture / Structure**
 Read the `## Architecture` section of CLAUDE.md. If `## Architecture` is missing, fall back to one alias in this order: `## Structure`, `## Layout`, `## File Structure`. For each file path or directory path mentioned in the chosen section, Glob to verify it exists. Record PASS or FAIL per path. If none of these sections exist, record one FAIL row for the missing section rather than erroring out.
@@ -184,7 +184,7 @@ Note: Token estimates use chars/4 approximation.
 ### Reference Integrity
 | Source | Reference | Status |
 |--------|-----------|--------|
-| CLAUDE.md | research/prompt-engineering/... | PASS |
+| docs/research-references.md | research/prompt-engineering/... | PASS |
 
 ---
 

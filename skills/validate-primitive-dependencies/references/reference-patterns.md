@@ -1,7 +1,7 @@
 ---
 name: reference-patterns
 description: Dependency detection patterns for Claude Code skills, agents, rules, and hooks. Used by validate-primitive-dependencies.
-last_refreshed: 2026-04-04
+last_refreshed: 2026-04-30
 ---
 
 # Reference Patterns
@@ -62,11 +62,11 @@ Detection patterns for cross-primitive dependency extraction.
 
 ---
 
-## 6. Research References in CLAUDE.md
+## 6. Research References in `docs/research-references.md`
 
-**Pattern:** Markdown link syntax `[label](path/to/research/file.md)` inside the `## Research References` section.
+**Pattern:** Markdown links `[label](path)` anywhere in the file.
 
-**Resolution:** Paths are relative to the repo root.
+**Resolution:** Paths are relative to `docs/`, not the repo root (e.g., `(../research/foo.md)` → `<repo>/research/foo.md`). Normalise to repo-root-relative before glob-checking.
 
 ---
 

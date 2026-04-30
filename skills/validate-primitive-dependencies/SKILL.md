@@ -121,12 +121,14 @@ For each hooks config file found (hooks.json, settings.json with hooks key):
 2. Extract every "command" field value that contains a file path (e.g., "python3 ./hooks/foo.py").
 3. Record each as a forward reference of type "hook-script" from the hooks file to the script path.
 
-## Task C: Scan CLAUDE.md Research References
+## Task C: Scan docs/research-references.md
 
-Read <folder>/CLAUDE.md.
-Extract the ## Research References section.
+Read <folder>/docs/research-references.md (the canonical research-index file).
+This is the authoritative list of repo-internal research files; CLAUDE.md only contains a topic-cluster routing table that points here.
 For each line matching: `[^\]]+\]\(([^)]+\.md)\)` — capture the path.
-Record each as a forward reference of type "research-ref" from CLAUDE.md to the path.
+Paths in this file are written **relative to `docs/`** (e.g., `(../research/foo.md)`). Normalise each captured path to repo-root-relative before recording (e.g., `(../research/foo.md)` → `research/foo.md`; `(evidence-maintenance.md)` → `docs/evidence-maintenance.md`).
+Record each as a forward reference of type "research-ref" from `docs/research-references.md` to the normalised path.
+If `docs/research-references.md` does not exist, skip Task C and note the skip; the orphan-check in Phase 3 Step 2 must also degrade gracefully.
 
 ## Task E: Scan MCP cross-references
 
@@ -175,7 +177,7 @@ directory). Reference-file paths are relative to their **source file's parent di
   `<target>/.claude/skills/<name>/SKILL.md`). Glob both. If neither exists, status = MISSING.
 - **hook-script**: Resolve relative to the target folder root.
   Glob for the script path. If not found, status = MISSING.
-- **research-ref**: Resolve relative to the target folder root.
+- **research-ref**: The path was already normalised to repo-root-relative in Phase 2 Task C (paths in `docs/research-references.md` are written relative to `docs/`).
   Glob for the path. If not found, status = MISSING.
 - **subagent-delegation**: Record as informational (subagent permissions do not
   inherit — no file existence to check).
@@ -193,8 +195,9 @@ For each reference file: check whether it appears as a target in the dependency
 map. If it does not appear, classify as ORPHANED.
 
 Research files in `<folder>/research/` are checked separately: for each
-`research/**/*.md`, verify it appears in the CLAUDE.md Research References
-section (from Phase 2 Task C). If not, classify as ORPHANED.
+`research/**/*.md`, verify it appears as a target in `docs/research-references.md`
+(from Phase 2 Task C). If not, classify as ORPHANED. If `docs/research-references.md`
+does not exist, skip this orphan check and note the skip.
 
 ### Step 3: Cycle detection
 
@@ -278,7 +281,7 @@ Forward refs: N pass, N fail
 | File | Type | Note |
 |------|------|------|
 | skills/foo/references/unused.md | reference-file | Not read by any skill |
-| research/some/file.md | research-file | Not in CLAUDE.md Research References |
+| research/some/file.md | research-file | Not in docs/research-references.md |
 
 Orphans: N found
 
@@ -343,7 +346,7 @@ If the overall verdict is HEALTHY, skip the menu — just present the report.
   this skill writes is the health report.
 - **Graceful degradation.** If hooks.json is missing, skip hook checks and note
   the skip. If registration docs are missing, skip those checks and note the skip.
-  If CLAUDE.md has no Research References section, skip that orphan check.
+  If `docs/research-references.md` is missing, skip Task C and the research-file orphan check.
 - **Explicit stop conditions.** Stop if the target folder does not exist. Stop
   if the Phase 2 subagent fails entirely (report the error).
 - **Functional role, not persona.** The subagent receives a task description,
