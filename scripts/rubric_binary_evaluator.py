@@ -117,7 +117,41 @@ CLAR_3_RECOVERY = re.compile(
     r"write\s+[^.]{0,80}\s+stub|append\s+[^.]{0,80}\s+to\s+|"
     r"fall\s?back\s+to|continue\s+to\s+(step|b\.)|retry\s+with|"
     r"report\s+and\s+(stop|exit|terminate)|terminal\s+(stop|state|action)|"
-    r"NONE\s*[—-]\s*terminal)",
+    r"NONE\s*[—-]\s*terminal|"
+    # issue #105: refuse and ask for X — interactive recovery
+    r"refuse(\s+\w+){0,3}\s+(and|then)\s+(ask|prompt|request)|"
+    # issue #105: abort with <noun> — terminal action that both fires
+    # and resolves; accept any noun-phrase up to 80 chars
+    r"abort\s+with\s+[\w-]+(?:\s+[\w-]+){0,4}|"
+    # issue #105: option-label terminal — `(go|proceed|continue) to step N`
+    # or `go to Step N` recovery destinations
+    r"(go|proceed|continue)\s+to\s+step\s+\d+|"
+    # issue #105: terminal halt action `On 'Stop': halt.`
+    r"['\"]\s*:\s*halt\b|"
+    # issue #105: abort plus partial/structured status
+    r"abort\s+(with\s+)?(partial|structured|platform)\s+\w+)",
+    re.IGNORECASE,
+)
+# issue #105: skip trigger occurrences preceded by negation within 30
+# chars (``not abort``, ``never refuse``, ``do not bail``).
+CLAR_3_NEGATION = re.compile(
+    r"\b(not|never|don'?t|do\s+not)\s+\w*\s*$",
+    re.IGNORECASE,
+)
+# issue #105: NA when ``timeout`` appears as a configuration noun or in
+# a noun-phrase usage:
+#   * inside a heading, a bullet-list config description (`- Timeout —`),
+#   * a numbered-list config item (`5. **Timeout** — defaults to ...`),
+#   * a ``default(s)? timeout`` phrase,
+#   * a ``timeout`` field path (`case.execution.timeout_seconds`),
+#   * a possessive/qualified noun phrase (`agent timeout`, `request timeout`).
+CLAR_3_TIMEOUT_AS_NOUN = re.compile(
+    r"(?:^|\n)\s*(?:[-*#]+|\d+\.)\s*\**\s*timeout\b|"
+    r"\bdefaults?\s+timeout\b|"
+    r"\btimeout\b\s*[—:-]\s*[^.\n]{0,80}\bdefault|"
+    r"\.timeout(_\w+)?\b|"
+    r"\b(agent|request|response|tool|hook|build|deploy|connection|"
+    r"session|read|write|case|test)\s+timeout\b",
     re.IGNORECASE,
 )
 
@@ -228,6 +262,38 @@ RL_1B_MAX_KEY = re.compile(
 RL_1B_STATUS = re.compile(
     r"\bstatus\s*[:=]\s*[\"']?"
     r"(terminal|success|partial|failure|done|complete)[\"']?",
+    re.IGNORECASE,
+)
+# issue #108: bounded-iteration NA — ``For each <X>`` (or ``Repeat for
+# each <X>``, ``Iterate <X>``) over a finite enumerable provides
+# termination by construction (mirrors the Round-1 COMP-W refinement).
+# NA when both:
+#   1) body contains an iteration clause whose object is a known finite
+#      enumerable (``intervention``, ``recommendation``, ``dimension``,
+#      ``case``, ``scenario``, ``criterion``, ``metric``, ``category``,
+#      ``finding``, ``entry``, ``file matching``, ``file in``,
+#      ``mapped <noun>``, ``selected <noun>``); AND
+#   2) body contains NO unbounded-loop construct (``while X is/are/do``,
+#      ``until ...``, ``loop until``, ``keep \w+ing``, ``repeatedly``).
+# A bare ``For each <word>`` clause is bounded by the enumerable on the
+# right side. In this repo's idiom, every ``For each`` takes a finite,
+# pre-collected source (Glob result, parsed sidecar, dimension list,
+# matched line set, …); none open a streaming or unbounded source.
+# Authors who need an unbounded loop reach for ``while``, ``until``,
+# ``loop until``, ``keep <verb>ing``, or ``repeatedly`` — so we use the
+# unbounded-construct check below as the sole disqualifier.
+RL_1B_FOR_EACH_FINITE = re.compile(
+    r"\b(?:for\s+each|repeat\s+for\s+each|"
+    r"iterate(?:\s+through|\s+over)?|loop\s+over)\s+\w+",
+    re.IGNORECASE,
+)
+# Unbounded constructs: require ``while`` to be followed by a clause
+# that does not have a deterministic terminating predicate. Plain
+# ``while`` as a connective (``while applying X``) is not an unbounded
+# loop; we look for ``while <verb>``-style imperative loops.
+RL_1B_UNBOUNDED = re.compile(
+    r"\b(while\s+(true|not\s+done|incomplete|response\s+is|the\s+result\s+is)|"
+    r"loop\s+until|keep\s+\w+ing|repeatedly|recursively\s+invoke)",
     re.IGNORECASE,
 )
 
@@ -696,22 +762,57 @@ def check_CLAR_1(body: str) -> dict:
 def check_CLAR_2(body: str) -> dict:
     if passes_clar2(body):
         return {"verdict": "PASS", "evidence": {"reason": "no bare pronoun+verb", "heuristic": True}}
+    # Re-walk to surface the first match that ``passes_clar2`` rejected
+    # (i.e., the first one without a local antecedent / outside backticks).
+    from rubric_patterns import _has_local_antecedent, _inside_backticks
+
+    for match in BARE_PRONOUN_VERB.finditer(body):
+        if _has_local_antecedent(body, match.start()):
+            continue
+        if _inside_backticks(body, match.start()):
+            continue
+        return {
+            "verdict": "FAIL",
+            "evidence": {
+                "line": line_of_offset(body, match.start()),
+                "match": match.group(0),
+                "heuristic": True,
+            },
+        }
+    # Defensive fallback (should not reach here when passes_clar2 is False).
     match = BARE_PRONOUN_VERB.search(body)
     return {
         "verdict": "FAIL",
         "evidence": {
-            "line": line_of_offset(body, match.start()),
-            "match": match.group(0),
+            "line": line_of_offset(body, match.start()) if match else 0,
+            "match": match.group(0) if match else "",
             "heuristic": True,
         },
     }
 
 
 def check_CLAR_3(body: str) -> dict:
-    triggers = list(CLAR_3_TRIGGER.finditer(body))
-    if not triggers:
+    raw_triggers = list(CLAR_3_TRIGGER.finditer(body))
+    if not raw_triggers:
         return _na("no abort/refuse/bail/halt/timeout trigger in body")
-    for trig in triggers:
+    # issue #105: filter out negated triggers and `timeout`-as-noun
+    # documentation occurrences before evaluating recovery pairing.
+    actionable: list[re.Match[str]] = []
+    for trig in raw_triggers:
+        prefix_window = body[max(0, trig.start() - 30) : trig.start()]
+        if CLAR_3_NEGATION.search(prefix_window):
+            continue
+        if trig.group(0).lower() == "timeout":
+            line_start = body.rfind("\n", 0, trig.start()) + 1
+            line_end = body.find("\n", trig.end())
+            if line_end == -1:
+                line_end = len(body)
+            if CLAR_3_TIMEOUT_AS_NOUN.search(body[line_start:line_end]):
+                continue
+        actionable.append(trig)
+    if not actionable:
+        return _na("only negated or noun-form timeout occurrences (no actionable triggers)")
+    for trig in actionable:
         window_start = trig.start()
         window_end = min(len(body), trig.end() + 200)
         if not CLAR_3_RECOVERY.search(body[window_start:window_end]):
@@ -720,7 +821,7 @@ def check_CLAR_3(body: str) -> dict:
                 trigger=trig.group(0),
                 reason="no recovery predicate within 200 chars",
             )
-    return _pass(reason=f"{len(triggers)} trigger(s) each paired with recovery")
+    return _pass(reason=f"{len(actionable)} trigger(s) each paired with recovery")
 
 
 def check_CLAR_4(body: str) -> dict:
@@ -928,6 +1029,13 @@ def check_RL_1b(body: str, is_agentic_flag: bool) -> dict:
         return _na("non-agentic")
     if RL_1B_NUMERIC.search(body) or RL_1B_MAX_KEY.search(body) or RL_1B_STATUS.search(body):
         return _pass(reason="numeric / max-key / status predicate present")
+    # issue #108: bounded-iteration NA. ``For each <X>`` over a finite
+    # enumerable (intervention, recommendation, dimension, …) provides
+    # termination by construction; only FAIL when the body shows an
+    # unbounded-loop construct (`while true`, `loop until`, `keep
+    # \w+ing`, `repeatedly`, `recursively invoke`).
+    if RL_1B_FOR_EACH_FINITE.search(body) and not RL_1B_UNBOUNDED.search(body):
+        return _na("bounded iteration over deterministic finite enumerable")
     return _fail(reason="no numeric or enum termination predicate")
 
 

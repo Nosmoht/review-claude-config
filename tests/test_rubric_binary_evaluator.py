@@ -320,6 +320,38 @@ class TestCLAR2:
         assert result["verdict"] == "FAIL"
         assert result["evidence"].get("heuristic") is True
 
+    # issue #104 boundary cases — antecedent-aware narrowing.
+    def test_if_X_use_it_passes(self):
+        # ``If <antecedent>, use it`` — pronoun resolves to clause subject.
+        body = "If `$ARGUMENTS` contains a file path, use it."
+        assert check_CLAR_2(body)["verdict"] == "PASS"
+
+    def test_otherwise_use_it_passes(self):
+        body = "First try the cache. Otherwise, use it as the fresh source."
+        assert check_CLAR_2(body)["verdict"] == "PASS"
+
+    def test_when_X_with_parentheticals_passes(self):
+        # Antecedent prefix may include parenthetical commas (issue #104).
+        body = (
+            "If the user provided explicit domain information in their "
+            'request (e.g., "Go MCP server", "Python FastAPI"), use it directly.'
+        )
+        assert check_CLAR_2(body)["verdict"] == "PASS"
+
+    def test_determiner_that_passes(self):
+        # ``Use that <noun>`` is determiner usage, not bare pronoun.
+        body = "Locate the contract via Glob. Use that contract's schema below."
+        assert check_CLAR_2(body)["verdict"] == "PASS"
+
+    def test_em_dash_recovery_passes(self):
+        # ``<noun-phrase> — re-run that <noun>`` em-dash construct.
+        body = "A bare heading is INCOMPLETE — re-run that category."
+        assert check_CLAR_2(body)["verdict"] == "PASS"
+
+    def test_backtick_quoted_string_passes(self):
+        body = "- Option label: `\"Use this domain context for skill\"`"
+        assert check_CLAR_2(body)["verdict"] == "PASS"
+
 
 class TestCLAR3:
     def test_trigger_with_recovery_passes(self):
@@ -327,13 +359,39 @@ class TestCLAR3:
         assert check_CLAR_3(body)["verdict"] == "PASS"
 
     def test_trigger_without_recovery_fails(self):
-        body = "Collect errors per perspective; do not abort the whole dispatch."
+        # Plain ``abort`` with no recovery and no negation (issue #105).
+        body = "Run the check. If the file is missing, abort."
         result = check_CLAR_3(body)
         assert result["verdict"] == "FAIL"
         assert result["evidence"]["trigger"] == "abort"
 
     def test_no_trigger_na(self):
         assert check_CLAR_3("plain descriptive body")["verdict"] == "NA"
+
+    # issue #105 boundary cases.
+    def test_refuse_and_ask_passes(self):
+        body = "If the file already exists, refuse and ask for a different name."
+        assert check_CLAR_3(body)["verdict"] == "PASS"
+
+    def test_abort_with_noun_passes(self):
+        body = "If Grep fails, abort with structured error block."
+        assert check_CLAR_3(body)["verdict"] == "PASS"
+
+    def test_negation_skipped(self):
+        # ``do not abort`` is a negation; the trigger is non-actionable.
+        body = "Collect errors per perspective; do not abort the whole dispatch."
+        result = check_CLAR_3(body)
+        assert result["verdict"] == "NA"
+
+    def test_timeout_as_config_noun_skipped(self):
+        body = "5. **Timeout** — command handlers default to 600 seconds."
+        result = check_CLAR_3(body)
+        assert result["verdict"] == "NA"
+
+    def test_timeout_field_path_skipped(self):
+        body = "Mark FAIL with note 'agent timeout or crash' if `case.execution.timeout_seconds` exceeded."
+        result = check_CLAR_3(body)
+        assert result["verdict"] == "NA"
 
 
 class TestCLAR4:
@@ -607,6 +665,30 @@ class TestRL1b:
 
     def test_no_predicate_fails(self):
         assert check_RL_1b("keep trying", is_agentic_flag=True)["verdict"] == "FAIL"
+
+    # issue #108 boundary cases — bounded-iteration NA.
+    def test_for_each_intervention_na(self):
+        body = "For each intervention, follow the type-specific procedure below."
+        assert check_RL_1b(body, is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_for_each_recommendation_na(self):
+        body = "For each mapped recommendation, verify it can drive a real Edit."
+        assert check_RL_1b(body, is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_repeat_for_each_recommendation_na(self):
+        body = "[Repeat for each recommendation, ordered by impact]"
+        assert check_RL_1b(body, is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_unbounded_while_true_fails(self):
+        # ``while true`` is a genuine unbounded loop — must FAIL even
+        # if a ``for each`` is also present.
+        body = "For each finding: while true, retry the operation."
+        assert check_RL_1b(body, is_agentic_flag=True)["verdict"] == "FAIL"
+
+    def test_keep_verbing_fails(self):
+        body = "For each entry, keep retrying until the response is complete."
+        # ``keep retrying`` is unbounded — must FAIL despite for-each.
+        assert check_RL_1b(body, is_agentic_flag=True)["verdict"] == "FAIL"
 
 
 class TestRL3b:
@@ -905,7 +987,7 @@ REVIEW_SKILL_EXPECTED = {
     "META-3c": "FAIL",  # review-skill has no token unique vs all 31 siblings
     "META-4": "PASS",
     "CLAR-1": "PASS",
-    "CLAR-2": "FAIL",
+    "CLAR-2": "PASS",  # issue #104: antecedent-aware narrowing
     "CLAR-3": "FAIL",
     "CLAR-4": "PASS",
     "WS-2b": "PASS",
@@ -960,7 +1042,7 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "SP-2b": "NA",
     "SP-4b": "NA",
     "IJ-1b": "NA",
-    "RL-1b": "FAIL",
+    "RL-1b": "NA",  # issue #108: bounded-iteration NA
     "RL-3b": "NA",
     "RL-4b": "FAIL",
     "RL-9b": "NA",
@@ -975,8 +1057,8 @@ SCAFFOLD_SKILL_EXPECTED = {
     "META-3c": "FAIL",
     "META-4": "PASS",
     "CLAR-1": "PASS",
-    "CLAR-2": "FAIL",
-    "CLAR-3": "FAIL",
+    "CLAR-2": "PASS",  # issue #104
+    "CLAR-3": "PASS",  # issue #105
     "CLAR-4": "NA",
     "WS-2b": "NA",
     "WS-5b": "NA",

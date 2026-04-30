@@ -67,8 +67,172 @@ def passes_clar1(text: str) -> bool:
 
 
 def passes_clar2(text: str) -> bool:
-    """Return True when the text has no bare action-verb+pronoun pattern."""
-    return BARE_PRONOUN_VERB.search(text) is None
+    """Return True when the text has no bare action-verb+pronoun pattern.
+
+    Antecedent-aware (issue #104): a match is ignored when:
+      * the same sentence opens with an antecedent-introducing connective
+        (``If X, ... use it`` / ``Otherwise, ...`` / ``When X, ...`` /
+        ``Once X, ...``) that has a top-level comma before the pair;
+      * the trailing token is ``that|this|those`` used as a determiner
+        (followed by a noun-like word — ``Use that contract's schema``);
+      * the match falls inside a backtick-quoted span on the same line
+        (option labels, illustrative code).
+    """
+    for match in BARE_PRONOUN_VERB.finditer(text):
+        if _is_determiner_usage(text, match):
+            continue
+        if _has_local_antecedent(text, match.start()):
+            continue
+        if _inside_backticks(text, match.start()):
+            continue
+        return False
+    return True
+
+
+# A short closed-class list of common prepositions and conjunctions
+# that, if they immediately follow ``that|this|those``, mean the latter
+# is a pronoun, not a determiner — the next word is structural, not a
+# noun head. (``check that for errors`` → pronoun, not determiner.)
+_NON_NOUN_FOLLOWERS = frozenset(
+    {
+        "for",
+        "to",
+        "in",
+        "of",
+        "on",
+        "by",
+        "with",
+        "from",
+        "at",
+        "as",
+        "into",
+        "onto",
+        "upon",
+        "and",
+        "or",
+        "but",
+        "is",
+        "are",
+        "was",
+        "were",
+        "will",
+        "can",
+        "could",
+        "should",
+        "would",
+        "must",
+        "the",
+        "a",
+        "an",
+    }
+)
+
+
+def _is_determiner_usage(text: str, match: "re.Match[str]") -> bool:
+    """Return True when the matched pronoun is ``that|this|those`` followed
+    by a lowercase noun-head token — i.e., a determiner phrase, not a
+    bare pronoun reference. ``it``/``them`` are always pronouns and are
+    not excluded by this check.
+
+    Heuristic: the pronoun is treated as a determiner when the next word
+    is a lowercase token AND that next word is not in
+    ``_NON_NOUN_FOLLOWERS`` (prepositions, conjunctions, copulas, modals,
+    articles), since those introduce a structural continuation rather
+    than a noun head.
+    """
+    pronoun = match.group(2).lower()
+    if pronoun not in {"that", "this", "those"}:
+        return False
+    next_token_match = re.match(
+        r"\s+(?:[`\"']?)([a-z][\w-]*)",
+        text[match.end() : match.end() + 24],
+    )
+    if not next_token_match:
+        return False
+    next_token = next_token_match.group(1).lower()
+    return next_token not in _NON_NOUN_FOLLOWERS
+
+
+# Sentence boundary: previous `.`, `!`, `?`, newline, or string start.
+_SENTENCE_START = re.compile(r"[\.!?\n]|\Z")
+
+
+def _sentence_window_start(text: str, offset: int) -> int:
+    """Return the index of the start of the sentence containing ``offset``.
+
+    Only treat ``.``/``!``/``?`` as terminators when followed by whitespace
+    + capital letter (skips abbreviations like ``e.g.``, ``i.e.``, ``cf.``).
+    Newlines remain unconditional terminators."""
+    start = 0
+    # Newlines are unconditional sentence terminators.
+    for m in re.finditer(r"\n", text[:offset]):
+        start = m.end()
+    # Period/!/? followed by whitespace + capital letter (or end of string).
+    for m in re.finditer(r"[\.!?]\s+(?=[A-Z])", text[:offset]):
+        if m.end() > start:
+            start = m.end()
+    return start
+
+
+def _has_local_antecedent(text: str, offset: int) -> bool:
+    """Return True when the sentence containing ``offset`` opens with an
+    antecedent-introducing connective (``If X, ...`` / ``Otherwise, ...``
+    / ``When X, ...`` / ``Once X, ...``) that precedes the verb+pronoun
+    pair — providing a clear antecedent.
+
+    Detection is two-stage to tolerate commas inside parenthetical
+    examples (``e.g., "A", "B"``):
+      1. The sentence-opening connective is one of ``if|when|otherwise|once``.
+      2. A comma occurs between the connective and the verb+pronoun pair
+         that is NOT inside parentheses or brackets.
+
+    Also accepts em-dash separators (``INCOMPLETE — re-run that category``)
+    when the segment before the dash names a clear noun-phrase subject.
+    """
+    sentence_start = _sentence_window_start(text, offset)
+    window = text[sentence_start:offset]
+    # Stage 1: match a sentence-opening connective in the prefix window.
+    if re.search(
+        r"^\s*(?:[-*#`>\s]+)?\b(if|when|otherwise|once)\b",
+        window,
+        re.IGNORECASE,
+    ):
+        # Stage 2: require a top-level comma between connective and offset.
+        if _has_top_level_comma(window):
+            return True
+    # Em-dash construct: ``... — verb pronoun`` after a noun-phrase
+    # subject in the same line. We accept any em-dash (``—`` U+2014) or
+    # double-hyphen ``--`` separator preceded by a word ending in a noun
+    # within the current sentence.
+    if re.search(r"[—–]|--", window):
+        if re.search(
+            r"\b\w+\s*(?:[—–]|--)\s*\S{0,40}$",
+            window,
+        ):
+            return True
+    return False
+
+
+def _has_top_level_comma(window: str) -> bool:
+    """Return True when ``window`` contains a comma outside of ()/[] depth."""
+    depth = 0
+    for ch in window:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth = max(0, depth - 1)
+        elif ch == "," and depth == 0:
+            return True
+    return False
+
+
+def _inside_backticks(text: str, offset: int) -> bool:
+    """Return True when ``offset`` falls inside a backtick-quoted span on
+    the same line. Counts unescaped backticks before ``offset`` on the
+    current line; an odd count means we are inside a span."""
+    line_start = text.rfind("\n", 0, offset) + 1
+    line_prefix = text[line_start:offset]
+    return line_prefix.count("`") % 2 == 1
 
 
 # COMP-W Termination Criteria (scoring-rubric.md L133).
