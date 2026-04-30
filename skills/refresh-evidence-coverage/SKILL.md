@@ -75,7 +75,7 @@ Write a refresh report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/refresh-evide
 
 You are done when:
 - Every in-scope dimension has been audited (or skipped with reason)
-- `docs/dimension-evidence-coverage.md` `last_audited:` per-dimension dates are current
+- `docs/dimension-evidence-coverage.md` `last_audited:` frontmatter fields are updated to the current date for each audited dimension
 - New-source findings are tracked as issues (operationalization deferred to fresh sessions)
 - Refresh report written and reported to user
 

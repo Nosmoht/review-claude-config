@@ -1,10 +1,10 @@
 ---
 name: review-settings
 description: >
-  Evaluates Claude Code settings.json across 4 dimensions (Completeness,
-  Goal Alignment, Safety, Metadata). Use when asked to 'review settings',
-  'review settings.json', or 'check settings'. Do NOT use for .mcp.json,
-  skills, agents, rules, or hooks.
+  Evaluates Claude Code settings.json (deny-rules, env-vars, statusline)
+  across 4 dimensions (Completeness, Goal Alignment, Safety, Metadata).
+  Use when asked to 'review settings', 'review settings.json', or
+  'check settings'. Do NOT use for .mcp.json, skills, agents, rules, or hooks.
 argument-hint: <path-to-settings.json>
 allowed-tools: Read, Write, Glob, Grep, WebSearch
 ---

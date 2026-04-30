@@ -1,7 +1,8 @@
 ---
 name: apply-agent-review-findings
 description: >
-  Applies findings from a /review-agent report to the reviewed agent file. Use
+  Applies findings from a /review-agent report to the reviewed agent file
+  (perspective subagents, model-routing, allowed-tools frontmatter). Use
   after /review-agent on a single agent or when delegated by
   /apply-review-findings. Do NOT use for skill or rule reports.
 argument-hint: "[report-path]"

@@ -1,9 +1,10 @@
 ---
 name: apply-rule-review-findings
 description: >
-  Applies findings from a /review-rule report to the reviewed rule file. Use
-  after /review-rule on a single rule or when delegated by
-  /apply-review-findings. Do NOT use for skill or agent reports.
+  Applies findings from a /review-rule report to the reviewed rule file
+  (always-loaded directives, imperatives). Use after /review-rule on a
+  single rule or when delegated by /apply-review-findings. Do NOT use for
+  skill or agent reports.
 argument-hint: "[report-path]"
 allowed-tools: Read, Edit, Glob, Bash
 disable-model-invocation: true

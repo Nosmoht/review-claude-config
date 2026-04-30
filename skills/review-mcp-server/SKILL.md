@@ -1,10 +1,11 @@
 ---
 name: review-mcp-server
 description: >
-  Evaluates MCP server configuration (.mcp.json) across 4 dimensions
-  (Completeness, Goal Alignment, Safety, Metadata). Use when asked to
-  'review mcp', 'review mcp server', or 'review .mcp.json'. Do NOT use
-  for skills, agents, rules, hooks, or settings.json.
+  Evaluates MCP server configuration (.mcp.json manifest, transport,
+  servers-block) across 4 dimensions (Completeness, Goal Alignment, Safety,
+  Metadata). Use when asked to 'review mcp', 'review mcp server', or
+  'review .mcp.json'. Do NOT use for skills, agents, rules, hooks, or
+  settings.json.
 argument-hint: <path-to-.mcp.json>
 allowed-tools: Read, Write, Glob, Grep, WebSearch
 ---

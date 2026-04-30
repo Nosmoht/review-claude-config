@@ -77,7 +77,7 @@ For each item, classify its overall trajectory:
 - **Stable** — Grade unchanged across all reports, AND score variation < 5 points.
 - **Regressing** — Latest grade is lower than the previous report, OR score dropped by ≥5 points.
 
-Example: B(82) → B(86) → B(81) is Stable (grade unchanged, variation < 5). B(82) → A(90) → B(85) is Regressing (latest grade lower than previous).
+Example: B(82) → B(86) → B(81) is Stable (grade unchanged, variation < 5). B(82) → A(90) → B(85) is Regressing (latest grade lower than previous by ≥1 grade-step or ≥5 score points).
 
 For each dimension, compute the average grade across only the items where that dimension is non-null in the most recent report and compare against the earliest report to determine dimension-level trends.
 

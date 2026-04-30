@@ -1,10 +1,10 @@
 ---
 name: review-rule
 description: >
-  Evaluates a single rule .md across 3 dimensions (Clarity, Completeness, Goal
-  Alignment). Use when asked to 'review rule' or dispatched by
-  /review-claude-config. Do NOT use for skills or agents — use /review-skill or
-  /review-agent.
+  Evaluates a single rule .md (always-load imperatives, injection-prone
+  prose) across 3 dimensions (Clarity, Completeness, Goal Alignment). Use
+  when asked to 'review rule' or dispatched by /review-claude-config. Do
+  NOT use for skills or agents — use /review-skill or /review-agent.
 argument-hint: <path-to-rule.md>
 allowed-tools: Read, Write, Glob, WebSearch, WebFetch
 ---

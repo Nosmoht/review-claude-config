@@ -1,9 +1,10 @@
 ---
 name: apply-skill-review-findings
 description: >
-  Applies findings from a /review-skill report to the reviewed SKILL.md. Use
-  after /review-skill on a single skill or when delegated by
-  /apply-review-findings. Do NOT use for agent or rule reports.
+  Applies findings from a /review-skill report to the reviewed SKILL.md
+  (progressive-disclosure body, JIT references). Use after /review-skill
+  on a single skill or when delegated by /apply-review-findings. Do NOT
+  use for agent or rule reports.
 argument-hint: "[report-path]"
 allowed-tools: Read, Edit, Glob, Bash
 disable-model-invocation: true
