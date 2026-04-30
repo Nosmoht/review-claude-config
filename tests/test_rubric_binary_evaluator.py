@@ -957,20 +957,63 @@ class TestRL3b:
 
 class TestRL4b:
     def test_non_agentic_na(self):
-        assert check_RL_4b("body", is_agentic_flag=False)["verdict"] == "NA"
+        assert check_RL_4b("body", fm={"allowed-tools": ["Read"]}, is_agentic_flag=False)["verdict"] == "NA"
 
     def test_askuserquestion_passes(self):
-        assert check_RL_4b("ask via AskUserQuestion", is_agentic_flag=True)["verdict"] == "PASS"
+        assert check_RL_4b("ask via AskUserQuestion", fm={"allowed-tools": ["Bash"]}, is_agentic_flag=True)["verdict"] == "PASS"
 
     def test_partial_status_passes(self):
-        assert check_RL_4b('status: "partial"', is_agentic_flag=True)["verdict"] == "PASS"
+        assert check_RL_4b('status: "partial"', fm={"allowed-tools": ["Bash"]}, is_agentic_flag=True)["verdict"] == "PASS"
 
     def test_escalate_heading_passes(self):
         body = "\n- escalate when budget exhausted\n"
-        assert check_RL_4b(body, is_agentic_flag=True)["verdict"] == "PASS"
+        assert check_RL_4b(body, fm={"allowed-tools": ["Bash"]}, is_agentic_flag=True)["verdict"] == "PASS"
 
     def test_no_path_fails(self):
-        assert check_RL_4b("silently continue on failure", is_agentic_flag=True)["verdict"] == "FAIL"
+        body = "silently continue on failure"
+        assert check_RL_4b(body, fm={"allowed-tools": ["Bash"]}, is_agentic_flag=True)["verdict"] == "FAIL"
+
+    def test_rl4b_internal_report_only_audit_na(self):
+        """Agentic audit/review writing only to internal report path, no Edit/Bash → NA."""
+        body = (
+            "Write audit findings to $CLAUDE_PLUGIN_DATA/reports/foo.md. "
+            "Read skill files and produce structured report."
+        )
+        fm = {"allowed-tools": ["Read", "Glob", "Write"]}
+        assert check_RL_4b(body, fm=fm, is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_rl4b_internal_report_review_no_bash_na(self):
+        """Agentic review writing only to internal report path, tools=[Read, Write] → NA."""
+        body = (
+            "Write review report to $CLAUDE_PLUGIN_DATA/reports/review.md. "
+            "Analyze skill files and produce quality certificate."
+        )
+        fm = {"allowed-tools": ["Read", "Write"]}
+        assert check_RL_4b(body, fm=fm, is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_rl4b_internal_audit_with_readonly_bash_na(self):
+        """Agentic body, internal report path, Bash with read-only commands only → NA."""
+        body = "Write to $CLAUDE_PLUGIN_DATA/reports/foo.md after Bash realpath foo and git log --oneline."
+        fm = {"allowed-tools": ["Read", "Bash", "Write"]}
+        assert check_RL_4b(body, fm=fm, is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_rl4b_edit_in_tools_fails(self):
+        """Agentic body, internal report path, but Edit in tools → FAIL (Edit excludes NA-rescue)."""
+        body = (
+            "Write audit findings to $CLAUDE_PLUGIN_DATA/reports/foo.md. "
+            "Edit skill files as needed."
+        )
+        fm = {"allowed-tools": ["Edit", "Write"]}
+        assert check_RL_4b(body, fm=fm, is_agentic_flag=True)["verdict"] == "FAIL"
+
+    def test_rl4b_bash_mutating_fails(self):
+        """Agentic body, internal report path, Bash-mutating command → FAIL."""
+        body = (
+            "Write findings to $CLAUDE_PLUGIN_DATA/reports/foo.md. "
+            "Bash rm -rf stale_cache/ to clean up."
+        )
+        fm = {"allowed-tools": ["Bash", "Write"]}
+        assert check_RL_4b(body, fm=fm, is_agentic_flag=True)["verdict"] == "FAIL"
 
 
 class TestRL9b:

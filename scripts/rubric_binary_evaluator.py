@@ -315,11 +315,18 @@ ARGUMENTS_NEAR_WRITE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+BASH_MUTATING = re.compile(
+    r"\bBash\b[^.]{0,400}\b(rm|mv|cp\s+-[fr]|"
+    r"git\s+(add|commit|push|reset|merge|rebase|checkout|tag)|"
+    r"gh\s+(issue\s+(create|edit|close)|pr\s+(create|merge)|repo\s+create)|"
+    r"echo\s+\S+\s*>(?!&))",
+    re.IGNORECASE | re.DOTALL,
+)
 _WRITE_TOKEN = re.compile(r"\bWrite\b")
 
 
-def _ij1b_internal_report_only_writer(body: str, fm: dict) -> bool:
-    """Fallback NA-rule for check_IJ_1b.
+def _writes_only_to_internal_reports(body: str, fm: dict) -> bool:
+    """Shared NA-rule helper for check_IJ_1b and check_RL_4b.
 
     Returns True iff the Write payload's surface is internal-report-only:
     body references the literal token \\bWrite\\b (boundary-anchored, NOT a
@@ -1167,7 +1174,7 @@ def check_IJ_1b(body: str, fm: dict) -> dict:
         return _pass(validation=True, write_gate=True)
     # Fallback NA when both predicates are missing/incomplete but the
     # Write surface is internal-report only and not user-derived.
-    if _ij1b_internal_report_only_writer(body, fm):
+    if _writes_only_to_internal_reports(body, fm):
         return _na("internal-report-only Write target, no $ARGUMENTS-near-Write")
     missing = []
     if not has_validation:
@@ -1224,7 +1231,7 @@ def check_RL_3b(body: str, is_agentic_flag: bool) -> dict:
     return _pass(retry_count=len(actionable))
 
 
-def check_RL_4b(body: str, is_agentic_flag: bool) -> dict:
+def check_RL_4b(body: str, fm: dict, is_agentic_flag: bool) -> dict:
     if not is_agentic_flag:
         return _na("non-agentic")
     if RL_4B_HITL.search(body) or RL_4B_PARTIAL.search(body) or RL_4B_ESCALATE_HEADING.search(body):
@@ -1232,6 +1239,14 @@ def check_RL_4b(body: str, is_agentic_flag: bool) -> dict:
             "verdict": "PASS",
             "evidence": {"reason": "HITL / partial / escalate path present", "heuristic": True},
         }
+    # Fallback NA: read-only audit/review producing only internal report.
+    # `fm or {}` defends against malformed/missing frontmatter — the outer
+    # `try/except BLE001` at :1567 would otherwise swallow a TypeError into
+    # NA, silently flipping a true FAIL to NA. tools_list already returns
+    # an empty list for missing/empty `allowed-tools`.
+    tools = set(tools_list(fm or {}))
+    if _writes_only_to_internal_reports(body, fm or {}) and "Edit" not in tools and not BASH_MUTATING.search(body):
+        return _na("read-only audit/review producing only internal report")
     return {
         "verdict": "FAIL",
         "evidence": {
@@ -1555,7 +1570,7 @@ def _run_check(
         if item_id == "RL-3b":
             return check_RL_3b(body, is_agentic_flag)
         if item_id == "RL-4b":
-            return check_RL_4b(body, is_agentic_flag)
+            return check_RL_4b(body, fm, is_agentic_flag)
         if item_id == "RL-9b":
             return check_RL_9b(body, fm_raw, needs_rl9b_flag)
         if item_id == "AH-2b":
