@@ -552,11 +552,67 @@ class TestCOMPY:
 
 
 class TestCOMPZ:
+    # issue #112: COMP-Z now requires fm; allowlist gating mirrors COMP-X (#102).
+    ALLOWLISTED = {"name": "review-skill"}      # any name in COMP_X_REVIEW_ALLOWLIST
+    NON_ALLOWLISTED = {"name": "scaffold-rule"}  # any non-allowlisted name
+
     def test_evidence_passes(self):
-        assert check_COMP_Z("each finding has Evidence: <quote>")["verdict"] == "PASS"
+        # Existing test, updated to pass an allowlisted fm.
+        assert check_COMP_Z("each finding has Evidence: <quote>", self.ALLOWLISTED)["verdict"] == "PASS"
 
     def test_no_trail_fails(self):
-        assert check_COMP_Z("emit findings as a list")["verdict"] == "FAIL"
+        # Existing test, updated to pass an allowlisted fm.
+        assert check_COMP_Z("emit findings as a list", self.ALLOWLISTED)["verdict"] == "FAIL"
+
+    # --- new boundary tests for #112 (3 NA + 2 FAIL) ---
+
+    def test_scaffold_skill_na(self):
+        # issue #112: scaffold/creator skills emit new files, not graded findings.
+        assert check_COMP_Z("creates a new SKILL.md scaffold", {"name": "scaffold-skill"})["verdict"] == "NA"
+
+    def test_validate_skill_na(self):
+        # issue #112: validation skills emit pass/fail, not citations.
+        assert check_COMP_Z("checks dependencies and emits a report", {"name": "validate-primitive-dependencies"})["verdict"] == "NA"
+
+    def test_check_skill_na(self):
+        # issue #112: ``check-repo-health`` is not in the allowlist (substring-anywhere
+        # mis-classification was the #102 motivation).
+        assert check_COMP_Z("checks freshness and writes a status report", {"name": "check-repo-health"})["verdict"] == "NA"
+
+    def test_allowlisted_review_skill_without_citation_fails(self):
+        # issue #112: regression guard — allowlisted skills still FAIL when no citation.
+        body = "the skill emits a list of findings as plain bullets"
+        assert check_COMP_Z(body, {"name": "review-agent"})["verdict"] == "FAIL"
+
+    def test_allowlisted_audit_skill_without_citation_fails(self):
+        # issue #112: second FAIL across a different allowlisted prefix (audit-).
+        body = "the skill summarises trust violations and exits"
+        assert check_COMP_Z(body, {"name": "audit-policy-compliance"})["verdict"] == "FAIL"
+
+    @pytest.mark.parametrize("name", [
+        "review-skill", "review-agent", "audit-trust-chain",
+        "classify-trace-errors", "audit-policy-compliance",
+    ])
+    def test_allowlisted_names_reach_body_check(self, name):
+        # issue #112: regression guard — every allowlisted name reaches the
+        # body-pattern check (so PASS/FAIL is determined by body content).
+        # Body text must not contain any COMP_Z_PATTERN tokens (evidence,
+        # citation, quote, verified against) to produce a FAIL verdict.
+        assert check_COMP_Z("the skill emits a list of findings as plain bullets", {"name": name})["verdict"] == "FAIL"
+        assert check_COMP_Z("each finding has Evidence: <quote>", {"name": name})["verdict"] == "PASS"
+
+    # --- defensive tests for malformed fm (team-red R1 hardening) ---
+
+    def test_empty_fm_is_na(self):
+        # issue #112: file without frontmatter → parse_frontmatter returns {} →
+        # ``"" not in COMP_X_REVIEW_ALLOWLIST`` → NA. Verifies the gate handles
+        # the real empty-frontmatter case from parse_frontmatter:545.
+        assert check_COMP_Z("emit findings as a list", {})["verdict"] == "NA"
+
+    def test_none_name_is_na(self):
+        # issue #112: defensive — YAML edge case where ``name:`` is unset.
+        # ``str(None) = "None"`` which is not in COMP_X_REVIEW_ALLOWLIST → NA.
+        assert check_COMP_Z("emit findings as a list", {"name": None})["verdict"] == "NA"
 
 
 class TestCOMPW:
@@ -1129,7 +1185,7 @@ REVIEW_SKILL_EXPECTED = {
     "COMP-V": "PASS",
     "COMP-X": "PASS",  # issue #102: extended convergence patterns
     "COMP-Y": "PASS",
-    "COMP-Z": "PASS",
+    "COMP-Z": "PASS",  # issue #112: review-skill is in COMP_X_REVIEW_ALLOWLIST
     "COMP-W": "NA",  # issue #103: ``for each`` removed from LOOP_PATTERN
     "SAMP-1": "NA",
     "SAMP-2": "NA",
@@ -1164,7 +1220,7 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "COMP-V": "NA",
     "COMP-X": "NA",  # Issue #74: skill-review-semantics only; agent TC-3 pending #75/#76.
     "COMP-Y": "PASS",
-    "COMP-Z": "PASS",
+    "COMP-Z": "NA",  # issue #112: review-perspective-clarity not in COMP_X_REVIEW_ALLOWLIST
     "COMP-W": "NA",  # issue #103
     "SAMP-1": "NA",
     "SAMP-2": "NA",
@@ -1199,7 +1255,7 @@ SCAFFOLD_SKILL_EXPECTED = {
     "COMP-V": "NA",
     "COMP-X": "FAIL",
     "COMP-Y": "FAIL",
-    "COMP-Z": "FAIL",
+    "COMP-Z": "NA",  # issue #112: scaffold-skill not in COMP_X_REVIEW_ALLOWLIST
     "COMP-W": "NA",  # issue #103
     "SAMP-1": "NA",
     "SAMP-2": "NA",

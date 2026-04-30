@@ -969,7 +969,18 @@ def check_COMP_Y(body: str) -> dict:
     return _fail(reason="no binary verification predicate and no exclusion")
 
 
-def check_COMP_Z(body: str) -> dict:
+def check_COMP_Z(body: str, fm: dict) -> dict:
+    # issue #112: scope-symmetric with COMP-X (#102, commit 0aad9d9). The
+    # rubric item asks "are findings backed by quote/citation/evidence?" —
+    # only graded-review skills emit findings to begin with; scaffold/
+    # validate/check skills emit other artifacts (new files, exit codes,
+    # status reports) and have nothing to cite.
+    name = str(fm.get("name", ""))
+    if name not in COMP_X_REVIEW_ALLOWLIST:
+        return _na(
+            "non-review-class skill: COMP-Z applies only to allowlisted "
+            "graded-review skills (mirrors #102 COMP-X scope)"
+        )
     match = COMP_Z_PATTERN.search(body)
     if match:
         return _pass(
@@ -1487,7 +1498,7 @@ def _run_check(
         if item_id == "COMP-Y":
             return check_COMP_Y(body)
         if item_id == "COMP-Z":
-            return check_COMP_Z(body)
+            return check_COMP_Z(body, fm)
         if item_id == "COMP-W":
             return check_COMP_W(body)
         if item_id == "SAMP-1":
