@@ -18,6 +18,11 @@ You are a strict but fair pre-merge evaluator for the `review-claude-config` rep
 3. The PR diff: `gh pr diff <PR-ref>` (if PR provided), or `git diff <base>..HEAD` (if direct-to-branch). Always full diff, not summarized.
 4. `CLAUDE.md` §Hard Constraints — never-violate boundary for this repo
 5. `CLAUDE.md` §Working Guidelines and §Development Conventions — operative guidance the diff must respect
+6. **User-global skill files referenced by the issue**: when the issue
+   body cites a path beginning `$HOME/.claude/skills/...` or
+   `~/.claude/skills/...`, read that file directly and run predicate
+   greps against it. The path is NOT in the diff surface but IS in the
+   issue's stated deliverable surface.
 
 ## Evaluation Procedure
 
@@ -43,6 +48,28 @@ Follow numbered steps. Do not skip.
    - **No mid-session rubric/baseline edits via direct edit**: if `skills/review-claude-config/references/scoring-rubric.md` or `skills/review-claude-config/references/engineering-baseline.md` is in the diff, classify as **WARNING**, not CRITICAL — confirm via the commit author/message that the change came through `/refresh-engineering-baseline` or an equivalent maintained workflow. Do not block on this; surface for human review.
 
    Each violation that maps to a CRITICAL predicate above → CRITICAL finding. Do not invent new constraints; only the items above are sweep-eligible because only they are diff-checkable.
+
+   **NOTE**: cross-issue checks (rescope-path `derived-by:` verification,
+   evidence-tuple spot-checks on referenced spillover issues) live in step
+   5a below, NOT in this step. Step 5 remains diff-checkable-only.
+5a. **Cross-issue verification (when rescope path used)** — skip if the
+    commit body does not match
+    `/rescop|carved to #|spilled to #|split into #|follow-up #|rescoped/i`.
+    For each `#N` referenced in the rescope commit body:
+    - Fetch: `gh issue view <N> --repo Nosmoht/review-claude-config --json body,labels`
+    - Verify every `R3:` line carries a `derived-by:` field; value ∈
+      {`counted-trigger-occurrences`, `evaluator-with-mock-patch`,
+      `extrapolated-from-prior-PR`, `best-effort`}.
+    - If `derived-by: best-effort`: label set MUST include
+      `status: needs-review`, MUST NOT include `status: ready`.
+    - For each `(file, line, trigger-token)` tuple cited as evidence in
+      the spillover-issue body, run the repo's per-file verification
+      command and confirm the tuple appears verbatim in the output.
+      Mismatch ⇒ CRITICAL finding.
+    - If neither tuples nor `evidence: prose-only` marker present in the
+      spillover body: CRITICAL (vacuity gate).
+    Defense-in-depth: the Builder enforces these checks pre-file at step 4a
+    in `builder-implementer.md`; this step re-verifies post-file.
 6. **Write findings** to `.work/issue-<N>/evaluator-findings.md` (format below).
 7. **Return JSON summary** for the Orchestrator (also below).
 

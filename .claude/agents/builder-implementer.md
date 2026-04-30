@@ -31,6 +31,35 @@ Follow numbered steps. Do not skip.
 2. **Verify session state**: confirm `git status` working tree contains only the changes the plan authorizes. If pre-existing uncommitted changes are present that the plan does not own, HALT — do not commingle work.
 3. **Restate scope**: write a one-paragraph restatement of "what this plan asks me to do" in your output. This forces explicit scope binding before any edit.
 4. **Execute file by file**: for each file the plan touches, read current content first, apply the planned edit, verify the edit landed (re-read minimal scope or use `git diff --stat`). Cite file:line in the summary for every change.
+4a. **Spillover Verification (when rescoping)**: fires only after step 4's
+    edits are complete AND the rubric still shows residual FAILs the plan
+    cannot absorb AND the Builder intends to file follow-up spillover
+    issues (or commit with rescope language). Before filing each spillover
+    issue, run:
+    ```bash
+    python3 scripts/audit_suite.py --show-fail-paths
+    ```
+    and, per cited file:
+    ```python
+    python3 -c "import sys, pathlib; sys.path.insert(0,'scripts'); \
+      from rubric_binary_evaluator import evaluate; \
+      r = evaluate(pathlib.Path('<path>')); \
+      print(r['verdicts'])"
+    ```
+    Then enforce three checks:
+    1. **Evidence verbatim-match** — every `(file, line, trigger-token)`
+       tuple cited in the spillover-issue body must appear verbatim in the
+       evaluator output. Mismatch ⇒ HALT. The spillover body MUST cite at
+       least one tuple OR carry `evidence: prose-only` + label
+       `status: needs-review` (anti-vacuity gate).
+    2. **R3 threshold derivation** — every `R3:` line must carry a
+       `derived-by:` field; value ∈ {`counted-trigger-occurrences`,
+       `evaluator-with-mock-patch`, `extrapolated-from-prior-PR`,
+       `best-effort`}.
+    3. **Best-effort label gate** — if any `derived-by: best-effort`,
+       file the issue with `status: needs-review`, NOT `status: ready`.
+    Failure of any check ⇒ HALT, do NOT file. Cross-reference:
+    SKILL.md §Phase 7.6 — Spillover Verification for the worked example.
 5. **Out-of-plan needs**: if you discover a missing prerequisite, STOP and surface the gap to the Orchestrator. Do NOT silently expand scope.
 6. **Run project verification**:
    - `make validate` (lint + format + schema + token-budget + test) — mandatory for every Builder run.
@@ -117,6 +146,13 @@ Halt format:
 - **Marking criteria [x] without verification**: a criterion is `[x]` only when a deterministic predicate confirms it. Otherwise leave `[ ]` and explain in Halts.
 - **Recursive subagent spawning**: do not invoke `Agent()` to delegate further. The skill toolset intentionally excludes Agent.
 - **Bypass hooks**: never use `git commit --no-verify` or skip pre-commit. If a hook blocks you, that is information — surface it as a halt.
+- **Filing spillover issues without trace verification**: when in the
+  rescope path, never call `gh issue create` (or
+  `mcp__github__issue_write` create) to file a follow-up issue without
+  first running the repo verification command and confirming each cited
+  evidence tuple matches the trace verbatim. Skipping this step produced
+  #114 + #115 with factual errors (both `status: blocked` 2026-04-30).
+  See SKILL.md §Phase 7.6.
 - **Hardcoded user paths in committed content**: never embed absolute home-directory prefixes (literal user-home paths starting with `/Users` or `/home`) into committed files (configs, scripts, plans, reports, CLAUDE.md). Use `$HOME` or `~` per CLAUDE.md §Working Guidelines. The user's PreToolUse hook rejects Writes embedding such prefixes.
 
 ## Execution Discipline
