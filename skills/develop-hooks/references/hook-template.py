@@ -57,11 +57,11 @@ def main():
         return
 
     # Read input from stdin
-    input_data = json.load(sys.stdin)
+    _input_data = json.load(sys.stdin)
 
     # --- PreToolUse: inspect tool name and file path ---
-    # tool_name = input_data.get("tool_name", "")
-    # tool_input = input_data.get("tool_input", {})
+    # tool_name = _input_data.get("tool_name", "")
+    # tool_input = _input_data.get("tool_input", {})
     # file_path = tool_input.get("file_path", "")
 
     # --- Your hook logic here ---

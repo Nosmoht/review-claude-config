@@ -5,8 +5,6 @@ import json
 import os
 import sys
 
-import pytest
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hooks"))
 from audit_logger import _hash_input, _audit_path, main
 
