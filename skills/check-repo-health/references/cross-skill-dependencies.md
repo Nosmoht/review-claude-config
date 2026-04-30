@@ -26,6 +26,7 @@ Severity: `!`=fatal `?`=warn `-`=skip
 | refresh-engineering-baseline | evidence-contract.md | ! |
 | maintain-evidence-layer,refresh-engineering-baseline | engineering-baseline-provenance.md | ! |
 | review-claude-config,refresh-engineering-baseline | source-quality-criteria.md | ! |
+| review-agent,review-skill | tool-grant-decision-tree.md | ? |
 | audit-repo,suggest-skills,review-skill,review-agent,review-rule | source-quality-criteria.md | ? |
 | apply-skill-review-findings,apply-agent-review-findings,apply-rule-review-findings | skills/apply-review-findings/references/commit-conventions.md | ? |
 | apply-audit-findings | skills/apply-review-findings/references/commit-conventions.md | ! |
