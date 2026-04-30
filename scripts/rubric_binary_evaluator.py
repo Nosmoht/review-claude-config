@@ -86,11 +86,9 @@ from rubric_patterns import (  # noqa: E402
     WS_6_ANCHOR,
     WS_6_ANCHOR_WINDOW,
     WS_6_COMPARATOR,
-    has_loop,
     is_third_person,
     passes_clar1,
     passes_clar2,
-    passes_comp_w,
     rd_5b_has_mapping_clause,
     rd_5b_schemes_present,
     strip_code,
@@ -180,10 +178,43 @@ CE_X_JUSTIFICATION = re.compile(
     re.IGNORECASE,
 )
 
-# COMP-X (rubric L126).
-COMP_X_SUCCESS = re.compile(r"complete when|success when|done when", re.IGNORECASE)
+# COMP-X (rubric L126). Extended per issue #102 to recognize the full
+# repo idiom of explicit success-condition statements:
+#   * canonical: ``complete when`` / ``success when`` / ``done when``
+#   * pronominal: ``You are done when`` / ``you are done when``
+#   * block-marker: ``COMPLETION:`` / ``## Completion`` heading
+#   * passive: ``... are complete`` / ``... has been complete(d)``
+#     when paired with an enumerable subject (``all 5 categories``,
+#     ``every check``, ``each task``)
+COMP_X_SUCCESS = re.compile(
+    r"complete\s+when|success\s+when|done\s+when|"
+    r"\byou\s+are\s+done\s+when\b|"
+    r"(?:^|\n)\s*COMPLETION\s*:|"
+    r"(?:^|\n)#+\s*Completion\b|"
+    r"(?:^|\n)##\s*Completion\b|"
+    r"\bskill\s+is\s+done\s+when\b|"
+    r"\bworkflow\s+(?:is\s+)?complete\s+when\b|"
+    r"\b(?:once|after)\s+all\s+\w+\s+(?:are|have\s+been)\s+(?:complete|done)\b|"
+    r"\boutput\s+the\s+(?:table|report)\s+when\s+all\b",
+    re.IGNORECASE,
+)
 COMP_X_CONVERGENCE = re.compile(
-    r"re-run variance|identical finding|<=\s*\d+[-\s]letter\s*Δ",
+    # Convergence (the strongest form, used by iterative skills).
+    r"re-run\s+variance|identical\s+finding|<=\s*\d+[-\s]letter\s*Δ|"
+    r"two\s+consecutive\s+runs|converge(?:nce|d|s)?\b|stable\s+(?:across\s+)?runs|"
+    # Grade-distribution (used by skills that emit per-dimension grades).
+    r"grade\s+(?:distribution|per\s+dimension)|per[-\s]dimension\s+grade|"
+    r"grade\s+each\s+dimension|score\s+each\s+dimension|"
+    # Evidence-citation (used by skills that mandate citing Tier-1
+    # sources or checklist IDs in justifications).
+    r"cite\s+(?:tier[-\s]?\d|the\s+checklist|≥\s*\d+\s+checklist|"
+    r"at\s+least\s+one\s+checklist|"
+    r"specific\s+(?:path|line|section)|"
+    r"the\s+exact|"
+    r"a\s+specific\s+example|"
+    r"evidence\s+(?:from|in|for))|"
+    r"must\s+cite|must\s+include\s+evidence|"
+    r"(?:cite|reference)\s+\w+\s+(?:source|sources|line|lines|path|paths)",
     re.IGNORECASE,
 )
 COMP_X_PRIMARY_VERB = re.compile(
@@ -192,6 +223,39 @@ COMP_X_PRIMARY_VERB = re.compile(
     re.IGNORECASE,
 )
 COMP_X_NAME_TOKENS = frozenset({"review", "audit", "classify", "evaluate", "score", "certify"})
+# issue #102: explicit allowlist of true review-class skills — those that
+# produce a graded review/audit/certificate report and must declare a
+# convergence / grade-distribution / evidence-citation predicate.
+# Skills outside this allowlist are subject to the standard COMP-X skill
+# clause (success-condition only), even if their name or description
+# starts with ``audit``/``review``/``classify``. This prevents one-time
+# bug detectors (audit-mcp-auth), one-shot estimators (audit-context-
+# budget), and verb-prefix collisions (check-repo-health, where ``reviews``
+# appears only in object position) from being misclassified.
+COMP_X_REVIEW_ALLOWLIST = frozenset(
+    {
+        "review-skill",
+        "review-agent",
+        "review-rule",
+        "review-hook",
+        "review-mcp-server",
+        "review-plugin",
+        "review-settings",
+        "review-claude-md",
+        "review-claude-config",
+        "review-analytics",
+        "review-session-trace",
+        "classify-trace-errors",
+        "audit-trust-chain",
+        "audit-policy-compliance",
+        "audit-memory-hygiene",
+        "audit-repo",
+    }
+)
+# Tokens that do not function as primary verbs even when they appear
+# first (skipped over to find the next candidate). Empty for now —
+# kept for forward extensibility.
+_COMP_X_FIRST_WORD_SKIP = frozenset({"the", "a", "an"})
 
 # COMP-Y (rubric L127).
 COMP_Y_EXCLUSION = re.compile(r"looks good|seems correct|appears valid", re.IGNORECASE)
@@ -634,19 +698,27 @@ def tokenize_description(text: str) -> set[str]:
 
 
 def primary_verb(fm: dict) -> str | None:
-    """Extract primary verb for the COMP-X review-skill clause."""
-    description = str(fm.get("description", ""))
-    match = COMP_X_PRIMARY_VERB.search(description)
-    if match:
-        verb = match.group(1).lower()
-        for root in COMP_X_NAME_TOKENS:
-            if verb.startswith(root):
-                return root
-    # Fall back to name-stem tokens.
+    """Extract primary verb for the COMP-X review-skill clause.
+
+    Refined per issue #102: the review-skill clause applies only when
+    the skill name is in ``COMP_X_REVIEW_ALLOWLIST``. The allowlist
+    enumerates skills that produce graded review/audit/certificate
+    output and must declare a convergence predicate. Skills outside
+    the allowlist — even those whose first word is ``Audits`` /
+    ``Reviews`` / ``Classifies`` — are subject to the standard skill
+    clause (success-condition only).
+
+    Substring-anywhere matching (``\\breviews?\\b`` over the whole
+    description) is NOT used; that idiom catches object-position
+    mentions (``before running reviews``) which produce false positives.
+    """
     name = str(fm.get("name", ""))
-    for token in re.split(r"[^A-Za-z]+", name.lower()):
-        if token in COMP_X_NAME_TOKENS:
-            return token
+    if name in COMP_X_REVIEW_ALLOWLIST:
+        for root in COMP_X_NAME_TOKENS:
+            if root in name.lower():
+                return root
+        # Allowlisted but no token in name (rare): default to "review".
+        return "review"
     return None
 
 
@@ -907,9 +979,43 @@ def check_COMP_Z(body: str) -> dict:
 
 
 def check_COMP_W(body: str) -> dict:
-    if not has_loop(body):
-        return _na("non-iterative body")
-    if passes_comp_w(body):
+    # issue #103: filter out triggers whose binding is itself bounded
+    # before demanding a termination predicate. The MAST-F14 motivation
+    # (unterminated reasoning) does not apply to:
+    #   * ``for each <X>`` over a finite enumerable (X bounds the loop)
+    #   * ``do not retry`` / ``never retry`` (negated trigger)
+    #   * ``loop back to Phase|Step N`` (one-shot reprocess)
+    #   * ``Iterate <field-path>`` (enumerable named directly)
+    from rubric_patterns import LOOP_PATTERN, TERMINATION_PREDICATE
+
+    actionable_triggers = []
+    for match in LOOP_PATTERN.finditer(body):
+        token = match.group(0).lower()
+        prefix = body[max(0, match.start() - 30) : match.start()]
+        if re.search(r"\b(not|never|don'?t|do\s+not)\s+\w*\s*$", prefix, re.IGNORECASE):
+            continue
+        # ``for each`` is bounded list-iteration by construction unless
+        # paired with an explicit unbounded marker.
+        if token.startswith("for each"):
+            continue
+        # ``loop back to Phase|Step N`` — finite reprocess
+        if token == "loop":
+            tail = body[match.end() : match.end() + 80]
+            if re.match(
+                r"\s+back\s+to\s+(phase|step|section)\s+\w+",
+                tail,
+                re.IGNORECASE,
+            ):
+                continue
+        # ``Iterate <field-path>`` over a quoted/backticked enumerable
+        if token.startswith("iterate"):
+            tail = body[match.end() : match.end() + 80]
+            if re.match(r"\s+[`'\"]?[\w.]+[`'\"]?", tail):
+                continue
+        actionable_triggers.append(match)
+    if not actionable_triggers:
+        return _na("no actionable loop trigger (bounded / negated / finite-reprocess)")
+    if TERMINATION_PREDICATE.search(body):
         return _pass(reason="loop has termination predicate")
     return _fail(reason="loop without termination predicate")
 

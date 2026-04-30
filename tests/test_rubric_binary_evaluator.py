@@ -198,21 +198,42 @@ class TestNeedsRL9B:
 
 
 class TestPrimaryVerb:
-    def test_description_verb_wins(self):
+    # issue #102: review-skill clause now applies only to skills in
+    # COMP_X_REVIEW_ALLOWLIST. Description-verb classification was
+    # removed; non-allowlisted skills return None regardless of their
+    # description prefix.
+    def test_non_allowlisted_returns_none(self):
+        # Skill name not in allowlist — description first verb is no
+        # longer used to classify as review-class (would be a false
+        # positive for one-time bug detectors / estimators).
         fm = {"description": "Evaluates a single SKILL.md", "name": "foo"}
-        assert primary_verb(fm) == "evaluate"
+        assert primary_verb(fm) is None
 
-    def test_fallback_to_name(self):
+    def test_allowlisted_review_skill(self):
         fm = {"description": "Use when something", "name": "review-skill"}
         assert primary_verb(fm) == "review"
 
-    def test_scaffold_description_no_match(self):
+    def test_allowlisted_audit_skill(self):
+        fm = {"description": "Audits trust chain", "name": "audit-trust-chain"}
+        assert primary_verb(fm) == "audit"
+
+    def test_scaffold_returns_none(self):
         fm = {"description": "Creates a research-optimized skill", "name": "scaffold-skill"}
         assert primary_verb(fm) is None
 
-    def test_audit_name_token(self):
-        fm = {"description": "Use when checking hygiene", "name": "audit-memory"}
-        assert primary_verb(fm) == "audit"
+    def test_audit_mcp_auth_returns_none(self):
+        # audit-mcp-auth is a one-time bug detector, not a graded review.
+        fm = {"description": "Audits MCP OAuth credential storage", "name": "audit-mcp-auth"}
+        assert primary_verb(fm) is None
+
+    def test_check_repo_health_returns_none(self):
+        # check-repo-health: ``Verifies`` is the primary verb; ``reviews``
+        # appears only in object position (``before running reviews``).
+        fm = {
+            "description": "Verifies reference freshness, token budgets, before running reviews",
+            "name": "check-repo-health",
+        }
+        assert primary_verb(fm) is None
 
 
 # ---------------------------------------------------------------------------
@@ -469,6 +490,55 @@ class TestCOMPX:
         body = "Complete when all output sections are emitted."
         assert check_COMP_X(body, fm, artifact_type="skill")["verdict"] == "PASS"
 
+    # issue #102 boundary cases — primary-verb + allowlist refinement.
+    def test_audit_mcp_auth_uses_standard_clause(self):
+        # audit-mcp-auth is NOT in the review allowlist (one-time bug
+        # detector). Description verb ``Audits`` no longer triggers
+        # the review-skill clause. Standard skill clause applies; if
+        # the body lacks ``complete when``, it FAILs on success-condition.
+        fm = {"description": "Audits MCP OAuth credential storage", "name": "audit-mcp-auth"}
+        body = "Run security check. Report findings."
+        result = check_COMP_X(body, fm)
+        assert result["verdict"] == "FAIL"
+        assert result["evidence"]["reason"] == "no explicit success condition"
+
+    def test_check_repo_health_object_position_skipped(self):
+        # ``before running reviews`` puts ``reviews`` in object position;
+        # the old substring-anywhere logic mis-classified this as a
+        # review-class skill. New logic: not in allowlist → standard.
+        fm = {
+            "description": "Verifies reference freshness, before running reviews.",
+            "name": "check-repo-health",
+        }
+        body = "Complete when all references are scanned."
+        assert check_COMP_X(body, fm)["verdict"] == "PASS"
+
+    def test_evaluate_first_word_not_allowlisted(self):
+        # ``Evaluates a single SKILL.md`` no longer auto-classifies as
+        # review-class — only allowlist membership counts.
+        fm = {"description": "Evaluates a single SKILL.md", "name": "foo"}
+        body = "Complete when output emitted."
+        assert check_COMP_X(body, fm)["verdict"] == "PASS"
+
+    def test_youre_done_when_passes(self):
+        # Extended success-condition: ``You are done when ...``
+        fm = {"description": "Scaffolds", "name": "scaffold-something"}
+        body = "You are done when all sections are emitted."
+        assert check_COMP_X(body, fm)["verdict"] == "PASS"
+
+    def test_completion_block_marker_passes(self):
+        # Extended success-condition: ``COMPLETION:`` block marker.
+        fm = {"description": "Audits stuff", "name": "audit-something"}
+        body = "Run checks.\n\nCOMPLETION: End response with SCAN COMPLETE."
+        assert check_COMP_X(body, fm)["verdict"] == "PASS"
+
+    def test_review_with_evidence_citation_passes(self):
+        # Extended convergence: ``must cite at least one checklist ID``
+        # is recognized as evidence-citation predicate.
+        fm = {"description": "Evaluates a skill", "name": "review-skill"}
+        body = "Complete when justifications must cite at least one checklist ID."
+        assert check_COMP_X(body, fm)["verdict"] == "PASS"
+
 
 class TestCOMPY:
     def test_binary_predicate_passes(self):
@@ -499,6 +569,33 @@ class TestCOMPW:
 
     def test_loop_without_termination_fails(self):
         assert check_COMP_W("retry on failure")["verdict"] == "FAIL"
+
+    # issue #103 boundary cases — bounded-iteration / context-aware NA.
+    def test_for_each_no_longer_triggers(self):
+        # ``for each`` was removed from LOOP_PATTERN; bounded list
+        # iteration is termination by construction.
+        body = "For each finding, emit a diagnostic line."
+        assert check_COMP_W(body)["verdict"] == "NA"
+
+    def test_negated_retry_skipped(self):
+        body = "Process the entry. Do not retry on failure — surface as evidence."
+        assert check_COMP_W(body)["verdict"] == "NA"
+
+    def test_loop_back_to_phase_skipped(self):
+        # ``loop back to Phase 3`` is one-shot reprocess of a finite set,
+        # not an unbounded loop.
+        body = "On 'Address findings': loop back to Phase 3 with the Low recommendations."
+        assert check_COMP_W(body)["verdict"] == "NA"
+
+    def test_iterate_field_path_skipped(self):
+        # ``Iterate case.scenarios`` is bounded by the enumerable.
+        body = "Iterate `case.scenarios` (each has mode + name + expected_writes_under)."
+        assert check_COMP_W(body)["verdict"] == "NA"
+
+    def test_genuine_unbounded_retry_fails(self):
+        # Plain ``retry on failure`` still FAILs (positive control).
+        body = "On error, retry the request. Always retry until success."
+        assert check_COMP_W(body)["verdict"] == "FAIL"
 
 
 class TestSAMP1:
@@ -996,10 +1093,10 @@ REVIEW_SKILL_EXPECTED = {
     "RD-5b": "FAIL",
     "CE-X": "PASS",
     "COMP-V": "PASS",
-    "COMP-X": "FAIL",
+    "COMP-X": "PASS",  # issue #102: extended convergence patterns
     "COMP-Y": "PASS",
     "COMP-Z": "PASS",
-    "COMP-W": "FAIL",
+    "COMP-W": "NA",  # issue #103: ``for each`` removed from LOOP_PATTERN
     "SAMP-1": "NA",
     "SAMP-2": "NA",
     "PE-1": "PASS",
@@ -1034,7 +1131,7 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "COMP-X": "NA",  # Issue #74: skill-review-semantics only; agent TC-3 pending #75/#76.
     "COMP-Y": "PASS",
     "COMP-Z": "PASS",
-    "COMP-W": "FAIL",
+    "COMP-W": "NA",  # issue #103
     "SAMP-1": "NA",
     "SAMP-2": "NA",
     "PE-1": "PASS",
@@ -1069,7 +1166,7 @@ SCAFFOLD_SKILL_EXPECTED = {
     "COMP-X": "FAIL",
     "COMP-Y": "FAIL",
     "COMP-Z": "FAIL",
-    "COMP-W": "FAIL",
+    "COMP-W": "NA",  # issue #103
     "SAMP-1": "NA",
     "SAMP-2": "NA",
     "PE-1": "PASS",
