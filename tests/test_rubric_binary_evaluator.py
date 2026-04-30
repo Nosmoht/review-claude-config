@@ -442,9 +442,9 @@ class TestCEX:
         assert check_CE_X("plain procedural body")["verdict"] == "NA"
 
     def test_summarisation_with_justification_passes(self):
-        # CE_X_TRIGGER uses American spelling `summariz(e|ation)` and
-        # `compact(ion)?`. British variants ("summarisation") do not
-        # match the trigger.
+        # CE_X_SUMMARIZE_VERB uses American spelling `summariz(?:e|ation)`.
+        # British variant ("summarisation") and gerund ("summarizing") do
+        # not match. Context noun from CE_X_CONTEXT_NOUN triggers Mode (a).
         body = (
             "We keep the conversation history for 20 turns and summarize each. "
             "Masking is justified: summarization irreversibly drops tool outputs."
@@ -454,6 +454,41 @@ class TestCEX:
     def test_summarisation_without_justification_fails(self):
         body = "Keep the conversation history across 20 turns and summarize periodically."
         assert check_CE_X(body)["verdict"] == "FAIL"
+
+    def test_mode_a_context_plus_summarize_with_justification_passes(self):
+        # Mode (a): context noun + summarize + justification → PASS
+        body = (
+            "We compress the context window and summarize prior turns. "
+            "Masking is justified: summarization irreversibly drops tool call results."
+        )
+        assert check_CE_X(body)["verdict"] == "PASS"
+
+    def test_mode_a_context_plus_summarize_without_justification_fails(self):
+        # Mode (a): context noun + summarize, no justification → FAIL
+        body = "Truncate the context window: summarize prior turns every 50 exchanges."
+        assert check_CE_X(body)["verdict"] == "FAIL"
+
+    def test_quote_or_summarize_output_instruction_na(self):
+        # Mode (b) non-fire: output-instruction qualifier → NA
+        body = "Quote or summarize the relevant section from the document."
+        assert check_CE_X(body)["verdict"] == "NA"
+
+    def test_briefly_summarize_output_instruction_na(self):
+        # Mode (b) non-fire: output-instruction qualifier → NA
+        body = "Briefly summarize the findings in a single paragraph."
+        assert check_CE_X(body)["verdict"] == "NA"
+
+    def test_compact_json_with_context_noun_na(self):
+        # Formatting-noun NA short-circuit (CE_X_COMPACT_FORMAT): context noun present but no
+        # summarize verb → passes early guard, skips Mode (a), hits CE_X_COMPACT_FORMAT → NA
+        body = "Compress the context window and output as compact JSON for downstream."
+        assert check_CE_X(body)["verdict"] == "NA"
+
+    def test_compact_format_with_summarize_verb_na(self):
+        # Formatting-noun NA short-circuit (CE_X_COMPACT_FORMAT): summarize verb present but no
+        # context noun → passes early guard, skips Mode (a), hits CE_X_COMPACT_FORMAT → NA
+        body = "Summarize results and emit them as compact format for the log."
+        assert check_CE_X(body)["verdict"] == "NA"
 
 
 class TestCOMPX:

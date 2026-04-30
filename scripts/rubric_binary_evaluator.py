@@ -168,8 +168,17 @@ CLAR_4_FALLBACK_HEADING = re.compile(
 )
 
 # CE-X (rubric L122).
-CE_X_TRIGGER = re.compile(
-    r"(conversation history|summariz(e|ation)|compact(ion)?)",
+CE_X_CONTEXT_NOUN = re.compile(
+    r"(?:conversation history|context window|prior turns|compaction event)",
+    re.IGNORECASE,
+)
+CE_X_SUMMARIZE_VERB = re.compile(r"summariz(?:e|ation)", re.IGNORECASE)
+CE_X_OUTPUT_INSTRUCTION = re.compile(
+    r"(?:quote\s+or|briefly|concise|short)\s+summariz",
+    re.IGNORECASE,
+)
+CE_X_COMPACT_FORMAT = re.compile(
+    r"\bcompact\b\s+(?:JSON|format|entry|output|response|representation)",
     re.IGNORECASE,
 )
 CE_X_JUSTIFICATION = re.compile(
@@ -957,17 +966,38 @@ def check_CLAR_4(body: str) -> dict:
 
 
 def check_CE_X(body: str) -> dict:
-    if not CE_X_TRIGGER.search(body):
-        return _na("no conversation-history / summarisation / compaction mention")
-    if CE_X_JUSTIFICATION.search(body):
+    has_context = bool(CE_X_CONTEXT_NOUN.search(body))
+    has_summarize = bool(CE_X_SUMMARIZE_VERB.search(body))
+    if not (has_context or has_summarize):
+        return _na("no context-window summarisation signal")
+    # Mode (a): context-noun + summarize co-occurrence → true context-window trigger
+    if has_context and has_summarize:
+        if CE_X_JUSTIFICATION.search(body):
+            return {
+                "verdict": "PASS",
+                "evidence": {"reason": "masking / justification sentence present", "heuristic": True},
+            }
         return {
-            "verdict": "PASS",
-            "evidence": {"reason": "masking / justification sentence present", "heuristic": True},
+            "verdict": "FAIL",
+            "evidence": {"reason": "context-window summarisation without masking / justification", "heuristic": True},
         }
-    return {
-        "verdict": "FAIL",
-        "evidence": {"reason": "summarisation without masking / justification", "heuristic": True},
-    }
+    # Formatting-noun NA short-circuit: compact-as-formatting-noun → NA before FAIL path
+    if CE_X_COMPACT_FORMAT.search(body):
+        return _na("compact-as-formatting-noun, not context-window compaction")
+    # Mode (b): bare summarize not qualified by output-instruction → trigger fires
+    has_output_inst = bool(CE_X_OUTPUT_INSTRUCTION.search(body))
+    if has_summarize and not has_output_inst:
+        if CE_X_JUSTIFICATION.search(body):
+            return {
+                "verdict": "PASS",
+                "evidence": {"reason": "masking / justification sentence present", "heuristic": True},
+            }
+        return {
+            "verdict": "FAIL",
+            "evidence": {"reason": "summarisation without masking / justification", "heuristic": True},
+        }
+    # Remaining: output-instruction summarize → NA
+    return _na("no context-window summarisation signal")
 
 
 def check_COMP_X(body: str, fm: dict, artifact_type: str = "skill") -> dict:
