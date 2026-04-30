@@ -274,7 +274,12 @@ SAMPLING_PARAM = re.compile(r"\b(temperature|top_p|top_k)\s*[:=]", re.IGNORECASE
 SP_2B_BINDING = re.compile(
     r"(restricted to|allowlisted|limited to|scoped to|"
     r"policy[-_ ]?gate|used only for|invoked only when|"
-    r"guarded by|Read-only|read\s+only)",
+    r"guarded by|Read-only|read\s+only|"
+    r"(only\s+(used\s+for|file\s+\w+\s+writes|invoked|dispatched))|"
+    r"(per[-_\s](recommendation|finding|item)\s+(confirmation|approval))|"
+    r"(subagent_type\s*[:=]\s*['\"]?\w+['\"]?)|"
+    r"(after\s+(AskUserQuestion|confirm|approval))|"
+    r"optional\s+\(\s*degrade\s+gracefully\s*\))",
     re.IGNORECASE,
 )
 READ_ONLY_TOOLS = frozenset({"Read", "Glob", "Grep", "NotebookRead", "WebSearch"})
@@ -297,7 +302,10 @@ IJ_1B_VALIDATION = re.compile(
     r"(validate|matches|conforms?|conforms\s+to|format|pattern|regex)"
     r"\s+[^.]{0,200}?"
     r"(\$ARGUMENTS|repo[-_ ]?slug|path|url|input|argument|"
-    r"[`'\"]\^.*\$[`'\"])",
+    r"[`'\"]\^.*\$[`'\"])"
+    r"|validate\s+(the\s+)?(file|path|input)\s+exists"
+    r"|(sidecar|payload|file)\s+conforms\s+to\s+\S+\.(schema|json)"
+    r"|Glob\s+[`'\"][^`'\"]+[`'\"]",
     re.IGNORECASE,
 )
 IJ_1B_WRITE_GATE = re.compile(
@@ -306,6 +314,34 @@ IJ_1B_WRITE_GATE = re.compile(
     r"(Write|Edit|create|overwrite|append|save)",
     re.IGNORECASE | re.DOTALL,
 )
+INTERNAL_REPORT_TARGET = re.compile(r"\$CLAUDE_PLUGIN_DATA/(reports|audit)/", re.IGNORECASE)
+ARGUMENTS_NEAR_WRITE = re.compile(
+    r"\bWrite\b[^.]{0,300}\$ARGUMENTS|\$ARGUMENTS[^.]{0,300}\bWrite\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
+_WRITE_TOKEN = re.compile(r"\bWrite\b")
+
+
+def _ij1b_internal_report_only_writer(body: str, fm: dict) -> bool:
+    """Fallback NA-rule for check_IJ_1b.
+
+    Returns True iff the Write payload's surface is internal-report-only:
+    body references the literal token \\bWrite\\b (boundary-anchored, NOT a
+    substring inside "Writing"/"Underwrite"/etc.), AND at least one
+    $CLAUDE_PLUGIN_DATA/{reports,audit}/ target reference appears, AND no
+    $ARGUMENTS appears within 300 chars of a Write token.
+    """
+    text = body + "\n" + str(fm.get("description", ""))
+    if not _WRITE_TOKEN.search(text):
+        return False
+    if not INTERNAL_REPORT_TARGET.search(text):
+        return False
+    if ARGUMENTS_NEAR_WRITE.search(text):
+        return False
+    return True
+
+
 EXTERNAL_INPUT_MARKERS = re.compile(
     r"\$ARGUMENTS|repo[-_ ]?slug|user-supplied|fetched URL|MCP-tool output",
     re.IGNORECASE,
@@ -1134,6 +1170,10 @@ def check_IJ_1b(body: str, fm: dict) -> dict:
     has_write_gate = bool(IJ_1B_WRITE_GATE.search(text))
     if has_validation and has_write_gate:
         return _pass(validation=True, write_gate=True)
+    # Fallback NA when both predicates are missing/incomplete but the
+    # Write surface is internal-report only and not user-derived.
+    if _ij1b_internal_report_only_writer(body, fm):
+        return _na("internal-report-only Write target, no $ARGUMENTS-near-Write")
     missing = []
     if not has_validation:
         missing.append("validation-predicate")

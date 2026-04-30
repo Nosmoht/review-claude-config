@@ -802,6 +802,67 @@ class TestIJ1b:
         assert result["verdict"] == "FAIL"
         assert "write-gate-predicate" in result["evidence"]["missing"]
 
+    def test_ij1b_validate_file_exists_passes(self):
+        """BOUNDARY PASS: new pattern 1 — 'Validate the file exists' + write-gate."""
+        fm = {"allowed-tools": ["Write"]}
+        body = (
+            "Validate the file exists before processing $ARGUMENTS. "
+            "Show preview via AskUserQuestion before Write."
+        )
+        assert check_IJ_1b(body, fm)["verdict"] == "PASS"
+
+    def test_ij1b_sidecar_conforms_to_schema_passes(self):
+        """BOUNDARY PASS: new pattern 2 — 'sidecar conforms to <schema>.json'."""
+        fm = {"allowed-tools": ["Write"]}
+        body = (
+            "The sidecar conforms to schemas/skill.schema.json. "
+            "Uses $ARGUMENTS as input. "
+            "Preview via AskUserQuestion before Write."
+        )
+        assert check_IJ_1b(body, fm)["verdict"] == "PASS"
+
+    def test_ij1b_glob_bounded_input_passes(self):
+        """BOUNDARY PASS: new pattern 3 — Glob-bounded input narrowing."""
+        fm = {"allowed-tools": ["Write"]}
+        body = (
+            'Glob "*.md" to narrow the input set from $ARGUMENTS. '
+            "Preview via AskUserQuestion before Write."
+        )
+        assert check_IJ_1b(body, fm)["verdict"] == "PASS"
+
+    def test_ij1b_internal_report_only_writer_na(self):
+        """BOUNDARY NA: fallback NA fires — no validation, no write-gate,
+        body writes only to $CLAUDE_PLUGIN_DATA/reports/ and $ARGUMENTS is
+        far from any Write token."""
+        fm = {"allowed-tools": ["Write"]}
+        body = (
+            "This skill reviews the $ARGUMENTS target and produces a report. "
+            "Write the structured report to $CLAUDE_PLUGIN_DATA/reports/foo/report.md."
+        )
+        assert check_IJ_1b(body, fm)["verdict"] == "NA"
+
+    def test_ij1b_user_path_writer_no_validation_fails(self):
+        """BOUNDARY FAIL: fallback does NOT rescue user-controlled writes.
+        Body must NOT contain $CLAUDE_PLUGIN_DATA/reports/ anywhere."""
+        fm = {"allowed-tools": ["Write"]}
+        body = (
+            "Takes $ARGUMENTS as the target path and writes output. "
+            "Write the result to /tmp/foo.md."
+        )
+        result = check_IJ_1b(body, fm)
+        assert result["verdict"] == "FAIL"
+
+    def test_ij1b_internal_path_with_arguments_near_write_fails(self):
+        """BOUNDARY FAIL: $ARGUMENTS appears within 300 chars of Write even
+        though destination is $CLAUDE_PLUGIN_DATA/reports/ — fallback does
+        NOT fire because the $ARGUMENTS-near-Write guard triggers."""
+        fm = {"allowed-tools": ["Write"]}
+        body = (
+            "Write $ARGUMENTS output to $CLAUDE_PLUGIN_DATA/reports/out.md."
+        )
+        result = check_IJ_1b(body, fm)
+        assert result["verdict"] == "FAIL"
+
 
 class TestRL1b:
     def test_non_agentic_na(self):
@@ -1193,7 +1254,7 @@ REVIEW_SKILL_EXPECTED = {
     "PE-2": "PASS",
     "SP-2b": "PASS",
     "SP-4b": "PASS",
-    "IJ-1b": "FAIL",
+    "IJ-1b": "PASS",  # issue #107: "Validate the file exists" now matches
     "RL-1b": "PASS",
     "RL-3b": "NA",
     "RL-4b": "PASS",
