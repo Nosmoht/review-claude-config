@@ -53,21 +53,38 @@ Attempt a trivial Bash probe: `Bash("echo ok")`. If it fails, set `bash_availabl
 
 ### Step 1: Load References
 
-Locate the `review-claude-config` skill directory (sibling skill in the same plugin). Read these shared references from it:
-- `references/scoring-rubric.md` — the grading criteria
-- `references/engineering-baseline.md` — prompt, context, and tool design techniques
-- `references/source-quality-criteria.md` — source credibility and filtering criteria for web research
+The skill consumes 6 markdown references plus 1 conditional file. Each is
+annotated with the consumer (where its content is used) and the load site
+(where the Read call happens). This separation prevents multi-source
+context-loading from blurring canonical vs. supporting scope (Kassner
+mispriming — see `engineering-baseline.md` §"Distractor Isolation"). Five of
+the six are loaded immediately below; the sixth (`boundary-exemplars.md`) is
+loaded JIT in `b.1` only when multi-perspective dispatch fires.
 
-Use Glob to find the files if the path is not immediately known: `**/review-claude-config/references/scoring-rubric.md`
+Reference inventory (always present; load timing varies):
 
-Also load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`.
+- `references/scoring-rubric.md` — grading criteria (consumed in Phase 2 Step B/B-multi rubric application; loaded now at Step 1)
+- `references/engineering-baseline.md` — prompt, context, and tool-design techniques (consumed in Phase 2 Step A goal-inference and Phase 2 Step B/B-multi justification citations; loaded now at Step 1)
+- `references/source-quality-criteria.md` — source filtering for web research (consumed in Phase 2 Step A domain research; loaded now at Step 1)
+- `references/skill-evaluation-guide.md` — type-specific checklist PD-1 → IJ-1 (consumed in Phase 2 Step B/B-multi checklist walk; loaded now at Step 1 from this skill's own directory, NOT the sibling `review-claude-config` skill)
+- `references/boundary-exemplars.md` — canonical B-vs-C boundaries per dimension (consumed in Phase 2 Step B-multi b.1 Block 2 cache prefix and Phase 3 §"Grading Boundary Examples"; loaded JIT at b.1 in multi-perspective mode only — declared here for inventory completeness, NO Read call at Step 1)
+- `references/repo-identification.md` — `suite-root` / `repo-slug` resolution (consumed in Phase 4 standalone-mode report-path construction; loaded now at Step 1)
+
+Locate the `review-claude-config` skill directory (sibling skill in the same
+plugin) and read these references from it now, in the order listed:
+`scoring-rubric.md`, `engineering-baseline.md`, `source-quality-criteria.md`,
+`repo-identification.md`. The fifth always-now load is
+`skill-evaluation-guide.md` from THIS skill's own `references/` directory
+(not the sibling). Use Glob to find the files if the path is not immediately
+known: `**/review-claude-config/references/scoring-rubric.md` (and analogous
+for the others).
 
 **If any of these files is not found, set `status: failure`, emit the error "Required reference not found. Ensure review-claude-config is installed as a sibling skill.", and stop.**
 
-Read the type-specific evaluation guide from this skill's own directory:
-- `references/skill-evaluation-guide.md`
-
-When the skill declares Write, Bash, Edit, or MCP tools in `allowed-tools`: also read `**/review-claude-config/references/tool-grant-decision-tree.md` for archetype alignment and high-risk combination evaluation (SP-2, SP-4).
+When the skill declares Write, Bash, Edit, or MCP tools in `allowed-tools`:
+also read `**/review-claude-config/references/tool-grant-decision-tree.md`
+for archetype alignment and high-risk combination evaluation (consumed in
+Phase 2 Step B SP-2 / SP-4 evaluation only when tool-grant triggers fire).
 
 ## Phase 2 — Evaluation
 
@@ -147,6 +164,8 @@ If any Agent tool call errors, times out, or the `subagent_type` is not one of t
 **b.4 — Write perspective certificates to audit-disk.** (depends on: b.2 and b.3 returning or timing out; produces: 3 files under `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/`)
 
 For each of the 3 returned perspective certificates (clarity, correctness, integration) — max 3 iterations, stop when all three audit-paths are written or stubbed — use the Write tool to persist the certificate at `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/<perspective>.json`. The cert is produced by `scripts/perspective_certificate_parser.py::parse_perspective_certificate`, which converts the agent's Markdown grade-table into the canonical shape (see `references/merge-rules.md` §"Inputs" for the JSON example; the parser is the authoritative producer, the example illustrates the output). The grade map MUST be persisted under the top-level key `dimensions` (the parser's output key) — `merge_findings.py:357` reads `cert.get("dimensions", {})`, so any other alias (e.g., `grades`) defaults every dimension to F at the merge layer. File names are derived strictly from the orchestrator's constants `clarity|correctness|integration` — never from sub-agent output — to prevent path injection. Missing certificates write a `{"status": "missing"}` stub. b.5 must not begin until all three b.4 writes have completed; once every slot holds either a real certificate or a `{"status": "missing"}` stub (covering timed-out, denied, or skipped perspectives), continue to b.5.
+
+For malformed agent output (parser raises an exception, `dimensions` key absent, or grade table cannot be extracted), write a `{"status": "parse_error", "reason": "<parser stderr or exception summary>"}` stub to the same audit path instead of the partial certificate; the orchestrator MUST construct this JSON via `json.dumps()` (Python) or an equivalent JSON-escaping primitive — never via raw string formatting — to prevent attacker-controlled bytes in the parser stderr from breaking JSON well-formedness or escaping the `reason` field. Treat the perspective as missing for downstream merge purposes (b.5 sees the stub like any other missing perspective and applies the same degraded-mode logic), and surface `agent_output_validation: {total: 3, parsed: <count>, failed: <count>}` in the merged-cert footer so operators can distinguish a transient parser failure from a perspective that genuinely declined to grade.
 
 **b.5 — Merge findings via deterministic script.** (depends on: b.0 and b.4 completed; produces: `merged.json` + `findings.json`)
 
@@ -341,7 +360,8 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 
 ### Named failure classes
 
-- **Bash script failure** (`merge_findings.py` or `escalation_decision.py` exits non-zero OR writes stdout that does not parse as JSON): emit `## ERROR <script>: <exit-code or stderr>` and stop. Exception: when `escalation_decision.py` specifically fails, do **not** abort — fall back to treating the run as `escalation_required: false, reasons: ["script-error"]` and set `escalation_script_error: true` in the certificate so the user can re-run with `/review-skill --deep <path>`.
+- **`merge_findings.py` failure** (non-zero exit OR stdout not valid JSON): construct a stub via `json.dumps()` (Python) or an equivalent JSON-escaping primitive — `{"status": "script_error", "stderr": "<captured stderr>", "degraded_mode": true, "missing_perspectives": ["merge-failed"]}` — and write it directly to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json`. The `degraded_mode` and `missing_perspectives` keys MUST be inside this JSON object so `escalation_decision.py`'s ESC-5 trigger reads them. Use a JSON-escaping primitive (never raw string concatenation) so attacker-controlled bytes in the merge-script stderr cannot break JSON well-formedness or escape the `stderr` field. Then continue to b.6 unchanged. b.6 invokes `escalation_decision.py` against the stub merged.json; the script reads `degraded_mode: true` and emits `escalation_required: true, reasons: ["ESC-5: degraded mode — missing perspectives: merge-failed"]`. The user re-runs with `/review-skill --deep <path>` to recover. This is symmetric with `escalation_decision.py` failure handling and keeps a single hard-abort path: only Phase 1 reference-not-found remains terminal.
+- **`escalation_decision.py` failure** (non-zero exit OR stdout not valid JSON): fall back to `escalation_required: false, reasons: ["script-error"]` and set `escalation_script_error: true` in the certificate so the user can re-run with `/review-skill --deep <path>`.
 - **`rubric_binary_evaluator.py` exit-code-specific rules** (overrides the generic "Bash script failure" rule above for this script):
   - exit 0 — success; write verdicts file, proceed.
   - exit 2 — partial verdicts present; write verdicts file, proceed. Merged cert records `binary_evaluator_status: "error"`.
