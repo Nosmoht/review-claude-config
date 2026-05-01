@@ -18,6 +18,9 @@ Initially deferred because audit traces lack declared tool grants per agent (`to
 **Containment architecture spec → SKIP.**
 No consuming skill exists. Research papers without consumers go stale. The `action-classification.md` reference and `hook-observation-patterns.md` research already document the plugin's containment capabilities. Defer the spec to when an MCP server build actually begins.
 
+**MCP tool classification → PATTERN-BASED, not blanket L4.**
+`hooks/policy_gate.py` originally treated every `mcp__*` tool as L4 (`Act` → ask). This conflated reads (`list_*`/`get_*`/`retrieve_*`/`search_*` and `_read` suffix) with mutations (13 verb prefixes plus `_write` suffix). Pattern dispatch in `_classify_mcp_tool` keeps the conservative L4 default for unknown suffixes while letting opt-in `policy.json` users skip prompts on read-only ops. The skill reference `audit-policy-compliance/references/action-classification.md` is updated in lockstep so static audit and the live hook agree.
+
 ## Phase 4 — Autonomous Governance
 
 **Goal-drift detection → SKIP (partially).**
