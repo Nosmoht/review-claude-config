@@ -56,39 +56,40 @@ DEFAULT_POLICY = {
 LEVEL_LABELS = {1: "Read", 2: "Analyze", 3: "Recommend", 4: "Act", 5: "Irreversible"}
 
 # MCP tool name patterns — matched on the suffix after the last '__' separator.
-# L1 reads (list_, get_, retrieve_, search_ + suffix _read used by github MCP).
-# L4 mutations (13 verbs covering create/update/delete plus archive/membership/
-# transfer/git-publish operations + suffix _write used by github MCP).
-# Unknown suffixes fall back to L4 conservatively.
+# An L1 *shape* (list_/get_/retrieve_/search_ prefix or _read suffix) is only
+# honored when the suffix does NOT contain any L4 verb anywhere. This guards
+# against compound idioms like get_or_create_thing, list_and_delete_records,
+# search_and_replace, retrieve_and_archive — common in REST/ORM APIs (Django
+# get_or_create, idempotent endpoints) where prefix matching alone would flip
+# a destructive operation to allow. Anything not matching the L1 contract
+# falls back to L4 conservatively.
 _MCP_L1_PREFIXES = ("list_", "get_", "retrieve_", "search_")
-_MCP_L4_PREFIXES = (
-    "create_",
-    "update_",
-    "delete_",
-    "archive_",
-    "unarchive_",
-    "add_",
-    "remove_",
-    "transfer_",
-    "assign_",
-    "merge_",
-    "push_",
-    "fork_",
-    "request_",
+_MCP_L4_VERBS = (
+    "create",
+    "update",
+    "delete",
+    "archive",
+    "unarchive",
+    "remove",
+    "transfer",
+    "assign",
+    "merge",
+    "push",
+    "fork",
+    "request",
+    "write",
 )
 
 
 def _classify_mcp_tool(tool_name):
     """Classify an mcp__ tool by name pattern. Default L4 for unknown suffixes."""
+    if "__" not in tool_name:
+        return 4  # malformed name — conservative fallback
     suffix = tool_name.split("__")[-1]
-    if any(suffix.startswith(p) for p in _MCP_L1_PREFIXES):
+    is_l1_shape = any(suffix.startswith(p) for p in _MCP_L1_PREFIXES) or suffix.endswith("_read")
+    has_l4_verb = any(v in suffix for v in _MCP_L4_VERBS)
+    if is_l1_shape and not has_l4_verb:
         return 1
-    if suffix.endswith("_read"):
-        return 1
-    if any(suffix.startswith(p) for p in _MCP_L4_PREFIXES):
-        return 4
-    if suffix.endswith("_write"):
-        return 4
     return 4
 
 

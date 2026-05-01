@@ -105,6 +105,25 @@ class TestClassifyMCPTool:
         # Conservative fallback: any unrecognized verb stays at L4 (ask).
         assert _classify_mcp_tool("mcp__unknown__exotic_op") == 4
 
+    def test_get_or_create_idiom_is_l4(self):
+        # Real Django/REST idiom: get_or_create combines a read shape with a
+        # mutation verb. Prefix-only matching would flip this to L1 (allow).
+        assert _classify_mcp_tool("mcp__server__get_or_create_thing") == 4
+
+    def test_list_and_delete_idiom_is_l4(self):
+        # Compound name where the L4 verb appears inside the suffix.
+        assert _classify_mcp_tool("mcp__server__list_and_delete_records") == 4
+
+    def test_search_and_replace_idiom_is_l4(self):
+        # 'replace' isn't an L4 verb, but 'update' is — covers the family of
+        # destructive ops that hide behind a search_ prefix.
+        assert _classify_mcp_tool("mcp__server__search_and_update") == 4
+
+    def test_malformed_no_separator_is_l4(self):
+        # Defensive: a tool name without the expected mcp__server__name shape
+        # short-circuits to L4 instead of treating the whole string as suffix.
+        assert _classify_mcp_tool("mcp_no_double_underscore") == 4
+
 
 class TestLoadPolicy:
     def test_no_policy_file_returns_none(self, tmp_path):

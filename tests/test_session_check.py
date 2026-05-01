@@ -397,17 +397,35 @@ class TestParseLastRefreshedUnreadable:
     not silent pass."""
 
     def test_unicode_decode_error_surfaces(self, tmp_path):
-        """A file with invalid UTF-8 returns an error tuple instead of (None, None, None)."""
+        """A file with invalid UTF-8 BEFORE the date line returns an error tuple.
+
+        Placing the bad byte inside the frontmatter (between `---` markers and
+        before `last_refreshed:`) guarantees the iterator hits UnicodeDecodeError
+        deterministically — earlier the assertion was tautological because the
+        bad byte landed after the date and the function returned cleanly.
+        """
         bad = tmp_path / "binary.md"
-        # Write invalid UTF-8 bytes (lone continuation byte).
-        bad.write_bytes(b"---\nlast_refreshed: 2026-04-14\n---\n\xff\xfe garbage")
+        # Bad UTF-8 byte inside frontmatter, before the date line.
+        bad.write_bytes(b"---\n\xff\xfe corrupt header\nlast_refreshed: 2026-04-14\n---\n")
         date, raw, error = _parse_last_refreshed(str(bad))
-        # Outcome depends on where the iterator hits the bad byte. Either:
-        # - the date-parse succeeds before hitting the invalid byte → no error;
-        # - or UnicodeDecodeError raises mid-iteration → error captured.
-        # Both are acceptable — we assert only that the function does not
-        # raise.
-        assert (date is not None) or (error is not None) or (raw is None)
+        assert date is None
+        assert raw is None
+        assert error is not None
+        assert "UnicodeDecodeError" in error or "unreadable" in error
+
+    def test_permission_error_surfaces(self, tmp_path):
+        """An unreadable file (PermissionError) returns an error tuple, not silent pass."""
+        bad = tmp_path / "locked.md"
+        bad.write_text("---\nlast_refreshed: 2026-04-14\n---\n")
+        bad.chmod(0o000)
+        try:
+            date, raw, error = _parse_last_refreshed(str(bad))
+        finally:
+            bad.chmod(0o644)  # restore so tmp_path cleanup succeeds
+        assert date is None
+        assert raw is None
+        assert error is not None
+        assert "PermissionError" in error or "unreadable" in error
 
 
 class TestExitCodeDiscipline:

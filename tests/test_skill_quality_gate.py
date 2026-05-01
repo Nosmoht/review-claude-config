@@ -188,8 +188,10 @@ class TestExitCodeDiscipline:
     """Subprocess-level exit-code contract per issue #118.
 
     All hook scripts must `sys.exit(0)` on any exception (top-level wrapper)
-    so Claude Code never blocks tool calls due to a hook crash. These tests
-    enforce that contract for the three canonical failure inputs.
+    so Claude Code never blocks tool calls due to a hook crash. This hook
+    has no audit-write path, so the contract is enforced over two failure
+    inputs (malformed stdin, missing env vars) plus one defensive-open
+    failure that exercises commit 0926e9b's `try/except OSError`.
     """
 
     def test_malformed_json_stdin_exits_zero(self, tmp_path):
@@ -207,4 +209,25 @@ class TestExitCodeDiscipline:
         )
         assert r.returncode == 0
         # Early exit prints "{}" — verify pass-through stays clean.
+        assert r.stdout.strip() == "{}"
+
+    def test_guidelines_unreadable_exits_zero(self, tmp_path):
+        # CLAUDE_PLUGIN_ROOT/hooks/guidelines.md is a directory, not a file.
+        # The defensive `except OSError` in skill_quality_gate.main must
+        # swallow the resulting IsADirectoryError and pass through cleanly,
+        # not raise to the top-level wrapper.
+        hooks_dir = tmp_path / "hooks"
+        hooks_dir.mkdir()
+        (hooks_dir / "guidelines.md").mkdir()  # directory blocks the open()
+
+        # Match SKILL_PATTERNS so we reach the open() call, not the
+        # early-return pattern guard.
+        skill_path = tmp_path / "plugin" / "skills" / "x" / "SKILL.md"
+        skill_path.parent.mkdir(parents=True)
+        skill_path.write_text("dummy")
+
+        payload = json.dumps({"tool_input": {"file_path": str(skill_path)}})
+        r = _run(payload, env_overrides={"CLAUDE_PLUGIN_ROOT": str(tmp_path)})
+        assert r.returncode == 0
+        # Defensive open swallows the OSError and prints {} pass-through.
         assert r.stdout.strip() == "{}"

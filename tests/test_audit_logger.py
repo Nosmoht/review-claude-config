@@ -160,3 +160,7 @@ class TestExitCodeDiscipline:
         })
         r = _run(payload, env_overrides={"CLAUDE_PLUGIN_DATA": str(not_a_dir)})
         assert r.returncode == 0
+        # Pin the stdout contract too: the TL wrapper prints "{}" so a hook
+        # that exits 0 but emits hook-output garbage on the failure path
+        # would not silently pass.
+        assert r.stdout.strip() == "{}"
