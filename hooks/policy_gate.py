@@ -55,14 +55,50 @@ DEFAULT_POLICY = {
 
 LEVEL_LABELS = {1: "Read", 2: "Analyze", 3: "Recommend", 4: "Act", 5: "Irreversible"}
 
+# MCP tool name patterns — matched on the suffix after the last '__' separator.
+# L1 reads (list_, get_, retrieve_, search_ + suffix _read used by github MCP).
+# L4 mutations (13 verbs covering create/update/delete plus archive/membership/
+# transfer/git-publish operations + suffix _write used by github MCP).
+# Unknown suffixes fall back to L4 conservatively.
+_MCP_L1_PREFIXES = ("list_", "get_", "retrieve_", "search_")
+_MCP_L4_PREFIXES = (
+    "create_",
+    "update_",
+    "delete_",
+    "archive_",
+    "unarchive_",
+    "add_",
+    "remove_",
+    "transfer_",
+    "assign_",
+    "merge_",
+    "push_",
+    "fork_",
+    "request_",
+)
+
+
+def _classify_mcp_tool(tool_name):
+    """Classify an mcp__ tool by name pattern. Default L4 for unknown suffixes."""
+    suffix = tool_name.split("__")[-1]
+    if any(suffix.startswith(p) for p in _MCP_L1_PREFIXES):
+        return 1
+    if suffix.endswith("_read"):
+        return 1
+    if any(suffix.startswith(p) for p in _MCP_L4_PREFIXES):
+        return 4
+    if suffix.endswith("_write"):
+        return 4
+    return 4
+
 
 def _classify_tool(tool_name, tool_input):
     """Return authorization level (1-5) for a tool call."""
     level = TOOL_LEVELS.get(tool_name, 4)  # unknown tools default to L4
 
-    # MCP tools default to L4
+    # MCP tools: pattern-based classification (reads vs mutations vs unknown)
     if tool_name.startswith("mcp__"):
-        level = 4
+        level = _classify_mcp_tool(tool_name)
 
     # Bash escalation check
     if tool_name == "Bash" and level == 4:

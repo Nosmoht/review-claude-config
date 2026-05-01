@@ -25,7 +25,7 @@ last_refreshed: 2026-04-14
 | AskUserQuestion | L3 | User decides |
 | Edit, Write, MultiEdit, Agent | L4 | State change |
 | Bash | L4* | *L5 if matches destructive pattern |
-| MCP tools | L4 | Default; adjust per server risk tier |
+| MCP tools | L1 / L4 | L1 for `list_`/`get_`/`retrieve_`/`search_` prefixes and `_read` suffix; L4 for `create_`/`update_`/`delete_`/`archive_`/`unarchive_`/`add_`/`remove_`/`transfer_`/`assign_`/`merge_`/`push_`/`fork_`/`request_` prefixes and `_write` suffix; L4 default for unknown suffixes |
 
 ## Bash → L5 Escalation Patterns
 

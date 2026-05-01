@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hooks"))
 from policy_gate import (
     DEFAULT_POLICY,
     _check_overrides,
+    _classify_mcp_tool,
     _classify_tool,
     _load_policy,
     main,
@@ -42,7 +43,10 @@ class TestClassifyTool:
     def test_unknown_tool_defaults_to_l4(self):
         assert _classify_tool("SomeNewTool", {}) == 4
 
-    def test_mcp_tool_is_l4(self):
+    def test_mcp_create_is_l4(self):
+        # Historic baseline test, kept for regression. New MCP coverage lives
+        # in TestClassifyMCPTool below — this case exercises the create_ prefix
+        # path through _classify_tool's MCP branch.
         assert _classify_tool("mcp__github__create_issue", {}) == 4
 
     def test_ask_user_is_l3(self):
@@ -50,6 +54,56 @@ class TestClassifyTool:
 
     def test_bash_deploy_escalates_to_l5(self):
         assert _classify_tool("Bash", {"command": "deploy production"}) == 5
+
+
+class TestClassifyMCPTool:
+    """Pattern-based classification for mcp__* tool names.
+
+    L1 reads: list_, get_, retrieve_, search_ prefixes + _read suffix.
+    L4 mutations: create_/update_/delete_/archive_/unarchive_/add_/remove_/
+    transfer_/assign_/merge_/push_/fork_/request_ prefixes + _write suffix.
+    Unknown suffixes fall back to L4 conservatively.
+    """
+
+    def test_list_prefix_is_l1(self):
+        assert _classify_mcp_tool("mcp__github__list_issues") == 1
+
+    def test_retrieve_prefix_is_l1(self):
+        assert _classify_mcp_tool("mcp__plane__retrieve_work_item") == 1
+
+    def test_search_prefix_is_l1(self):
+        assert _classify_mcp_tool("mcp__github__search_repositories") == 1
+
+    def test_get_prefix_is_l1(self):
+        assert _classify_mcp_tool("mcp__plane__get_me") == 1
+
+    def test_read_suffix_is_l1(self):
+        # GitHub MCP convention: issue_read / pull_request_read are reads.
+        assert _classify_mcp_tool("mcp__github__issue_read") == 1
+
+    def test_create_prefix_is_l4(self):
+        assert _classify_mcp_tool("mcp__plane__create_work_item") == 4
+
+    def test_delete_prefix_is_l4(self):
+        assert _classify_mcp_tool("mcp__plane__delete_work_item") == 4
+
+    def test_archive_prefix_is_l4(self):
+        assert _classify_mcp_tool("mcp__plane__archive_cycle") == 4
+
+    def test_add_prefix_is_l4(self):
+        assert _classify_mcp_tool("mcp__plane__add_work_items_to_cycle") == 4
+
+    def test_merge_prefix_is_l4(self):
+        assert _classify_mcp_tool("mcp__github__merge_pull_request") == 4
+
+    def test_write_suffix_is_l4(self):
+        # GitHub MCP convention: issue_write / pull_request_review_write /
+        # sub_issue_write are mutations dispatched via method= argument.
+        assert _classify_mcp_tool("mcp__github__issue_write") == 4
+
+    def test_unknown_suffix_defaults_to_l4(self):
+        # Conservative fallback: any unrecognized verb stays at L4 (ask).
+        assert _classify_mcp_tool("mcp__unknown__exotic_op") == 4
 
 
 class TestLoadPolicy:
