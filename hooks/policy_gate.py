@@ -57,27 +57,47 @@ LEVEL_LABELS = {1: "Read", 2: "Analyze", 3: "Recommend", 4: "Act", 5: "Irreversi
 
 # MCP tool name patterns — matched on the suffix after the last '__' separator.
 # An L1 *shape* (list_/get_/retrieve_/search_ prefix or _read suffix) is only
-# honored when the suffix does NOT contain any L4 verb anywhere. This guards
-# against compound idioms like get_or_create_thing, list_and_delete_records,
-# search_and_replace, retrieve_and_archive — common in REST/ORM APIs (Django
-# get_or_create, idempotent endpoints) where prefix matching alone would flip
-# a destructive operation to allow. Anything not matching the L1 contract
-# falls back to L4 conservatively.
+# honored when no token in the suffix is an L4 mutation verb. Token matching
+# (split on '_') avoids two substring-collision classes:
+#   - 'request' inside pull_request_read / list_pull_requests is a noun, not
+#     the HTTP verb. Token split keeps 'request'-the-noun distinct from a
+#     mutation verb of the same letters.
+#   - 'read' inside ready_to_send / thread_id is a noun fragment, not the
+#     read verb — token split prevents these collisions in either direction.
+# It also guards against compound idioms (get_or_create_thing, list_and_delete,
+# get_and_set_label) that prefix matching alone would flip to L1. Anything not
+# matching the L1 contract falls back to L4 conservatively.
 _MCP_L1_PREFIXES = ("list_", "get_", "retrieve_", "search_")
-_MCP_L4_VERBS = (
-    "create",
-    "update",
-    "delete",
-    "archive",
-    "unarchive",
-    "remove",
-    "transfer",
-    "assign",
-    "merge",
-    "push",
-    "fork",
-    "request",
-    "write",
+_MCP_L4_VERBS = frozenset(
+    {
+        "create",
+        "update",
+        "delete",
+        "archive",
+        "unarchive",
+        "remove",
+        "transfer",
+        "assign",
+        "merge",
+        "push",
+        "fork",
+        "write",
+        # Real mutation verbs that surfaced in round-2 review — not all are in
+        # the current GitHub/Plane MCP inventory, but they are common API shapes
+        # ('set_*', 'rotate_*', 'revoke_*', 'cancel_*') worth blocking before
+        # they appear, so the conservative fallback does not have to carry the
+        # whole burden.
+        "set",
+        "rotate",
+        "revoke",
+        "destroy",
+        "patch",
+        "replace",
+        "purge",
+        "disable",
+        "cancel",
+        "close",
+    }
 )
 
 
@@ -87,7 +107,7 @@ def _classify_mcp_tool(tool_name):
         return 4  # malformed name — conservative fallback
     suffix = tool_name.split("__")[-1]
     is_l1_shape = any(suffix.startswith(p) for p in _MCP_L1_PREFIXES) or suffix.endswith("_read")
-    has_l4_verb = any(v in suffix for v in _MCP_L4_VERBS)
+    has_l4_verb = bool(set(suffix.split("_")) & _MCP_L4_VERBS)
     if is_l1_shape and not has_l4_verb:
         return 1
     return 4

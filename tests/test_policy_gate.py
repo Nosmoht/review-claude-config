@@ -59,10 +59,11 @@ class TestClassifyTool:
 class TestClassifyMCPTool:
     """Pattern-based classification for mcp__* tool names.
 
-    L1 reads: list_, get_, retrieve_, search_ prefixes + _read suffix.
-    L4 mutations: create_/update_/delete_/archive_/unarchive_/add_/remove_/
-    transfer_/assign_/merge_/push_/fork_/request_ prefixes + _write suffix.
-    Unknown suffixes fall back to L4 conservatively.
+    Algorithm: an L1 shape (list_/get_/retrieve_/search_ prefix or _read
+    suffix) is honored only when no token in the suffix is an L4 mutation
+    verb. Token matching (split on '_') avoids substring collisions like
+    'request' inside pull_request_read and lets compound idioms such as
+    get_or_create_thing resolve to L4. Unknown shapes fall back to L4.
     """
 
     def test_list_prefix_is_l1(self):
@@ -123,6 +124,32 @@ class TestClassifyMCPTool:
         # Defensive: a tool name without the expected mcp__server__name shape
         # short-circuits to L4 instead of treating the whole string as suffix.
         assert _classify_mcp_tool("mcp_no_double_underscore") == 4
+
+    def test_pull_request_read_is_l1(self):
+        # Regression: 'request' was previously a verb in the L4 list and
+        # substring matching flipped pull_request_read to L4 incorrectly.
+        # Token-split classification keeps the noun 'request' distinct from
+        # any mutation verb, and 'read' wins via the _read suffix.
+        assert _classify_mcp_tool("mcp__github__pull_request_read") == 1
+
+    def test_list_pull_requests_is_l1(self):
+        # Regression: pluralized 'requests' as the suffix-tail must not flip
+        # the read shape — the suffix 'list_pull_requests' has L1 shape and
+        # contains no L4 verb token.
+        assert _classify_mcp_tool("mcp__github__list_pull_requests") == 1
+
+    def test_get_and_set_label_is_l4(self):
+        # Round-2 verb extension: 'set' is a mutation verb and must override
+        # the get_ prefix's L1 shape.
+        assert _classify_mcp_tool("mcp__server__get_and_set_label") == 4
+
+    def test_get_or_destroy_record_is_l4(self):
+        # Round-2 verb extension: 'destroy' must override get_ L1 shape.
+        assert _classify_mcp_tool("mcp__server__get_or_destroy_record") == 4
+
+    def test_list_and_revoke_tokens_is_l4(self):
+        # Round-2 verb extension: 'revoke' must override list_ L1 shape.
+        assert _classify_mcp_tool("mcp__server__list_and_revoke_tokens") == 4
 
 
 class TestLoadPolicy:
