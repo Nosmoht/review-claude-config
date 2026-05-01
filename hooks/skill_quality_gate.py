@@ -28,8 +28,18 @@ def main():
         return
 
     guidelines_path = os.path.join(plugin_root, "hooks", "guidelines.md")
-    with open(guidelines_path, "r") as f:
-        guidelines = f.read()
+    # Defensive read: a missing/unreadable guidelines.md must not raise.
+    # Covers FileNotFoundError, PermissionError, IsADirectoryError, and any
+    # other OSError. The hook degrades to pass-through ("{}") rather than
+    # falling back to the top-level Exception wrapper (which prints a
+    # diagnostic to stderr and is therefore noisier than necessary).
+    # See GitHub issue #118: phantom-block class from anthropics/claude-code#21988.
+    try:
+        with open(guidelines_path, "r", encoding="utf-8") as f:
+            guidelines = f.read()
+    except OSError:
+        print("{}")
+        return
 
     print(json.dumps({"systemMessage": guidelines}))
 

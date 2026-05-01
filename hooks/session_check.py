@@ -27,8 +27,11 @@ def _parse_last_refreshed(path):
     """Return (date, date_str, error) from YAML frontmatter last_refreshed.
 
     - Valid date:              (datetime.date, "YYYY-MM-DD", None)
-    - Field absent/no FM/I/O: (None, None, None)
+    - Field absent/no FM:      (None, None, None)
+    - Nonexistent path:        (None, None, None)  (silent — not a corruption)
     - Malformed date present:  (None, raw_str, error_message)
+    - Unreadable existing file: (None, None, error_message)  surfaces via
+      malformed_errors so corruption is auditable instead of silent.
     """
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -51,8 +54,15 @@ def _parse_last_refreshed(path):
                         return datetime.date.fromisoformat(date_str), date_str, None
                     except ValueError:
                         return None, date_str, "not a valid calendar date"
-    except (OSError, UnicodeDecodeError):
-        pass
+    except FileNotFoundError:
+        # Path doesn't exist — caller's glob may race with delete; treat as
+        # absent (not as corruption).
+        return None, None, None
+    except (OSError, UnicodeDecodeError) as exc:
+        # Existing-but-unreadable file (permissions, decode error, etc.) is
+        # corruption-class — surface via malformed_errors instead of silent
+        # pass so the maintainer sees it in additionalContext.
+        return None, None, f"unreadable: {type(exc).__name__}"
     return None, None, None
 
 
@@ -112,13 +122,19 @@ def main():
     refs_dir = os.path.join(plugin_root, "skills", "review-claude-config", "references")
     stale, malformed_errors = _check_stale_references(refs_dir, today)
 
-    # Malformed dates: surface as warnings (one per file)
+    # Malformed dates / unreadable files: surface as warnings (one per file)
     for path, raw, error in malformed_errors:
         name = os.path.basename(path)
-        messages.append(
-            f"Unparseable last_refreshed in '{name}': '{raw}' — expected YYYY-MM-DD"
-            f" ({error}). Run python scripts/validate_schema.py to audit."
-        )
+        if raw is None:
+            # Unreadable existing file (no parseable date_str captured).
+            messages.append(
+                f"Cannot read reference file '{name}' ({error}). Run python scripts/validate_schema.py to audit."
+            )
+        else:
+            messages.append(
+                f"Unparseable last_refreshed in '{name}': '{raw}' — expected YYYY-MM-DD"
+                f" ({error}). Run python scripts/validate_schema.py to audit."
+            )
 
     # Staleness: report only the oldest stale file
     if stale:
