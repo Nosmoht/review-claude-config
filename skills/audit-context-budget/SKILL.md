@@ -135,6 +135,10 @@ Wait for the scanner to return "SCAN COMPLETE" before proceeding.
 
 Using the scanner output and the loaded reference files, compute estimates and classifications inline.
 
+**Step 0: Validate scanner output against detection.**
+
+For every artifact flagged present in Phase 1 Step 3 (`CLAUDE.md`, `.mcp.json`, `settings.json`, plugin skills), confirm a corresponding non-`NOT FOUND` entry exists in the scanner's Categories A/C/D/F. If any detected artifact maps to `NOT FOUND` or is absent from the scanner output, abort and re-dispatch the scanner with the missing path enumerated. Also confirm every Category A–F header is present in the response.
+
 **Step 1: Compute token ranges.**
 
 For each measured component, apply chars/4 (low) and chars/3 (high) from `context-budget-heuristics.md`.
