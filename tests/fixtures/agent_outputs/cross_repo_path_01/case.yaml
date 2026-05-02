@@ -1,0 +1,36 @@
+case_id: cross_repo_path_01
+category: clear_antecedent
+artifact_path: /workspace/knowledge-base/.claude/skills/deploy/SKILL.md
+provenance:
+  source: synthesised
+  captured_at: 2026-05-02
+  rubric_sha: 9c717d06f7d135e1f780bf2dc844ea56fe733861
+  rationale: |
+    Regression guard for issue #149: the integration perspective agent must
+    produce a canonical certificate when the artifact lives outside the
+    review-claude-config repository. Previously the agent emitted a
+    "BOUNDARY VIOLATION" refusal for cross-repo paths.
+expected:
+  perspective: integration
+  error_present: false
+  dimensions:
+    Clarity: B
+    Completeness: B
+    Prompt Engineering: B
+    Context Engineering: B
+    Goal Alignment: B
+    Safety: C
+    Metadata: B
+  findings:
+    count: 2
+    severity_counts:
+      High: 1
+      Low: 1
+    must_include_checklist_items: [SP-1, RD-2]
+    must_not_include_checklist_items: []
+attack:
+  class: null
+notes: |
+  Synthesised. artifact_path resolves outside review-claude-config. Regression
+  guard for the BOUNDARY VIOLATION hallucination fixed in issue #149. SP-1 and
+  RD-2 are non-binary, non-narrative-parent items that survive apply_caps.
