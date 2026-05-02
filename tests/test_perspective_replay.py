@@ -3,10 +3,11 @@
 Implements the contract pinned by issue #82: snapshot fixtures, no VCR.
 Each case directory under ``tests/fixtures/agent_outputs/<case_id>/`` carries:
 
-  - ``clarity.md``  — captured or synthesised perspective certificate (the
-    Markdown body the agent returned). Captures come from the local session
-    JSONL ledger; synthesised fixtures emulate Haiku-style output for
-    behaviours real captures do not exhibit.
+  - ``{perspective}.md``  — captured or synthesised perspective certificate where
+    ``perspective`` matches ``expected.perspective`` in ``case.yaml``
+    (default ``clarity.md`` for fixtures that do not declare ``expected.perspective``).
+    Captures come from the local session JSONL ledger; synthesised fixtures
+    emulate Haiku-style output for behaviours real captures do not exhibit.
   - ``case.yaml``   — test definition with assertions and provenance.
 
 The harness mocks the dispatch step by feeding the recorded Markdown into
@@ -93,7 +94,7 @@ import yaml
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from merge_findings import merge_directory  # noqa: E402
+from merge_findings import merge_directory, PERSPECTIVES  # noqa: E402
 from perspective_certificate_parser import (  # noqa: E402
     VALID_DIMENSIONS,
     parse_certificate,
@@ -212,7 +213,7 @@ def test_replay_case(case_dir: pathlib.Path, tmp_path: pathlib.Path) -> None:
     """Per-case parser+merge replay.
 
     Steps:
-      1. Read ``case.yaml`` and ``clarity.md``.
+      1. Read ``case.yaml`` and ``{expected.perspective}.md`` (default ``clarity.md``).
       2. Parse the Markdown to a JSON-shaped dict.
       3. Apply ``expected:`` assertions to the parser output.
       4. Write the parsed cert plus two neutral sibling stubs to ``tmp_path``,
@@ -220,17 +221,25 @@ def test_replay_case(case_dir: pathlib.Path, tmp_path: pathlib.Path) -> None:
          entering ``status=failure`` — this is the integration smoke.
     """
     case = yaml.safe_load((case_dir / "case.yaml").read_text(encoding="utf-8"))
-    md = (case_dir / "clarity.md").read_text(encoding="utf-8")
     case_id = case["case_id"]
     artifact_path = case["artifact_path"]
     expected = case.get("expected") or {}
-
-    # Real orchestrators know which perspective slot they dispatched into
-    # (the file name is constant per slot — see perspective-dispatch-protocol.md
-    # "File name is derived strictly from the orchestrator's constants
-    # clarity|correctness|integration"). Mirror that here so ERROR shortcuts
-    # still tag with the dispatching perspective.
-    perspective_override = (case_dir / "clarity.md").stem  # "clarity"
+    # Cert file name matches expected.perspective. Pre-existing fixtures that do not
+    # declare expected.perspective default to "clarity" (backward-compatible).
+    # When expected.perspective is explicitly set to a non-clarity value, the named
+    # file MUST exist — no silent fallback (would mask a missing fixture file).
+    _ep = (expected.get("perspective") or "clarity").strip()
+    _cert_file = case_dir / f"{_ep}.md"
+    if not _cert_file.exists():
+        if _ep == "clarity":
+            raise FileNotFoundError(f"{case_id}: clarity.md missing in {case_dir}")
+        else:
+            raise FileNotFoundError(
+                f"{case_id}: expected cert file {_cert_file} not found "
+                f"(expected.perspective={_ep!r})"
+            )
+    md = _cert_file.read_text(encoding="utf-8")
+    perspective_override = _cert_file.stem
     cert = parse_certificate(
         md,
         artifact_path=artifact_path,
@@ -241,13 +250,9 @@ def test_replay_case(case_dir: pathlib.Path, tmp_path: pathlib.Path) -> None:
     # Integration smoke — write all three perspective JSONs to a tmp dir and
     # confirm merge_directory consumes the cert. This catches regressions
     # where a parser change emits a shape merge_directory cannot read.
-    (tmp_path / "clarity.json").write_text(json.dumps(cert), encoding="utf-8")
-    (tmp_path / "correctness.json").write_text(
-        json.dumps(_neutral_sibling("correctness")), encoding="utf-8"
-    )
-    (tmp_path / "integration.json").write_text(
-        json.dumps(_neutral_sibling("integration")), encoding="utf-8"
-    )
+    for _p in PERSPECTIVES:
+        _slot = cert if _p == perspective_override else _neutral_sibling(_p)
+        (tmp_path / f"{_p}.json").write_text(json.dumps(_slot), encoding="utf-8")
 
     result = merge_directory(tmp_path)
     if expected.get("error_present", False):
@@ -258,6 +263,20 @@ def test_replay_case(case_dir: pathlib.Path, tmp_path: pathlib.Path) -> None:
     else:
         assert result["status"] == "success", f"{case_id}: merge status {result['status']!r}"
         assert result["degraded_mode"] is False, f"{case_id}: merge entered degraded_mode"
+        # Verify findings from the real cert flowed through (neutral siblings add none).
+        assert len(result["findings"]) >= len(cert["findings"]), (
+            f"{case_id}: expected ≥{len(cert['findings'])} findings from real "
+            f"{perspective_override!r} cert in merge output, got {len(result['findings'])}"
+        )
+        # Also verify checklist items from must_include are present in merge output.
+        _must_include = expected.get("findings", {}).get("must_include_checklist_items", [])
+        if _must_include:
+            _result_items = {f.get("checklist_item") for f in result["findings"]}
+            for _item in _must_include:
+                assert _item in _result_items, (
+                    f"{case_id}: required checklist_item {_item!r} missing from merge "
+                    f"output (expected perspective: {perspective_override!r})"
+                )
 
 
 def test_at_least_twelve_cases() -> None:
@@ -319,6 +338,7 @@ def test_caps_smoke_drops_binary_items(tmp_path: pathlib.Path) -> None:
     logic exhaustively in isolation.
     """
     case_dir = FIXTURES_DIR / "clear_antecedent_02"
+    # clear_antecedent_02 is a clarity-only fixture; clarity.md is intentional here.
     md = (case_dir / "clarity.md").read_text(encoding="utf-8")
     cert = parse_certificate(
         md,
