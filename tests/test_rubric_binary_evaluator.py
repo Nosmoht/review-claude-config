@@ -30,6 +30,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from rubric_binary_evaluator import (  # noqa: E402
     BINARY_ITEM_IDS,
     NON_BINARY_ITEMS,
+    REPO_ROOT,
     SCHEMA_VERSION,
     check_AH_2b,
     check_CE_X,
@@ -61,6 +62,7 @@ from rubric_binary_evaluator import (  # noqa: E402
     check_WS_2b,
     check_WS_5b,
     evaluate,
+    find_analyzed_repo_root,
     is_agentic,
     needs_rl9b,
     parse_frontmatter,
@@ -308,6 +310,77 @@ class TestMETA3b:
         result = check_META_3b(p, fm, artifact_type="agent")
         assert result["verdict"] == "NA"
         assert "#75" in result["evidence"]["reason"]
+
+
+class TestMETA3bBoundary:
+    """Verify META-3b uses artifact-derived sibling glob, not plugin REPO_ROOT."""
+
+    def test_external_repo_sibling_path_not_from_plugin(self, tmp_path):
+        # External Claude Code repo layout: <repo>/.claude/skills/*/SKILL.md
+        (tmp_path / ".claude" / "skills" / "target").mkdir(parents=True)
+        (tmp_path / ".claude" / "skills" / "sibling").mkdir(parents=True)
+        target = tmp_path / ".claude" / "skills" / "target" / "SKILL.md"
+        target.write_text(
+            "---\nname: target\ndescription: Audits review quality sessions\n---\nbody"
+        )
+        (tmp_path / ".claude" / "skills" / "sibling" / "SKILL.md").write_text(
+            "---\nname: sibling\ndescription: Audits review quality output\n---\nbody"
+        )
+        fm, _ = parse_frontmatter(target)
+        result = check_META_3b(target, fm)
+        # Overlapping descriptions, no counter-reference → FAIL
+        assert result["verdict"] == "FAIL"
+        sibling_path = result["evidence"]["sibling"]
+        # Sibling must NOT reference the plugin's skills/ directory
+        assert str(REPO_ROOT / "skills") not in sibling_path, (
+            f"sibling references plugin root: {sibling_path}"
+        )
+        # Sibling path is relative to .claude/ container → "skills/<name>/SKILL.md"
+        assert "skills/sibling/SKILL.md" in sibling_path.replace("\\", "/"), (
+            f"sibling not from analyzed repo: {sibling_path}"
+        )
+
+    def test_external_repo_no_siblings_returns_na(self, tmp_path):
+        # Only one skill in the external repo — no siblings
+        (tmp_path / ".claude" / "skills" / "lonely").mkdir(parents=True)
+        lonely = tmp_path / ".claude" / "skills" / "lonely" / "SKILL.md"
+        lonely.write_text(
+            "---\nname: lonely\ndescription: Evaluates something unique entirely\n---\nbody"
+        )
+        fm, _ = parse_frontmatter(lonely)
+        result = check_META_3b(lonely, fm)
+        assert result["verdict"] == "NA"
+        assert "no sibling" in result["evidence"]["reason"]
+
+    def test_no_claude_parent_no_siblings(self, tmp_path):
+        # Artifact is the only SKILL.md in its skills/ dir → no siblings after self-exclusion → NA
+        skills_dir = tmp_path / "skills" / "orphan"
+        skills_dir.mkdir(parents=True)
+        orphan = skills_dir / "SKILL.md"
+        orphan.write_text(
+            "---\nname: orphan\ndescription: Evaluates something standalone\n---\nbody"
+        )
+        fm, _ = parse_frontmatter(orphan)
+        result = check_META_3b(orphan, fm)
+        # glob at tmp_path/skills/ finds only orphan/SKILL.md (self); self-exclusion → [] → NA
+        assert result["verdict"] == "NA"
+        assert "no sibling" in result["evidence"]["reason"]
+
+    def test_find_analyzed_repo_root_returns_nearest_claude_parent(self, tmp_path):
+        # Verifies find_analyzed_repo_root walks to the nearest ancestor containing .claude/
+        (tmp_path / ".claude").mkdir()
+        deep = tmp_path / "a" / "b" / "c"
+        deep.mkdir(parents=True)
+        artifact = deep / "SKILL.md"
+        artifact.write_text("body")
+        result = find_analyzed_repo_root(artifact)
+        assert result == tmp_path, f"expected {tmp_path}, got {result}"
+
+    def test_find_analyzed_repo_root_no_claude_parent_returns_none(self, tmp_path):
+        artifact = tmp_path / "SKILL.md"
+        artifact.write_text("body")
+        result = find_analyzed_repo_root(artifact)
+        assert result is None
 
 
 class TestMETA4:
@@ -1337,7 +1410,7 @@ REVIEW_SKILL_EXPECTED = {
     "META-2": "PASS",
     "META-3a": "PASS",
     "META-3b": "PASS",
-    "META-3c": "FAIL",  # review-skill has no token unique vs all 31 siblings
+    "META-3c": "PASS",  # artifact-derived sibling root: only 1 non-overlapping sibling → unique tokens exist
     "META-4": "PASS",
     "CLAR-1": "PASS",
     "CLAR-2": "PASS",  # issue #104: antecedent-aware narrowing
@@ -1406,8 +1479,8 @@ SCAFFOLD_SKILL_EXPECTED = {
     "META-1a": "PASS",
     "META-2": "PASS",
     "META-3a": "PASS",
-    "META-3b": "FAIL",
-    "META-3c": "FAIL",
+    "META-3b": "PASS",  # artifact-derived sibling root: only 1 non-overlapping sibling → PASS
+    "META-3c": "PASS",  # artifact-derived sibling root: unique tokens exist vs single sibling
     "META-4": "PASS",
     "CLAR-1": "PASS",
     "CLAR-2": "PASS",  # issue #104
