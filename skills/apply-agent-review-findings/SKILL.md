@@ -36,6 +36,8 @@ report_timestamp: YYYY-MM-DDTHHMMSS
 - If present -> **orchestrated mode** (use provided items, skip report parsing, return structured results only).
 - If absent -> **standalone mode** (full workflow below).
 
+> **Pre-apply policy classification.** Before any Edit, classify the finding against [`docs/apply-risk-policy.md`](../../docs/apply-risk-policy.md) on `evidence_class × confidence × blast_radius`. If `decide()` returns `auto_apply_allowed: false` (e.g., `evidence_class: Low-evidence area`, missing label, or any `blast_radius: security-sensitive`), route to manual-only handling regardless of the per-edit Confirmation Gate.
+
 ## Phase 1 -- Setup (standalone mode only)
 
 ### Step 1: Locate Report

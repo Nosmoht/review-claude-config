@@ -1,0 +1,22 @@
+id: case-08-apply-risk-security-sensitive
+kind: behavior_apply_policy
+description: Apply-risk policy — blast_radius=security-sensitive always forces auto_apply_allowed=false (O2)
+target_skill: apply-risk-policy
+sprint_contract:
+  - id: C8-1
+    description: "Lookup with blast_radius=security-sensitive returns auto_apply_allowed: false for all evidence_class × confidence × change_type combinations not already blocked by O1/O3."
+expected:
+  policy_lookup_parametric:
+    fixed:
+      blast_radius: "security-sensitive"
+    cartesian:
+      evidence_class: ["Proven result", "Engineering guidance", "Repo default"]
+      confidence:     [high, medium, low]
+      change_type:    [formatting, structure, wording, policy, tool-permission, hook, apply-flow]
+    output:
+      auto_apply_allowed: false
+      human_review_required: true
+acceptance: null
+notes: |
+  Pins Boundaries §Ask-first rule. Cartesian: 1 fixed × 3 ec × 3 conf × 7 ct = 63 combinations.
+  Low-evidence area excluded from cartesian because O1 short-circuits before O2.

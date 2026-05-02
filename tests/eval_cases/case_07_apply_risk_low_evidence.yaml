@@ -1,0 +1,25 @@
+id: case-07-apply-risk-low-evidence
+kind: behavior_apply_policy
+description: Apply-risk policy — Low-evidence area is always blocked regardless of other dimensions
+target_skill: apply-risk-policy
+sprint_contract:
+  - id: C7-1
+    description: "Lookup with evidence_class=Low-evidence area returns auto_apply_allowed: false for ALL 84 (confidence × blast_radius × change_type) combinations."
+  - id: C7-2
+    description: "Lookup returns human_review_required: true for the same."
+expected:
+  policy_lookup_parametric:
+    fixed:
+      evidence_class: "Low-evidence area"
+    cartesian:
+      confidence:    [high, medium, low]
+      blast_radius:  [single-file, multi-file, runtime-behavior, security-sensitive]
+      change_type:   [formatting, structure, wording, policy, tool-permission, hook, apply-flow]
+    output:
+      auto_apply_allowed: false
+      human_review_required: true
+acceptance: null
+notes: |
+  Pins issue #125 acceptance criterion (b) and Boundaries §Always rule that
+  Low-evidence area is auto_apply_allowed: false regardless of confidence/blast_radius/change_type.
+  Cartesian shape: 1 fixed × 3 conf × 4 br × 7 ct = 84 combinations exercised — full coverage of the change_type enum (R2.4 fix).

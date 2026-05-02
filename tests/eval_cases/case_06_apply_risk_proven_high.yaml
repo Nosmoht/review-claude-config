@@ -1,0 +1,23 @@
+id: case-06-apply-risk-proven-high
+kind: behavior_apply_policy
+description: Apply-risk policy — Proven-result + high + single-file + formatting → auto_apply_allowed
+target_skill: apply-risk-policy
+sprint_contract:
+  - id: C6-1
+    description: "Lookup (Proven result, high, single-file, formatting) returns auto_apply_allowed: true."
+  - id: C6-2
+    description: "Lookup returns human_review_required: false for the same combination."
+expected:
+  policy_lookup:
+    - input:
+        evidence_class: "Proven result"
+        confidence: high
+        blast_radius: single-file
+        change_type: formatting
+      output:
+        auto_apply_allowed: true
+        human_review_required: false
+acceptance: null
+notes: |
+  Pins issue #125 acceptance criterion (a). Validates the matrix top-row outcome —
+  strong evidence + high confidence + minimal blast radius + cosmetic change yields auto-apply.
