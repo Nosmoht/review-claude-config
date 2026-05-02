@@ -64,6 +64,15 @@ import traceback
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
+
+def find_analyzed_repo_root(artifact_path: pathlib.Path) -> pathlib.Path | None:
+    """Walk ancestors of artifact_path to find the nearest repo root (dir containing .claude/)."""
+    for parent in artifact_path.resolve().parents:
+        if (parent / ".claude").is_dir():
+            return parent
+    return None
+
+
 from rubric_patterns import (  # noqa: E402
     AGENTIC_DISPATCH_PATTERN,
     AGENTIC_LOOP_PATTERN,
@@ -719,8 +728,8 @@ def needs_rl9b(body: str, tools: list[str]) -> bool:
 
 
 def find_sibling_skills(path: pathlib.Path) -> list[pathlib.Path]:
-    """Return sibling SKILL.md files under skills/*/SKILL.md minus self."""
-    skills_root = REPO_ROOT / "skills"
+    """Return sibling SKILL.md files in the same skills/ directory as path, minus self."""
+    skills_root = path.resolve().parent.parent
     if not skills_root.exists():
         return []
     self_resolved = path.resolve()
@@ -852,7 +861,7 @@ def check_META_3b(path: pathlib.Path, fm: dict, artifact_type: str = "skill") ->
             return {
                 "verdict": "FAIL",
                 "evidence": {
-                    "sibling": str(sib.relative_to(REPO_ROOT)),
+                    "sibling": str(sib.relative_to(sib.parent.parent.parent)),
                     "shared_tokens": sorted(shared)[:6],
                     "heuristic": True,
                 },
@@ -1645,11 +1654,13 @@ def evaluate(path: pathlib.Path) -> dict:
         if isinstance(ev, dict) and str(ev.get("reason", "")).startswith("runner_error"):
             stats["runner_error"] += 1
 
-    # Artifact path is recorded relative to repo root when possible.
+    # Artifact path is recorded relative to analyzed repo root when possible.
+    analyzed_repo_root = find_analyzed_repo_root(path)
+    rel_base = analyzed_repo_root if analyzed_repo_root is not None else REPO_ROOT
     try:
-        rel_path = str(path.resolve().relative_to(REPO_ROOT))
+        rel_path = str(path.resolve().relative_to(rel_base))
     except ValueError:
-        rel_path = str(path)
+        rel_path = str(path.resolve())
 
     fm_out = {
         "name": fm.get("name"),
@@ -1678,14 +1689,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "artifact_path",
-        help="Absolute or repo-relative path to a SKILL.md artifact.",
+        help="Absolute or CWD-relative path to a SKILL.md artifact.",
     )
     args = parser.parse_args(argv)
 
     try:
         path = pathlib.Path(args.artifact_path).expanduser()
         if not path.is_absolute():
-            path = (REPO_ROOT / path).resolve()
+            path = (pathlib.Path.cwd() / path).resolve()
         if not path.is_file():
             raise FileNotFoundError(f"artifact not found: {path}")
         result = evaluate(path)
