@@ -164,3 +164,138 @@ class TestExitCodeDiscipline:
         # that exits 0 but emits hook-output garbage on the failure path
         # would not silently pass.
         assert r.stdout.strip() == "{}"
+
+
+class TestRedaction:
+    """$HOME redaction contract for the cwd field per docs/hook-governance.md.
+
+    All tests use the _run() subprocess pattern with env_overrides so that
+    _HOME and _REDACT_ENABLED are resolved at module-load time inside the
+    subprocess — exactly as in production. No importlib.reload is used.
+    """
+
+    def test_redaction_cwd_home_prefix(self, tmp_path):
+        """cwd starting with $HOME is replaced with '~'; other fields unchanged."""
+        fake_home = str(tmp_path / "fakehome")
+        cwd_value = fake_home + "/foo/bar"
+        payload = json.dumps({
+            "session_id": "r-session",
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Read",
+            "tool_use_id": "toolu_r1",
+            "tool_input": {"file_path": "/tmp/x"},
+            "cwd": cwd_value,
+        })
+        r = _run(
+            payload,
+            env_overrides={
+                "CLAUDE_PLUGIN_DATA": str(tmp_path),
+                "HOME": fake_home,
+            },
+        )
+        assert r.returncode == 0
+        audit_file = tmp_path / "audit" / "r-session.audit.jsonl"
+        assert audit_file.exists(), "audit file not written"
+        entry = json.loads(audit_file.read_text().strip())
+        assert entry["cwd"] == "~/foo/bar", f"expected ~/foo/bar, got {entry['cwd']!r}"
+        # Scoping check: unrelated fields must be untouched
+        assert entry["tool_name"] == "Read"
+        assert entry["success"] is True
+
+    def test_redaction_cwd_no_home_prefix_unchanged(self, tmp_path):
+        """cwd not under $HOME is written verbatim."""
+        fake_home = str(tmp_path / "fakehome")
+        payload = json.dumps({
+            "session_id": "r-session2",
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Bash",
+            "tool_use_id": "toolu_r2",
+            "tool_input": {},
+            "cwd": "/tmp/xyz",
+        })
+        r = _run(
+            payload,
+            env_overrides={
+                "CLAUDE_PLUGIN_DATA": str(tmp_path),
+                "HOME": fake_home,
+            },
+        )
+        assert r.returncode == 0
+        audit_file = tmp_path / "audit" / "r-session2.audit.jsonl"
+        entry = json.loads(audit_file.read_text().strip())
+        assert entry["cwd"] == "/tmp/xyz", f"expected /tmp/xyz, got {entry['cwd']!r}"
+
+    def test_redaction_cwd_none_passthrough(self, tmp_path):
+        """Omitting cwd key results in cwd=None in audit entry; no error."""
+        fake_home = str(tmp_path / "fakehome")
+        payload = json.dumps({
+            "session_id": "r-session3",
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Bash",
+            "tool_use_id": "toolu_r3",
+            "tool_input": {},
+            # cwd key intentionally absent
+        })
+        r = _run(
+            payload,
+            env_overrides={
+                "CLAUDE_PLUGIN_DATA": str(tmp_path),
+                "HOME": fake_home,
+            },
+        )
+        assert r.returncode == 0
+        audit_file = tmp_path / "audit" / "r-session3.audit.jsonl"
+        entry = json.loads(audit_file.read_text().strip())
+        assert entry["cwd"] is None, f"expected None, got {entry['cwd']!r}"
+
+    def test_redaction_empty_home_env_disables(self, tmp_path):
+        """Empty HOME disables redaction; cwd is written verbatim."""
+        payload = json.dumps({
+            "session_id": "r-session4",
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Bash",
+            "tool_use_id": "toolu_r4",
+            "tool_input": {},
+            "cwd": "/tmp/foo",
+        })
+        r = _run(
+            payload,
+            env_overrides={
+                "CLAUDE_PLUGIN_DATA": str(tmp_path),
+                "HOME": "",
+            },
+        )
+        assert r.returncode == 0
+        audit_file = tmp_path / "audit" / "r-session4.audit.jsonl"
+        entry = json.loads(audit_file.read_text().strip())
+        # Empty HOME → _REDACT_ENABLED = False → no ~ substitution
+        assert entry["cwd"] == "/tmp/foo", f"expected /tmp/foo, got {entry['cwd']!r}"
+
+    def test_redaction_home_prefix_collision_safe(self, tmp_path):
+        """cwd sharing a byte-prefix but NOT a path-component boundary is unchanged."""
+        fake_home = str(tmp_path / "home")
+        # fake_home = <tmp_path>/home ; cwd = <tmp_path>/homer/x
+        # "homer" starts with "home" but is NOT under "home/" (different dir)
+        homer_dir = str(tmp_path / "homer" / "x")
+        payload = json.dumps({
+            "session_id": "r-session5",
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Bash",
+            "tool_use_id": "toolu_r5",
+            "tool_input": {},
+            "cwd": homer_dir,
+        })
+        r = _run(
+            payload,
+            env_overrides={
+                "CLAUDE_PLUGIN_DATA": str(tmp_path),
+                "HOME": fake_home,
+            },
+        )
+        assert r.returncode == 0
+        audit_file = tmp_path / "audit" / "r-session5.audit.jsonl"
+        entry = json.loads(audit_file.read_text().strip())
+        # Should NOT be replaced — boundary check prevents collision
+        assert entry["cwd"] == homer_dir, (
+            f"boundary check failed: expected {homer_dir!r}, got {entry['cwd']!r}"
+        )

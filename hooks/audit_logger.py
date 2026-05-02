@@ -7,13 +7,35 @@ Output: {} (async, no blocking)
 
 Writes structured JSONL to $CLAUDE_PLUGIN_DATA/audit/{session_id}.audit.jsonl.
 Tool input is hashed (SHA-256) for privacy — raw arguments are never logged.
+The `cwd` field is $HOME-redacted per docs/hook-governance.md: a leading $HOME
+prefix is replaced with '~'. Redaction is a no-op when $HOME is unset, '/', or
+'~' (e.g. cron, launchd environments where HOME may be absent or degenerate).
 """
 
 import datetime
 import hashlib
 import json
 import os
+import os.path
 import sys
+
+# Pre-resolve at module load. Empty string and degenerate roots disable
+# the redaction so an unset HOME (cron, launchd) cannot self-corrupt
+# every cwd field.
+_HOME = os.path.expanduser("~")
+_REDACT_ENABLED = bool(_HOME) and _HOME not in ("/", "~") and os.path.isabs(_HOME)
+
+
+def _redact_home(value):
+    """Replace a leading $HOME prefix with '~'. Pass-through for None,
+    non-strings, and values that don't sit on a path-component boundary."""
+    if not _REDACT_ENABLED or not isinstance(value, str):
+        return value
+    if value == _HOME:
+        return "~"
+    if value.startswith(_HOME + os.sep):
+        return "~" + value[len(_HOME) :]
+    return value
 
 
 def _hash_input(tool_input):
@@ -54,7 +76,7 @@ def main():
         "tool_use_id": input_data.get("tool_use_id"),
         "input_hash": _hash_input(input_data.get("tool_input", {})),
         "success": success,
-        "cwd": input_data.get("cwd"),
+        "cwd": _redact_home(input_data.get("cwd")),
     }
 
     path = _audit_path(plugin_data, session_id)
