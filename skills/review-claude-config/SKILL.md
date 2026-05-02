@@ -289,7 +289,7 @@ Aggregate any "Domain Cache Update" sections from researcher agents into a `### 
 If `validation_mode = true`, skip this entire phase.
 
 After presenting all reports to the user, confirm before writing:
-"Save review report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`?"
+"Save review report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`?"
 
 Resolve `<repo-slug>` per `references/repo-identification.md`. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
 
@@ -313,13 +313,13 @@ For every High or Medium recommendation in the body, preserve the shared recomme
 
 ### Step 2: Write the report
 
-Write to: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`
+Write to: `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`
 
-Use the current date and time for the timestamp. Create the `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` directory if it does not exist. Timestamp ensures each run produces a unique file, supporting the "iterate until convergence" workflow.
+Use the current date and time for the timestamp. Create the `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` directory if it does not exist. Timestamp ensures each run produces a unique file, supporting the "iterate until convergence" workflow.
 
 ### Step 3: Delta comparison
 
-If a previous review report exists in `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`:
+If a previous review report exists in `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`:
 - Read the most recent prior report's frontmatter `summary` block and `baseline_version`
 - **Baseline check:** If the prior report's `baseline_version` differs from the current engineering baseline, apply the Baseline version lock hard rule (present choice to user before proceeding)
 - Compare each item's current grades against prior grades
@@ -368,7 +368,7 @@ On "Apply review findings": invoke `/apply-review-findings` with the report path
 
 ## Hard Rules
 
-- **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`. Plugin-internal paths (skills, agents, references, domain-cache) are read-only at runtime.
+- **Read-only on analyzed files.** Never modify any discovered skill, agent, or reference file. The only files this skill writes are the review report at `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`. Plugin-internal paths (skills, agents, references, domain-cache) are read-only at runtime.
 - **Domain cache entries must come from web research (WebSearch and/or WebFetch) only.** Never write cache entries based on model knowledge alone. If WebSearch is unavailable, skip cache persistence entirely.
 - **Analyze every discovered item.** Skip none in the normal mode. Validation mode is the only exception and must stay capped at the deterministic sample described above.
 - **Apply the rubric strictly.** Do not inflate grades.

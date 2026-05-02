@@ -56,7 +56,7 @@ number of lines changed per apply run, is currently codified.
 ## Report Poisoning
 
 A review report (stored as Markdown with optional sidecar JSON under
-`$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`) is itself consumed by
+`${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`) is itself consumed by
 downstream flows: apply-skills read it, `/review-analytics` aggregates
 it, and future review sessions may load prior reports for context.
 Fabricated grade values, false-negative findings, or injected
@@ -102,5 +102,5 @@ review pipeline.
 | --- | --- | --- | --- |
 | Reviewed-Artifact Injection | IJ-1 / IJ-2 rubric checks | `skills/review-claude-config/references/injection-surface-catalog.md` (line 11–32) | Subject-side only; reviewer-context defences rely on Claude instruction-hierarchy (V1 inheritance); no plugin-layer sandboxing exists |
 | Apply-Flow Mutation | Confirmation gates on apply-* skills | `CLAUDE.md` line 219 (`Apply skills and scaffold-skill modify files and require confirmation gates`) | No deterministic blast-radius gating; auto-apply scope policy not codified (audit §12.3 R1 deferred) |
-| Report Poisoning | Read-only review/audit skills + reports under `$CLAUDE_PLUGIN_DATA/reports/` | `CLAUDE.md` line 218 + `skills/review-claude-config/references/review-report-contract.md` | Sidecar JSON schema-validated; Markdown body free-form with no signature or authenticity check |
+| Report Poisoning | Read-only review/audit skills + reports under `${HOME}/.claude/plugins/data/claude-config/reports/` | `CLAUDE.md` line 218 + `skills/review-claude-config/references/review-report-contract.md` | Sidecar JSON schema-validated; Markdown body free-form with no signature or authenticity check |
 | Stale-Evidence Poisoning | `last_refreshed` freshness checks | `skills/check-repo-health/SKILL.md` (line 40–49) + 90-day refresh cadence | Soft warning only for non-baseline files (`session_check.py` per `CLAUDE.md` line 212); no hard fail gate on stale evidence |

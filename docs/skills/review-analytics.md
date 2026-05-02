@@ -22,11 +22,11 @@ The skill answers three questions about a portfolio's quality evolution over tim
 2. **Dimension trends** -- Which scoring dimensions are strengthening or weakening across the portfolio?
 3. **Alerts** -- Are there regressions, disappearances, or systemic issues that need attention?
 
-It operates exclusively on the structured YAML frontmatter defined by `review-claude-config/references/review-report-contract.md` for review reports already written to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`. The skill never modifies any file.
+It operates exclusively on the structured YAML frontmatter defined by `review-claude-config/references/review-report-contract.md` for review reports already written to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`. The skill never modifies any file.
 
 ### Step 1: Discover review reports
 
-Glob for `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-review-*.md` where `<target>` is the folder argument (defaults to the current project root). Sort results by filename -- because filenames are ISO-timestamped (`YYYY-MM-DDTHHMMSS-...`), lexicographic order equals chronological order. Then keep only reports whose `generated_by` is one of `review-claude-config`, `review-skill`, `review-agent`, or `review-rule`.
+Glob for `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-review-*.md` where `<target>` is the folder argument (defaults to the current project root). Sort results by filename -- because filenames are ISO-timestamped (`YYYY-MM-DDTHHMMSS-...`), lexicographic order equals chronological order. Then keep only reports whose `generated_by` is one of `review-claude-config`, `review-skill`, `review-agent`, or `review-rule`.
 
 If `--validation` is present, first filter to supported, parseable reports, then keep only the 10 most recent of that filtered set and switch to the bounded validation summary described below.
 

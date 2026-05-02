@@ -121,6 +121,6 @@ Each rule emits a finding with:
 ## Disabling rules
 
 A rule may be disabled per session via
-`$CLAUDE_PLUGIN_DATA/policy.json` `disable_detection_rule: ["BYP-1"]`.
+`${HOME}/.claude/plugins/data/claude-config/policy.json` `disable_detection_rule: ["BYP-1"]`.
 Disabled rules still run but emit `severity: Info` (audit trail
 preserved); only the surfaced severity is suppressed.

@@ -23,7 +23,7 @@ Because the skill has `disable-model-invocation: true`, it runs without spawning
 
 ### Step 1: Locate the audit report
 
-If `$ARGUMENTS` contains a file path, use it directly. Otherwise, Glob `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-audit-repo.md` and select the most recent report by filename timestamp.
+If `$ARGUMENTS` contains a file path, use it directly. Otherwise, Glob `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-audit-repo.md` and select the most recent report by filename timestamp.
 
 Read the report file. Parse the YAML frontmatter. Validate two fields:
 - `generated_by` must be `audit-repo`. If not: "This skill applies audit-repo reports only. Found `generated_by: [value]`. Use `/apply-review-findings` for review reports." Stop.

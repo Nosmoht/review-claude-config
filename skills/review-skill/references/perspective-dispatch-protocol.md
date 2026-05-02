@@ -23,7 +23,7 @@ Total per call ≈ 11–12K Opus-4.7 tokens. Above 4,096 floor for Opus cache, w
 
 ## Pre-Dispatch Binary Evaluation (step b.0)
 
-Before the three perspective Agent-tool calls, `/review-skill` invokes `scripts/rubric_binary_evaluator.py` once per artifact. Stdout JSON is persisted to `${CLAUDE_PLUGIN_DATA}/audit/perspectives/<session_id>/binary_verdicts.json`.
+Before the three perspective Agent-tool calls, `/review-skill` invokes `scripts/rubric_binary_evaluator.py` once per artifact. Stdout JSON is persisted to `${HOME}/.claude/plugins/data/claude-config/audit/perspectives/<session_id>/binary_verdicts.json`.
 
 The verdicts document is **NOT injected into the 4-block perspective prompt** (Alt-A design). Instead it is consumed by the merge layer (§"Merge + Escalation Invocation") to synthesize deterministic findings and apply Layer-1.5 grade caps. Rationale:
 
@@ -61,7 +61,7 @@ Output contract:
 ## Certificate Capture
 
 After receiving the 3 Agent-tool return values, `/review-skill` writes each to:
-  `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/<perspective>.json`
+  `${HOME}/.claude/plugins/data/claude-config/audit/perspectives/<session_id>/<perspective>.json`
 using the Write tool (orchestrator-side write, NOT via SubagentStop hook — the hook does not have the return value).
 
 File name is derived strictly from the orchestrator's constants `clarity|correctness|integration` — never from sub-agent output — to prevent path injection.
@@ -71,11 +71,11 @@ File name is derived strictly from the orchestrator's constants `clarity|correct
 Bash-invoke (three scripts total now that the deterministic binary evaluator is wired in):
 
 0. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rubric_binary_evaluator.py <artifact-path>` → `binary_verdicts.json` (pre-dispatch; see §"Pre-Dispatch Binary Evaluation" above).
-1. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_findings.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id> --findings-out $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/findings.json` → merged cert JSON to stdout (reads `binary_verdicts.json` from the same dir and applies Layer 1.5 caps), plus a schema-validated `findings.json` sidecar per `skills/review-claude-config/references/schemas/findings-list.schema.json` for downstream `/apply-skill-review-findings` consumption.
-2. Write merged cert to `$CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json`.
-3. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/escalation_decision.py $CLAUDE_PLUGIN_DATA/audit/perspectives/<session_id>/merged.json [--deep]` → `{escalation_required, reasons}`.
+1. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_findings.py ${HOME}/.claude/plugins/data/claude-config/audit/perspectives/<session_id> --findings-out ${HOME}/.claude/plugins/data/claude-config/audit/perspectives/<session_id>/findings.json` → merged cert JSON to stdout (reads `binary_verdicts.json` from the same dir and applies Layer 1.5 caps), plus a schema-validated `findings.json` sidecar per `skills/review-claude-config/references/schemas/findings-list.schema.json` for downstream `/apply-skill-review-findings` consumption.
+2. Write merged cert to `${HOME}/.claude/plugins/data/claude-config/audit/perspectives/<session_id>/merged.json`.
+3. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/escalation_decision.py ${HOME}/.claude/plugins/data/claude-config/audit/perspectives/<session_id>/merged.json [--deep]` → `{escalation_required, reasons}`.
 
-Command-level gating is enforced by `.claude/settings.local.json` (`Bash(python3 *)` permission); `hooks/policy_gate.py` is opt-in level-based (L1-L5) and applies no command-level allowlist when no `${CLAUDE_PLUGIN_DATA}/policy.json` is present.
+Command-level gating is enforced by `.claude/settings.local.json` (`Bash(python3 *)` permission); `hooks/policy_gate.py` is opt-in level-based (L1-L5) and applies no command-level allowlist when no `${HOME}/.claude/plugins/data/claude-config/policy.json` is present.
 
 ## Output Certificate (Phase 3)
 

@@ -7,16 +7,16 @@
   },
   "plugins": [
     {
-      "name": "skill-quality",
+      "name": "claude-config",
       "source": {
         "source": "github",
         "repo": "Nosmoht/review-claude-config",
-        "ref": "v1.1.0"
+        "ref": "v2.0.0"
       },
-      "description": "Evidence-based quality review and gap analysis for Claude Code skills, agents, and rules.",
-      "version": "1.1.0",
+      "description": "Evidence-based quality review and audit suite for Claude Code primitives — skills, agents, rules, hooks, MCP servers, plugins, settings.json, CLAUDE.md, traces, memory, trust chains, policy compliance.",
+      "version": "2.0.0",
       "category": "review",
-      "tags": ["review", "quality", "skills", "agents"]
+      "tags": ["review", "audit", "quality", "skills", "agents", "hooks", "mcp", "settings", "claude-md", "memory", "trace"]
     }
   ]
 }

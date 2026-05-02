@@ -29,7 +29,7 @@ The skill checks whether the prompt contains an orchestration metadata block (`-
 
 ### Phase 1 -- Setup (standalone mode only)
 
-**Step 1: Locate report.** If `$ARGUMENTS` contains a file path, use it directly. Otherwise, Glob `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-review-rule.md` and select the most recent report by filename timestamp. Read the report and verify `generated_by` is `review-rule`. If validation fails, report the error and stop.
+**Step 1: Locate report.** If `$ARGUMENTS` contains a file path, use it directly. Otherwise, Glob `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-review-rule.md` and select the most recent report by filename timestamp. Read the report and verify `generated_by` is `review-rule`. If validation fails, report the error and stop.
 
 **Step 2: Parse and classify.** Extract YAML frontmatter (`date`, `target`, `summary`) and parse the report body for recommendation sections. Historical reports may use `###` instead of `####` and may omit `Evidence`, `Why it matters`, or `Validation`. Classify findings into:
 - **Dispatchable**: includes both `Current` and `Recommended`

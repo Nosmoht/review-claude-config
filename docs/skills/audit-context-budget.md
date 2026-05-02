@@ -45,7 +45,7 @@ A structured report with:
 4. Optimization Recommendations — ranked P0/P1/P2 with expected savings
 5. Action Plan — checkbox list
 
-Report is saved to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-context-budget.md`.
+Report is saved to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-context-budget.md`.
 
 ## Key Findings (from Research)
 

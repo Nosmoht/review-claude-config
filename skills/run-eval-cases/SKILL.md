@@ -137,7 +137,7 @@ For BLOCKED cases: show which skill or fixture was missing and what it would hav
 ### Step 3: Persist
 
 Confirm via AskUserQuestion (header: "Save report"):
-- Option 1 label: "Save report" (Recommended) — description: `"Write to $CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-eval-cases.md"`
+- Option 1 label: "Save report" (Recommended) — description: `"Write to ${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-eval-cases.md"`
 - Option 2 label: "Skip" — description: `"Discard the report"`
 
 On "Save report": write the report. Use today's date and current time in the filename. If the directory does not exist, create it first.

@@ -219,13 +219,13 @@ Checkbox list: one item per recommendation with specific file path and action.
 
 **Present the full report in the conversation. Then confirm before writing the report file.**
 
-Offer to write to: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/<YYYY-MM-DDTHHMMSS>-audit-context-budget.md`
+Offer to write to: `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/<YYYY-MM-DDTHHMMSS>-audit-context-budget.md`
 
 Resolve `<repo-slug>` per `repo-identification.md`. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
 
 ## Hard Rules
 
-- Read-only on the target repository. Write only the report file to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+- Read-only on the target repository. Write only the report file to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 - Token estimates are always ranges (chars/4 to chars/3), always labeled "estimated".
 - Every recommendation cites the evidence tier and specific file paths measured.
 - Never recommend removing MCP servers, skills, or rules. Report cost only.

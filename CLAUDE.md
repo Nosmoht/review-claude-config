@@ -4,14 +4,14 @@ Maintainer operating guide for this repository (Clarity, Completeness, Prompt En
 
 ## Architecture
 
-- **Plugin surface**: `skills/`, `agents/`, and `hooks/`, distributed via personal marketplace (`Nosmoht/review-claude-config` → `ntbc-plugins/skill-quality`); `claude --plugin-dir` is the dev override that takes precedence. `agents/` contains top-level perspective agents (`review-perspective-{clarity,correctness,integration}`) dispatched by `/review-skill` in multi-perspective mode (P1.1 pilot).
+- **Plugin surface**: `skills/`, `agents/`, and `hooks/`, distributed via personal marketplace (`Nosmoht/review-claude-config` → `ntbc-plugins/claude-config`); `claude --plugin-dir` is the dev override that takes precedence. `agents/` contains top-level perspective agents (`review-perspective-{clarity,correctness,integration}`) dispatched by `/review-skill` in multi-perspective mode (P1.1 pilot).
 - **Shared references**: `skills/review-claude-config/references/`, including the rubric, baseline, evidence contract, source-quality criteria, and review-report contract
 - **Domain cache**: `skills/review-claude-config/references/domain-cache/`, contains 7 universal methodology entries (context-engineering, research-sourcing, etc.) maintained on the repo's 90-day rhythm. Domain-specific knowledge is researched at runtime via WebSearch, not pre-cached
 - **Repo-internal skills**: `.claude/skills/` for maintenance utilities not needed globally
 - **Repo-internal agents**: `.claude/agents/` for maintenance subagents that orchestrate this repo's workflow but are NOT shipped to plugin consumers (e.g., `builder-implementer`, `builder-evaluator` driven by `/implement-issue`). Mirrors the `.claude/skills/` repo-internal convention. Plugin-distributed agents stay at top-level `agents/`. Discovered only at session start; new agents require a fresh session to register
-- **Review reports**: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` for timestamped reports organized by target repo, consumed by analytics and apply flows. Slug = `basename(target_dir)`, see `references/repo-identification.md`
+- **Review reports**: `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` for timestamped reports organized by target repo, consumed by analytics and apply flows. Slug = `basename(target_dir)`, see `references/repo-identification.md`
 - **Self-contained knowledge**: The plugin carries all knowledge needed for quality in its own files. External services (KB server, web research) are optional enhancements — skills degrade gracefully without them. The distillation path is: `research/ → engineering-baseline.md + skill-agent-format-conventions.md → skill decisions`. Research findings must be distilled into these operational surfaces to affect plugin behavior in any repo.
-- **Runtime audit layer**: `hooks/` provides observation (PostToolUse, SubagentStart/Stop, SessionEnd) and opt-in policy enforcement (PreToolUse policy gate). Audit traces written to `$CLAUDE_PLUGIN_DATA/audit/`. Skills consume these traces for analysis. Per-hook classification + redaction/retention policy: [docs/hook-governance.md](docs/hook-governance.md).
+- **Runtime audit layer**: `hooks/` provides observation (PostToolUse, SubagentStart/Stop, SessionEnd) and opt-in policy enforcement (PreToolUse policy gate). Audit traces written to `${HOME}/.claude/plugins/data/claude-config/audit/`. Skills consume these traces for analysis. Per-hook classification + redaction/retention policy: [docs/hook-governance.md](docs/hook-governance.md).
 - **Meta-review threat model**: reviewer-side threats (reading
   malicious skill content, applying poisoned findings, ingesting
   stale evidence) are catalogued in
@@ -221,7 +221,7 @@ Diff-checkable never-violate rules. The `builder-evaluator` subagent enforces th
 - Local-dev venv: `.venv/` at repo root; the Makefile auto-detects `.venv/bin/python` when present and falls back to `python3` (CI path). Recreate via `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"` if missing or corrupt.
 - Domain-cache entries are read-only at runtime; maintainer refresh is hand-edit + commit in source repo (90-day cadence). Runtime researcher findings surface as `### Domain Cache Drift` in the review report — copy into the relevant `references/domain-cache/{key}.md` to refresh.
 - Audit-fix chain: commit review report first, then commit fixes
-- Review, suggest, and audit skills are read-only on analyzed files except for reports (`$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`)
+- Review, suggest, and audit skills are read-only on analyzed files except for reports (`${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`)
 - Apply skills and `scaffold-skill` modify files and require confirmation gates
 
 ## Research References

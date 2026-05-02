@@ -34,7 +34,7 @@ case.yaml schema
                                      # current blob SHA drifts, fixtures may
                                      # have rotted — refresh required.
       agent_dispatch: <string>       # capture-only: the subagent_type used
-                                     # (e.g. "skill-quality:review-perspective-clarity")
+                                     # (e.g. "claude-config:review-perspective-clarity")
       rationale: <string>            # synthesised-only: why this case exists
     expected:
       perspective: clarity       # required

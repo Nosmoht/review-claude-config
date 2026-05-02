@@ -33,7 +33,7 @@ last_refreshed: 2026-04-14
 
 ## Policy Rule Format
 
-Stored in `$CLAUDE_PLUGIN_DATA/policy.json`:
+Stored in `${HOME}/.claude/plugins/data/claude-config/policy.json`:
 ```json
 {
   "rules": [{"level": "L4", "action": "ask"}],

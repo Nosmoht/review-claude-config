@@ -2,6 +2,33 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-05-03
+
+**Breaking — plugin renamed.** `skill-quality` → `claude-config`. The previous name implied skill-only quality review, but the suite covers all Claude Code primitives (skills, agents, rules, hooks, MCP servers, plugins, settings.json, CLAUDE.md) and runtime artefacts (session traces, memory, trust chains, policy compliance). The new name reflects the actual scope, and the slash-command namespace becomes `claude-config:<command>` (no more stuttering with `:review-claude-config`).
+
+### Migration
+
+Existing installations must reinstall — `claude plugin update` does not migrate plugin renames:
+
+```bash
+claude plugin uninstall skill-quality
+claude plugin marketplace update
+claude plugin install claude-config@ntbc-plugins
+```
+
+User data under `${HOME}/.claude/plugins/data/skill-quality/` is preserved on uninstall but lives at the old path; rename it to `${HOME}/.claude/plugins/data/claude-config/` to keep historical reports and audit traces accessible to the new install.
+
+### Changed
+
+- `.claude-plugin/plugin.json` — `name` field, version, description (now lists all covered primitive types).
+- `.claude-plugin/marketplace.json` — plugin entry name, version, ref, description, tags.
+- `README.md` — install / update / uninstall / cache-path examples.
+- `CLAUDE.md` — architecture description, data path references.
+- `install.sh` — `PLUGIN_NAME` constant.
+- `docs/cross-repo-probe-runbook.md` — install / probe commands.
+- `tests/test_merge_findings.py`, `tests/test_perspective_replay.py` — namespace example updates.
+- `.claude/settings.local.json` — local data-path permissions updated to new path.
+
 ## [1.1.0] - 2026-05-02
 
 Interim ship of accumulated fixes and feature additions before the GA-cut at v1.2.0. Includes 5 user-visible features, 4 rubric-evaluator fixes that change FAIL verdicts, and 4 policy-gate / hook-discipline fixes.
@@ -47,6 +74,7 @@ Interim ship of accumulated fixes and feature additions before the GA-cut at v1.
 
 - Untrack `settings.local.json`; remove stale lock file.
 
+[2.0.0]: https://github.com/Nosmoht/review-claude-config/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/Nosmoht/review-claude-config/compare/v1.0.2...v1.1.0
 
 ## [1.0.2] - 2026-04-30

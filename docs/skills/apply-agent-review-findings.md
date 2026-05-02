@@ -23,7 +23,7 @@ Because agents are single-file primitives, the skill enforces constraints that d
 
 ### Step 1: Load report and extract findings
 
-If `$ARGUMENTS` provides a report path, use it directly. Otherwise, locate the most recent `review-agent` report in `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` by timestamp.
+If `$ARGUMENTS` provides a report path, use it directly. Otherwise, locate the most recent `review-agent` report in `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` by timestamp.
 
 Read the report and parse the findings list from the review body using consumer compatibility rules derived from the canonical review contract. Historical reports may vary in heading depth or omit some modern fields, but only findings with both `Current` and `Recommended` are dispatchable to edits; anchorless findings are manual-only. The edit target comes only from `summary.path`; body `**Path:**` text is not an alternate authority.
 

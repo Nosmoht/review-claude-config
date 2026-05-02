@@ -67,7 +67,7 @@ Use these when a verdict is uncertain. Each pair shows the minimum PASS and maxi
 ## IJ-1 — external input reaches a write tool without a gate?
 
 - **PASS**: Skill reads user-supplied path, validates against an allowlist regex BEFORE any Write/Edit call; rejects on miss.
-- **FAIL**: Skill reads user-supplied template content and writes it verbatim to `$CLAUDE_PLUGIN_DATA/reports/` without sanitization or confirmation gate.
+- **FAIL**: Skill reads user-supplied template content and writes it verbatim to `${HOME}/.claude/plugins/data/claude-config/reports/` without sanitization or confirmation gate.
 
 ## SP-1 — confirmation gate before destructive or irreversible operations?
 
@@ -81,7 +81,7 @@ Use these when a verdict is uncertain. Each pair shows the minimum PASS and maxi
 
 ## SP-4 — high-risk tool combinations (Tier A/B) justified if present?
 
-- **PASS**: "Write + WebFetch justified: Write restricted to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`; WebFetch used only for domain research (read-only). No file-modification risk from network content."
+- **PASS**: "Write + WebFetch justified: Write restricted to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`; WebFetch used only for domain research (read-only). No file-modification risk from network content."
 - **FAIL**: `allowed-tools: Bash, Write, WebFetch` with no Hard-Rules section scoping any of the three.
 
 ## RL-1 — termination conditions defined (step limit, timeout, or success criteria)?

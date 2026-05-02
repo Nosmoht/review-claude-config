@@ -1,16 +1,22 @@
 ---
 name: repo-identification
 description: Slug algorithm and report storage path for review/audit reports
-last_refreshed: 2026-04-14
+last_refreshed: 2026-05-03
 ---
 
 # Repo Identification
 
 ## Report Path
 
-`${CLAUDE_PLUGIN_DATA}/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-<skill>.md`
+`${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-<skill>.md`
 
-`${CLAUDE_PLUGIN_DATA}` is substituted inline by Claude Code wherever it appears in skill, agent, hook, or MCP content — the rendered value reaches the model as a literal absolute path. Do **not** resolve it via Bash (`echo $CLAUDE_PLUGIN_DATA`): the variable is not reliably exported to Bash-tool subprocesses, and when present it may carry the value of a different installed plugin. The official contract covers inline substitution and hook/MCP/LSP subprocess env only — see https://code.claude.com/docs/en/plugins-reference.
+Skills MUST use the deterministic literal `${HOME}/.claude/plugins/data/claude-config/...`
+for all read and write operations on report and audit data. Do NOT use the harness-injected
+`CLAUDE_PLUGIN_DATA` env var in skill/agent/doc inline content; the harness sets it
+per-active-plugin, which is incorrect under multi-plugin installs
+(see https://github.com/Nosmoht/review-claude-config/issues/144).
+Hooks may continue to use the env var because hook subprocesses are launched per-plugin and
+the value is contract-reliable for hook Python.
 
 ## Slug Derivation
 
@@ -27,4 +33,4 @@ No git dependency. Slug is stable regardless of whether the target gains or lose
 
 ## Collision Detection
 
-Before writing a report, if `${CLAUDE_PLUGIN_DATA}/reports/<slug>/` already has reports with a different `origin:` value, warn the user about a potential slug collision.
+Before writing a report, if `${HOME}/.claude/plugins/data/claude-config/reports/<slug>/` already has reports with a different `origin:` value, warn the user about a potential slug collision.
