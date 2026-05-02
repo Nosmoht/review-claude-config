@@ -26,7 +26,7 @@
     ],
     "PostToolUse": [
       {
-        "description": "Log tool call to audit trace (async, non-blocking)",
+        "description": "Log tool call to audit trace (async, non-blocking; cwd $HOME-redacted per docs/hook-governance.md)",
         "hooks": [
           {
             "type": "command",
@@ -39,7 +39,7 @@
     ],
     "PostToolUseFailure": [
       {
-        "description": "Log tool failure to audit trace (async, non-blocking)",
+        "description": "Log tool failure to audit trace (async, non-blocking; cwd $HOME-redacted per docs/hook-governance.md)",
         "hooks": [
           {
             "type": "command",
