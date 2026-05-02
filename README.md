@@ -6,7 +6,7 @@ Evidence-based review plugin for Claude Code skills, agents, and rules.
 
 `review-claude-config` audits Claude Code primitives, produces review reports, helps apply findings, and provides maintenance utilities for the review system itself.
 
-Use this file as the user-facing entrypoint. Maintainer policy lives in [`CLAUDE.md`](/home/nos-ai/workspace/review-claude-config/CLAUDE.md). System documentation lives in [`docs/skills/README.md`](/home/nos-ai/workspace/review-claude-config/docs/skills/README.md).
+Use this file as the user-facing entrypoint. Maintainer policy lives in [`CLAUDE.md`](CLAUDE.md). System documentation lives in [`docs/skills/README.md`](docs/skills/README.md).
 
 ## Installation
 
@@ -109,7 +109,7 @@ cp -r .claude/skills/sync-research-index <target>/.claude/skills/
 
 ## Where To Look Next
 
-- [`CLAUDE.md`](/home/nos-ai/workspace/review-claude-config/CLAUDE.md) - maintainer operating guide and authoritative maintainer command inventory
-- [`docs/skills/README.md`](/home/nos-ai/workspace/review-claude-config/docs/skills/README.md) - skill and hook index, workflow chains, and system map
-- [`docs/evidence-maintenance.md`](/home/nos-ai/workspace/review-claude-config/docs/evidence-maintenance.md) - evidence maintenance policy
-- [`docs/scientific-research-dossier.md`](/home/nos-ai/workspace/review-claude-config/docs/scientific-research-dossier.md) - current evidence narrative and open questions
+- [`CLAUDE.md`](CLAUDE.md) - maintainer operating guide and authoritative maintainer command inventory
+- [`docs/skills/README.md`](docs/skills/README.md) - skill and hook index, workflow chains, and system map
+- [`docs/evidence-maintenance.md`](docs/evidence-maintenance.md) - evidence maintenance policy
+- [`docs/scientific-research-dossier.md`](docs/scientific-research-dossier.md) - current evidence narrative and open questions
