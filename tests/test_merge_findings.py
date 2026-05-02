@@ -1207,8 +1207,8 @@ class TestPrimitiveExists:
         assert primitive_exists(REPO_ROOT, "merge_findings") is True
 
     def test_strips_plugin_namespace(self):
-        # `skill-quality:review-perspective-clarity` should resolve to the bare name.
-        assert primitive_exists(REPO_ROOT, "skill-quality:review-perspective-clarity") is True
+        # `claude-config:review-perspective-clarity` should resolve to the bare name.
+        assert primitive_exists(REPO_ROOT, "claude-config:review-perspective-clarity") is True
 
     def test_unknown_returns_false(self):
         assert primitive_exists(REPO_ROOT, "this-primitive-definitely-does-not-exist") is False

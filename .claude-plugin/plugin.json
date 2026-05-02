@@ -1,7 +1,7 @@
 {
-  "name": "skill-quality",
-  "version": "1.1.0",
-  "description": "Evidence-based quality review and gap analysis for Claude Code skills, agents, and rules. Injects quality guidelines when editing SKILL.md files and provides /review-claude-config, /review-skill, /review-agent, /review-rule, /suggest-skills, and /audit-repo globally.",
+  "name": "claude-config",
+  "version": "2.0.0",
+  "description": "Evidence-based quality review and audit suite for Claude Code primitives — skills, agents, rules, hooks, MCP servers, plugins, settings.json, CLAUDE.md, session traces, memory, trust chains, and policy compliance. Provides /review-* and /audit-* commands and injects quality guidelines when editing primitives.",
   "author": {
     "name": "ntbc"
   },

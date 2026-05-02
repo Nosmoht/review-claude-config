@@ -6,7 +6,7 @@ last_refreshed: 2026-04-14
 
 # Audit Trace Schema
 
-One JSONL file per session at `$CLAUDE_PLUGIN_DATA/audit/{session_id}.audit.jsonl`. Each line is a JSON object with a `type` field.
+One JSONL file per session at `${HOME}/.claude/plugins/data/claude-config/audit/{session_id}.audit.jsonl`. Each line is a JSON object with a `type` field.
 
 ## Entry Types
 
@@ -70,7 +70,7 @@ Appended as the final entry by the SessionEnd hook.
 
 ## Storage Convention
 
-- Path: `$CLAUDE_PLUGIN_DATA/audit/{session_id}.audit.jsonl`
+- Path: `${HOME}/.claude/plugins/data/claude-config/audit/{session_id}.audit.jsonl`
 - One file per session; append-only during session
 - SessionEnd hook appends summary as last line
 - Retention: no auto-pruning; user manages via filesystem

@@ -42,9 +42,9 @@ report_timestamp: YYYY-MM-DDTHHMMSS
 
 ### Step 1: Locate Report
 
-**Resolve report directory:** Load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to compute `<repo-slug>` (= `sanitize(basename(CWD))` — lowercase, alphanumeric + hyphens only). The report directory is `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+**Resolve report directory:** Load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to compute `<repo-slug>` (= `sanitize(basename(CWD))` — lowercase, alphanumeric + hyphens only). The report directory is `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 
-If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-review-agent.md` and select the most recent report by filename timestamp.
+If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-review-agent.md` and select the most recent report by filename timestamp.
 
 Read the report file. If the file does not exist or `generated_by` is not `review-agent`, report the error and stop.
 

@@ -18,7 +18,7 @@ You are an error classification tool that reads Claude Code audit traces or tran
 ## Argument Handling
 
 - `$ARGUMENTS` is a path to a `.jsonl` file (audit trace or raw transcript).
-- If empty, check `$CLAUDE_PLUGIN_DATA/audit/` for recent audit traces. If none found, ask the user for a path and stop.
+- If empty, check `${HOME}/.claude/plugins/data/claude-config/audit/` for recent audit traces. If none found, ask the user for a path and stop.
 - Validate the file exists and contains parseable JSONL.
 
 ## Termination and Escalation
@@ -121,7 +121,7 @@ Compute summary:
 
 1. Present the report.
 2. Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`).
-3. Confirm before writing to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-classify-trace-errors.md`.
+3. Confirm before writing to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-classify-trace-errors.md`.
 4. Frontmatter:
    ```yaml
    ---
@@ -145,7 +145,7 @@ Compute summary:
 
 ## Hard Rules
 
-- **Read-only on the trace.** Never modify the analyzed file. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+- **Read-only on the trace.** Never modify the analyzed file. Write only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 - **Tier A justification:** Write is for report persistence only. No web tools needed.
 - **Evidence over inference.** Every classification must cite a line number and excerpt. Do not classify based on absence alone except for FM-3.1 and FM-3.2.
 - **Taxonomy-only codes.** Only use FM-* codes from the codebook. Do not invent new failure modes.

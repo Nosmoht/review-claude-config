@@ -1,6 +1,6 @@
 # Cross-Repo Probe Runbook
 
-This runbook defines how to validate the `skill-quality` plugin against external (non-self) repositories before declaring Cross-Repo-GA. One probe run = one external repo + one fresh Claude Code session + one structured findings report.
+This runbook defines how to validate the `claude-config` plugin against external (non-self) repositories before declaring Cross-Repo-GA. One probe run = one external repo + one fresh Claude Code session + one structured findings report.
 
 ## Why this exists
 
@@ -24,17 +24,17 @@ Two consecutive probe runs against **different** external repos produce zero Cri
 
 ### Pre-flight (5 min)
 
-1. Confirm `skill-quality@ntbc-plugins` is installed and up to date:
+1. Confirm `claude-config@ntbc-plugins` is installed and up to date:
 
    ```bash
-   claude plugin list | grep skill-quality
+   claude plugin list | grep claude-config
    ```
 
    If version mismatches the latest tag on `Nosmoht/review-claude-config`, reinstall:
 
    ```bash
-   claude plugin uninstall skill-quality@ntbc-plugins
-   claude plugin install skill-quality@ntbc-plugins
+   claude plugin uninstall claude-config@ntbc-plugins
+   claude plugin install claude-config@ntbc-plugins
    ```
 
 2. `cd <probe-repo-path>`. The probe is run **from inside** the external repo, not from the source repo of the plugin.

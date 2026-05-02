@@ -82,7 +82,7 @@ Each fire produces a finding with:
 
 ## Disabling rules
 
-`$CLAUDE_PLUGIN_DATA/policy.json` `disable_detection_rule: ["KCH-1"]`
+`${HOME}/.claude/plugins/data/claude-config/policy.json` `disable_detection_rule: ["KCH-1"]`
 suppresses surfaced severity but keeps audit trail (Info-level only).
 
 ## Cross-references

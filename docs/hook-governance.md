@@ -23,7 +23,7 @@ Column definitions:
 | Hook | Script | class | risk | data_sensitivity | retention | owner | notes |
 |---|---|---|---|---|---|---|---|
 | PreToolUse | skill_quality_gate.py | warn | low | metadata | session-only | maintainer | Advisory injection (`systemMessage`); never blocks. Matcher = Edit/Write/MultiEdit on skill/agent/rule files. |
-| PreToolUse | policy_gate.py | block | medium | metadata | 30 days rolling | maintainer | **Opt-in**: pass-through unless `$CLAUDE_PLUGIN_DATA/policy.json` exists. ALSO writes `policy_decision` entries to audit JSONL (audit-writer side-effect). |
+| PreToolUse | policy_gate.py | block | medium | metadata | 30 days rolling | maintainer | **Opt-in**: pass-through unless `${HOME}/.claude/plugins/data/claude-config/policy.json` exists. ALSO writes `policy_decision` entries to audit JSONL (audit-writer side-effect). |
 | PostToolUse | audit_logger.py | observe | low | content | 30 days rolling | maintainer | Tool input SHA-256 hashed; `cwd` $HOME-redacted per Redaction Rules below. |
 | PostToolUseFailure | audit_logger.py | observe | low | content | 30 days rolling | maintainer | Same writer as PostToolUse; `success: false` flag. |
 | SubagentStart | delegation_tracker.py | observe | low | metadata | 30 days rolling | maintainer | Subagent type + parent session id; no tool inputs. |
@@ -35,7 +35,7 @@ Column definitions:
 
 ## Redaction Rules
 
-These rules apply to data written to `$CLAUDE_PLUGIN_DATA/audit/` JSONL by any hook classified `data_sensitivity: content` or higher. Rules are applied before the JSONL line is flushed.
+These rules apply to data written to `${HOME}/.claude/plugins/data/claude-config/audit/` JSONL by any hook classified `data_sensitivity: content` or higher. Rules are applied before the JSONL line is flushed.
 
 ### Implemented (PR #126)
 
@@ -72,7 +72,7 @@ Three retention tiers are in use:
 
 **Every new hook added to `hooks/hooks.json` MUST receive a row in the table above before the PR merges.** This is a hard process requirement, not advisory.
 
-**Audit-writing hooks** (any hook that appends to `$CLAUDE_PLUGIN_DATA/audit/`) MUST be classified `data_sensitivity: content` or higher. A hook classified `metadata` that silently writes content fields is a governance violation.
+**Audit-writing hooks** (any hook that appends to `${HOME}/.claude/plugins/data/claude-config/audit/`) MUST be classified `data_sensitivity: content` or higher. A hook classified `metadata` that silently writes content fields is a governance violation.
 
 **`secret-risk` classification** requires a `sunset date:` entry in the notes column documenting when the capability will be removed or replaced. Open-ended `secret-risk` retention is not permitted.
 

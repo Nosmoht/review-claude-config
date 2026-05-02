@@ -188,7 +188,7 @@ In orchestrated mode, skip this phase entirely — return only the structured ce
 
 In standalone mode:
 1. Present the certificate to the user.
-2. Confirm before writing: "Save review report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-md.md`?"
+2. Confirm before writing: "Save review report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-md.md`?"
 3. If confirmed, assemble the report using the canonical frontmatter contract located in Step 1 with:
    - `generated_by: review-claude-md`
    - one `summary` item of type `ClaudeMd`
@@ -218,7 +218,7 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 
 ## Hard Rules
 
-- **Read-only on the analyzed CLAUDE.md.** Never modify the file being reviewed. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+- **Read-only on the analyzed CLAUDE.md.** Never modify the file being reviewed. Write only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present the full certificate before any follow-up actions.**

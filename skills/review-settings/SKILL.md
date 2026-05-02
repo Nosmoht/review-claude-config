@@ -76,12 +76,12 @@ Produce the certificate (same format as review-mcp-server).
 
 ## Phase 3 — Report (standalone mode only)
 
-1. Create the `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` directory if it does not exist. Write to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-settings.md` with `repo: <slug>` and optionally `origin: <git-remote-url>` in the frontmatter (after `date`).
+1. Create the `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` directory if it does not exist. Write to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-settings.md` with `repo: <slug>` and optionally `origin: <git-remote-url>` in the frontmatter (after `date`).
 2. Suggest commit message.
 
 ## Hard Rules
 
-- **Read-only on analyzed files.** Never modify settings.json. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+- **Read-only on analyzed files.** Never modify settings.json. Write only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 - **Apply the rubric strictly.**
 - **Every High or Medium recommendation must include evidence and a concrete rewrite.**
 - **Parse failure = Critical.** Invalid JSON disables ALL permission rules.

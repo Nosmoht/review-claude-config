@@ -156,8 +156,8 @@ Return the report in this exact format:
 ## Phase 4 — Report Persistence
 
 1. Present the report to the user.
-2. Confirm before writing: "Save trace report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-session-trace.md`?"
-3. If confirmed, create the `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` directory if it does not exist. Write with frontmatter:
+2. Confirm before writing: "Save trace report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-session-trace.md`?"
+3. If confirmed, create the `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` directory if it does not exist. Write with frontmatter:
    ```yaml
    ---
    generated_by: review-session-trace
@@ -179,7 +179,7 @@ Return the report in this exact format:
 
 ## Hard Rules
 
-- **Read-only on the transcript.** Never modify the analyzed file. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+- **Read-only on the transcript.** Never modify the analyzed file. Write only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 - **Tier A justification:** Write is for report persistence only. Grep/Read are for transcript parsing. No web tools needed.
 - **Context budget discipline.** Do not read the full transcript into context. Use Grep for bulk extraction, Read with offset/limit for sampling. Transcripts can be 100K+ tokens.
 - **Evidence over inference.** Report only patterns with concrete line-number evidence. Do not speculate about intent.

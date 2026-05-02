@@ -42,9 +42,9 @@ report_timestamp: YYYY-MM-DDTHHMMSS
 
 ### Step 1: Locate Report
 
-**Resolve report directory:** Load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to compute `<repo-slug>` (= `sanitize(basename(CWD))` — lowercase, alphanumeric + hyphens only). The report directory is `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+**Resolve report directory:** Load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to compute `<repo-slug>` (= `sanitize(basename(CWD))` — lowercase, alphanumeric + hyphens only). The report directory is `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 
-If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-review-skill.md` and select the most recent report by filename timestamp.
+If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-review-skill.md` and select the most recent report by filename timestamp.
 
 Read the report file. If the file does not exist or `generated_by` is not `review-skill`, report the error and stop.
 
@@ -63,7 +63,7 @@ Read that file as the forward-looking report contract. Extract the YAML frontmat
 Derive the findings.json sidecar path deterministically:
 - Resolve the report path to absolute via `Bash("realpath <report-path>")` (handles relative vs absolute mismatch).
 - Require it to end in `.md`. If not, skip sidecar discovery — go directly to the Markdown back-compat path (Step 2.3).
-- Sidecar path = `<report-path>` with the trailing `.md` removed and `.findings.json` appended. Example: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/2026-04-27T120000-review-skill.md` → `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/2026-04-27T120000-review-skill.findings.json`.
+- Sidecar path = `<report-path>` with the trailing `.md` removed and `.findings.json` appended. Example: `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/2026-04-27T120000-review-skill.md` → `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/2026-04-27T120000-review-skill.findings.json`.
 
 Attempt to Read the sidecar:
 - **File missing** → log `"no sidecar at <path> — using Markdown body"` (legitimate for `--single-perspective`, orchestrated mode, or pre-#81 legacy reports) and fall through to Markdown back-compat (Step 2.3).

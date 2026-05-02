@@ -104,12 +104,12 @@ Produce the certificate:
 
 ## Phase 3 — Report (standalone mode only)
 
-1. Write the review report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-mcp-server.md` with frontmatter matching the review report contract. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in the frontmatter (after `date`). Create the `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` directory if it does not exist.
+1. Write the review report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-mcp-server.md` with frontmatter matching the review report contract. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in the frontmatter (after `date`). Create the `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` directory if it does not exist.
 2. Suggest commit message: `docs(reviews): add YYYY-MM-DDTHHMMSS MCP server review report`.
 
 ## Hard Rules
 
-- **Read-only on analyzed files.** Never modify `.mcp.json`. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+- **Read-only on analyzed files.** Never modify `.mcp.json`. Write only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every High or Medium recommendation must include evidence and a concrete rewrite.**
 - **Parse failure = Critical.** Invalid JSON is the most dangerous finding (all subsequent checks are meaningless).

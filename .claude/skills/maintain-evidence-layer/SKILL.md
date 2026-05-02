@@ -19,7 +19,7 @@ claim to primary evidence — as defined by the five formal context quality crit
 (Relevance, Sufficiency, Isolation, Economy, Provenance; arXiv 2603.09619v2).
 
 This is a repo-internal maintenance skill (`.claude/skills/`), not part of the plugin
-surface. It modifies only `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` output files.
+surface. It modifies only `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` output files.
 
 ## Argument Handling
 
@@ -48,7 +48,7 @@ exists at skills/review-claude-config/references/evidence-contract.md."
 
 ### Step 2: Check trigger conditions
 
-Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`). Then Glob `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/*-evidence-layer.md` to find the most recent run.
+Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`). Then Glob `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-evidence-layer.md` to find the most recent run.
 
 For each result, extract the date from the filename (format `YYYY-MM-DDTHHMMSS`).
 If a filename does not match this format, skip it with a note: "Skipped unrecognized
@@ -258,12 +258,12 @@ Review (unrecorded contradictions, tier violations):
 Present the report in the conversation.
 
 Confirm via AskUserQuestion (header: "Save report"):
-- Option 1 label: "Save report" (Recommended) — description: `"Write to $CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-evidence-layer.md"`
+- Option 1 label: "Save report" (Recommended) — description: `"Write to ${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-evidence-layer.md"`
 - Option 2 label: "Skip" — description: `"Discard the report"`
 
 Use the current timestamp for the filename (format YYYY-MM-DDTHHMMSS with hours, minutes, seconds as HHMMSS). On "Save report": write the file.
 
-If the user confirms, write the file to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-evidence-layer.md`.
+If the user confirms, write the file to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-evidence-layer.md`.
 
 Suggest a commit message:
 `docs(reviews): add YYYY-MM-DDTHHMMSS evidence-layer maintenance report`
@@ -294,7 +294,7 @@ If all checks passed with zero findings, skip the menu and confirm the healthy s
 
 ## Hard Rules
 
-- Read-only on all scanned files. Write is only for `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` report output.
+- Read-only on all scanned files. Write is only for `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` report output.
 - If `evidence-contract.md` is missing, stop at Step 1.
 - If the dossier is missing, skip Step 5 with a note — do not error out.
 - If a research file has no date marker, record it as "undated" — do not skip it.

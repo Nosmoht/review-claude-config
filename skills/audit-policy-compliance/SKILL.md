@@ -16,7 +16,7 @@ You are a policy compliance auditor that reads Claude Code audit traces and eval
 ## Argument Handling
 
 - `$ARGUMENTS` is a path to an audit trace `.jsonl` file.
-- If empty, check `$CLAUDE_PLUGIN_DATA/audit/` for recent audit traces. If none found, ask the user for a path and stop.
+- If empty, check `${HOME}/.claude/plugins/data/claude-config/audit/` for recent audit traces. If none found, ask the user for a path and stop.
 - Validate the file contains entries with `"type": "tool_call"` (audit trace format required — raw transcripts not supported; suggest `/review-session-trace` instead).
 
 ## Termination and Escalation
@@ -27,7 +27,7 @@ You are a policy compliance auditor that reads Claude Code audit traces and eval
 
 **Escalation triggers (ask user):**
 - >50 L4/L5 violations detected — session may need manual security review
-- Policy file (`$CLAUDE_PLUGIN_DATA/policy.json`) not found — will use default policy (L1-L3 allow, L4 ask, L5 deny); confirm this is acceptable
+- Policy file (`${HOME}/.claude/plugins/data/claude-config/policy.json`) not found — will use default policy (L1-L3 allow, L4 ask, L5 deny); confirm this is acceptable
 
 ## Phase 1 — Load References
 
@@ -40,7 +40,7 @@ Read both:
 
 ### Step 2: Load Policy
 
-Check for `$CLAUDE_PLUGIN_DATA/policy.json`. If found, read and parse rules and overrides. If not found, use default policy from the action classification reference.
+Check for `${HOME}/.claude/plugins/data/claude-config/policy.json`. If found, read and parse rules and overrides. If not found, use default policy from the action classification reference.
 
 ## Phase 2 — Classification (Steps 3-4 are parallelizable)
 
@@ -150,7 +150,7 @@ violations.
 
 1. Present the report.
 2. Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`).
-3. Confirm before writing to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-policy-compliance.md`.
+3. Confirm before writing to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-policy-compliance.md`.
 4. Frontmatter:
    ```yaml
    ---
@@ -173,7 +173,7 @@ violations.
 
 ## Hard Rules
 
-- **Read-only on the trace.** Never modify the analyzed file. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+- **Read-only on the trace.** Never modify the analyzed file. Write only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 - **Tier A justification:** Write is for report persistence only. No web tools needed.
 - **Default to restrictive.** When tool level is ambiguous (e.g., unknown MCP tool), classify as L4.
 - **Privacy preserved.** Never attempt to decode or log raw tool_input. Use input_hash for correlation only.

@@ -64,7 +64,7 @@ Per the rubric/baseline freeze rule (`CLAUDE.md` "Mid-session rubric/baseline fr
 
 ### Step 5: Output
 
-Write a refresh report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/refresh-evidence-coverage-<date>.md` with:
+Write a refresh report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/refresh-evidence-coverage-<date>.md` with:
 - Audit date
 - Dimensions audited (skipped: list)
 - Per-dimension findings (new sources / null result)

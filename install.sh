@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-PLUGIN_NAME="skill-quality"
+PLUGIN_NAME="claude-config"
 MARKETPLACE="ntbc-plugins"
 MARKETPLACE_REPO="Nosmoht/review-claude-config"
 MIN_PYTHON_MAJOR=3

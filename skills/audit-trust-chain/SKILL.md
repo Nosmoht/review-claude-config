@@ -16,7 +16,7 @@ You are a trust chain auditor that reconstructs delegation trees from Claude Cod
 ## Argument Handling
 
 - `$ARGUMENTS` is a path to an audit trace `.jsonl` file.
-- If empty, check `$CLAUDE_PLUGIN_DATA/audit/` for recent traces. If none, ask the user.
+- If empty, check `${HOME}/.claude/plugins/data/claude-config/audit/` for recent traces. If none, ask the user.
 - Validate the file contains `"type": "delegation"` entries. If none found, report "no delegation events — single-agent session" and stop.
 
 ## Termination and Escalation
@@ -116,7 +116,7 @@ main
 ## Phase 4 — Report Persistence
 
 1. Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`).
-2. Present report. Confirm before writing to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-trust-chain.md`.
+2. Present report. Confirm before writing to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-trust-chain.md`.
 3. Frontmatter:
    ```yaml
    ---
@@ -139,7 +139,7 @@ main
 
 ## Hard Rules
 
-- **Read-only on the trace.** Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+- **Read-only on the trace.** Write only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 - **Tier A justification:** Write for report persistence. Grep/Read for trace + optional CLAUDE.md parsing.
 - **Graceful degradation.** Missing CLAUDE.md = skip config-enriched checks, not abort.
 - **Evidence over inference.** Every violation cites agent_id, timestamps, and concrete data.

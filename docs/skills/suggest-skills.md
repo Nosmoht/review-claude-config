@@ -18,7 +18,7 @@ Analyze a repository's structure, workflows, and documentation to identify missi
 
 The skill answers the question: "What Claude Code skills should this repository have but doesn't?" It takes a target folder, scans its structure, classifies the repository type, and runs two complementary analysis layers -- one deterministic (table matching) and one heuristic (open reasoning with web validation). The result is a prioritized list of skill suggestions, each backed by concrete evidence, labeled with `evidence_class` and `confidence`, and accompanied by a skeleton SKILL.md.
 
-The skill is strictly read-only on the target repository. It writes only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` when persisting a report.
+The skill is strictly read-only on the target repository. It writes only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` when persisting a report.
 
 ## Process Steps
 
@@ -149,7 +149,7 @@ Priority is the sum of all three scores:
 - **Signal Summary table** -- consolidated view of all signals checked and their status
 - **Integration Notes** -- how the suggested skills relate to each other and to existing skills
 
-**Step 2: Persist.** Write the report to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-suggest-skills.md` with YAML frontmatter.
+**Step 2: Persist.** Write the report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-suggest-skills.md` with YAML frontmatter.
 
 **Step 3: Commit and menu.** Suggest a commit message (`docs(reviews): add YYYY-MM-DDTHHMMSS suggest-skills report`) and present the "What's next?" menu:
 
@@ -181,7 +181,7 @@ Priority is the sum of all three scores:
 
 ## Hard Rules
 
-1. **Read-only on the target repository.** Never modify any file in the analyzed repository. Write only to `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/`.
+1. **Read-only on the target repository.** Never modify any file in the analyzed repository. Write only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 2. **Every suggestion needs evidence.** Each suggestion must cite a concrete signal (file path, configuration entry, documentation excerpt) and be web-validated or explicitly marked `[no web verification]`.
 3. **No duplicates.** Cross-check every suggestion against the existing skill inventory (Category B). Overlapping coverage (>60%) becomes an enhancement note, not a new suggestion.
 4. **Extraction criteria gate.** Layer 2 suggestions must pass at least 3 of 4 extraction criteria (Recurrence, Verification, Non-obviousness, Generalizability).
