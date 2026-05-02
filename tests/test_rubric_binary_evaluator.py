@@ -295,10 +295,11 @@ class TestMETA3b:
         assert check_META_3b(p, fm)["verdict"] == "NA"
 
     def test_counter_reference_overrides_overlap(self):
-        # review-skill description contains "Do NOT use for agents or rules" —
-        # counter-reference overrides any token overlap with siblings.
-        fm, _ = parse_frontmatter(REVIEW_SKILL_FIXTURE)
-        assert check_META_3b(REVIEW_SKILL_FIXTURE, fm)["verdict"] == "PASS"
+        # review-skill (live file) has real siblings in skills/ and its description
+        # contains "Do NOT use for agents or rules" — counter-reference overrides overlap.
+        live = REPO_ROOT / "skills" / "review-skill" / "SKILL.md"
+        fm, _ = parse_frontmatter(live)
+        assert check_META_3b(live, fm)["verdict"] == "PASS"
 
     def test_agent_artifact_returns_na(self, tmp_path):
         # Issue #74: META-3b globs skills/*/SKILL.md for siblings, which is
@@ -1409,8 +1410,8 @@ REVIEW_SKILL_EXPECTED = {
     "META-1a": "PASS",
     "META-2": "PASS",
     "META-3a": "PASS",
-    "META-3b": "PASS",
-    "META-3c": "PASS",  # artifact-derived sibling root: only 1 non-overlapping sibling → unique tokens exist
+    "META-3b": "NA",  # frozen fixture has no SKILL.md siblings → no-sibling NA
+    "META-3c": "NA",  # frozen fixture has no SKILL.md siblings → no-sibling NA
     "META-4": "PASS",
     "CLAR-1": "PASS",
     "CLAR-2": "PASS",  # issue #104: antecedent-aware narrowing
@@ -1479,8 +1480,8 @@ SCAFFOLD_SKILL_EXPECTED = {
     "META-1a": "PASS",
     "META-2": "PASS",
     "META-3a": "PASS",
-    "META-3b": "PASS",  # artifact-derived sibling root: only 1 non-overlapping sibling → PASS
-    "META-3c": "PASS",  # artifact-derived sibling root: unique tokens exist vs single sibling
+    "META-3b": "NA",  # frozen fixture has no SKILL.md siblings → no-sibling NA
+    "META-3c": "NA",  # frozen fixture has no SKILL.md siblings → no-sibling NA
     "META-4": "PASS",
     "CLAR-1": "PASS",
     "CLAR-2": "PASS",  # issue #104
