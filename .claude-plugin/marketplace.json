@@ -11,10 +11,10 @@
       "source": {
         "source": "github",
         "repo": "Nosmoht/review-claude-config",
-        "ref": "v1.0.2"
+        "ref": "v1.1.0"
       },
       "description": "Evidence-based quality review and gap analysis for Claude Code skills, agents, and rules.",
-      "version": "1.0.2",
+      "version": "1.1.0",
       "category": "review",
       "tags": ["review", "quality", "skills", "agents"]
     }
