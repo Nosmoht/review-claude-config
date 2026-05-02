@@ -80,7 +80,7 @@ From the extracted data, compute:
 | Total turns | Count of `type: "assistant"` entries |
 | Tool call count by tool | Group tool_use blocks by `name` |
 | Tool error rate | tool_results with error content / total results |
-| Retry signal | Consecutive tool_use blocks with same `name` in same assistant turn |
+| Retry signal | Consecutive tool_use blocks repeated 2 times or more with same `name` in same assistant turn |
 | Delegation depth | Max nesting level of Agent tool_use blocks |
 | Token totals | Sum of usage fields |
 | Cache hit rate | cache_read / (cache_read + input_tokens) |
