@@ -1237,7 +1237,10 @@ def check_RL_3b(body: str, is_agentic_flag: bool) -> dict:
         return _na("no retry/regenerate/redisplay token")
     # issue #113: filter negated triggers (`do not retry`) and triggers inside
     # backtick-quoted spans (mirrors check_CLAR_3 #105 / check_COMP_W #103/#104).
-    from rubric_patterns import _inside_backticks
+    from rubric_patterns import (  # function-local; matches existing convention, do not hoist
+        _inside_backticks,
+        _inside_hitl_cycle,
+    )
 
     actionable: list[re.Match[str]] = []
     for r in raw_retries:
@@ -1246,9 +1249,11 @@ def check_RL_3b(body: str, is_agentic_flag: bool) -> dict:
             continue
         if _inside_backticks(body, r.start()):
             continue
+        if _inside_hitl_cycle(body, r.start()):
+            continue
         actionable.append(r)
     if not actionable:
-        return _na("only negated or backtick-quoted retry tokens")
+        return _na("only negated, backtick-quoted, or HITL-handler retry tokens")
     for r in actionable:
         window_start = max(0, r.start() - 400)
         window_end = min(len(body), r.end() + 400)

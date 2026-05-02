@@ -235,6 +235,68 @@ def _inside_backticks(text: str, offset: int) -> bool:
     return line_prefix.count("`") % 2 == 1
 
 
+# Issue #139 — RL-3b NA filter for HITL preview-confirm cycles.
+#
+# Conservative whitelist approach: only matches option-handler prefixes whose
+# label is in the adjust-class set OR the "Option <list>" pattern. This
+# prevents false-negative bypass on labels like ``On "Failure":`` that
+# wrap genuine autonomous retry loops.
+HITL_OPTION_HANDLER = re.compile(
+    r"On\s+(?:"
+    # Branch 1: quoted adjust-class label (whitelist). Curly + ASCII quotes.
+    # Inline (?i:...) flag scopes case-insensitivity to the label only — `On`
+    # itself is hard-cased so prose-internal `on` does not match.
+    r"[\"“'](?i:Adjust|Modify|Edit|Change|Refine)[\"”']"
+    r"|"
+    # Branch 2: unquoted "Option <N>[, <N>]*[, or <Word>]?" list pattern.
+    # Mirrors scaffold-skill L149: ``On Option 2, 3, or Other:``.
+    r"Option\s+\d+(?:\s*,\s*\d+)*(?:\s*,?\s*or\s+\w+)?"
+    r")\s*:\s*",
+)  # NB: NO global re.IGNORECASE — keeps `On`/`Option` case-sensitive.
+
+
+# Paragraph-break detection — handles LF, CRLF, and whitespace-only blank lines.
+_PARAGRAPH_BREAK = re.compile(r"\n[ \t]*\r?\n")
+
+
+def _inside_hitl_cycle(text: str, offset: int) -> bool:
+    """Return True when ``offset`` is preceded within 100 characters by an
+    option-handler prefix matching ``HITL_OPTION_HANDLER`` — indicating the
+    surrounding directive is a user-driven preview-confirm branch
+    (Apply / Adjust / Cancel) rather than an autonomous retry loop.
+
+    Mirrors the architectural pattern of issue #105's ``_inside_backticks``
+    filter (same module, L229–235) and #103's table-cell pattern.
+
+    Whitelist (issue #139): the accepted handler labels are exactly
+        Branch 1 (quoted): {Adjust, Modify, Edit, Change, Refine}
+        Branch 2 (unquoted Option list): ``Option <N>[, <N>]*[, or <Word>]?``
+    A handler with ANY OTHER label (e.g., ``On "Failure":``, ``On "Tweak":``)
+    is NOT treated as HITL. To extend the whitelist, edit
+    ``HITL_OPTION_HANDLER`` and add a regression test for the new label
+    against an autonomous-retry counter-example (mirroring
+    ``test_RL_3b_hitl_filter_does_NOT_bypass_failure_handler``).
+
+    Window calibration: 100 chars gives ~75% margin over the empirically
+    longest gap (57 chars at scaffold-skill L209, verified 2026-05-02).
+    A paragraph break (LF-LF, CRLF-CRLF, or blank-line-with-whitespace)
+    inside the window terminates the lookback so cross-paragraph
+    contamination cannot smuggle a HITL prefix into an unrelated retry
+    directive. Two consecutive blank lines (``\\n\\n\\n``) are treated as
+    a deliberate section break and also terminate lookback.
+    """
+    window_start = max(0, offset - 100)
+    window = text[window_start:offset]
+    # Last paragraph-break inside the window terminates lookback. Handles
+    # LF-LF, CRLF-CRLF, and blank-line-with-whitespace forms.
+    last_break_end = -1
+    for m in _PARAGRAPH_BREAK.finditer(window):
+        last_break_end = m.end()
+    if last_break_end != -1:
+        window = window[last_break_end:]
+    return HITL_OPTION_HANDLER.search(window) is not None
+
+
 # COMP-W Termination Criteria (scoring-rubric.md L133).
 # LOOP_PATTERN does NOT include `until` (see module-level asymmetry note).
 LOOP_PATTERN = re.compile(

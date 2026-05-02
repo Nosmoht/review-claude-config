@@ -989,6 +989,33 @@ class TestRL3b:
         body = f"On error, {token} the call until success."
         assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "FAIL"
 
+    def test_RL_3b_hitl_quoted_adjust_handler_is_NA(self):
+        """issue #139 — `regenerate` inside `On "Adjust":` HITL handler is NA."""
+        body = 'On "Adjust": ask what to change, regenerate, and show again. On "Cancel": stop.'
+        assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_RL_3b_hitl_unquoted_option_list_is_NA(self):
+        """issue #139 — `redisplay` inside `On Option 2, 3, or Other:` is NA."""
+        body = 'On Option 2, 3, or Other: incorporate the correction, redisplay the updated table.'
+        assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "NA"
+
+    def test_RL_3b_hitl_filter_does_NOT_bypass_failure_handler(self):
+        """issue #139 — `On "Failure": retry` is NOT inside HITL cycle (whitelist
+        excludes "Failure"). Guards against Scenario-B false-negative bypass.
+        """
+        body = 'On "Failure": retry indefinitely until success.'
+        assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "FAIL"
+
+    def test_RL_3b_hitl_filter_does_NOT_bypass_cross_paragraph_retry(self):
+        """issue #139 (Team-Red Scenario C) — paragraph break protects against
+        contamination: an unrelated `regenerate` in the next paragraph must FAIL.
+        """
+        body = (
+            'On "Adjust": confirm the preview.\n\n'
+            'In all error paths, regenerate the index without bound.'
+        )
+        assert check_RL_3b(body, is_agentic_flag=True)["verdict"] == "FAIL"
+
 
 class TestRL4b:
     def test_non_agentic_na(self):
@@ -1404,7 +1431,7 @@ SCAFFOLD_SKILL_EXPECTED = {
     "SP-4b": "FAIL",
     "IJ-1b": "PASS",
     "RL-1b": "PASS",
-    "RL-3b": "FAIL",
+    "RL-3b": "NA",  # issue #139: HITL-cycle filter — regenerate/redisplay inside On "Adjust": handler
     "RL-4b": "PASS",
     "RL-9b": "FAIL",
     "AH-2b": "NA",

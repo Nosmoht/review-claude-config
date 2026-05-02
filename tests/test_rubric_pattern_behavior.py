@@ -26,6 +26,7 @@ from rubric_patterns import (  # noqa: E402
     PE_2_PATTERN,
     SECOND_PERSON,
     TERMINATION_PREDICATE,
+    _inside_hitl_cycle,
 )
 
 
@@ -298,3 +299,82 @@ class TestPE2Pattern:
     )
     def test_match(self, text, expected):
         assert bool(PE_2_PATTERN.search(text)) is expected
+
+
+class TestInsideHitlCycle:
+    """Boundary cases for ``_inside_hitl_cycle`` (issue #139). Mirrors
+    the empirically-verified RL-3b residuals at:
+      - skills/{develop-hooks,scaffold-agent,scaffold-rule}/SKILL.md (Adjust handler)
+      - skills/scaffold-skill/SKILL.md L149 (Option list) + L209 (Adjust handler)
+    """
+
+    def test_positive_match_quoted_adjust_handler(self):
+        """R1 case 1 — positive match (Adjust handler with regenerate)."""
+        body = 'On "Adjust": ask what to change, regenerate, and show again.'
+        offset = body.index("regenerate")
+        assert _inside_hitl_cycle(body, offset) is True
+
+    def test_negative_outside_cycle(self):
+        """R1 case 2 — no handler prefix, plain regenerate."""
+        body = 'The agent will regenerate the file on each invocation.'
+        offset = body.index("regenerate")
+        assert _inside_hitl_cycle(body, offset) is False
+
+    def test_negative_handler_not_adjust(self):
+        """R1 case 3 — handler is "Cancel"/"Failure"/"Continue" (NOT in whitelist).
+        Critical for preventing Scenario-B bypass: ``On "Failure": retry`` must NOT NA.
+        """
+        body = 'On "Failure": retry indefinitely until success.'
+        offset = body.index("retry")
+        assert _inside_hitl_cycle(body, offset) is False
+
+    def test_positive_match_multiline_preview_block(self):
+        """R1 case 4 — handler on one line, trigger on later line.
+        100-char window crosses newlines (intentional: bullet-list HITL flows).
+        """
+        body = 'On "Adjust":\n  - regenerate the spec\n  - show the preview again.'
+        offset = body.index("regenerate")
+        assert _inside_hitl_cycle(body, offset) is True
+
+    def test_negative_offset_before_handler(self):
+        """R1 case 5 — trigger appears before the handler prefix in text."""
+        body = 'regenerate the file. On "Adjust": ask what to change.'
+        offset = body.index("regenerate")
+        assert _inside_hitl_cycle(body, offset) is False
+
+    # ---- Revision-2 additions (Team-Red R1 findings) ----
+
+    def test_negative_lowercase_on_does_not_match(self):
+        """Revision 2 — `on "adjust"` (lowercase) must NOT match.
+        Guards against IGNORECASE drift; `On` is hard-cased.
+        """
+        body = 'we rely on "adjust" mode: regenerate everything.'
+        offset = body.index("regenerate")
+        assert _inside_hitl_cycle(body, offset) is False
+
+    def test_negative_paragraph_break_terminates_lookback(self):
+        """Revision 2 (Team-Red Scenario C) — a `\\n\\n` paragraph break
+        between handler and trigger blocks cross-paragraph contamination.
+        """
+        body = 'On "Adjust": confirm the spec.\n\nIf degraded, regenerate everything.'
+        offset = body.index("regenerate")
+        assert _inside_hitl_cycle(body, offset) is False
+
+    # ---- Revision-3 additions (Team-Red R2 findings) ----
+
+    def test_negative_crlf_paragraph_break_terminates_lookback(self):
+        """Revision 3 (Team-Red R2 Blocker 2) — CRLF-encoded paragraph
+        breaks (`\\r\\n\\r\\n`) must also terminate lookback. Guards against
+        Windows-encoded SKILL.md slipping through.
+        """
+        body = 'On "Adjust": confirm the spec.\r\n\r\nIf degraded, regenerate everything.'
+        offset = body.index("regenerate")
+        assert _inside_hitl_cycle(body, offset) is False
+
+    def test_negative_whitespace_blank_line_terminates_lookback(self):
+        """Revision 3 — a blank line containing only whitespace (`\\n   \\n`)
+        is also a paragraph break.
+        """
+        body = 'On "Adjust": confirm.\n   \nregenerate the index.'
+        offset = body.index("regenerate")
+        assert _inside_hitl_cycle(body, offset) is False
