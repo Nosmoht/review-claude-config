@@ -12,6 +12,12 @@ Maintainer operating guide for this repository (Clarity, Completeness, Prompt En
 - **Review reports**: `$CLAUDE_PLUGIN_DATA/reports/<repo-slug>/` for timestamped reports organized by target repo, consumed by analytics and apply flows. Slug = `basename(target_dir)`, see `references/repo-identification.md`
 - **Self-contained knowledge**: The plugin carries all knowledge needed for quality in its own files. External services (KB server, web research) are optional enhancements — skills degrade gracefully without them. The distillation path is: `research/ → engineering-baseline.md + skill-agent-format-conventions.md → skill decisions`. Research findings must be distilled into these operational surfaces to affect plugin behavior in any repo.
 - **Runtime audit layer**: `hooks/` provides observation (PostToolUse, SubagentStart/Stop, SessionEnd) and opt-in policy enforcement (PreToolUse policy gate). Audit traces written to `$CLAUDE_PLUGIN_DATA/audit/`. Skills consume these traces for analysis.
+- **Meta-review threat model**: reviewer-side threats (reading
+  malicious skill content, applying poisoned findings, ingesting
+  stale evidence) are catalogued in
+  [docs/meta-review-threat-model.md](docs/meta-review-threat-model.md).
+  Subject-side patterns remain in
+  `skills/review-claude-config/references/injection-surface-catalog.md`.
 
 ### Plugin vs External Infrastructure Boundaries
 
