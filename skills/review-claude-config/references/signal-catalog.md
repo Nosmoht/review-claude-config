@@ -45,6 +45,24 @@ last_refreshed: 2026-04-03
 | No cross-skill dependency map | Skills cross-read sibling `references/`, undocumented | Dependency skill | W |
 | Research files without index | `research/` ≥5 files, no generated index | Research index skill | W |
 
+## Agent Candidate Signal Table
+
+| Signal | Detection Pattern | Agent Candidate | S |
+|--------|-------------------|-----------------|---|
+| Security scanning toolchain | `.github/workflows/*.{yml,yaml}` references Trivy / Snyk / CodeQL / gitleaks AND no `agents/security*` exists | `security-reviewer` agent | S |
+| Separate IaC deployment targets | ≥2 of `*.tf`, `helm/Chart.yaml`, `cdk.json`, `kustomization.yaml` AND no `agents/infra*` exists | `infra-architect` agent | S |
+| Database-migration toolchain isolated | `migrations/`, `alembic/`, or `prisma/migrations/` AND no `agents/migration*` exists | `migration-reviewer` agent | S |
+| Release-engineering toolchain isolated | `scripts/release*` + `.github/workflows/release*.yml` use a toolchain absent from `make test` | `release-engineer` agent | W |
+
+## Rule Candidate Signal Table
+
+| Signal | Detection Pattern | Rule Candidate | S |
+|--------|-------------------|----------------|---|
+| Branch-protection enforcement on `main` | `.github/branch_protection.json` OR repo policy prohibits direct push to `main`/`master` | `no-direct-push-to-main` rule | S |
+| Review-label routing requiring judgment | repo workflow requires PR labels (`needs: security-review`, `needs: arch-review`) selected by content judgment | `pr-review-label-routing` rule | M |
+| Sensitive-path write-restriction | `.gitignore`/`.dockerignore` patterns where exclusion rationale is non-mechanical (e.g., `secrets/`, `*.local.*`) | `sensitive-paths-write-restriction` rule | M |
+| Commit-message style requiring narrative judgment | `CONTRIBUTING.md` / `STYLE.md` clauses like "prefer X unless Y" — not single-command checkable | `commit-message-style` rule | M |
+
 ## Extraction Criteria
 
 Every suggestion must pass 3/4 ([source](https://arxiv.org/html/2603.11808v1)):

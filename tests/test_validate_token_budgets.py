@@ -39,7 +39,7 @@ class TestGetBudget:
         assert get_budget(tmp_path / "engineering-baseline.md") == 4350
 
     def test_signal_catalog(self, tmp_path):
-        assert get_budget(tmp_path / "signal-catalog.md") == 1000
+        assert get_budget(tmp_path / "signal-catalog.md") == 1400
 
     def test_domain_cache(self, tmp_path):
         p = tmp_path / "skills" / "x" / "references" / "domain-cache" / "cilium.md"
