@@ -296,11 +296,25 @@ In the intervention matrix, include a `signal_source` for each Skill row: "repet
 
 ### 4C: Agent Candidates
 
+#### Signal catalog checks
+
+Using the signal-catalog.md loaded in Phase 1, match Phase 2 scan results
+against the Agent Candidate Signal Table.
+
+For each signal row in the table:
+1. Check if the Detection Pattern matches Phase 2 findings
+2. Check if a corresponding agent already exists (from Phase 1 Step 2 inventory)
+3. If the signal matches AND no existing agent covers it → candidate
+
+#### Concern-topology checks (carry-over)
+
 From Phase 2 concern topology:
 - Separate lint/test configs per subdirectory → specialized agent per domain
 - Security scanning tools in CI (Trivy, Snyk, CodeQL, gitleaks) → security-reviewer agent
 - Separate deployment targets (Terraform, Helm, CDK) → infra-architect agent
 - CODEOWNERS with clear responsibility boundaries → agent per ownership area
+
+#### Validation gate
 
 Decision: only recommend Agent if concern has BOTH its own toolchain AND its own evaluation criteria. Otherwise recommend Skill.
 
@@ -308,12 +322,26 @@ This is an intentionally conservative repo policy to avoid inflating agent count
 
 ### 4D: Hook/Rule Candidates
 
+#### Signal catalog checks (Rule track)
+
+Using the signal-catalog.md loaded in Phase 1, match Phase 2 scan results
+against the Rule Candidate Signal Table.
+
+For each signal row in the table:
+1. Check if the Detection Pattern matches Phase 2 findings
+2. Check if a corresponding rule already exists (from Phase 1 Step 2 inventory)
+3. If the signal matches AND no existing rule covers it → candidate
+
+#### Constraint-extraction checks (carry-over, both tracks)
+
 From Phase 2 constraint extraction:
 - Pre-commit hooks (.pre-commit-config.yaml, .husky/) → PostToolUse hooks for formatters
 - Branch protection rules → Rule ("Never commit directly to main")
 - Secret scanning in CI → PreToolUse hook for secret detection
 - .gitignore/.dockerignore patterns → file-write restriction rules
 - Mandatory review labels → permission config recommendation
+
+#### Validation gate
 
 Decision: if check is a single command with boolean output → Hook. If judgment needed → Rule.
 
