@@ -42,7 +42,8 @@ schema_version: 1
 date: YYYY-MM-DD
 repo: <slug>                # basename(target_dir)
 origin: <git-remote-url>    # Optional
-target: /absolute/path
+# MUST use the literal token `$HOME/` (not the resolved absolute home prefix). block-sensitive-content.sh denies Write otherwise. Applies to review-skill, review-agent, review-rule, review-claude-md, review-mcp-server.
+target: $HOME/path/to/repo
 baseline_version: YYYY-MM-DD
 items_reviewed: N
 summary:

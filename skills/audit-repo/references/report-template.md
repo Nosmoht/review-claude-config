@@ -8,7 +8,7 @@ last_refreshed: 2026-04-06
 # Repository Audit Report
 
 ## Repository Profile
-- **Target:** [absolute path]
+- **Target:** $HOME/path/to/repo  (literal `$HOME/` token; never the resolved absolute home prefix — block-sensitive-content.sh denies Write)
 - **Languages:** [detected]
 - **Frameworks:** [detected]
 - **Existing Claude Config:** [yes/no — N skills, N agents, N rules, hooks: yes/no]

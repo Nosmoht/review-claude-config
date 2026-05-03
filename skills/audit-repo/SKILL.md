@@ -390,6 +390,8 @@ Present the full report to the user.
 
 After presenting, confirm before writing: "Save audit report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-repo.md`?"
 
+Before Write: scan the assembled report (frontmatter `target:`, optional `origin:`, and the entire body including evidence citations and action-plan command paths) and replace any literal absolute home-directory prefix with `$HOME/`. The `~/.claude/hooks/block-sensitive-content.sh` PreToolUse hook denies Writes containing such prefixes.
+
 If confirmed, write the report. Create `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` if it does not exist. If declined, display the path that would have been used.
 
 Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS audit-repo report`

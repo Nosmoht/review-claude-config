@@ -104,6 +104,7 @@ Produce the certificate:
 
 ## Phase 3 — Report (standalone mode only)
 
+Before Write: scan the assembled report (frontmatter `target:`, optional `origin:`, and the entire body including per-finding evidence quotations) and replace any literal absolute home-directory prefix with `$HOME/`. The `~/.claude/hooks/block-sensitive-content.sh` PreToolUse hook denies Writes containing such prefixes.
 1. Write the review report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-mcp-server.md` with frontmatter matching the review report contract. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in the frontmatter (after `date`). Create the `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` directory if it does not exist.
 2. Suggest commit message: `docs(reviews): add YYYY-MM-DDTHHMMSS MCP server review report`.
 

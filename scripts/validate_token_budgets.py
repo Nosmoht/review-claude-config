@@ -114,6 +114,10 @@ BUDGETS: dict[str, int] = {
     "opus-4.7-migration-checks.md": 800,  # P0.1 extraction target
     "mcp-2026-security-checklist.md": 800,  # P0.3 extraction target
     "injection-regex-library.md": 1500,  # P0.3 — 22 Tier-A patterns + procedure
+    # Issue #145: schema files gained one above-field comment line
+    # instructing $HOME/ usage; legitimately over 500-token default.
+    "audit-report-schema.md": 600,
+    "context-report-schema.md": 600,
 }
 
 DOMAIN_CACHE_BUDGET = 800
