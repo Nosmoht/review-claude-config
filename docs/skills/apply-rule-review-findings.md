@@ -43,7 +43,7 @@ If no High/Medium dispatchable findings exist:
 - if dispatchable Low findings exist, show any manual-only findings first and then offer them as an optional Low-impact pass
 - otherwise present manual-only findings as follow-up items and stop
 
-**Step 3: Load references.** Read `references/rule-fix-guide.md` for rule-specific validation rules. Locate shared commit conventions via Glob (`**/apply-review-findings/references/commit-conventions.md`). If commit conventions are not found, warn but continue.
+**Step 3: Load references.** Read `references/rule-fix-guide.md` for rule-specific validation rules. Locate shared commit conventions via Glob (`**/review-claude-config/references/commit-conventions.md`). If commit conventions are not found, warn but continue.
 
 ### Phase 2 -- Present Summary
 

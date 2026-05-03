@@ -44,7 +44,7 @@ domain_cache: |
    - Scoring rubric: Glob `**/review-claude-config/references/scoring-rubric.md`
    - Source quality criteria: Glob `**/review-claude-config/references/source-quality-criteria.md`
    - Repo identification: Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`
-   - MCP evaluation guide: `references/mcp-evaluation-guide.md`
+   - MCP evaluation guide: `skills/review-claude-config/references/mcp-evaluation-guide.md`
 
 2. **Probe tool availability.** Test WebSearch with a trivial query. Record `websearch_available`.
 
@@ -64,7 +64,7 @@ domain_cache: |
 
 ### Step B: Checklist Evaluation
 
-1. Load `references/mcp-evaluation-guide.md`.
+1. Load `skills/review-claude-config/references/mcp-evaluation-guide.md`.
 2. For each server entry in `.mcp.json`, evaluate every checklist item: PASS | FAIL | NA.
 3. Aggregate across all server entries. A single FAIL on any server = FAIL for that item.
 4. Score each dimension using the rubric. Cite evidence before grading.

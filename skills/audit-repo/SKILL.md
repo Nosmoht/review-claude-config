@@ -36,7 +36,7 @@ Read these files from the skill's own `references/` directory:
 - `references/audit-report-schema.md` — report frontmatter schema and body structure
 
 Read from the sibling `suggest-skills` skill's references:
-- Locate via Glob: `**/suggest-skills/references/signal-catalog.md`
+- Locate via Glob: `**/review-claude-config/references/signal-catalog.md`
 - This provides the Application Signal Table and Skills Repository Signal Table for Phase 4B skill detection
 
 Load repo-identification reference to resolve suite-root and repo-slug:

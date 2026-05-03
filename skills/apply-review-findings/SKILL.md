@@ -87,7 +87,7 @@ For each mapped recommendation, verify it can drive a real Edit before dispatchi
 
 Split Dispatchable into **High/Medium** and **Low** groups. Group remaining Dispatchable by item `type` for the per-type dispatch (Step 4–5).
 
-> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-skill/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time. After Step 2.4, synthesized binary findings (currently emitting non-substring `current`) also fall to Manual-only by construction. The orchestrator dispatches only Dispatchable recommendations; per-type appliers receive only edit-ready inputs in orchestrated mode.
+> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-claude-config/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time. After Step 2.4, synthesized binary findings (currently emitting non-substring `current`) also fall to Manual-only by construction. The orchestrator dispatches only Dispatchable recommendations; per-type appliers receive only edit-ready inputs in orchestrated mode.
 
 If no dispatchable High or Medium recommendations are found:
 - if dispatchable Low recommendations exist, skip to **Step 2a: Low Impact Offer**
@@ -222,7 +222,7 @@ On "Address N low-impact findings": re-enter Step 5 with the Low recommendations
 
 ### 7. Commit with audit-fix chain
 
-Read `references/commit-conventions.md` for the commit format.
+Read `skills/review-claude-config/references/commit-conventions.md` for the commit format.
 
 Check whether the review report itself has been committed. Run `git log --oneline --all -- <report-path>` via Bash. If the report is not yet committed, tell the user:
 

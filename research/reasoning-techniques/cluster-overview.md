@@ -104,5 +104,5 @@ All Tier-1 (peer-reviewed at ICLR / ACL conferences, well-cited). Passes web-res
 
 - `skills/review-claude-config/references/engineering-baseline.md` §"Verification Criteria" — adjacent technique; CoVe extends it
 - `skills/review-claude-config/references/scoring-rubric.md` §"Reasoning-Model Anti-Patterns" — PE-1 rationale informs Step-Back rejection
-- `skills/review-skill/references/merge-rules.md` — multi-perspective dispatch is the orchestration-layer analog of Self-Consistency
+- `skills/review-claude-config/references/merge-rules.md` — multi-perspective dispatch is the orchestration-layer analog of Self-Consistency
 - `research/finding-identity/finding-identity-and-lifecycle.md` — multi-source merge rules

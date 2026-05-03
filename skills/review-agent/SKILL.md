@@ -58,7 +58,7 @@ Also load `repo-identification.md` via Glob `**/review-claude-config/references/
 **If any of these files is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
 
 Read the type-specific evaluation guide from this skill's own directory:
-- `references/agent-evaluation-guide.md`
+- `skills/review-claude-config/references/agent-evaluation-guide.md`
 
 When the agent declares Write, Bash, Edit, or MCP tools in `tools:`/`disallowedTools:`: also read `**/review-claude-config/references/tool-grant-decision-tree.md` for archetype alignment and high-risk combination evaluation (TV-2, TV-3).
 
@@ -84,7 +84,7 @@ Score using the rubric as the PRIMARY basis. The agent evaluation guide provides
 
 **Scoring procedure:**
 
-1. Work through the full checklist in `references/agent-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item in the checklist.
+1. Work through the full checklist in `skills/review-claude-config/references/agent-evaluation-guide.md`. Record a PASS, FAIL, or NA verdict for every item in the checklist.
 2. **Completeness gate:** Before producing the certificate, verify:
    - Every checklist item has a verdict (no blanks).
    - Every dimension has at least one non-NA item.

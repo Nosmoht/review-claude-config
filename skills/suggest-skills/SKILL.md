@@ -32,7 +32,7 @@ Attempt a trivial WebFetch (e.g., fetch "https://docs.anthropic.com"). If it fai
 **1. Load References**
 
 Read these files from the skill's own `references/` directory:
-- `references/signal-catalog.md` — signal patterns and extraction criteria
+- `skills/review-claude-config/references/signal-catalog.md` — signal patterns and extraction criteria
 
 Also read shared references (read-only, owned by review-claude-config):
 - Read `${CLAUDE_PLUGIN_ROOT}/skills/review-claude-config/references/domain-cache/INDEX.md`. If found, note available domain cache entries for reuse. If not found, skip — no error.

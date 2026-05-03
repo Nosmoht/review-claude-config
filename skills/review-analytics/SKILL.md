@@ -35,7 +35,7 @@ Locate the canonical review contract via Glob: `**/review-claude-config/referenc
 - Prefer `skills/review-claude-config/references/review-report-contract.md` when present.
 - Otherwise use the sibling `.claude/skills/review-claude-config/references/review-report-contract.md` copy.
 
-Read that file for the forward-looking frontmatter and identity contract. Use `references/report-schema.md` for analytics-specific compatibility notes and producer partition rules.
+Read that file for the forward-looking frontmatter and identity contract. Use `skills/review-claude-config/references/report-schema.md` for analytics-specific compatibility notes and producer partition rules.
 
 For each report, read the YAML frontmatter and extract:
 - `date` — report date
