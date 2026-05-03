@@ -11,7 +11,7 @@ last_refreshed: 2026-04-06
 
 ## Repository Overview
 
-- **Target:** [absolute path]
+- **Target:** $HOME/path/to/repo  (literal `$HOME/` token; never the resolved absolute home prefix — block-sensitive-content.sh denies Write)
 - **Repository Type:** [Application / Skills-Config / Mixed]
 - **Tech Stack:** [detected languages, frameworks, infrastructure — or "N/A (skills/config repository)" if no source code]
 - **Existing Skills:** [count] ([list names])
@@ -64,7 +64,8 @@ last_refreshed: 2026-04-06
 generated_by: suggest-skills
 schema_version: 1
 date: YYYY-MM-DD
-target: /absolute/path/to/target
+# MUST use the literal token `$HOME/` (not the resolved absolute home prefix). block-sensitive-content.sh denies Write otherwise.
+target: $HOME/path/to/repo
 repo_type: Application | Skills-Config | Mixed
 existing_skills: N
 suggestions:

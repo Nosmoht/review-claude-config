@@ -15,7 +15,8 @@ schema_version: 2                      # v1=review, v2=audit
 date: YYYY-MM-DD
 repo: <slug>                           # basename(target_dir)
 origin: <git-remote-url>               # Optional
-target: /absolute/path
+# MUST use the literal token `$HOME/` (not the resolved absolute home prefix). block-sensitive-content.sh denies Write otherwise.
+target: $HOME/path/to/repo
 existing_claude_config: true|false
 languages: [python, typescript]
 repo_type: Application|Skills-Config|Mixed

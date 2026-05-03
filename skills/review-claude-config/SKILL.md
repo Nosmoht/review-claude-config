@@ -313,6 +313,8 @@ For every High or Medium recommendation in the body, preserve the shared recomme
 
 ### Step 2: Write the report
 
+Before Write: scan the assembled report (frontmatter `target:`, optional `origin:`, and the entire body including per-item recommendation evidence) and replace any literal absolute home-directory prefix with `$HOME/`. The `~/.claude/hooks/block-sensitive-content.sh` PreToolUse hook denies Writes containing such prefixes.
+
 Write to: `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`
 
 Use the current date and time for the timestamp. Create the `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` directory if it does not exist. Timestamp ensures each run produces a unique file, supporting the "iterate until convergence" workflow.

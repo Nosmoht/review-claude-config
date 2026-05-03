@@ -225,7 +225,7 @@ Resolve `<repo-slug>` per `repo-identification.md`. Include `repo: <slug>` and o
 
 ## Hard Rules
 
-- Read-only on the target repository. Write only the report file to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
+- Read-only on the target repository. Write only the report file to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`. Before Write, scan the assembled report (frontmatter `target:`, optional `origin:`, and the entire body) and replace any literal absolute home-directory prefix with `$HOME/`. The `~/.claude/hooks/block-sensitive-content.sh` PreToolUse hook denies Writes containing such prefixes.
 - Token estimates are always ranges (chars/4 to chars/3), always labeled "estimated".
 - Every recommendation cites the evidence tier and specific file paths measured.
 - Never recommend removing MCP servers, skills, or rules. Report cost only.

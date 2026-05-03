@@ -404,6 +404,8 @@ If the user declines, skip report writing but still display the report path that
 
 **Body:** Full report content as presented.
 
+Before Write: scan the assembled report (frontmatter `target:` and the entire body) and replace any literal absolute home-directory prefix with `$HOME/`. The `~/.claude/hooks/block-sensitive-content.sh` PreToolUse hook denies Writes containing such prefixes.
+
 Write to: `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-suggest-skills.md`
 
 Use the current date and time for the timestamp. Create `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` if it does not exist.

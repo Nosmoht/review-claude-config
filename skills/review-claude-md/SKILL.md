@@ -188,6 +188,7 @@ In orchestrated mode, skip this phase entirely — return only the structured ce
 
 In standalone mode:
 1. Present the certificate to the user.
+Before Write: scan the assembled report (frontmatter `target:`, optional `origin:`, and the entire body including per-finding evidence quotations) and replace any literal absolute home-directory prefix with `$HOME/`. The `~/.claude/hooks/block-sensitive-content.sh` PreToolUse hook denies Writes containing such prefixes.
 2. Confirm before writing: "Save review report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-md.md`?"
 3. If confirmed, assemble the report using the canonical frontmatter contract located in Step 1 with:
    - `generated_by: review-claude-md`
