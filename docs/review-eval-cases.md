@@ -83,7 +83,7 @@ Artifact: same skill reviewed twice without changes.
 
 Expected review behavior:
 - Both reports contain `finding_id` values in recommendation headings.
-- Every High/Medium finding **whose `checklist_item` is in the deterministic subset** (see `skills/review-skill/references/merge-rules.md` §"Convergence Policy") appears with the same `finding_id` in both runs. Advisory findings may differ.
+- Every High/Medium finding **whose `checklist_item` is in the deterministic subset** (see `skills/review-claude-config/references/merge-rules.md` §"Convergence Policy") appears with the same `finding_id` in both runs. Advisory findings may differ.
 - The finding delta table shows all deterministic-subset findings as `recurring` — zero `new`, zero `fixed` within the deterministic subset. Advisory `new`/`fixed` entries are tolerated.
 - `finding_id` format matches `{checklist_item}:{path}:{dimension}/v1`.
 

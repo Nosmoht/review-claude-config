@@ -28,7 +28,7 @@ Dispatchable = both `Current` and `Recommended` present. Manual-only = valid fin
 
 Findings fall into two classes:
 
-- **Deterministic** — `checklist_item` is in the binary or narrative-parent enumeration (see `scripts/merge_findings.py` `BINARY_ITEM_IDS` / `NARRATIVE_PARENT_IDS`, and `skills/review-skill/references/merge-rules.md` §"Convergence Policy"). `finding_id` is byte-stable across runs on unchanged artifacts. Counted in convergence gates.
+- **Deterministic** — `checklist_item` is in the binary or narrative-parent enumeration (see `scripts/merge_findings.py` `BINARY_ITEM_IDS` / `NARRATIVE_PARENT_IDS`, and `skills/review-claude-config/references/merge-rules.md` §"Convergence Policy"). `finding_id` is byte-stable across runs on unchanged artifacts. Counted in convergence gates.
 - **Advisory** — items emitted by perspective Haiku agents that fall outside the deterministic enumeration. May vary run-to-run. Surface in the cert but do not count toward convergence. Consumers parsing finding_ids for delta analytics SHOULD filter to the deterministic class for stable series.
 
 Advisory findings surface only at Low severity (issue #72 demotes advisory H/M to Low at merge). H+M is deterministic by construction.

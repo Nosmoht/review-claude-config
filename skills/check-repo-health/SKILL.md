@@ -102,7 +102,7 @@ Then read each consumer file and verify its dimensions match the expected set:
 
 | Consumer file | Expected set | How dimensions appear |
 |---|---|---|
-| `skills/review-analytics/references/report-schema.md` | Canonical contract reference present | Pointer to `review-report-contract.md` |
+| `skills/review-claude-config/references/report-schema.md` | Canonical contract reference present | Pointer to `review-report-contract.md` |
 | `skills/review-skill/SKILL.md` | Full | Dimension column values in the certificate table template (exclude the "Overall" row — it is a computed aggregate, not a dimension) |
 | `skills/review-agent/SKILL.md` | Full | Same as review-skill |
 | `skills/review-rule/SKILL.md` | Rule subset | Same format, fewer dimensions |

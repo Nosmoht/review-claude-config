@@ -165,7 +165,7 @@ ITEM_DIMENSION: dict[str, str] = {
 # Narrative-parent IDs deliberately OMITTED (dropped before canonicalize, so
 # dim pinning has no effect): IJ-1, RL-1, RL-3, RL-4, RL-9.
 #
-# Source: skills/review-agent/references/agent-evaluation-guide.md Dim column.
+# Source: skills/review-claude-config/references/agent-evaluation-guide.md Dim column.
 # Issue #76. Extending this table to include TV-4 / AF-5 / AF-6 as binary
 # items + their BINARY_CAPS entries is #74 Phase 2.
 AGENT_ITEM_DIMENSION: dict[str, str] = {

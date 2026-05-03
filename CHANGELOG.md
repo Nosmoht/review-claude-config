@@ -2,6 +2,28 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-05-03
+
+**Internal layout — selective hub consolidation per Rule of Three.** Six reference files with ≥3 cross-skill consumers migrated from their owner skills into the central hub at `skills/review-claude-config/references/`. Reference files with 0–2 consumers remain skill-local (Locality of Behaviour over premature DRY). Plugin API is unchanged — additive minor bump.
+
+### Changed
+
+- Migrated to hub: `merge-rules.md` (5 consumers), `commit-conventions.md` (5), `signal-catalog.md` (4), `report-schema.md` (4), `mcp-evaluation-guide.md` (3), `agent-evaluation-guide.md` (3).
+- All 48 path references in skills, agents, docs, scripts, tests, research updated to the new hub path. Frozen test fixtures (`tests/fixtures/{rubric_evaluator,agent_outputs}/**`) intentionally untouched to preserve determinism guarantees.
+- `CLAUDE.md` §Architecture documents the Rule-of-Three hub-inclusion threshold.
+- `skills/check-repo-health/references/cross-skill-dependencies.md` `last_refreshed` bumped to reflect the new hub state.
+
+### Migration for external consumers
+
+If your own memory, plans, or notes reference the migrated files at their old paths, run:
+
+```bash
+grep -rn "skills/\(review-skill\|apply-review-findings\|suggest-skills\|review-analytics\|review-mcp-server\|review-agent\)/references/\(merge-rules\|commit-conventions\|signal-catalog\|report-schema\|mcp-evaluation-guide\|agent-evaluation-guide\)" \
+  $HOME/.claude/projects/<your-project>/
+```
+
+and update each hit to `skills/review-claude-config/references/<file>.md`.
+
 ## [2.0.0] - 2026-05-03
 
 **Breaking — plugin renamed.** `skill-quality` → `claude-config`. The previous name implied skill-only quality review, but the suite covers all Claude Code primitives (skills, agents, rules, hooks, MCP servers, plugins, settings.json, CLAUDE.md) and runtime artefacts (session traces, memory, trust chains, policy compliance). The new name reflects the actual scope, and the slash-command namespace becomes `claude-config:<command>` (no more stuttering with `:review-claude-config`).

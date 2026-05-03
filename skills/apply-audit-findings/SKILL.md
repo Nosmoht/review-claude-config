@@ -51,7 +51,7 @@ Read from this skill's own `references/` directory:
 - `references/primitive-creation-guide.md` — validation rules per primitive type
 - `references/claudemd-section-patterns.md` — section matching and placement logic
 
-Locate shared commit conventions via Glob: `**/apply-review-findings/references/commit-conventions.md`. Read it.
+Locate shared commit conventions via Glob: `**/review-claude-config/references/commit-conventions.md`. Read it.
 
 ### 4. Present summary table
 

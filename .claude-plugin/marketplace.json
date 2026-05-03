@@ -11,10 +11,10 @@
       "source": {
         "source": "github",
         "repo": "Nosmoht/review-claude-config",
-        "ref": "v2.0.0"
+        "ref": "v2.1.0"
       },
       "description": "Evidence-based quality review and audit suite for Claude Code primitives — skills, agents, rules, hooks, MCP servers, plugins, settings.json, CLAUDE.md, traces, memory, trust chains, policy compliance.",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "category": "review",
       "tags": ["review", "audit", "quality", "skills", "agents", "hooks", "mcp", "settings", "claude-md", "memory", "trace"]
     }

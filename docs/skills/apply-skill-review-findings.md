@@ -33,7 +33,7 @@ The skill checks whether the prompt contains an orchestration metadata block wit
 
 Dispatchable High and Medium impact recommendations are handled first. Dispatchable Low impact recommendations are deferred to an optional follow-up pass rather than discarded. If only Low dispatchable findings remain, any manual-only findings must still be shown before the Low-impact offer. If only manual-only findings remain, the skill reports them as manual follow-up and stops.
 
-**Step 3: Load references.** The skill reads its own `references/skill-fix-guide.md` for skill-specific validation rules. It also locates the shared commit conventions file via Glob (`**/apply-review-findings/references/commit-conventions.md`). If the shared file is not found, the skill warns but continues -- commit message guidance will use defaults.
+**Step 3: Load references.** The skill reads its own `references/skill-fix-guide.md` for skill-specific validation rules. It also locates the shared commit conventions file via Glob (`**/review-claude-config/references/commit-conventions.md`). If the shared file is not found, the skill warns but continues -- commit message guidance will use defaults.
 
 ### Phase 2 -- Present Summary
 

@@ -111,7 +111,7 @@ For each mapped recommendation, verify it can drive a real Edit:
 
 Filter Dispatchable into **High/Medium** and **Low** groups.
 
-> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-skill/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time. After Step 2.4, synthesized binary findings (currently emitting non-substring `current`) also fall to Manual-only by construction. Auto-dispatchable Highs are perspective-emitted findings that survive the demote — typically a small set; the rest of the workflow treats them normally.
+> Reports produced after issue #72 ship only the **deterministic subset** at H+M severity (items in `BINARY_ITEM_IDS` or `NARRATIVE_PARENT_IDS`, per `skills/review-claude-config/references/merge-rules.md` §"Perspective Finding Handling"). Advisory perspective findings are demoted to Low at merge time. After Step 2.4, synthesized binary findings (currently emitting non-substring `current`) also fall to Manual-only by construction. Auto-dispatchable Highs are perspective-emitted findings that survive the demote — typically a small set; the rest of the workflow treats them normally.
 
 If no High/Medium dispatchable recommendations exist:
 - if dispatchable Low recommendations exist, skip to **Step 2a: Low Impact Offer**
@@ -135,7 +135,7 @@ If there are no dispatchable recommendations but manual-only findings exist, pre
 
 Read own `references/skill-fix-guide.md` for type-specific validation rules.
 
-Locate shared commit conventions via Glob: `**/apply-review-findings/references/commit-conventions.md`. If not found, warn but continue (commit message guidance will use defaults).
+Locate shared commit conventions via Glob: `**/review-claude-config/references/commit-conventions.md`. If not found, warn but continue (commit message guidance will use defaults).
 
 ## Phase 2 -- Present Summary
 
