@@ -34,7 +34,7 @@ jobs:
       - name: Sync marketplace.json source.ref + plugins[0].version
         if: ${{ steps.release.outputs.pr != '' && !inputs.dry-run }}
         env:
-          PR_HEAD: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          PR_HEAD: ${{ steps.release.outputs.pr && fromJSON(steps.release.outputs.pr).headBranchName || '' }}
         run: |
           set -euo pipefail
           git fetch origin "$PR_HEAD"
@@ -66,7 +66,7 @@ jobs:
       - name: Auto-merge release PR (only when validation passed)
         if: ${{ steps.release.outputs.pr != '' && !inputs.dry-run }}
         env:
-          PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+          PR_NUMBER: ${{ steps.release.outputs.pr && fromJSON(steps.release.outputs.pr).number || '' }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
