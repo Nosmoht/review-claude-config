@@ -122,5 +122,5 @@ META-3b sibling-distinguishability already addresses the *negative* axis (no exc
 
 - `scripts/rubric_binary_evaluator.py` L284-323, L633-664 — META-3b implementation, `META_3B_COUNTER_REFERENCE` regex, `STOPWORDS`, `tokenize_description`, `find_sibling_skills`, `has_sibling_counter_reference`
 - `scripts/audit_description_collision.py` — one-off audit script using the above as a library
-- `Plans/98-baseline-verdicts.txt` — baseline snapshot from 2026-04-29
+- `docs/audits/2026-04-29-description-collision-baseline.txt` — baseline snapshot from 2026-04-29
 - `skills/review-claude-config/references/scoring-rubric.md` §"Trigger-Consistency" — rubric items live here

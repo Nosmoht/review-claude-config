@@ -50,7 +50,7 @@ Execute web research per the global `web-research.md` rule:
 - Cross-validation: ≥2 independent sources per new claim
 
 Compare findings against the dimension's "Last anchored to" sources in the matrix:
-- **No new Tier-1 sources found**: write a one-line null-result entry to `Plans/refresh-evidence-coverage-<date>.md`. Update `last_audited:` to today.
+- **No new Tier-1 sources found**: post a one-line null-result comment on the relevant tracking issue + update `last_audited:` to today. Working notes are session-local (no file commit).
 - **New Tier-1 sources found**: open a focused follow-up issue per source (or per cluster) using the #91-cycle template. Do NOT operationalize inline — operationalization is per-issue work with adversarial review per `docs/change-discipline-rule.md`.
 
 ### Step 4: Update Coverage Matrix

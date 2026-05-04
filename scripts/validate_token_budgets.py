@@ -20,7 +20,7 @@ BUDGETS: dict[str, int] = {
     # Core review references (large by design)
     # Issue #69: +10 binary exemplars with full regex specs (CLAR-3/4,
     # SP-2b/4b, RL-1b/3b/4b/9b, IJ-1b) + COMP-X review-skill clause +
-    # AH-2b Default-Handling-Pair (Plans/steady-distilling-runner.md Phase 0).
+    # AH-2b Default-Handling-Pair.
     # Issue #63: +PE-1 CoT-Scaffolding / PE-2 Hedge-Free-Directives binary
     # items + Opus 4.7 reasoning-model anti-pattern section + SAMP-2 hard-F
     # rationale sentence (2026-04-22 rubric refresh for Opus 4.7 GA).

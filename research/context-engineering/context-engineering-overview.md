@@ -40,7 +40,7 @@ Context engineering addresses challenges that prompt engineering alone cannot: c
 
 ## 2026-04-04 Update
 
-Sources: 11 Tier 1 sources from arXiv, COLM 2025 (peer-reviewed), and Anthropic engineering blog. Research plan: `Plans/virtual-meandering-sparrow-agent-a7240c9ff051dfd3d.md`.
+Sources: 11 Tier 1 sources from arXiv, COLM 2025 (peer-reviewed), and Anthropic engineering blog.
 
 ### Finding 1: ACON — Agent Context Optimization
 

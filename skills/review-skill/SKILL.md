@@ -319,7 +319,7 @@ When `converged: false`, the per-finding diff lists give the reviewer a precise 
 escalation_required: [true|false]
 reasons: [list of ESC-1..5 triggers, or empty list]
 design_deviations:
-  - "Escalation is flag-only by default. Auto-re-run restricted to ESC-5 (degraded mode — missing/malformed certificates). On ESC-1/2/3/4, re-invoke as /review-skill --deep <path> to force Opus-tier escalation. See Plans/claude-code-hat-in-validated-seahorse.md:201 amendment."
+  - "Escalation is flag-only by default. Auto-re-run restricted to ESC-5 (degraded mode — missing/malformed certificates). On ESC-1/2/3/4, re-invoke as /review-skill --deep <path> to force Opus-tier escalation. See docs/roadmap-2026-04-19.md amendment."
 
 degraded_mode: [true|false]
 missing_perspectives: [list or empty]

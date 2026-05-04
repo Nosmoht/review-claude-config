@@ -128,4 +128,4 @@ Der Parser ist **nicht die klassische AST-Traversal** unter Right-Altitude-Regel
 
 ---
 
-**Status**: Spike geschlossen. Keine Aktion erforderlich. Ergebnis in Plans/ dokumentiert.
+**Status**: Spike geschlossen. Keine Aktion erforderlich. Ergebnis in diesem Report dokumentiert + Issue #184 (track: post-ga).
