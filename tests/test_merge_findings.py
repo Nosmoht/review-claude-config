@@ -6,6 +6,8 @@ import json
 import pathlib
 import sys
 
+import pytest
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
@@ -1354,3 +1356,56 @@ class TestMergeDirectoryWithRepoRoot:
         result = merge_directory(tmp_path)
         assert "false_positive_missing_primitive_dropped" in result
         assert result["false_positive_missing_primitive_dropped"] == []
+
+
+class TestLazyLoadPolicy:
+    """Cover the PEP 562 lazy-load path for the 5 YAML-derived constants."""
+
+    def test_yaml_missing_raises_runtime_error(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """When merge-policy.yaml is missing, attribute access raises
+        RuntimeError pointing at the regenerator."""
+        import merge_findings
+
+        monkeypatch.setattr(merge_findings, "YAML_PATH", tmp_path / "absent.yaml")
+        merge_findings._load_policy_cached.cache_clear()
+        try:
+            with pytest.raises(
+                RuntimeError,
+                match=r"merge-policy\.yaml missing at .* — run scripts/regenerate_merge_policy\.py",
+            ):
+                _ = merge_findings.BINARY_ITEM_IDS
+        finally:
+            merge_findings._load_policy_cached.cache_clear()
+
+    def test_monkeypatch_setattr_is_reversible(self, monkeypatch: pytest.MonkeyPatch):
+        """Pinned contract: setattr writes the name into __dict__ (short-
+        circuiting __getattr__), monkeypatch.undo deletes it, and the next
+        access re-resolves via the lazy-load path. Locks _resolve against
+        accidental __dict__-caching regressions."""
+        import merge_findings
+
+        original_len = len(merge_findings.BINARY_ITEM_IDS)
+        monkeypatch.setattr(merge_findings, "BINARY_ITEM_IDS", frozenset({"FAKE-ITEM"}))
+        assert merge_findings.BINARY_ITEM_IDS == frozenset({"FAKE-ITEM"})
+        monkeypatch.undo()
+        assert len(merge_findings.BINARY_ITEM_IDS) == original_len
+        assert "FAKE-ITEM" not in merge_findings.BINARY_ITEM_IDS
+
+    def test_lazy_loaded_values_match_yaml_committed_in_repo(self):
+        """Sanity: lazy-loaded values match the YAML committed in the repo."""
+        import merge_findings
+
+        assert len(merge_findings.BINARY_ITEM_IDS) == 32
+        assert len(merge_findings.NARRATIVE_PARENT_IDS) == 15
+        assert len(merge_findings.ITEM_DIMENSION) == 33
+        assert len(merge_findings.BINARY_CAPS) == 22
+        assert len(merge_findings.AGENT_ITEM_DIMENSION) == 35
+        # Shape preservation — frozenset of strings, list-of-3-tuples.
+        assert isinstance(merge_findings.BINARY_ITEM_IDS, frozenset)
+        assert isinstance(merge_findings.NARRATIVE_PARENT_IDS, frozenset)
+        assert isinstance(merge_findings.ITEM_DIMENSION, dict)
+        assert isinstance(merge_findings.AGENT_ITEM_DIMENSION, dict)
+        assert isinstance(merge_findings.BINARY_CAPS[0], tuple)
+        assert len(merge_findings.BINARY_CAPS[0]) == 3
