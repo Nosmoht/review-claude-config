@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1](https://github.com/Nosmoht/review-claude-config/compare/v2.3.0...v2.3.1) (2026-05-04)
+
+
+### Fixed
+
+* **ci:** guard fromJSON against empty release-please pr output ([#179](https://github.com/Nosmoht/review-claude-config/issues/179)) ([0633006](https://github.com/Nosmoht/review-claude-config/commit/0633006933fbab63c7444d0ff7ba4950aff2ecf7))
+
 ## [2.3.0](https://github.com/Nosmoht/review-claude-config/compare/v2.2.0...v2.3.0) (2026-05-04)
 
 
