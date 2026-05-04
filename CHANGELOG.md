@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1](https://github.com/Nosmoht/review-claude-config/compare/v2.4.0...v2.4.1) (2026-05-04)
+
+
+### Changed
+
+* **merge_findings:** lazy-load 5 policy constants from yaml ([3a5e168](https://github.com/Nosmoht/review-claude-config/commit/3a5e1686e11a4efdf428721de1653845108a8d3b))
+
 ## [2.4.0](https://github.com/Nosmoht/review-claude-config/compare/v2.3.3...v2.4.0) (2026-05-04)
 
 
