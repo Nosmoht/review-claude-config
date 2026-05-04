@@ -23,4 +23,4 @@ test-cov:
 	$(PYTHON) -m pytest tests/ -v --tb=short --cov=hooks --cov=scripts --cov-report=term-missing
 
 sync-marketplace-ref:
-	$(PYTHON) scripts/sync-marketplace-ref.py
+	$(PYTHON) scripts/sync_marketplace_ref.py

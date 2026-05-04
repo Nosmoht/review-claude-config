@@ -101,7 +101,7 @@ The bot manages three places automatically:
 
 - `.claude-plugin/plugin.json` → `version` (release-please `extra-files`)
 - `.claude-plugin/marketplace.json` → `plugins[0].version` and
-  `plugins[0].source.ref` (post-step via `scripts/sync-marketplace-ref.py`)
+  `plugins[0].source.ref` (post-step via `scripts/sync_marketplace_ref.py`)
 - `CHANGELOG.md` (release-please appends a generated section)
 
 Maintainers may edit the bot's release-PR before merging — for example,
