@@ -10,95 +10,145 @@ Falls back to default policy: L1-L3 allow, L4 ask, L5 deny.
 Also logs the policy decision to the audit trace.
 """
 
+from __future__ import annotations
+
 import datetime
+import functools
 import json
 import os
+import pathlib
 import re
 import sys
+from typing import TYPE_CHECKING, Any
 
-# Tool-to-level mapping (L1=read, L2=analyze, L3=recommend, L4=act, L5=irreversible)
-TOOL_LEVELS = {
-    "Read": 1,
-    "Glob": 1,
-    "Grep": 2,
-    "WebSearch": 2,
-    "WebFetch": 2,
-    "AskUserQuestion": 3,
-    "Edit": 4,
-    "Write": 4,
-    "Bash": 4,
-    "Agent": 4,
-    "MultiEdit": 4,
-    "NotebookEdit": 4,
-}
-
-# Bash patterns that escalate L4 → L5
-L5_BASH_PATTERNS = [
-    r"\brm\s+-(r|rf|fr)\b",
-    r"\bgit\s+push\s+--force\b",
-    r"\bgit\s+reset\s+--hard\b",
-    r"\bdocker\s+rm\b",
-    r"\bkubectl\s+delete\b",
-    r"\bDROP\s+TABLE\b",
-    r"\bDELETE\s+FROM\b",
-    r"\b(deploy|publish|release)\b",
-]
-
-# Default policy: level → action
-DEFAULT_POLICY = {
-    1: "allow",
-    2: "allow",
-    3: "allow",
-    4: "ask",
-    5: "deny",
-}
+if TYPE_CHECKING:
+    # Declared for static analysis (ruff F821, mypy/pyright). Resolved at
+    # runtime via PEP 562 __getattr__ from policy_gate.json.
+    TOOL_LEVELS: dict[str, int]
+    L5_BASH_PATTERNS: list[str]
+    DEFAULT_POLICY: dict[int, str]
+    _MCP_L1_PREFIXES: tuple[str, ...]
+    _MCP_L4_VERBS: frozenset[str]
 
 LEVEL_LABELS = {1: "Read", 2: "Analyze", 3: "Recommend", 4: "Act", 5: "Irreversible"}
 
-# MCP tool name patterns — matched on the suffix after the last '__' separator.
-# An L1 *shape* (list_/get_/retrieve_/search_ prefix or _read suffix) is only
-# honored when no token in the suffix is an L4 mutation verb. Token matching
-# (split on '_') avoids two substring-collision classes:
-#   - 'request' inside pull_request_read / list_pull_requests is a noun, not
-#     the HTTP verb. Token split keeps 'request'-the-noun distinct from a
-#     mutation verb of the same letters.
-#   - 'read' inside ready_to_send / thread_id is a noun fragment, not the
-#     read verb — token split prevents these collisions in either direction.
-# It also guards against compound idioms (get_or_create_thing, list_and_delete,
-# get_and_set_label) that prefix matching alone would flip to L1. Anything not
-# matching the L1 contract falls back to L4 conservatively.
-_MCP_L1_PREFIXES = ("list_", "get_", "retrieve_", "search_")
-_MCP_L4_VERBS = frozenset(
+_LAZY_NAMES = frozenset(
     {
-        "create",
-        "update",
-        "delete",
-        "archive",
-        "unarchive",
-        "remove",
-        "transfer",
-        "assign",
-        "merge",
-        "push",
-        "fork",
-        "write",
-        # Real mutation verbs that surfaced in round-2 review — not all are in
-        # the current GitHub/Plane MCP inventory, but they are common API shapes
-        # ('set_*', 'rotate_*', 'revoke_*', 'cancel_*') worth blocking before
-        # they appear, so the conservative fallback does not have to carry the
-        # whole burden.
-        "set",
-        "rotate",
-        "revoke",
-        "destroy",
-        "patch",
-        "replace",
-        "purge",
-        "disable",
-        "cancel",
-        "close",
+        "TOOL_LEVELS",
+        "L5_BASH_PATTERNS",
+        "DEFAULT_POLICY",
+        "_MCP_L1_PREFIXES",
+        "_MCP_L4_VERBS",
     }
 )
+
+# Test injection: POLICY_GATE_CONFIG_PATH overrides the default; otherwise
+# resolve relative to the file (mirrors YAML_PATH idiom in merge_findings.py).
+_DEFAULT_CONFIG_PATH = pathlib.Path(__file__).resolve().parent / "policy_gate.json"
+
+
+def _config_path() -> pathlib.Path:
+    override = os.environ.get("POLICY_GATE_CONFIG_PATH")
+    return pathlib.Path(override) if override else _DEFAULT_CONFIG_PATH
+
+
+_SCHEMA_PATH = (
+    pathlib.Path(__file__).resolve().parent.parent
+    / "skills/review-claude-config/references/schemas/policy_gate.schema.json"
+)
+
+# Inline shape-check used as graceful-degradation fallback when the
+# canonical schema file is missing (e.g., directory reorg) — defends the
+# env-var injection seam at minimal-shape level even without the full
+# schema. Prevents the team-red R2 ScenarioB failure mode (silent hook
+# disablement on schema relocation).
+_REQUIRED_KEYS = (
+    "policy_version",
+    "tool_levels",
+    "bash_l5_patterns",
+    "mcp_l1_prefixes",
+    "mcp_l4_verbs",
+    "default_policy",
+)
+
+
+def _minimal_shape_check(data: Any) -> None:
+    if not isinstance(data, dict):
+        raise RuntimeError("policy_gate.json: top-level must be object")
+    missing = [k for k in _REQUIRED_KEYS if k not in data]
+    if missing:
+        raise RuntimeError(f"policy_gate.json: missing required keys {missing}")
+    if not isinstance(data["tool_levels"], dict):
+        raise RuntimeError("policy_gate.json: tool_levels must be object")
+    if not isinstance(data["default_policy"], dict):
+        raise RuntimeError("policy_gate.json: default_policy must be object")
+    for arr_key in ("bash_l5_patterns", "mcp_l1_prefixes", "mcp_l4_verbs"):
+        if not isinstance(data[arr_key], list):
+            raise RuntimeError(f"policy_gate.json: {arr_key} must be array")
+
+
+@functools.lru_cache(maxsize=1)
+def _load_schema_cached() -> dict[str, Any] | None:
+    """Load the JSON Schema. Return None if the canonical schema file
+    has been relocated or removed — caller falls back to inline shape
+    check. Mirrors merge_findings.py's tolerance of yaml-missing failure mode."""
+    try:
+        with _SCHEMA_PATH.open(encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:
+        return None
+
+
+@functools.lru_cache(maxsize=1)
+def _load_config_cached(path: str) -> dict[str, Any]:
+    """Load + validate policy_gate.json.
+
+    Validation strategy (defense in depth):
+    1. If the canonical schema is reachable, run full
+       jsonschema.Draft202012Validator(schema).validate(data).
+    2. Else fall back to an inline _minimal_shape_check(data) that
+       enforces top-level keys + nested-container types. Both paths
+       defend the env-var injection seam (AC #5) by rejecting
+       runtime-supplied JSONs whose shape doesn't match policy_gate.json.
+    """
+    p = pathlib.Path(path)
+    if not p.exists():
+        raise RuntimeError(f"policy_gate.json missing at {p} — see hooks/policy_gate.json")
+    with p.open(encoding="utf-8") as fh:
+        data = json.load(fh)
+    schema = _load_schema_cached()
+    if schema is not None:
+        import jsonschema  # local import on cache-miss only
+
+        jsonschema.Draft202012Validator(schema).validate(data)
+    else:
+        _minimal_shape_check(data)
+    return data
+
+
+def _load_config() -> dict[str, Any]:
+    return _load_config_cached(str(_config_path()))
+
+
+def _resolve(name: str) -> Any:
+    cfg = _load_config()
+    if name == "TOOL_LEVELS":
+        return dict(cfg["tool_levels"])
+    if name == "L5_BASH_PATTERNS":
+        return list(cfg["bash_l5_patterns"])
+    if name == "DEFAULT_POLICY":
+        return {int(k): v for k, v in cfg["default_policy"].items()}
+    if name == "_MCP_L1_PREFIXES":
+        return tuple(cfg["mcp_l1_prefixes"])
+    if name == "_MCP_L4_VERBS":
+        return frozenset(cfg["mcp_l4_verbs"])
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __getattr__(name: str) -> Any:  # PEP 562
+    if name in _LAZY_NAMES:
+        return _resolve(name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def _classify_mcp_tool(tool_name):
@@ -106,8 +156,8 @@ def _classify_mcp_tool(tool_name):
     if "__" not in tool_name:
         return 4  # malformed name — conservative fallback
     suffix = tool_name.split("__")[-1]
-    is_l1_shape = any(suffix.startswith(p) for p in _MCP_L1_PREFIXES) or suffix.endswith("_read")
-    has_l4_verb = bool(set(suffix.split("_")) & _MCP_L4_VERBS)
+    is_l1_shape = any(suffix.startswith(p) for p in _resolve("_MCP_L1_PREFIXES")) or suffix.endswith("_read")
+    has_l4_verb = bool(set(suffix.split("_")) & _resolve("_MCP_L4_VERBS"))
     if is_l1_shape and not has_l4_verb:
         return 1
     return 4
@@ -115,7 +165,7 @@ def _classify_mcp_tool(tool_name):
 
 def _classify_tool(tool_name, tool_input):
     """Return authorization level (1-5) for a tool call."""
-    level = TOOL_LEVELS.get(tool_name, 4)  # unknown tools default to L4
+    level = _resolve("TOOL_LEVELS").get(tool_name, 4)  # unknown tools default to L4
 
     # MCP tools: pattern-based classification (reads vs mutations vs unknown)
     if tool_name.startswith("mcp__"):
@@ -124,7 +174,7 @@ def _classify_tool(tool_name, tool_input):
     # Bash escalation check
     if tool_name == "Bash" and level == 4:
         command = tool_input.get("command", "")
-        for pattern in L5_BASH_PATTERNS:
+        for pattern in _resolve("L5_BASH_PATTERNS"):
             if re.search(pattern, command, re.IGNORECASE):
                 return 5
 
@@ -145,9 +195,9 @@ def _load_policy(plugin_data):
             if level_str.startswith("L") and level_str[1:].isdigit():
                 policy[int(level_str[1:])] = rule.get("action", "ask")
         overrides = data.get("overrides", [])
-        return policy if policy else DEFAULT_POLICY, overrides
+        return policy if policy else _resolve("DEFAULT_POLICY"), overrides
     except (json.JSONDecodeError, KeyError, TypeError):
-        return DEFAULT_POLICY, []
+        return _resolve("DEFAULT_POLICY"), []
 
 
 def _check_overrides(overrides, tool_name, tool_input):

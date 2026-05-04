@@ -3,8 +3,10 @@
 import io
 import json
 import os
+import pathlib
 import sys
 
+import jsonschema
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hooks"))
@@ -16,6 +18,43 @@ from policy_gate import (
     _load_policy,
     main,
 )
+
+
+def _evict_lazy_names() -> None:
+    """Remove any lazy-load names that pytest's monkeypatch may have written
+    into policy_gate.__dict__ as a side-effect of setattr-undo. Without this,
+    a test that calls monkeypatch.setattr(policy_gate, 'TOOL_LEVELS', ...)
+    and then monkeypatch.undo() leaves the real value in __dict__, bypassing
+    __getattr__ for all subsequent tests in the same process."""
+    import policy_gate
+
+    for name in list(policy_gate._LAZY_NAMES):
+        policy_gate.__dict__.pop(name, None)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_policy_gate_state(monkeypatch):
+    """Prevent test bleed across the whole module: clear lru_caches,
+    evict lazy names from module __dict__, and unset POLICY_GATE_CONFIG_PATH
+    around every test, regardless of pytest collection order or -n auto
+    worker assignment.
+
+    Mandatory because the existing 45 tests import lazy names via
+    `from policy_gate import (DEFAULT_POLICY, ...)` at module load,
+    populating the cache before any test runs. Without this fixture,
+    a TestLazyLoadPolicy test that mutates POLICY_GATE_CONFIG_PATH
+    would leak its synthetic config into a subsequent TestLoadPolicy
+    or TestMain test on the same worker.
+    """
+    monkeypatch.delenv("POLICY_GATE_CONFIG_PATH", raising=False)
+    import policy_gate
+    policy_gate._load_config_cached.cache_clear()
+    policy_gate._load_schema_cached.cache_clear()
+    _evict_lazy_names()
+    yield
+    policy_gate._load_config_cached.cache_clear()
+    policy_gate._load_schema_cached.cache_clear()
+    _evict_lazy_names()
 
 
 class TestClassifyTool:
@@ -325,3 +364,90 @@ class TestMain:
         assert entry["type"] == "policy_decision"
         assert entry["level"] == 4
         assert entry["action"] == "ask"
+
+
+class TestLazyLoadPolicy:
+    """Cover the PEP 562 lazy-load path for the 5 JSON-derived constants."""
+
+    def test_config_missing_raises_runtime_error(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """When policy_gate.json is missing, attribute access raises
+        RuntimeError pointing at the config file."""
+        import policy_gate
+
+        monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(tmp_path / "absent.json"))
+        policy_gate._load_config_cached.cache_clear()
+        try:
+            with pytest.raises(
+                RuntimeError,
+                match=r"policy_gate\.json missing at .* — see hooks/policy_gate\.json",
+            ):
+                _ = policy_gate.TOOL_LEVELS
+        finally:
+            policy_gate._load_config_cached.cache_clear()
+
+    def test_monkeypatch_setattr_is_reversible(self, monkeypatch: pytest.MonkeyPatch):
+        """Pinned contract: setattr writes the name into __dict__ (short-
+        circuiting __getattr__), monkeypatch.undo deletes it, and the next
+        access re-resolves via the lazy-load path."""
+        import policy_gate
+
+        original_len = len(policy_gate.TOOL_LEVELS)
+        monkeypatch.setattr(policy_gate, "TOOL_LEVELS", {"Fake": 1})
+        assert policy_gate.TOOL_LEVELS == {"Fake": 1}
+        monkeypatch.undo()
+        assert len(policy_gate.TOOL_LEVELS) == original_len
+        assert "Fake" not in policy_gate.TOOL_LEVELS
+
+    def test_lazy_loaded_values_match_committed_json(self):
+        """Sanity: lazy-loaded values match the JSON committed in the repo."""
+        import policy_gate
+
+        assert len(policy_gate.TOOL_LEVELS) == 12
+        assert len(policy_gate.L5_BASH_PATTERNS) == 8
+        assert len(policy_gate._MCP_L1_PREFIXES) == 4
+        assert len(policy_gate._MCP_L4_VERBS) == 22
+        assert len(policy_gate.DEFAULT_POLICY) == 5
+        # Shape preservation
+        assert isinstance(policy_gate.TOOL_LEVELS, dict)
+        assert isinstance(policy_gate.L5_BASH_PATTERNS, list)
+        assert isinstance(policy_gate._MCP_L1_PREFIXES, tuple)
+        assert isinstance(policy_gate._MCP_L4_VERBS, frozenset)
+        assert isinstance(policy_gate.DEFAULT_POLICY, dict)
+        # DEFAULT_POLICY keys must be ints (coerced from JSON string keys)
+        assert all(isinstance(k, int) for k in policy_gate.DEFAULT_POLICY)
+
+    def test_env_var_overrides_default_path(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """env-var POLICY_GATE_CONFIG_PATH points to a synthetic config."""
+        import policy_gate
+
+        synthetic = {
+            "policy_version": "1.0",
+            "tool_levels": {"Custom": 1},
+            "bash_l5_patterns": ["\\brm\\b"],
+            "mcp_l1_prefixes": ["list_"],
+            "mcp_l4_verbs": ["create"],
+            "default_policy": {"1": "allow", "2": "allow", "3": "allow", "4": "ask", "5": "deny"},
+        }
+        config_file = tmp_path / "policy_gate.json"
+        config_file.write_text(json.dumps(synthetic))
+        monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(config_file))
+        policy_gate._load_config_cached.cache_clear()
+        assert policy_gate.TOOL_LEVELS == {"Custom": 1}
+
+    def test_malformed_json_raises_validation_error(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """A schema-mismatched JSON raises jsonschema.ValidationError on access."""
+        import policy_gate
+
+        bad_config = {"tool_levels": "not-a-dict"}
+        config_file = tmp_path / "policy_gate.json"
+        config_file.write_text(json.dumps(bad_config))
+        monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(config_file))
+        policy_gate._load_config_cached.cache_clear()
+        with pytest.raises((jsonschema.ValidationError, RuntimeError)):
+            _ = policy_gate.TOOL_LEVELS

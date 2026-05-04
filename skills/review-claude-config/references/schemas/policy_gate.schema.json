@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "policy-gate",
+  "description": "Schema for hooks/policy_gate.json — PreToolUse policy gate configuration",
+  "type": "object",
+  "required": [
+    "policy_version",
+    "tool_levels",
+    "bash_l5_patterns",
+    "mcp_l1_prefixes",
+    "mcp_l4_verbs",
+    "default_policy"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "policy_version": {
+      "const": "1.0"
+    },
+    "tool_levels": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 5
+      }
+    },
+    "bash_l5_patterns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "mcp_l1_prefixes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "mcp_l4_verbs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "default_policy": {
+      "type": "object",
+      "minProperties": 5,
+      "maxProperties": 5,
+      "propertyNames": {
+        "pattern": "^[1-5]$"
+      },
+      "additionalProperties": {
+        "enum": ["allow", "ask", "deny"]
+      }
+    }
+  }
+}

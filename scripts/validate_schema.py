@@ -265,6 +265,39 @@ def validate_agent_files() -> list[str]:
     return errors
 
 
+def validate_hook_config_files() -> list[str]:
+    """Validate hooks/*.json (excluding hooks.json) against their schemas.
+
+    For each <name>.json found under hooks/, looks up the corresponding
+    skills/review-claude-config/references/schemas/<name>.schema.json.
+    Reports an error if the schema is absent; validates via
+    jsonschema.Draft202012Validator otherwise.
+    """
+    import jsonschema
+
+    errors: list[str] = []
+    hooks_dir = REPO_ROOT / "hooks"
+    schemas_dir = REPO_ROOT / "skills" / "review-claude-config" / "references" / "schemas"
+    config_files = sorted(p for p in hooks_dir.glob("*.json") if p.name != "hooks.json")
+    if not config_files:
+        return []
+
+    for config_path in config_files:
+        schema_path = schemas_dir / f"{config_path.stem}.schema.json"
+        if not schema_path.exists():
+            errors.append(f"{config_path}: no schema found at {schema_path}")
+            continue
+        try:
+            data = json.loads(config_path.read_text(encoding="utf-8"))
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            errors.append(f"{config_path}: invalid JSON — {e}")
+            continue
+        for error in jsonschema.Draft202012Validator(schema).iter_errors(data):
+            errors.append(f"{config_path}: {error.message} at {error.json_path}")
+    return errors
+
+
 def validate_hooks_json() -> list[str]:
     """Validate hooks/hooks.json syntax and script path references."""
     errors: list[str] = []
@@ -299,6 +332,7 @@ def main() -> int:
         ("Research files", validate_research_files),
         ("Domain cache files", validate_domain_cache_files),
         ("hooks.json", validate_hooks_json),
+        ("Hook config files", validate_hook_config_files),
     ]
 
     for label, validator in validators:

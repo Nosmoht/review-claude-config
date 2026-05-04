@@ -1,0 +1,64 @@
+{
+  "policy_version": "1.0",
+  "tool_levels": {
+    "Read": 1,
+    "Glob": 1,
+    "Grep": 2,
+    "WebSearch": 2,
+    "WebFetch": 2,
+    "AskUserQuestion": 3,
+    "Edit": 4,
+    "Write": 4,
+    "Bash": 4,
+    "Agent": 4,
+    "MultiEdit": 4,
+    "NotebookEdit": 4
+  },
+  "bash_l5_patterns": [
+    "\\brm\\s+-(r|rf|fr)\\b",
+    "\\bgit\\s+push\\s+--force\\b",
+    "\\bgit\\s+reset\\s+--hard\\b",
+    "\\bdocker\\s+rm\\b",
+    "\\bkubectl\\s+delete\\b",
+    "\\bDROP\\s+TABLE\\b",
+    "\\bDELETE\\s+FROM\\b",
+    "\\b(deploy|publish|release)\\b"
+  ],
+  "mcp_l1_prefixes": [
+    "list_",
+    "get_",
+    "retrieve_",
+    "search_"
+  ],
+  "mcp_l4_verbs": [
+    "create",
+    "update",
+    "delete",
+    "archive",
+    "unarchive",
+    "remove",
+    "transfer",
+    "assign",
+    "merge",
+    "push",
+    "fork",
+    "write",
+    "set",
+    "rotate",
+    "revoke",
+    "destroy",
+    "patch",
+    "replace",
+    "purge",
+    "disable",
+    "cancel",
+    "close"
+  ],
+  "default_policy": {
+    "1": "allow",
+    "2": "allow",
+    "3": "allow",
+    "4": "ask",
+    "5": "deny"
+  }
+}

@@ -12,3 +12,9 @@ select = ["E", "F", "W", "I"]
 # lex-level and does not honor TYPE_CHECKING blocks. Suppress F821 only on
 # this file so the lazy-load pattern stays clean.
 "scripts/merge_findings.py" = ["F821"]
+# policy_gate.py uses PEP 562 module-level __getattr__ to lazy-load 5
+# policy constants from policy_gate.json. Names are declared under
+# `if TYPE_CHECKING:` for static analyzers, but ruff's F821 runs purely at
+# lex-level and does not honor TYPE_CHECKING blocks. Suppress F821 only on
+# this file so the lazy-load pattern stays clean.
+"hooks/policy_gate.py" = ["F821"]
