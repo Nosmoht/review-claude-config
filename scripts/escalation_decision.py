@@ -2,15 +2,19 @@
 """Decide whether a merged review certificate requires escalation.
 
 Rules (all decidable without an LLM call):
-  ESC-1: weighted_score within 2.5 points of any grade boundary (60/70/80/90).
+  ESC-1: weighted_score within ESC1_PROXIMITY of any GRADE_BOUNDARY.
   ESC-2: severity set contains "High" AND "Low" but NOT "Medium" (U-shape).
-  ESC-3: max-min perspective weighted-score divergence >=20 points
+  ESC-3: max-min perspective weighted-score divergence >= ESC3_DIVERGENCE
          (computed only over perspectives that produced a weighted_score).
          If fewer than 2 perspectives produced a score, ESC-3 is NULL (not
          triggered).
   ESC-4: --deep flag passed (external to this script — pass --deep to force).
   ESC-5: merged cert has degraded_mode=true (any perspective missing or
          malformed).
+
+Constants are loaded from
+skills/review-claude-config/references/escalation-rules.yaml
+(override via ESCALATION_RULES_YAML_PATH env var).
 
 Usage:
   python3 escalation_decision.py <merged-cert.json> [--deep]
@@ -24,13 +28,48 @@ Output (stdout): JSON:
 
 from __future__ import annotations
 
+import functools
 import json
+import os
 import pathlib
 import sys
 
-GRADE_BOUNDARIES = (60, 70, 80, 90)
-ESC1_PROXIMITY = 2.5
-ESC3_DIVERGENCE = 20.0
+import yaml
+
+_DEFAULT_PATH = (
+    pathlib.Path(__file__).resolve().parent.parent / "skills/review-claude-config/references/escalation-rules.yaml"
+)
+
+
+def _yaml_path() -> str:
+    return os.environ.get("ESCALATION_RULES_YAML_PATH", str(_DEFAULT_PATH))
+
+
+@functools.lru_cache(maxsize=4)
+def _load_cached(path: str) -> dict:
+    p = pathlib.Path(path)
+    if not p.exists():
+        raise RuntimeError(
+            f"escalation-rules.yaml missing at {p} — see "
+            f"skills/review-claude-config/references/schemas/escalation-rules.schema.json"
+        )
+    with p.open(encoding="utf-8") as fh:
+        data = yaml.safe_load(fh)
+    if data is None:
+        raise RuntimeError(f"escalation-rules.yaml at {p} is empty or invalid YAML")
+    return data
+
+
+def _load() -> dict:
+    return _load_cached(_yaml_path())
+
+
+_data = _load()
+
+# Eager-resolve at module import with type coercion — preserves test-suite imports.
+GRADE_BOUNDARIES: tuple[int, ...] = tuple(_data["GRADE_BOUNDARIES"])
+ESC1_PROXIMITY: float = float(_data["ESC1_PROXIMITY"])
+ESC3_DIVERGENCE: float = float(_data["ESC3_DIVERGENCE"])
 
 
 def decide(merged: dict, deep_flag: bool = False) -> dict:

@@ -2,17 +2,11 @@
 """Programmatic convergence checker for /review-skill Phase 5.
 
 Compares two ``merge_findings.py`` outputs ("run1" and "run2") and reports
-whether the two runs converged according to the contract in CLAUDE.md:126:
+whether the two runs converged according to the contract in CLAUDE.md:126.
 
-  1. **Deterministic subset match** — identical set of ``finding_id``s
-     whose ``checklist_item`` is in the deterministic subset
-     (``BINARY_ITEM_IDS | NARRATIVE_PARENT_IDS``) AND whose severity is
-     High or Medium.
-  2. **Grade variance ≤ 1 letter** in every dimension where both runs
-     produced a value.
-  3. **No null dimensions added** — a dimension that had a value in run1
-     must not be null in run2. (The reverse — gaining a dimension — is
-     treated as additional information, not a regression.)
+Constants are loaded from
+skills/review-claude-config/references/convergence-rules.yaml
+(override via CONVERGENCE_RULES_YAML_PATH env var).
 
 Exit codes:
   0 — converged (gate passes)
@@ -26,25 +20,49 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import functools
 import json
+import os
 import pathlib
 import sys
 
-# Source of truth for the deterministic subset lives in merge_findings.py.
-# Importing from there keeps the two files in lockstep — adding a new
-# binary item to BINARY_ITEM_IDS automatically extends the convergence
-# gate without requiring a parallel edit here.
-SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR))
-from merge_findings import BINARY_ITEM_IDS, NARRATIVE_PARENT_IDS  # noqa: E402
+import yaml
 
-DETERMINISTIC_SUBSET: frozenset[str] = BINARY_ITEM_IDS | NARRATIVE_PARENT_IDS
+_DEFAULT_PATH = (
+    pathlib.Path(__file__).resolve().parent.parent / "skills/review-claude-config/references/convergence-rules.yaml"
+)
 
-# A < B < C < D < F. F is "worst" in the standard letter scale.
-GRADE_LETTERS: tuple[str, ...] = ("A", "B", "C", "D", "F")
+
+def _yaml_path() -> str:
+    return os.environ.get("CONVERGENCE_RULES_YAML_PATH", str(_DEFAULT_PATH))
+
+
+@functools.lru_cache(maxsize=4)
+def _load_cached(path: str) -> dict:
+    p = pathlib.Path(path)
+    if not p.exists():
+        raise RuntimeError(
+            f"convergence-rules.yaml missing at {p} — see "
+            f"skills/review-claude-config/references/schemas/convergence-rules.schema.json"
+        )
+    with p.open(encoding="utf-8") as fh:
+        data = yaml.safe_load(fh)
+    if data is None:
+        raise RuntimeError(f"convergence-rules.yaml at {p} is empty or invalid YAML")
+    return data
+
+
+def _load() -> dict:
+    return _load_cached(_yaml_path())
+
+
+_data = _load()
+
+# Eager-resolve at module import with type coercion — preserves test-suite imports.
+DETERMINISTIC_SUBSET: frozenset[str] = frozenset(_data["DETERMINISTIC_SUBSET"])
+GRADE_LETTERS: tuple[str, ...] = tuple(_data["GRADE_LETTERS"])
 GRADE_RANK: dict[str, int] = {g: i for i, g in enumerate(GRADE_LETTERS)}
-
-DEFAULT_MAX_VARIANCE = 1
+DEFAULT_MAX_VARIANCE: int = int(_data["DEFAULT_MAX_VARIANCE"])
 
 
 def _deterministic_hm_finding_ids(merged: dict) -> set[str]:

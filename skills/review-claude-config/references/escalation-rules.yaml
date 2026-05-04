@@ -1,0 +1,6 @@
+# Maintainer-edited — controls scripts/escalation_decision.py escalation triggers.
+# Schema: skills/review-claude-config/references/schemas/escalation-rules.schema.json
+policy_version: '1.0'
+GRADE_BOUNDARIES: [60, 70, 80, 90]
+ESC1_PROXIMITY: 2.5
+ESC3_DIVERGENCE: 20.0
