@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "session-check",
+  "description": "Schema for hooks/session_check.json — SessionStart hook configuration",
+  "type": "object",
+  "required": ["policy_version", "staleness_days_threshold", "check_paths"],
+  "additionalProperties": false,
+  "properties": {
+    "policy_version": {"const": "1.0"},
+    "staleness_days_threshold": {"type": "integer", "minimum": 1, "maximum": 3650},
+    "check_paths": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  }
+}
