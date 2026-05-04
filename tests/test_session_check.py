@@ -9,9 +9,32 @@ import sys
 import textwrap
 
 import pytest
+import jsonschema  # noqa: F401 — used in TestLazyLoadConfig.test_malformed_json case
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hooks"))
 from session_check import _check_research_corpus, _check_stale_references, _parse_last_refreshed, main
+
+
+def _evict_lazy_names() -> None:
+    """Remove lazy-load names that monkeypatch.undo() may have written into
+    session_check.__dict__, which would short-circuit __getattr__."""
+    import session_check
+    for name in list(session_check._LAZY_NAMES):
+        session_check.__dict__.pop(name, None)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_session_check_state(monkeypatch):
+    """Clear lru_cache, evict lazy names, unset SESSION_CHECK_CONFIG_PATH around
+    every test. Mandatory because the existing tests import `main` at module
+    load time, populating cache before any test runs."""
+    monkeypatch.delenv("SESSION_CHECK_CONFIG_PATH", raising=False)
+    import session_check
+    session_check._load_config_cached.cache_clear()
+    _evict_lazy_names()
+    yield
+    session_check._load_config_cached.cache_clear()
+    _evict_lazy_names()
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 HOOK = REPO_ROOT / "hooks" / "session_check.py"
@@ -19,6 +42,7 @@ HOOK = REPO_ROOT / "hooks" / "session_check.py"
 
 def _run_hook(payload, env_overrides=None):
     env = os.environ.copy()
+    env.pop("SESSION_CHECK_CONFIG_PATH", None)  # prevent ambient-env leak
     if env_overrides is not None:
         for k, v in env_overrides.items():
             if v is None:
@@ -444,3 +468,86 @@ class TestExitCodeDiscipline:
         r = _run_hook("{}", env_overrides={"CLAUDE_PLUGIN_ROOT": None})
         assert r.returncode == 0
         assert r.stdout.strip() == "{}"
+
+
+class TestLazyLoadConfig:
+    def test_config_missing_raises_runtime_error(self, tmp_path, monkeypatch):
+        import session_check
+        monkeypatch.setenv("SESSION_CHECK_CONFIG_PATH", str(tmp_path / "absent.json"))
+        session_check._load_config_cached.cache_clear()
+        with pytest.raises(RuntimeError, match=r"session_check\.json missing at"):
+            _ = session_check.staleness_days_threshold
+
+    def test_monkeypatch_setattr_is_reversible(self, monkeypatch):
+        import session_check
+        original = session_check.staleness_days_threshold
+        monkeypatch.setattr(session_check, "staleness_days_threshold", 7)
+        assert session_check.staleness_days_threshold == 7
+        monkeypatch.undo()
+        assert session_check.staleness_days_threshold == original
+
+    def test_lazy_loaded_values_match_committed_json(self):
+        # Pins committed JSON values; do not replace with dynamic JSON read
+        # (would be vacuous, per feedback_verification_checks_need_negative_test).
+        import session_check
+        assert session_check.staleness_days_threshold == 90
+        assert session_check.check_paths == ["skills/review-claude-config/references"]
+        assert isinstance(session_check.staleness_days_threshold, int)
+        assert isinstance(session_check.check_paths, list)
+
+    def test_env_var_overrides_default_path(self, tmp_path, monkeypatch):
+        import session_check
+        synthetic = {
+            "policy_version": "1.0",
+            "staleness_days_threshold": 7,
+            "check_paths": ["custom/path"],
+        }
+        config_file = tmp_path / "session_check.json"
+        config_file.write_text(json.dumps(synthetic))
+        monkeypatch.setenv("SESSION_CHECK_CONFIG_PATH", str(config_file))
+        session_check._load_config_cached.cache_clear()
+        assert session_check.staleness_days_threshold == 7
+        assert session_check.check_paths == ["custom/path"]
+
+    def test_malformed_json_raises_decode_error(self, tmp_path, monkeypatch):
+        # Runtime hook does NOT schema-validate (build-time validator does).
+        # Malformed-JSON-syntax raises json.JSONDecodeError at runtime.
+        import session_check
+        config_file = tmp_path / "session_check.json"
+        config_file.write_text("not-json")
+        monkeypatch.setenv("SESSION_CHECK_CONFIG_PATH", str(config_file))
+        session_check._load_config_cached.cache_clear()
+        with pytest.raises(json.JSONDecodeError):
+            _ = session_check.staleness_days_threshold
+
+    def test_multi_path_merge_picks_oldest_across_paths(self, tmp_path, monkeypatch, capsys):
+        # Multi-path iteration: the oldest stale across all check_paths wins.
+        # Defends C1 (multi-iteration merge logic coverage).
+        # Older file is in path_b (SECOND check_paths entry) deliberately, so a
+        # buggy implementation that only iterates the first path cannot pass.
+        import session_check
+        path_a = tmp_path / "skills" / "a"
+        path_b = tmp_path / "skills" / "b"
+        path_a.mkdir(parents=True)
+        path_b.mkdir(parents=True)
+        older = (datetime.date.today() - datetime.timedelta(days=200)).isoformat()
+        newer_stale = (datetime.date.today() - datetime.timedelta(days=95)).isoformat()
+        (path_a / "newer.md").write_text(f"---\nlast_refreshed: {newer_stale}\n---\n")
+        (path_b / "old.md").write_text(f"---\nlast_refreshed: {older}\n---\n")
+
+        synthetic = {
+            "policy_version": "1.0",
+            "staleness_days_threshold": 90,
+            "check_paths": ["skills/a", "skills/b"],
+        }
+        config_file = tmp_path / "session_check.json"
+        config_file.write_text(json.dumps(synthetic))
+        monkeypatch.setenv("SESSION_CHECK_CONFIG_PATH", str(config_file))
+        session_check._load_config_cached.cache_clear()
+        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
+        session_check.main()
+        out = json.loads(capsys.readouterr().out.strip())
+        ctx = out["hookSpecificOutput"]["additionalContext"]
+        assert "old.md" in ctx
+        assert "newer.md" not in ctx

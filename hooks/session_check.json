@@ -1,0 +1,5 @@
+{
+  "policy_version": "1.0",
+  "staleness_days_threshold": 90,
+  "check_paths": ["skills/review-claude-config/references"]
+}

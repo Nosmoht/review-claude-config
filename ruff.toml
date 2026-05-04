@@ -18,3 +18,9 @@ select = ["E", "F", "W", "I"]
 # lex-level and does not honor TYPE_CHECKING blocks. Suppress F821 only on
 # this file so the lazy-load pattern stays clean.
 "hooks/policy_gate.py" = ["F821"]
+# session_check.py uses PEP 562 module-level __getattr__ to lazy-load 2
+# session constants from session_check.json. Names are declared under
+# `if TYPE_CHECKING:` for static analyzers, but ruff's F821 runs purely at
+# lex-level and does not honor TYPE_CHECKING blocks. Suppress F821 only on
+# this file so the lazy-load pattern stays clean.
+"hooks/session_check.py" = ["F821"]
