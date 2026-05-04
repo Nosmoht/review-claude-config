@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   release-please:
-    name: Release-please bump + sync marketplace.json
+    name: Release-please bump + sync + validate + auto-merge
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           git fetch origin "$PR_HEAD"
           git checkout "$PR_HEAD"
-          python3 scripts/sync-marketplace-ref.py
+          python3 scripts/sync_marketplace_ref.py
           if ! git diff --quiet .claude-plugin/marketplace.json; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -49,3 +49,50 @@ jobs:
           else
             echo "marketplace.json already in sync; nothing to commit."
           fi
+
+      - name: Set up Python for validation
+        if: ${{ steps.release.outputs.pr != '' && !inputs.dry-run }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Validate bot-PR branch (lint + format + schema + budget + tests + coverage)
+        if: ${{ steps.release.outputs.pr != '' && !inputs.dry-run }}
+        run: |
+          set -euo pipefail
+          pip install -e ".[dev]"
+          make validate
+
+      - name: Auto-merge release PR (only when validation passed)
+        if: ${{ steps.release.outputs.pr != '' && !inputs.dry-run }}
+        env:
+          PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh pr merge "$PR_NUMBER" \
+            --squash \
+            --delete-branch \
+            --repo "$GITHUB_REPOSITORY"
+
+      - name: Refresh checkout to main after merge
+        if: ${{ steps.release.outputs.pr != '' && !inputs.dry-run }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+
+      # GITHUB_TOKEN-driven merges do NOT cascade-trigger workflows. Without a
+      # second release-please-action call inline, the tag + GitHub Release
+      # would never be created. The action sees the just-merged release-PR
+      # carrying label `autorelease: pending`, creates tag vX.Y.Z, publishes
+      # the GitHub Release, and flips the label to `autorelease: tagged`.
+      # Idempotent: a no-op if the tag already exists.
+      - name: Tag + publish GitHub Release
+        if: ${{ steps.release.outputs.pr != '' && !inputs.dry-run }}
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          target-branch: main
