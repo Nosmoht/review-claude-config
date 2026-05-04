@@ -255,3 +255,44 @@ Vor PR-Open zwingend:
 
 - [arXiv 2603.13287 — From Stochastic Answers to Verifiable Reasoning](https://arxiv.org/abs/2603.13287)
 - [Anthropic Engineering — Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
+
+## Implementation Status (post-Approval, 2026-05-04)
+
+**Stufe 0 (Pre-flight) abgeschlossen.** Plan-Abweichung von "1 atomarer PR mit Squash-Merge" zu **"Multi-Commit direkt auf main"** — entstanden durch parallel-User-Arbeit während der Stufe-0.1-Audits liefen, dokumentiert hier damit nachfolgende Stufen den effektiven Modus kennen.
+
+**Geschehen:**
+
+| Commit | Inhalt | Pfad |
+|---|---|---|
+| `b8c20fe` (PR #181) | Stufe 0.3 (bin/-Konvention: Makefile, CLAUDE.md, CONTRIBUTING.md) + Stufe 1 Commit 1 (`bin/sync-marketplace-ref.sh` + `scripts/sync_marketplace_ref.py` deletion + `release-please.yml` update) als gebündelter User-Commit | direkt auf main via PR |
+| `1aa76f0` | `tests/test_bin_smoke.py` | mit-gemerged in #181 |
+| `c6a053f` | Plan + Audit-Reports + Spike-Report | direkt auf main |
+| `fd036fe` | Stufe 0.2 (rubric mit 3 normativen Tabellen + Token-Budget 10300→12000) + agent-evaluation-guide.md cross-ref | direkt auf main |
+| `b392e38` | Stufe-0-Close-Marker (`chore(session): close pre-flight session`) | direkt auf main |
+
+Plus: Issue #184 für markdown-it-py-Spike als `track: post-ga` gefilet (Spike-Output: ROI negativ, defer).
+
+**Effektiver Workflow (User-bestätigt 2026-05-04):**
+- Direkt auf `main` ohne Feature-Branch-PR (Solo-Maintainer-Pattern)
+- Pro Stufe-Commit: `make validate` grün vor Push
+- Conventional Commits + SSH-Signatur
+- `BREAKING CHANGE:`-Footer NUR wenn echte Konsumenten-API bricht (z. B. Stufe 1 sync-marketplace-ref)
+
+**Konsequenz für Stufe 2+:**
+Der ursprünglich geplante "atomare PR" entfällt. Stattdessen wird **jeder Plan-Commit (#2 bis #10) einzeln auf `main` gepusht**, jeder grün auf `make validate`. Wenn der Maintainer für eine spezifische Stufe doch einen PR-Review-Pfad bevorzugt (z. B. Stufe 2 Commit #3 `merge_findings.py` mit lazy-load via PEP 562 — substantielle Behavior-Änderung trotz gefrorener CLI), kann er pro Stufe entscheiden und feature-Branch + PR wählen.
+
+**Stufe 0.1 Audit-Verdicts (verbindlich):**
+- `rubric_binary_evaluator.py` (1726 LOC): **0/0/0 Verstöße** — alle 28 Check-Funktionen deterministisch. Repo-eigener Anti-Varianz-Beleg hält stand. Keine PR-Erweiterung.
+- `perspective_certificate_parser.py` (333 LOC): markdown-it-py-Migration **bedingt machbar (110-160 LOC, ROI negativ)** → Issue #184, `track: post-ga`. Keine PR-Erweiterung.
+
+**Plan-Inventar-Korrektur (echte Code-Daten aus `scripts/merge_findings.py`):**
+- `BINARY_ITEM_IDS`: 32 ✓
+- `NARRATIVE_PARENT_IDS`: **15** (Plan-Inventar listete 14)
+- `ITEM_DIMENSION`: **33** (Plan: 32)
+- `BINARY_CAPS`: **22** (Plan: 20)
+- `AGENT_ITEM_DIMENSION`: **35** (Plan: 26)
+
+`scoring-rubric.md` reflektiert die echten Zahlen. Stufe 2 Commit #2 (`regenerate_merge_policy.py` Parser) muss gegen diese Counts emittieren.
+
+**Stufe 2+ Eintrittspunkt:**
+Nächste Session beginnt mit Plan-Commit #2 (`scripts/regenerate_merge_policy.py` + initial `merge-policy.yaml` + `policy-consistency.yml`). Frische Session zwingend: scoring-rubric.md ist mid-session-frozen, der Parser MUSS die erweiterten Tabellen mit frischem KV-Cache lesen.
