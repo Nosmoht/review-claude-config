@@ -6,6 +6,13 @@ last_refreshed: 2026-04-19
 
 # Agent Evaluation Checklist
 
+> **Dim-Mapping authority**: the per-item `Dim` column below remains the
+> human-readable specification; the **machine-readable agent-item dim pins**
+> live in `scoring-rubric.md §Agent Items` (single source of truth, consumed
+> by `merge_findings.py:get_item_dim()`). Any change to a `Dim` value here
+> requires a synchronous edit to `scoring-rubric.md §Agent Items` and a
+> regenerate of `merge-policy.yaml`.
+
 Answer EVERY item: PASS | FAIL | NA. No skipping. FAILs map to Dim for scoring.
 
 The 15-field 2026 frontmatter catalog (`name`, `description`, `model`, `color`,

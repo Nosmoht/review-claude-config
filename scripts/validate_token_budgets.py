@@ -42,7 +42,10 @@ BUDGETS: dict[str, int] = {
     # Issue #98: +META-3c Discriminating-Keyword-Presence
     # (MetaTool / ToolLLM / Gorilla — description disambiguation).
     # Issue #89: +WS-5b binary check (WS-5 promotion to deterministic).
-    "scoring-rubric.md": 10300,
+    # Right-Altitude-Refactor (2026-05-04): +§Item Inventory + §Grade Caps +
+    # §Agent Items normative tables (~150 LOC) — rubric becomes single SOT
+    # for merge-policy.yaml CI-generation (Strategy C+).
+    "scoring-rubric.md": 12000,
     # Issue #61: Tier-0 same-turn combination section (OWASP ASI02 Tool
     # Misuse; MCP Protocol Security arXiv:2601.17549, 30+ CVEs Jan-Feb
     # 2026 incl. CVSS 9.6 RCE).

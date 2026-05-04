@@ -1,8 +1,9 @@
 ---
 name: scoring-rubric
 description: A-F grading criteria for evaluating Claude Code skills, agents, and rules across type-appropriate dimensions
-last_refreshed: 2026-04-28
+last_refreshed: 2026-05-04
 calibration_version: 2026-04-28
+derived-policy: skills/review-skill/references/merge-policy.yaml
 ---
 
 # Scoring Rubric
@@ -11,6 +12,17 @@ calibration_version: 2026-04-28
 A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<60)=Failing. `[Application-checked — N=18, single-rater, calibration_version=2026-04-28]` (see `research/rubric-design/rubric-calibration-evidence.md` §"Grade Boundary Calibration (issue #29)" — application-consistency only, not criterion validity).
 
 **Grade derivation:** A=0 FAILs; B=≤25% (no High); C=any High or >25%; D=>50% High; F=>50% total. Cite evidence before grading.
+
+> **Machine-readable policy companion**: the §Item Inventory, §Grade Caps, and
+> §Agent Items tables at the end of this file are the **single source of truth**
+> for the constants consumed by `scripts/merge_findings.py`,
+> `scripts/check_convergence.py`, and the perspective subagents. The YAML mirror
+> at `skills/review-skill/references/merge-policy.yaml` is **CI-generated** by
+> `scripts/regenerate_merge_policy.py` and carries an `AUTO-GENERATED` header —
+> do not edit it directly. Any rubric edit that adds, removes, or re-pins items
+> MUST run `python3 scripts/regenerate_merge_policy.py` and commit the resulting
+> yaml in the same commit; the `policy-consistency.yml` CI workflow enforces this
+> on push.
 
 ## Dimensions
 
@@ -205,3 +217,147 @@ Applies to agentic skills/agents — any file whose body contains `Agent`/`Task`
   *PASS:* "Redact token-like substrings matching `/[A-Za-z0-9_-]{20,}/` with `<REDACTED>` before Write." *FAIL (boundary):* "Redact API keys before writing reports." — the word `redact` appears but no token-shape / length / path-pattern is specified, so reviewers cannot verify scope. *FAIL (egregious):* no credential-scope mention anywhere in file. Source: OWASP LLM10:2025 (Unbounded Consumption / Data Leakage); `research/autonomous-agent-reliability/autonomous-agent-reliability.md` R9.
 
 Grade boundary: agentic items must pass ALL 4 RL-b checks for Safety A; any one failure caps Safety at C and contributes a High-severity finding. Non-agentic skills/agents: these items return NA.
+
+## Item Inventory
+
+This section is the canonical source for `BINARY_ITEM_IDS`, `NARRATIVE_PARENT_IDS`, and `ITEM_DIMENSION` consumed by `scripts/merge_findings.py`. CI regenerates `merge-policy.yaml` from these tables — never edit the yaml directly.
+
+### Binary-Evaluated Items (skill rubric, 32)
+
+These items have a deterministic PASS/FAIL/NA verdict from `scripts/rubric_binary_evaluator.py`. The `Dimension` column pins the item to a specific rubric dimension; perspective findings on these items get re-canonicalized in the merge layer (issue #70).
+
+| Item | Dimension |
+|---|---|
+| META-1a | Metadata |
+| META-2 | Metadata |
+| META-3a | Metadata |
+| META-3b | Metadata |
+| META-3c | Metadata |
+| META-4 | Metadata |
+| SAMP-2 | Metadata |
+| CLAR-1 | Clarity |
+| CLAR-2 | Clarity |
+| CLAR-3 | Clarity |
+| CLAR-4 | Clarity |
+| WS-2b | Clarity |
+| WS-5b | Clarity |
+| WS-6 | Clarity |
+| RD-5b | Clarity |
+| CE-X | Context Engineering |
+| COMP-V | Completeness |
+| COMP-W | Completeness |
+| COMP-X | Completeness |
+| COMP-Y | Completeness |
+| COMP-Z | Completeness |
+| AH-2b | Completeness |
+| SAMP-1 | Prompt Engineering |
+| PE-1 | Prompt Engineering |
+| PE-2 | Prompt Engineering |
+| SP-2b | Safety |
+| SP-4b | Safety |
+| IJ-1b | Safety |
+| RL-1b | Safety |
+| RL-3b | Safety |
+| RL-4b | Safety |
+| RL-9b | Safety |
+
+### Drop-from-Merge Items (narrative parents, 15)
+
+These items are "narrative parents" — perspective-emitted findings on these IDs are dropped at merge time, either because the rubric supersedes them with a binary `-b` variant, or because the rubric drops them in favor of a deterministic drop-from-merge policy. The `Dimension` column indicates a pinned dimension where applicable; blank means dropped without dimension semantics.
+
+| Item | Reason | Dimension |
+|---|---|---|
+| AH-2 | Superseded by AH-2b (binary) | — |
+| SP-2 | Superseded by SP-2b (binary) | — |
+| SP-4 | Superseded by SP-4b (binary) | — |
+| IJ-1 | Superseded by IJ-1b (binary) | — |
+| RL-1 | Superseded by RL-1b (binary) | — |
+| RL-3 | Superseded by RL-3b (binary) | — |
+| RL-4 | Superseded by RL-4b (binary) | — |
+| RL-9 | Superseded by RL-9b (binary) | — |
+| META-1 | Superseded by META-1a (binary) | — |
+| META-2 | Drop-from-merge policy AND binary-evaluated | Metadata |
+| META-3 | Superseded by META-3a/b/c (binary) | — |
+| WS-2 | Superseded by WS-2b (binary, issue #70) | — |
+| WS-4 | Drop-from-merge policy (LLM-interpretive); CLAR-3 covers underlying evidence (issue #70) | Clarity |
+| WS-5 | Superseded by WS-5b (binary, issue #89) | — |
+| RD-5 | Superseded by RD-5b (binary, issue #70) | — |
+
+## Grade Caps
+
+When a binary item FAILs, the dimension is capped at `cap_grade` (cannot be better). Caps are monotone — never upgrade. Multiple caps on the same dimension stack; the strictest wins.
+
+| Item | Dimension | Cap |
+|---|---|---|
+| CLAR-1 | Clarity | C |
+| CLAR-2 | Clarity | C |
+| CLAR-3 | Clarity | C |
+| CLAR-4 | Clarity | C |
+| WS-2b | Clarity | C |
+| RD-5b | Clarity | C |
+| COMP-W | Completeness | C |
+| AH-2b | Completeness | C |
+| CE-X | Context Engineering | C |
+| PE-1 | Prompt Engineering | C |
+| PE-2 | Prompt Engineering | C |
+| SAMP-1 | Prompt Engineering | C |
+| SAMP-2 | Metadata | F |
+| META-2 | Metadata | C |
+| META-4 | Metadata | C |
+| SP-2b | Safety | C |
+| SP-4b | Safety | C |
+| IJ-1b | Safety | C |
+| RL-1b | Safety | C |
+| RL-3b | Safety | C |
+| RL-4b | Safety | C |
+| RL-9b | Safety | C |
+
+`SAMP-2` is the only Hard-F cap (runtime 400-error on Opus 4.7 from non-default sampling params; see §"Sampling-Param Migration" above).
+
+## Agent Items
+
+Per-item dimension pin for **agent-rubric items** (consumed by `merge_findings.py:get_item_dim()` when `artifact_type == "agent"`). Disjoint by construction from §"Binary-Evaluated Items" — only agent-rubric IDs that (a) do not collide with skill-rubric IDs on dimension, and (b) are not in the Drop-from-Merge list, are listed here. Source: `agent-evaluation-guide.md` `Dim` column (issue #76).
+
+Collisions deliberately omitted (same ID, different dimension per rubric — pinning either would mis-pin the other; preserve current unpinned fall-through):
+
+- `AP-2` (skill=Metadata, agent=Safety)
+- `AP-3` (skill=Prompt Engineering, agent=Metadata)
+- `AP-4` (skill=Completeness, agent=Prompt Engineering)
+
+| Item | Dimension |
+|---|---|
+| SF-2 | Clarity |
+| RL-7 | Clarity |
+| DA-4 | Completeness |
+| TC-1 | Completeness |
+| TC-2 | Completeness |
+| TC-3 | Completeness |
+| RL-2 | Completeness |
+| RL-5 | Completeness |
+| RL-6 | Completeness |
+| RL-10 | Completeness |
+| RT-4 | Completeness |
+| AF-3 | Prompt Engineering |
+| DA-2a | Context Engineering |
+| DA-2b | Context Engineering |
+| SF-1 | Context Engineering |
+| RT-5 | Context Engineering |
+| AF-2 | Context Engineering |
+| TV-2 | Safety |
+| TV-3 | Safety |
+| RL-8 | Safety |
+| IJ-2 | Safety |
+| GV-1 | Safety |
+| GV-2 | Safety |
+| AF-1 | Safety |
+| AF-4 | Safety |
+| AF-5 | Safety |
+| MS-1 | Metadata |
+| DA-1 | Metadata |
+| DA-5 | Metadata |
+| TV-1 | Metadata |
+| TV-4 | Metadata |
+| TV-5 | Metadata |
+| TV-6 | Metadata |
+| AF-6 | Metadata |
+| AF-7 | Metadata |
