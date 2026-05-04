@@ -1,0 +1,147 @@
+# AUTO-GENERATED — edit skills/review-claude-config/references/scoring-rubric.md instead.
+# Regenerate via: python3 scripts/regenerate_merge_policy.py
+# CI enforces drift via .github/workflows/policy-consistency.yml.
+# item_dimension: union of binary items + narrative parents that declare a dimension.
+policy_version: '1.0'
+binary_item_ids:
+- META-1a
+- META-2
+- META-3a
+- META-3b
+- META-3c
+- META-4
+- SAMP-2
+- CLAR-1
+- CLAR-2
+- CLAR-3
+- CLAR-4
+- WS-2b
+- WS-5b
+- WS-6
+- RD-5b
+- CE-X
+- COMP-V
+- COMP-W
+- COMP-X
+- COMP-Y
+- COMP-Z
+- AH-2b
+- SAMP-1
+- PE-1
+- PE-2
+- SP-2b
+- SP-4b
+- IJ-1b
+- RL-1b
+- RL-3b
+- RL-4b
+- RL-9b
+narrative_parent_ids:
+- AH-2
+- SP-2
+- SP-4
+- IJ-1
+- RL-1
+- RL-3
+- RL-4
+- RL-9
+- META-1
+- META-2
+- META-3
+- WS-2
+- WS-4
+- WS-5
+- RD-5
+item_dimension:
+  META-1a: Metadata
+  META-2: Metadata
+  META-3a: Metadata
+  META-3b: Metadata
+  META-3c: Metadata
+  META-4: Metadata
+  SAMP-2: Metadata
+  CLAR-1: Clarity
+  CLAR-2: Clarity
+  CLAR-3: Clarity
+  CLAR-4: Clarity
+  WS-2b: Clarity
+  WS-5b: Clarity
+  WS-6: Clarity
+  RD-5b: Clarity
+  CE-X: Context Engineering
+  COMP-V: Completeness
+  COMP-W: Completeness
+  COMP-X: Completeness
+  COMP-Y: Completeness
+  COMP-Z: Completeness
+  AH-2b: Completeness
+  SAMP-1: Prompt Engineering
+  PE-1: Prompt Engineering
+  PE-2: Prompt Engineering
+  SP-2b: Safety
+  SP-4b: Safety
+  IJ-1b: Safety
+  RL-1b: Safety
+  RL-3b: Safety
+  RL-4b: Safety
+  RL-9b: Safety
+  WS-4: Clarity
+binary_caps:
+  - {item: CLAR-1, dimension: Clarity, cap: C}
+  - {item: CLAR-2, dimension: Clarity, cap: C}
+  - {item: CLAR-3, dimension: Clarity, cap: C}
+  - {item: CLAR-4, dimension: Clarity, cap: C}
+  - {item: WS-2b, dimension: Clarity, cap: C}
+  - {item: RD-5b, dimension: Clarity, cap: C}
+  - {item: COMP-W, dimension: Completeness, cap: C}
+  - {item: AH-2b, dimension: Completeness, cap: C}
+  - {item: CE-X, dimension: Context Engineering, cap: C}
+  - {item: PE-1, dimension: Prompt Engineering, cap: C}
+  - {item: PE-2, dimension: Prompt Engineering, cap: C}
+  - {item: SAMP-1, dimension: Prompt Engineering, cap: C}
+  - {item: SAMP-2, dimension: Metadata, cap: F}
+  - {item: META-2, dimension: Metadata, cap: C}
+  - {item: META-4, dimension: Metadata, cap: C}
+  - {item: SP-2b, dimension: Safety, cap: C}
+  - {item: SP-4b, dimension: Safety, cap: C}
+  - {item: IJ-1b, dimension: Safety, cap: C}
+  - {item: RL-1b, dimension: Safety, cap: C}
+  - {item: RL-3b, dimension: Safety, cap: C}
+  - {item: RL-4b, dimension: Safety, cap: C}
+  - {item: RL-9b, dimension: Safety, cap: C}
+agent_item_dimension:
+  SF-2: Clarity
+  RL-7: Clarity
+  DA-4: Completeness
+  TC-1: Completeness
+  TC-2: Completeness
+  TC-3: Completeness
+  RL-2: Completeness
+  RL-5: Completeness
+  RL-6: Completeness
+  RL-10: Completeness
+  RT-4: Completeness
+  AF-3: Prompt Engineering
+  DA-2a: Context Engineering
+  DA-2b: Context Engineering
+  SF-1: Context Engineering
+  RT-5: Context Engineering
+  AF-2: Context Engineering
+  TV-2: Safety
+  TV-3: Safety
+  RL-8: Safety
+  IJ-2: Safety
+  GV-1: Safety
+  GV-2: Safety
+  AF-1: Safety
+  AF-4: Safety
+  AF-5: Safety
+  MS-1: Metadata
+  DA-1: Metadata
+  DA-5: Metadata
+  TV-1: Metadata
+  TV-4: Metadata
+  TV-5: Metadata
+  TV-6: Metadata
+  AF-6: Metadata
+  AF-7: Metadata
