@@ -296,3 +296,20 @@ Der ursprünglich geplante "atomare PR" entfällt. Stattdessen wird **jeder Plan
 
 **Stufe 2+ Eintrittspunkt:**
 Nächste Session beginnt mit Plan-Commit #2 (`scripts/regenerate_merge_policy.py` + initial `merge-policy.yaml` + `policy-consistency.yml`). Frische Session zwingend: scoring-rubric.md ist mid-session-frozen, der Parser MUSS die erweiterten Tabellen mit frischem KV-Cache lesen.
+
+## Stufe 2 Progress (2026-05-04, second session)
+
+| Commit | SHA | Inhalt | Verifikation |
+|---|---|---|---|
+| #2 | `e119169` | `scripts/regenerate_merge_policy.py` (244 LOC) + `skills/review-skill/references/merge-policy.yaml` (146 LOC, AUTO-GENERATED) + `.github/workflows/policy-consistency.yml` (24 LOC, fail-only drift gate) + `tests/test_regenerate_merge_policy.py` (7 tests) | `make validate` exit 0; reviewer SHIP after 3 polish-edits applied (F3/F6/F10) |
+| #3 | `3a5e168` | `scripts/merge_findings.py` lazy-load via PEP 562 `__getattr__` + `tests/test_merge_findings.py` (3 new TestLazyLoadPolicy tests) + `ruff.toml` (per-file F821 ignore). Net diff: −106 LOC. | `make validate` exit 0 (985 tests); reviewer FIX-FIRST → T1 (full-message regex) + T2 (monkeypatch-reversibility test) applied; rebased onto release-bot v2.4.0 commit, sig preserved |
+
+**Migration scope cut (user-confirmed analysis 2026-05-04):**
+- 5 Konstanten migriert (rubric-derived): `BINARY_ITEM_IDS`, `NARRATIVE_PARENT_IDS`, `ITEM_DIMENSION`, `BINARY_CAPS`, `AGENT_ITEM_DIMENSION`
+- 4 Konstanten bleiben Code (Right-Altitude L82-84 — narrowly algorithmic, single-consumer math): `OVERLAP_THRESHOLD`, `GRADE_TO_NUMERIC`, `GRADE_ORDER`, `SEVERITY_RANK`
+- 1 Konstante deferred zu Issue #187: `dimension_owners` (function-local, besserer SoT-Pfad ist agent-frontmatter-derivation, nicht yaml)
+
+**Reviewer-Befunde verschoben auf post-Stufe-2:**
+- A1: `scripts/_lazy_yaml.py` Extraktion — Rule of Three, warten bis Commit #4 (`policy_gate.py`) + #5 (`session_check.py`) den Pattern wiederholen
+- A2: `references/policy-paths.yaml` Konstanten-Registry — bundle in A1 follow-up
+- S1/S2/D1: Polish (Function-Indirection, dead defensive AttributeError, längerer error-message hint) — non-blocking
