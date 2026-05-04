@@ -34,14 +34,14 @@ user-invocable: false                     # Optional: set if Claude-only (rare)
 <Continue sequential workflow>
 
 ### N. <Final step>
-<Present results, suggest commit if applicable>
+Done when 0 missing. Verify each file.
 
 ## Hard Rules
 
 - <Safety constraint>
 - <Scope restriction>
 - <Confirmation requirement if write-capable>
-- <Error handling guarantee>
+- Verify outputs: check all exist.
 ```
 
 ## Reference File Template

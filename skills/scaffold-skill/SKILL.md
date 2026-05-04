@@ -88,7 +88,7 @@ Using the skill name, target repo, and domain context from Step 2.5, generate **
 
 **Question 1 — Description** (header: "Description")
 
-Generate 2–3 description drafts based on the skill name + domain context. Apply quality-patterns.md Activation directive to each draft: verb-first, user-task terms, ≥1 trigger phrase, ≥1 counter-case.
+Generate 2–3 description drafts based on the skill name + domain context. Apply quality-patterns.md Activation directive to each draft: verb-first, user-task terms, ≥1 trigger phrase, ≥1 counter-case. (META-1a, CLAR-2, CLAR-3)
 
 Option generation heuristics:
 - Skill name contains a known verb (review, scaffold, lint, code, test, apply, validate) → generate specific, domain-targeted drafts
@@ -257,7 +257,15 @@ Then proceed directly to Step 7.
 
 Use Edit to make targeted additions. Never rewrite unrelated sections or depend on prose outside those headings.
 
-### 7. Suggest commit and next steps
+### 7. Verify outputs and suggest commit
+
+Verify all outputs before reporting success (COMP-Y, COMP-X):
+- Check that SKILL.md exists at the expected path and is non-empty.
+- If reference files were requested, confirm each `references/*.md` file was written.
+- If registration was performed, confirm the target `README.md` / `CLAUDE.md` lines were appended.
+- Assert no step was silently skipped — if any check fails, report which file is missing and stop.
+
+Skill is complete when all files are verified present and no step reported an error. (COMP-X)
 
 Tell the user:
 ```
@@ -282,3 +290,6 @@ On Option 1: invoke `/review-skill` with the absolute path to the new SKILL.md. 
 - **Reference files have token budgets.** Add "Keep under 500 tokens" as a note in each reference file stub.
 - **Kebab-case names only.** Reject names that are not valid kebab-case. This is a repo convention, not a scientific claim.
 - **External mode: never register.** Skip Steps 6 registration entirely; show the manual registration note instead.
+- **Verify outputs before reporting success (COMP-Y, COMP-X).** After writing files, assert each expected artifact exists and is non-empty. Check that registration targets were updated. Report any missing files explicitly — do not silently skip failed writes.
+- **Generated SKILL.md must include a success condition (COMP-X).** The final workflow step must contain "complete when", "success when", or "done when". Omitting the success condition produces a rubric FAIL.
+- **Generated SKILL.md must include a verification predicate (COMP-Y).** Hard Rules must contain at least one binary check ("verify", "validate", "check", or "assert"). Holistic "looks good" language is a rubric FAIL.

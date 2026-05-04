@@ -37,3 +37,12 @@ If domain known: inject 2–3 domain-specific rules into workflow or hard rules.
 
 ### Compaction
 Expected turns > 10: add compaction step — testable done criteria defined before execution.
+
+### COMP-X + COMP-V
+Final step: declare success with digit count or exit-code.
+
+### COMP-Y
+Hard Rules: include verify / validate / check / assert.
+
+### RL-1b + RL-4b + COMP-W
+Agentic: retry up to N; after N, status: terminal. Include AskUserQuestion.
