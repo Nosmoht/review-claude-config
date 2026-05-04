@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0](https://github.com/Nosmoht/review-claude-config/compare/v2.2.0...v2.3.0) (2026-05-04)
+
+
+### Changed
+
+* **ci:** auto-merge release PRs and tag on merge ([#177](https://github.com/Nosmoht/review-claude-config/issues/177)) ([0fd11a6](https://github.com/Nosmoht/review-claude-config/commit/0fd11a63d974801bd1ff248b561abd0b361fbb5c))
+
 ## [2.2.0](https://github.com/Nosmoht/review-claude-config/compare/v2.1.0...v2.2.0) (2026-05-04)
 
 
