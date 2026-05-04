@@ -2,6 +2,15 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0](https://github.com/Nosmoht/review-claude-config/compare/v2.1.0...v2.2.0) (2026-05-04)
+
+
+### Changed
+
+* **ci:** auto-release on push to main via release-please ([#172](https://github.com/Nosmoht/review-claude-config/issues/172)) ([099cc4c](https://github.com/Nosmoht/review-claude-config/commit/099cc4c29763756d22fcb1e0143d7cac64d1b4ae))
+* **scaffold:** harden scaffold-skill + scaffold-agent for rubric coverage ([#170](https://github.com/Nosmoht/review-claude-config/issues/170)) ([9914b7c](https://github.com/Nosmoht/review-claude-config/commit/9914b7c19d54b44bab50a67850fb23ca60f76e7e))
+* **skills:** add Agent and Rule signal tables to signal-catalog ([#165](https://github.com/Nosmoht/review-claude-config/issues/165)) ([e521e3c](https://github.com/Nosmoht/review-claude-config/commit/e521e3c49df20dc37d07acbe842565d1ecc544b1))
+
 ## [2.1.0] - 2026-05-03
 
 **Internal layout — selective hub consolidation per Rule of Three.** Six reference files with ≥3 cross-skill consumers migrated from their owner skills into the central hub at `skills/review-claude-config/references/`. Reference files with 0–2 consumers remain skill-local (Locality of Behaviour over premature DRY). Plugin API is unchanged — additive minor bump.
