@@ -122,7 +122,14 @@ Use only the stable surviving headings. Do not invent new top-level sections.
 
 Use Edit to make targeted additions. Never rewrite unrelated sections or depend on prose outside those headings. If a heading does not exist in the target file, skip that registration step and note it in your report.
 
-### 7. Suggest commit and next steps
+### 7. Verify outputs and suggest commit
+
+Verify all outputs before reporting success (COMP-Y, COMP-X):
+- Check that the agent file exists at `.claude/agents/<agent-name>.md` and is non-empty (0 missing files).
+- If registration was performed, confirm the target `README.md` / `CLAUDE.md` lines were appended.
+- Assert no step was silently skipped — if the file is missing, report the error and stop.
+
+Agent scaffolding is complete when the file exists and all registrations are confirmed. (COMP-X)
 
 Tell the user:
 ```
@@ -147,3 +154,7 @@ On "Review the new agent": invoke `/review-agent` with the new agent's path. On 
 - **Documentation edits are additive.** Append concise entries under stable headings. Never modify or remove unrelated entries.
 - **Least-privilege tools.** Only include tools the agent's workflow actually uses. Keep the list minimal.
 - **Stop conditions apply.** Stop immediately if: name is invalid and user does not supply a corrected one, user chooses cancel, or file write fails.
+- **Verify outputs before reporting success (COMP-Y, COMP-X).** After writing the agent file, assert it exists and is non-empty. Report any missing file explicitly — do not silently skip a failed write.
+- **Generated agent must include a success condition (COMP-X) with numeric predicate (COMP-V).** The final workflow step must contain "complete when", "done when", or "success when" plus a verifiable component (digit count, "frontmatter", exit code, or tool binding). Omitting either is a rubric FAIL.
+- **Generated agent must include HITL escalation (RL-4b) and termination ceiling (RL-1b).** The body must contain AskUserQuestion, `status: partial`, or an escalate heading; plus a numeric/enum termination predicate (`retry up to N` / `max N iterations` / `status: terminal`).
+- **Generated agent must include a verification predicate (COMP-Y).** Hard Rules must contain ≥1 binary check ("verify", "validate", "check", or "assert"). Holistic "looks good" language is a rubric FAIL.
