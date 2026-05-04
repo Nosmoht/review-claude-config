@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.3](https://github.com/Nosmoht/review-claude-config/compare/v2.4.2...v2.4.3) (2026-05-04)
+
+
+### Changed
+
+* **session_check:** extract 2 constants to JSON + schema ([#195](https://github.com/Nosmoht/review-claude-config/issues/195)) ([89eb885](https://github.com/Nosmoht/review-claude-config/commit/89eb8854dbdb4fc451ae32dde90afa001cb1860c))
+
 ## [2.4.2](https://github.com/Nosmoht/review-claude-config/compare/v2.4.1...v2.4.2) (2026-05-04)
 
 
