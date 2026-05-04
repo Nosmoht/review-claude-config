@@ -34,3 +34,9 @@ dist/
 
 # /implement-issue per-issue artifacts (plan.md, implementation-summary.md, evaluator-findings.md)
 .work/
+
+# Claude Code Plan tool working-output. GitHub Issues are SOT for status
+# + acceptance criteria; Plans/ is session-local scratch. Knowledge-
+# bearing artifacts (audits, spikes, ADRs, roadmaps) live in docs/.
+# See CLAUDE.md §Architecture.
+Plans/
