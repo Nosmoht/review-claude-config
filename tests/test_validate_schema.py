@@ -582,12 +582,87 @@ class TestValidateHooksJson:
 class TestValidateMain:
     def _setup_valid_repo(self, tmp_path):
         """Create minimal valid structure for all validators to pass."""
+        import json as _json
+
+        import yaml as _yaml
+
         # Reference files
         refs = tmp_path / "skills" / "review-claude-config" / "references"
+        schemas = refs / "schemas"
         refs.mkdir(parents=True)
+        schemas.mkdir()
         (refs / "ref.md").write_text(
             "---\nname: r\ndescription: a description that meets the minimum length\nlast_refreshed: 2026-01-01\n---\n"
         )
+        # YAML reference files (validate_yaml_reference_files allowlist)
+        audit_yaml = {
+            "policy_version": "1.0",
+            "triggers": [{"id": "WS-7", "pattern": "foo", "flags": [], "notes": "test trigger"}],
+            "count_triggers": [
+                {"id": "WS-8", "pattern": "bar", "flags": ["IGNORECASE"], "min_matches": 2, "notes": "count test"},
+                {"id": "GA-S", "name_prefix_match": ["review-"], "notes": "ga-s test"},
+            ],
+            "item_order": ["WS-7", "WS-8", "GA-S"],
+        }
+        audit_schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "required": ["policy_version", "triggers", "count_triggers", "item_order"],
+            "properties": {
+                "policy_version": {"type": "string", "const": "1.0"},
+                "triggers": {"type": "array"},
+                "count_triggers": {"type": "array"},
+                "item_order": {"type": "array"},
+            },
+        }
+        (refs / "audit-triggers.yaml").write_text(_yaml.dump(audit_yaml), encoding="utf-8")
+        (schemas / "audit-triggers.schema.json").write_text(_json.dumps(audit_schema), encoding="utf-8")
+
+        conv_yaml = {
+            "policy_version": "1.0",
+            "DETERMINISTIC_SUBSET": ["CLAR-1"],
+            "GRADE_LETTERS": ["A", "B", "C", "D", "F"],
+            "DEFAULT_MAX_VARIANCE": 1,
+        }
+        conv_schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "required": ["policy_version", "DETERMINISTIC_SUBSET", "GRADE_LETTERS", "DEFAULT_MAX_VARIANCE"],
+            "additionalProperties": False,
+            "properties": {
+                "policy_version": {"type": "string", "const": "1.0"},
+                "DETERMINISTIC_SUBSET": {"type": "array", "minItems": 1, "uniqueItems": True,
+                                         "items": {"type": "string", "minLength": 1}},
+                "GRADE_LETTERS": {"type": "array", "minItems": 5, "uniqueItems": True,
+                                  "items": {"type": "string", "minLength": 1}},
+                "DEFAULT_MAX_VARIANCE": {"type": "integer", "minimum": 0},
+            },
+        }
+        (refs / "convergence-rules.yaml").write_text(_yaml.dump(conv_yaml), encoding="utf-8")
+        (schemas / "convergence-rules.schema.json").write_text(_json.dumps(conv_schema), encoding="utf-8")
+
+        # Note: merge-policy.yaml not present in tmp_path → drift check is skipped gracefully
+        esc_yaml = {
+            "policy_version": "1.0",
+            "GRADE_BOUNDARIES": [60, 70, 80, 90],
+            "ESC1_PROXIMITY": 2.5,
+            "ESC3_DIVERGENCE": 20.0,
+        }
+        esc_schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "required": ["policy_version", "GRADE_BOUNDARIES", "ESC1_PROXIMITY", "ESC3_DIVERGENCE"],
+            "additionalProperties": False,
+            "properties": {
+                "policy_version": {"type": "string", "const": "1.0"},
+                "GRADE_BOUNDARIES": {"type": "array", "minItems": 1, "items": {"type": "integer"}},
+                "ESC1_PROXIMITY": {"type": "number"},
+                "ESC3_DIVERGENCE": {"type": "number"},
+            },
+        }
+        (refs / "escalation-rules.yaml").write_text(_yaml.dump(esc_yaml), encoding="utf-8")
+        (schemas / "escalation-rules.schema.json").write_text(_json.dumps(esc_schema), encoding="utf-8")
+
         # Hooks json (no script refs to resolve)
         hooks_dir = tmp_path / "hooks"
         hooks_dir.mkdir()

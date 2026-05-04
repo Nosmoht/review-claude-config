@@ -1,0 +1,57 @@
+# Maintainer-edited — controls scripts/check_convergence.py convergence gate.
+# DETERMINISTIC_SUBSET MUST equal binary_item_ids | narrative_parent_ids in
+# skills/review-skill/references/merge-policy.yaml. Drift is enforced by
+# scripts/validate_schema.py::validate_yaml_reference_files() (cross-YAML check).
+# Schema: skills/review-claude-config/references/schemas/convergence-rules.schema.json
+policy_version: '1.0'
+DETERMINISTIC_SUBSET:
+  # Materialised as the union of merge-policy.yaml binary_item_ids | narrative_parent_ids.
+  # The validator detects drift on every make validate run.
+  - AH-2
+  - AH-2b
+  - CE-X
+  - CLAR-1
+  - CLAR-2
+  - CLAR-3
+  - CLAR-4
+  - COMP-V
+  - COMP-W
+  - COMP-X
+  - COMP-Y
+  - COMP-Z
+  - IJ-1
+  - IJ-1b
+  - META-1
+  - META-1a
+  - META-2
+  - META-3
+  - META-3a
+  - META-3b
+  - META-3c
+  - META-4
+  - PE-1
+  - PE-2
+  - RD-5
+  - RD-5b
+  - RL-1
+  - RL-1b
+  - RL-3
+  - RL-3b
+  - RL-4
+  - RL-4b
+  - RL-9
+  - RL-9b
+  - SAMP-1
+  - SAMP-2
+  - SP-2
+  - SP-2b
+  - SP-4
+  - SP-4b
+  - WS-2
+  - WS-2b
+  - WS-4
+  - WS-5
+  - WS-5b
+  - WS-6
+GRADE_LETTERS: [A, B, C, D, F]
+DEFAULT_MAX_VARIANCE: 1

@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "audit-triggers.schema.json",
+  "title": "Audit Triggers",
+  "description": "Schema for audit-triggers.yaml — controls audit_preflight.py preflight detector.",
+  "type": "object",
+  "required": ["policy_version", "triggers", "count_triggers", "item_order"],
+  "additionalProperties": false,
+  "properties": {
+    "policy_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "triggers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "pattern", "flags", "notes"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pattern": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "flags": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": ["IGNORECASE", "MULTILINE", "DOTALL"]
+            }
+          },
+          "notes": {
+            "type": "string",
+            "pattern": "^[^|`]+$",
+            "maxLength": 200
+          },
+          "line_count_min": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "count_triggers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "notes"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pattern": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "flags": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": ["IGNORECASE", "MULTILINE", "DOTALL"]
+            }
+          },
+          "min_matches": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name_prefix_match": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "notes": {
+            "type": "string",
+            "pattern": "^[^|`]+$",
+            "maxLength": 200
+          }
+        }
+      }
+    },
+    "item_order": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

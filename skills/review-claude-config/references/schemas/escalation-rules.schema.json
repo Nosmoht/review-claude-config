@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "escalation-rules.schema.json",
+  "title": "Escalation Rules",
+  "description": "Schema for escalation-rules.yaml — controls escalation_decision.py escalation triggers.",
+  "type": "object",
+  "required": ["policy_version", "GRADE_BOUNDARIES", "ESC1_PROXIMITY", "ESC3_DIVERGENCE"],
+  "additionalProperties": false,
+  "properties": {
+    "policy_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "GRADE_BOUNDARIES": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100
+      }
+    },
+    "ESC1_PROXIMITY": {
+      "type": "number",
+      "minimum": 0
+    },
+    "ESC3_DIVERGENCE": {
+      "type": "number",
+      "minimum": 0
+    }
+  }
+}

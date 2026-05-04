@@ -322,6 +322,70 @@ def validate_hooks_json() -> list[str]:
     return errors
 
 
+YAML_REF_ALLOWLIST = ("audit-triggers.yaml", "convergence-rules.yaml", "escalation-rules.yaml")
+
+
+def validate_yaml_reference_files() -> list[str]:
+    """Validate maintainer-edited YAML references against schemas + cross-YAML invariants.
+
+    Distinct from merge-policy.yaml (auto-generated; validated separately by
+    scripts/regenerate_merge_policy.py). Allowlist-based to prevent accidental
+    inclusion of new yamls without explicit registration.
+
+    Cross-YAML invariant: convergence-rules.yaml::DETERMINISTIC_SUBSET MUST equal
+    merge-policy.yaml::binary_item_ids | narrative_parent_ids. Detects drift on
+    every make validate.
+    """
+    import jsonschema
+
+    errors: list[str] = []
+    refs_dir = REPO_ROOT / "skills" / "review-claude-config" / "references"
+    schemas_dir = refs_dir / "schemas"
+    yaml_data: dict[str, dict] = {}
+
+    for stem_yaml in YAML_REF_ALLOWLIST:
+        yaml_path = refs_dir / stem_yaml
+        if not yaml_path.exists():
+            errors.append(f"{yaml_path}: file not found (registered in YAML_REF_ALLOWLIST)")
+            continue
+        schema_path = schemas_dir / f"{yaml_path.stem}.schema.json"
+        if not schema_path.exists():
+            errors.append(f"{yaml_path}: no schema found at {schema_path}")
+            continue
+        try:
+            data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        except (yaml.YAMLError, json.JSONDecodeError) as e:
+            errors.append(f"{yaml_path}: invalid — {e}")
+            continue
+        if data is None:
+            errors.append(f"{yaml_path}: empty or invalid YAML")
+            continue
+        for error in jsonschema.Draft202012Validator(schema).iter_errors(data):
+            errors.append(f"{yaml_path}: {error.message} at {error.json_path}")
+        yaml_data[yaml_path.stem] = data
+
+    # Cross-YAML invariant: DETERMINISTIC_SUBSET drift check
+    conv = yaml_data.get("convergence-rules")
+    if conv is not None and "DETERMINISTIC_SUBSET" in conv:
+        merge_policy_path = REPO_ROOT / "skills" / "review-skill" / "references" / "merge-policy.yaml"
+        if merge_policy_path.exists():
+            try:
+                mp = yaml.safe_load(merge_policy_path.read_text(encoding="utf-8"))
+                expected = frozenset(mp.get("binary_item_ids", [])) | frozenset(mp.get("narrative_parent_ids", []))
+                actual = frozenset(conv["DETERMINISTIC_SUBSET"])
+                if actual != expected:
+                    missing = sorted(expected - actual)
+                    extra = sorted(actual - expected)
+                    errors.append(
+                        f"convergence-rules.yaml: DETERMINISTIC_SUBSET drift vs merge-policy.yaml — "
+                        f"missing={missing!r}, extra={extra!r}"
+                    )
+            except yaml.YAMLError as e:
+                errors.append(f"merge-policy.yaml: cannot read for drift check — {e}")
+    return errors
+
+
 def main() -> int:
     all_errors: list[str] = []
 
@@ -333,6 +397,7 @@ def main() -> int:
         ("Domain cache files", validate_domain_cache_files),
         ("hooks.json", validate_hooks_json),
         ("Hook config files", validate_hook_config_files),
+        ("YAML reference files", validate_yaml_reference_files),
     ]
 
     for label, validator in validators:
