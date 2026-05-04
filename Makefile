@@ -6,6 +6,9 @@ validate: lint format schema-validate token-budget test
 
 lint:
 	ruff check hooks/ scripts/
+	@if ls bin/*.sh >/dev/null 2>&1; then \
+		shellcheck bin/*.sh; \
+	fi
 
 format:
 	ruff format --check hooks/ scripts/
@@ -23,4 +26,4 @@ test-cov:
 	$(PYTHON) -m pytest tests/ -v --tb=short --cov=hooks --cov=scripts --cov-report=term-missing
 
 sync-marketplace-ref:
-	$(PYTHON) scripts/sync_marketplace_ref.py
+	bash bin/sync-marketplace-ref.sh

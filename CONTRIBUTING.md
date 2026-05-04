@@ -10,6 +10,7 @@ hard constraints, command inventory) lives in [CLAUDE.md](CLAUDE.md).
 - **Claude Code CLI** — for testing skills/agents/hooks in dev mode
 - **`uv`** (recommended) or `pip` — Python dependency manager
 - **`make`** — drives the validation pipeline
+- **`shellcheck`** — required when `bin/*.sh` files are present; `make lint` invokes it. Install via `brew install shellcheck` (macOS) or `apt install shellcheck` (Linux).
 
 ## Local Setup
 
@@ -101,7 +102,7 @@ The bot manages three places automatically:
 
 - `.claude-plugin/plugin.json` → `version` (release-please `extra-files`)
 - `.claude-plugin/marketplace.json` → `plugins[0].version` and
-  `plugins[0].source.ref` (post-step via `scripts/sync_marketplace_ref.py`)
+  `plugins[0].source.ref` (post-step via `bin/sync-marketplace-ref.sh`)
 - `CHANGELOG.md` (release-please appends a generated section)
 
 Maintainers may edit the bot's release-PR before merging — for example,
