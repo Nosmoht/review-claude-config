@@ -89,6 +89,39 @@ When opening a new issue, populate the testable acceptance criteria
 bounded scope (R4) sections — see CLAUDE.md §"Issue Lifecycle" for the
 canonical readiness predicates.
 
+## Release Workflow
+
+Releases are owned by [release-please](https://github.com/googleapis/release-please).
+A push to `main` containing one or more conventional commits with type
+`feat`, `fix`, `perf`, or `refactor` (or a `BREAKING CHANGE:` footer)
+opens or updates the bot's release-PR. Merging that PR creates the Git
+tag `vX.Y.Z` and the GitHub Release in the same workflow run.
+
+The bot manages three places automatically:
+
+- `.claude-plugin/plugin.json` → `version` (release-please `extra-files`)
+- `.claude-plugin/marketplace.json` → `plugins[0].version` and
+  `plugins[0].source.ref` (post-step via `scripts/sync-marketplace-ref.py`)
+- `CHANGELOG.md` (release-please appends a generated section)
+
+Maintainers may edit the bot's release-PR before merging — for example,
+to add Keep-a-Changelog `### Migration` prose for breaking changes.
+Manual edits on the bot-PR branch are preserved.
+
+**Release-workflow rules — never:**
+
+- Run `git tag vX.Y.Z` manually on `main`. The bot owns version state.
+- Edit `.release-please-manifest.json` outside a release-PR merge.
+- Edit `.claude-plugin/plugin.json#version` or
+  `.claude-plugin/marketplace.json#plugins[0].version` directly. Bumps
+  come from a release-PR merge.
+
+To trigger a release: write conventional commits on `main`. The bot
+opens or updates the release-PR within the next CI run.
+
+To dry-run the workflow without producing a release: GitHub UI →
+Actions → "Release Please" → Run workflow → branch=main → dry-run=true.
+
 ## Maintainer Reference
 
 For architecture, hard constraints, label taxonomy, evidence layer,
