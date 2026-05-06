@@ -2,6 +2,14 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+
+### Changed
+
+* **scripts:** right-altitude closeout — doc-sweep replaces stale `merge_findings.py` SoT pointers with `merge-policy.yaml` and `scoring-rubric.md` references ([#193](https://github.com/Nosmoht/review-claude-config/issues/193))
+
+
 ## [2.4.4](https://github.com/Nosmoht/review-claude-config/compare/v2.4.3...v2.4.4) (2026-05-06)
 
 

@@ -137,7 +137,7 @@ Before Layer 0 dedup, `merge_directory()` applies two rules to perspective-emitt
 
 **1. Drop** — when the finding's `checklist_item` is in the deterministic subset:
 
-- The 28 binary items (`BINARY_ITEM_IDS` in `merge_findings.py`) — prevents double-counting with synthesized findings.
+- The 28 binary items (`BINARY_ITEM_IDS`, declared in `skills/review-skill/references/merge-policy.yaml`; human-readable enumeration in `scoring-rubric.md` §"Item Inventory" + §"Grade Caps") — prevents double-counting with synthesized findings.
 - The 14 narrative parents the rubric supersedes (`NARRATIVE_PARENT_IDS`: `AH-2, IJ-1, META-1, META-2, META-3, RD-5, RL-1, RL-3, RL-4, RL-9, SP-2, SP-4, WS-2, WS-4`) — prevents Haiku-class perspective agents from re-litigating rubric-superseded surface.
 
 Counted in `dropped_perspective_findings`.
