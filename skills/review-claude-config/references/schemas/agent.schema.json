@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "review-claude-config:agent",
+  "title": "agent",
+  "description": "Frontmatter contract for agents/*.md (top-level plugin-distributed agents)",
+  "type": "object",
+  "required": ["name", "description", "model", "tools"],
+  "additionalProperties": true,
+  "properties": {
+    "name": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1},
+    "model": {"type": "string", "minLength": 1},
+    "tools": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      ]
+    }
+  }
+}

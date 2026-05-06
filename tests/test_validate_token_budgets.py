@@ -1,7 +1,11 @@
 """Tests for scripts/validate_token_budgets.py — token budget enforcement."""
 
+from __future__ import annotations
+
 import os
 import sys
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import validate_token_budgets
@@ -14,6 +18,24 @@ from validate_token_budgets import main as validate_main
 from validate_token_budgets import (
     validate_token_budgets as validate_fn,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_token_budgets_data():
+    """Reload module constants before and after each test.
+
+    Existing tests that use monkeypatch to set REPO_ROOT use file names
+    that fall through to DEFAULT_BUDGET, so they don't depend on _data
+    being reloaded. However, tests that monkeypatch TOKEN_BUDGETS_JSON_PATH
+    need fresh _data on entry.
+
+    Reload BEFORE yield: ensures test sees fresh state if a previous test
+    polluted the environment. Reload AFTER yield: restores production state
+    for subsequent tests.
+    """
+    validate_token_budgets._reload_data()
+    yield
+    validate_token_budgets._reload_data()
 
 
 class TestEstimateTokens:
@@ -167,3 +189,21 @@ class TestMain:
         output = capsys.readouterr().out
         assert "No reference files" in output
         assert "error(s) found" in output
+
+
+class TestMissingJsonRaises:
+    """Tests for the RuntimeError path when token-budgets.json is missing."""
+
+    def test_missing_json_raises(self, tmp_path, monkeypatch):
+        """_load_cached raises RuntimeError when token-budgets.json is absent.
+
+        Hits the missing-file guard that produces a clear error message
+        referencing the schema path, rather than a generic FileNotFoundError.
+        """
+        missing = tmp_path / "token-budgets.json"
+        monkeypatch.setenv("TOKEN_BUDGETS_JSON_PATH", str(missing))
+        validate_token_budgets._reload_data.__func__ if hasattr(validate_token_budgets._reload_data, "__func__") else None
+        # Clear cache so the new env var is picked up
+        validate_token_budgets._load_cached.cache_clear()
+        with pytest.raises(RuntimeError, match="token-budgets.json missing"):
+            validate_token_budgets._load_cached(str(missing))

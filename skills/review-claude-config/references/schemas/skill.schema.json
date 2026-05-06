@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "review-claude-config:skill",
+  "title": "skill",
+  "description": "Frontmatter contract for skills/*/SKILL.md and .claude/skills/*/SKILL.md",
+  "type": "object",
+  "required": ["name", "description"],
+  "additionalProperties": true,
+  "properties": {
+    "name": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1}
+  }
+}
