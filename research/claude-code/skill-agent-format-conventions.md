@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-19
+last_refreshed: 2026-05-06
 ---
 
 # Claude Code Skill and Agent Format Conventions
@@ -130,6 +130,18 @@ description: >
   </commentary>
   </example>
 ```
+
+### Body Conventions (Agents) — peer-reference anti-pattern
+
+The dispatcher reads only the `description:` field for routing decisions ([Claude Code — Sub-Agents](https://code.claude.com/docs/en/sub-agents): *"Claude uses each subagent's description to decide when to delegate tasks"*). The body is loaded only after dispatch, into the subagent's private context. Therefore:
+
+- **Do not name peer agents in the body** of an agent file — sections like "Recommended review chain (for parent orchestrator)" listing `reviewer.md`, `team-red.md`, etc. are mechanically inert (the routing layer never reads them) and create O(N²) coupling on every rename or addition.
+- **Do encode cross-agent workflows in skills, not agents.** Skills are the documented orchestrator primitive ([Anthropic Agent Skills](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview)) and may call `Agent(subagent_type="…")`. Agents are workers and have no architectural authority over the next step.
+- **Do emit agent-name-free *signals* in hand-off blocks.** Replace "next agent: postgres-expert if SQL surface" with structured signals like `SQL surface: YES with file list` or `Stakes flags: YES`. The parent (or a path-scoped rule) consumes the signals and routes — equivalent to the capability-vector pattern (arXiv 2511.02200).
+- **Cross-framework consensus.** LangGraph Supervisor/Swarm, CrewAI Hierarchical, AutoGen GroupChat/Swarm all externalise routing into structured fields (graph edges, `handoffs=[]` lists, `Agent()` allowlists); none place peer names into worker prose. Full evidence base in `research/agent-skills/peer-reference-anti-pattern.md`.
+- **Lexical false-positive guidance for reviewers.** A grep for an agent name inside a *skill* body can match three legitimate uses: genuine workflow dispatch (legit), the word "reviewer" denoting a *human role* (legit), or demo content in a scaffold template (legit). Inspect the surrounding 2-3 lines before flagging.
+
+This convention applies to A1 in the agent-authoring rubric and to the body-cleanliness check in `/review-agent`. Skill-side agent references are out of scope for this anti-pattern — they are by design.
 
 ## Hook Events
 
