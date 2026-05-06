@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "review-claude-config:token-budgets",
+  "title": "token-budgets",
+  "description": "Strict-data contract for skills/review-claude-config/references/token-budgets.json",
+  "type": "object",
+  "required": ["BUDGETS", "DOMAIN_CACHE_BUDGET", "DEFAULT_BUDGET"],
+  "additionalProperties": false,
+  "properties": {
+    "BUDGETS": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 1}
+    },
+    "DOMAIN_CACHE_BUDGET": {"type": "integer", "minimum": 1},
+    "DEFAULT_BUDGET": {"type": "integer", "minimum": 1}
+  }
+}
