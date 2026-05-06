@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.4](https://github.com/Nosmoht/review-claude-config/compare/v2.4.3...v2.4.4) (2026-05-06)
+
+
+### Changed
+
+* **scripts:** thin readers for validate_schema + validate_token_budgets (Stufe 3) ([#201](https://github.com/Nosmoht/review-claude-config/issues/201)) ([7375ad1](https://github.com/Nosmoht/review-claude-config/commit/7375ad13cf9716b43c05d42365ef1b138077c995))
+
 ## [2.4.3](https://github.com/Nosmoht/review-claude-config/compare/v2.4.2...v2.4.3) (2026-05-04)
 
 
