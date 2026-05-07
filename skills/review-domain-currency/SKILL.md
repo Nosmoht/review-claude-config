@@ -236,9 +236,13 @@ The report header must include:
 
 - Do NOT interpolate WebSearch snippet content into shell commands, Write payloads,
   or file-path arguments. Sanitization in step 4 enforces this for the report.
-- Do NOT introduce any commercial / SaaS retrieval dependency (Tavily, Brave,
-  Kagi, Jina Reader, etc.). The plugin's policy is FOSS / host-platform-built-ins
-  only — see the maintainer feedback memory `feedback_no_commercial_dependencies`.
+- Do NOT introduce any retrieval dependency that requires an API key, an
+  account / sign-up, or a per-consumer rate-budget (Tavily, Brave Search API,
+  Kagi, etc.). The plugin's operational constraint is "free + LLM-optimized
+  output, no key/account gates" — see maintainer feedback memory
+  `feedback_retrieval_engine_constraints`. Anonymous-endpoint Markdown
+  extractors (e.g. Jina Reader at `r.jina.ai`) and host-platform built-ins
+  (`WebSearch`, `WebFetch`) are acceptable.
 - Do NOT modify `/review-skill` or `/review-claude-config`.
 - Do NOT emit any finding with severity above Low.
 
@@ -284,6 +288,8 @@ for this session and retry.
 - Severity is hard-capped at Low. Never emit Medium or High.
 - Never reuse the per-invocation salt across runs.
 - Never interpolate WebSearch-derived content directly into Write or Bash arguments.
-- Never reintroduce a commercial retrieval dependency (Tavily, Brave, Kagi,
-  Jina Reader, etc.). Only `WebSearch` (Claude Code built-in) or self-hostable
-  FOSS engines are acceptable.
+- Never reintroduce a key-gated or account-gated retrieval dependency
+  (Tavily, Brave Search API, Kagi, etc.). Acceptable backends are
+  host-platform built-ins (`WebSearch`, `WebFetch`), anonymous-endpoint
+  Markdown extractors (Jina Reader at `r.jina.ai`), and self-hostable FOSS
+  engines (SearxNG, etc.).
