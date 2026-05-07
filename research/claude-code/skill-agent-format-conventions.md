@@ -106,10 +106,17 @@ mcpServers:                         # Optional: additional MCP server access
   - server-name
 skills:                             # Optional: skills available to the agent
   - skill-name
+expertise:                          # Optional: free-form domain tags for currency-audit targeting
+  - python
+  - postgres
 ---
 ```
 
 Use `tools` (array) or `allowed-tools` (inline string) — not both. Omit to allow all tools.
+
+> **`expertise:` field**: consumed by `/review-domain-currency` to scope which
+> agents are candidates for currency drift audit; absence is treated as "no
+> domain claims to verify".
 
 > **Agent-exclusive fields** ([source](https://docs.anthropic.com/en/docs/claude-code/sub-agents)): `maxTurns` prevents runaway agents. `background: true` + `isolation: worktree` recommended for long-running background tasks. `mcpServers` and `skills` expand attack surface — apply least-privilege. Plugin agents (installed via `--plugin-dir`) cannot use `mcpServers` or `permissionMode`. `skills` injects full skill content into subagent context at startup (token cost). Subagent nesting is prohibited.
 
