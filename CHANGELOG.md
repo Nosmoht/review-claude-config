@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0](https://github.com/Nosmoht/review-claude-config/compare/v2.4.4...v2.5.0) (2026-05-07)
+
+
+### Changed
+
+* **rules:** add R5 — AC-necessity gate per ISO/IEC/IEEE 29148:2018 ([#208](https://github.com/Nosmoht/review-claude-config/issues/208)) ([7178938](https://github.com/Nosmoht/review-claude-config/commit/717893808d6e5cc6220d801fd00ef37cafdb4cd9))
+
 ## [Unreleased]
 
 
