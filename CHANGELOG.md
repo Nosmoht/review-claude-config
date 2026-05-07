@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0](https://github.com/Nosmoht/review-claude-config/compare/v2.8.0...v2.9.0) (2026-05-07)
+
+
+### Changed
+
+* **references:** add DQ-1..DQ-6 sub-rubric + description conventions ([#226](https://github.com/Nosmoht/review-claude-config/issues/226)) ([a64d60e](https://github.com/Nosmoht/review-claude-config/commit/a64d60e5532bc5d6f238a3ef680c824ebc173244)), closes [#216](https://github.com/Nosmoht/review-claude-config/issues/216)
+
 ## [2.8.0](https://github.com/Nosmoht/review-claude-config/compare/v2.7.1...v2.8.0) (2026-05-07)
 
 
