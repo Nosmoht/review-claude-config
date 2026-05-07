@@ -1,0 +1,8 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-12-sf3-fp-scaffold-template",
+  "artifact_path": "tests/fixtures/eval/case_12_sf3_fp_scaffold_template.md",
+  "artifact_type": "agent",
+  "findings": []
+}

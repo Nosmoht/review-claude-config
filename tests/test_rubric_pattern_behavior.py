@@ -27,6 +27,8 @@ from rubric_patterns import (  # noqa: E402
     SECOND_PERSON,
     TERMINATION_PREDICATE,
     _inside_hitl_cycle,
+    build_peer_agent_re,
+    strip_code_preserve_lines,
 )
 
 
@@ -378,3 +380,159 @@ class TestInsideHitlCycle:
         body = 'On "Adjust": confirm.\n   \nregenerate the index.'
         offset = body.index("regenerate")
         assert _inside_hitl_cycle(body, offset) is False
+
+
+# ---------------------------------------------------------------------------
+# SF-3 helpers: strip_code_preserve_lines + build_peer_agent_re.
+# ---------------------------------------------------------------------------
+
+
+class TestSF3PeerAgentPattern:
+    """Behavioral tests for SF-3 pattern helpers.
+
+    Source of truth: scoring-rubric.md §SF-3 (Binary-Evaluated Items) +
+    rubric_patterns.py ``strip_code_preserve_lines`` / ``build_peer_agent_re``.
+    """
+
+    # ----------------------------------------------------------------
+    # Dynamic discovery finds sibling agents.
+    # ----------------------------------------------------------------
+    def test_dynamic_discovery_finds_sibling_agents(self, tmp_path):
+        """Three sibling agents → frozenset has 3 names (excluding self)."""
+        import pathlib
+
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        from rubric_binary_evaluator import discover_peer_agent_names, parse_frontmatter
+
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        subject = agents_dir / "subject.md"
+        subject.write_text("---\nname: subject\n---\nbody\n", encoding="utf-8")
+        for name in ("alpha", "beta", "gamma"):
+            (agents_dir / f"{name}.md").write_text(
+                f"---\nname: {name}\n---\nbody\n", encoding="utf-8"
+            )
+        names = discover_peer_agent_names(subject)
+        assert names == frozenset({"alpha", "beta", "gamma"})
+
+    # ----------------------------------------------------------------
+    # Self name excluded from peer set.
+    # ----------------------------------------------------------------
+    def test_self_name_excluded(self, tmp_path):
+        """Own `name:` not in discovery output (but sibling is)."""
+        import pathlib
+
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        from rubric_binary_evaluator import discover_peer_agent_names
+
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        subject = agents_dir / "me.md"
+        subject.write_text("---\nname: me\n---\nbody\n", encoding="utf-8")
+        (agents_dir / "other.md").write_text("---\nname: other\n---\nbody\n", encoding="utf-8")
+        names = discover_peer_agent_names(subject)
+        assert "me" not in names
+        assert "other" in names
+
+    # ----------------------------------------------------------------
+    # Long names take precedence over short in alternation.
+    # ----------------------------------------------------------------
+    def test_long_names_take_precedence_over_short(self):
+        """Regex sorts longest-first so `review-perspective-clarity` matches
+        before `reviewer` in a body containing both tokens.
+        """
+        names = frozenset({"review-perspective-clarity", "reviewer"})
+        pattern = build_peer_agent_re(names)
+        assert pattern is not None
+        body = "Dispatch review-perspective-clarity for analysis, then reviewer."
+        m = pattern.search(body)
+        assert m is not None
+        assert m.group(0) == "review-perspective-clarity"
+
+    # ----------------------------------------------------------------
+    # Hyphen boundary excludes mid-word match.
+    # ----------------------------------------------------------------
+    def test_hyphen_boundary_excludes_in_word_match(self):
+        """'pre-reviewer-mode' must NOT match 'reviewer'."""
+        names = frozenset({"reviewer"})
+        pattern = build_peer_agent_re(names)
+        assert pattern is not None
+        assert pattern.search("pre-reviewer-mode") is None
+
+    # ----------------------------------------------------------------
+    # strip_code_preserve_lines: line offsets preserved across fence.
+    # ----------------------------------------------------------------
+    def test_strip_code_preserve_lines_keeps_offsets(self):
+        """Content outside fence has the same line number in raw and stripped."""
+        raw = "line1\n```python\ncode\n```\nline5\n"
+        stripped = strip_code_preserve_lines(raw)
+        # "line5" must be at line 5 in both.
+        raw_line = raw[: raw.index("line5")].count("\n") + 1
+        stripped_line = stripped[: stripped.index("line5")].count("\n") + 1
+        assert raw_line == stripped_line == 5
+
+    # ----------------------------------------------------------------
+    # strip_code_preserve_lines: tilde fence.
+    # ----------------------------------------------------------------
+    def test_strip_code_preserve_lines_handles_tilde_fence(self):
+        """~~~ fenced block is stripped equivalently to ``` block."""
+        raw = "before\n~~~\ncode\n~~~\nafter\n"
+        stripped = strip_code_preserve_lines(raw)
+        raw_line_after = raw[: raw.index("after")].count("\n") + 1
+        stripped_line_after = stripped[: stripped.index("after")].count("\n") + 1
+        assert raw_line_after == stripped_line_after
+
+    # ----------------------------------------------------------------
+    # Unclosed fence does not cascade-skip remaining content.
+    # ----------------------------------------------------------------
+    def test_unclosed_fence_does_not_cascade_skip(self):
+        """Body with unbalanced opening fence (no closing ```).
+        DOTALL+MULTILINE requires a matching closing token.
+        Content after the unclosed fence remains in the stripped output.
+        """
+        raw = "before\n```\ncode without close\nafter\n"
+        stripped = strip_code_preserve_lines(raw)
+        # No match → stripped == raw (nothing removed).
+        assert "after" in stripped
+
+    # ----------------------------------------------------------------
+    # Discovery skips names shorter than 3 or longer than 64.
+    # ----------------------------------------------------------------
+    def test_discovery_skips_short_and_long_names(self, tmp_path):
+        """Name len=1 → excluded; len=3 → included; len=65 → excluded."""
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        from rubric_binary_evaluator import discover_peer_agent_names
+
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        subject = agents_dir / "subject.md"
+        subject.write_text("---\nname: subject\n---\nbody\n", encoding="utf-8")
+        (agents_dir / "short.md").write_text("---\nname: a\n---\nbody\n", encoding="utf-8")
+        (agents_dir / "ok.md").write_text("---\nname: abc\n---\nbody\n", encoding="utf-8")
+        (agents_dir / "toolong.md").write_text(
+            f"---\nname: {'x' * 65}\n---\nbody\n", encoding="utf-8"
+        )
+        names = discover_peer_agent_names(subject)
+        assert "a" not in names
+        assert "abc" in names
+        assert "x" * 65 not in names
+
+    # ----------------------------------------------------------------
+    # Discovery capped at 50 siblings.
+    # ----------------------------------------------------------------
+    def test_discovery_capped_at_50_siblings(self, tmp_path):
+        """60 siblings → frozenset has exactly 50."""
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        from rubric_binary_evaluator import discover_peer_agent_names
+
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        subject = agents_dir / "subject.md"
+        subject.write_text("---\nname: subject\n---\nbody\n", encoding="utf-8")
+        for i in range(60):
+            name = f"s{i:02d}"
+            (agents_dir / f"sib-{i:02d}.md").write_text(
+                f"---\nname: {name}\n---\nbody\n", encoding="utf-8"
+            )
+        names = discover_peer_agent_names(subject)
+        assert len(names) == 50

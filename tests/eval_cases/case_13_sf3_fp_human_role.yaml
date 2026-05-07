@@ -1,0 +1,36 @@
+id: case-13-sf3-fp-human-role
+kind: clean
+description: SF-3 FP Human Role — bare "reviewer" as a human role noun (no .md in 30 chars) must produce PASS-with-warning, not FAIL.
+target_skill: review-agent
+artifacts:
+  primary: tests/fixtures/eval/case_13_sf3_fp_human_role.md
+findings_fixture: tests/fixtures/eval/case_13_findings.json
+sprint_contract:
+  - id: C13-1
+    description: "SF-3 returns PASS (not FAIL) when body uses 'reviewer' as human role noun without .md suffix."
+  - id: C13-2
+    description: "No High SF-3 finding in output; at most a warning annotation."
+expected:
+  required_findings: []
+  forbidden_findings:
+    - { item: SF-3, dim: Metadata }
+  field_invariants: []
+acceptance:
+  precision: ">= 1.0"
+  recall:    ">= 1.0"
+execution:
+  dispatch:
+    command: /review-agent
+    target_arg: tests/fixtures/eval/case_13_sf3_fp_human_role.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_13_fp_human_role.md
+  reviewer_behavior: skills/review-agent/SKILL.md
+notes: |
+  AC4b coverage: body uses "reviewer" as a human role noun ("ask the reviewer
+  to confirm"). The disambiguation rule: when matched token is "reviewer" AND
+  no ".md" appears within 30 chars after the match end, emit WARN (not FAIL)
+  and return PASS. No SF-3 FAIL finding expected.

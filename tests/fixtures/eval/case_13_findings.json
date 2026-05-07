@@ -1,0 +1,8 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-13-sf3-fp-human-role",
+  "artifact_path": "tests/fixtures/eval/case_13_sf3_fp_human_role.md",
+  "artifact_type": "agent",
+  "findings": []
+}

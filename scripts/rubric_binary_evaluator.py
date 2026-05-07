@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Deterministic binary-rubric evaluator for Claude Code skills and agents.
 
-Produces PASS / FAIL / NA verdicts for 28 binary-verifiable rubric items
+Produces PASS / FAIL / NA verdicts for 29 binary-verifiable rubric items
 against a single skill or agent artifact. Written JSON to stdout. Moves
 regex execution out of the LLM prompt so every perspective reviewer sees
 byte-identical verdicts, eliminating the ~80% run-to-run variance
 observed in the /review-skill convergence retest.
 
 Scope:
-  * skills/<name>/SKILL.md — all 28 items evaluated (full scope).
-  * agents/*.md — 26 items evaluated; COMP-X and META-3b return NA
+  * skills/<name>/SKILL.md — 28 of 29 items evaluated; SF-3 returns NA (agent-only scope).
+  * agents/*.md — 27 items evaluated; COMP-X and META-3b return NA
     because the rubric clauses encode skill-semantics (review-skill
     convergence predicate; skills/*/SKILL.md sibling glob). Full
     agent-semantic coverage (TC-3 for COMP-X analogue, agent-namespace
@@ -22,7 +22,7 @@ Usage:
     python3 scripts/rubric_binary_evaluator.py <absolute-artifact-path>
 
 Exit codes:
-    0 — evaluator ran, stats.runner_error == 0 (all 28 items produced a
+    0 — evaluator ran, stats.runner_error == 0 (all 29 items produced a
         verdict). Also used by argparse --help per GNU convention, which
         downstream consumers disambiguate by checking for the
         "schema_version" key in stdout JSON.
@@ -95,12 +95,14 @@ from rubric_patterns import (  # noqa: E402
     WS_6_ANCHOR,
     WS_6_ANCHOR_WINDOW,
     WS_6_COMPARATOR,
+    build_peer_agent_re,
     is_third_person,
     passes_clar1,
     passes_clar2,
     rd_5b_has_mapping_clause,
     rd_5b_schemes_present,
     strip_code,
+    strip_code_preserve_lines,
 )
 
 SCHEMA_VERSION = 1
@@ -734,6 +736,41 @@ def find_sibling_skills(path: pathlib.Path) -> list[pathlib.Path]:
         return []
     self_resolved = path.resolve()
     return [p for p in sorted(skills_root.glob("*/SKILL.md")) if p.resolve() != self_resolved]
+
+
+def discover_peer_agent_names(path: pathlib.Path) -> frozenset:
+    """Discover sibling agent names from the same agents/ directory.
+
+    Algorithm: agent files live at <root>/agents/<name>.md or
+    <root>/.claude/agents/<name>.md (single-level layout, distinct from
+    skills/<name>/SKILL.md two-level layout). The peer set is
+    ``path.resolve().parent.glob("*.md")`` minus self.
+
+    Cross-namespace peers (top-level agents/ vs .claude/agents/) are NOT
+    considered siblings — they are separate plugin distribution surfaces.
+
+    Bounds defend against FP-storm and ReDoS amplification:
+      - min-length 3: single/double-letter names produce lint storms in body prose.
+      - max-length 64: pathological long names cap regex-alternation size.
+      - cap 50 siblings: discovery count ceiling.
+    """
+    agents_dir = path.resolve().parent
+    if not agents_dir.exists() or agents_dir.name != "agents":
+        return frozenset()
+    names: set[str] = set()
+    for sibling in sorted(agents_dir.glob("*.md")):
+        if sibling.resolve() == path.resolve():
+            continue
+        try:
+            fm, _ = parse_frontmatter(sibling)
+        except Exception:
+            continue  # malformed sibling: skip silently, not an SF-3 concern
+        name = (fm.get("name") or sibling.stem).strip().lower()
+        if 3 <= len(name) <= 64:
+            names.add(name)
+        if len(names) >= 50:
+            break  # discovery-count cap
+    return frozenset(names)
 
 
 def line_of_offset(text: str, offset: int) -> int:
@@ -1502,6 +1539,85 @@ def check_AH_2b(body: str) -> dict:
     )
 
 
+def check_SF_3(path: pathlib.Path, body: str, fm: dict, artifact_type: str = "agent") -> dict:
+    """SF-3 (issue-spec name: A1) — flag peer-agent name occurrences in agent body.
+
+    See agent-evaluation-guide.md SF-3 row and research/agent-skills/peer-reference-anti-pattern.md.
+    Skills are orchestrators by design and are exempt (return NA).
+
+    Detection algorithm:
+      1. Discover sibling agent names via discover_peer_agent_names().
+      2. Strip fenced code blocks (preserving line numbers) via strip_code_preserve_lines().
+      3. Match peer names using a hyphen-resistant word-boundary regex.
+      4. Bare 'reviewer' token without '.md' within 30 chars is downgraded to WARN (human-role
+         disambiguation) rather than FAIL — avoids false positives from human-role mentions.
+    """
+    if artifact_type != "agent":
+        return _na("SF-3 only applies to agent artifacts")
+    own_name = (fm.get("name") or path.stem).strip().lower()
+    peer_names = discover_peer_agent_names(path) - {own_name}
+    if not peer_names:
+        return _na("no sibling agents discoverable")
+    pattern = build_peer_agent_re(peer_names)
+    if pattern is None:
+        return _na("empty peer set")
+
+    # Derive frontmatter line count by subtraction so reported lines are file-absolute.
+    # split_content returns (full_text, body), not (frontmatter_text, body).
+    # frontmatter_line_count = full_text lines - body lines gives the correct offset.
+    full_text = path.read_text(encoding="utf-8")
+    _, body_check = split_content(path)
+    assert body_check == body, "body / split_content mismatch — caller-side bug"
+    frontmatter_line_count = full_text.count("\n") - body.count("\n")
+
+    stripped = strip_code_preserve_lines(body)
+    matches: list[dict] = []
+    for m in pattern.finditer(stripped):
+        token = m.group(0).lower()
+        # Use stripped coordinates — strip_code_preserve_lines preserves newline
+        # positions so line_of_offset(stripped, m.start()) == line number in raw body.
+        stripped_line = line_of_offset(stripped, m.start())
+        # Bare 'reviewer' human-role disambiguation (AC4b):
+        # if matched word is 'reviewer' AND no '.md' in the next 30 chars → WARN.
+        if token == "reviewer":
+            window = stripped[m.end() : m.end() + 30]
+            if ".md" not in window:
+                matches.append(
+                    {
+                        "kind": "warn",
+                        "line": stripped_line + frontmatter_line_count,
+                        "matched_token": m.group(0),
+                        "reason": "human-role-disambiguation-needed",
+                    }
+                )
+                continue
+        matches.append(
+            {
+                "kind": "fail",
+                "line": stripped_line + frontmatter_line_count,
+                "matched_token": m.group(0),
+            }
+        )
+
+    if not matches:
+        return _pass()
+    fail_matches = [x for x in matches if x["kind"] == "fail"]
+    if fail_matches:
+        return {
+            "verdict": "FAIL",
+            "evidence": {
+                "path": str(path),
+                "matches": fail_matches,
+                "warnings": [x for x in matches if x["kind"] == "warn"],
+            },
+        }
+    # Only WARN matches present — return PASS-with-warnings (no FAIL).
+    return {
+        "verdict": "PASS",
+        "evidence": {"warnings": matches},
+    }
+
+
 # ---------------------------------------------------------------------------
 # Dispatch + main.
 # ---------------------------------------------------------------------------
@@ -1540,6 +1656,7 @@ BINARY_ITEM_IDS: list[str] = [
     "RL-4b",
     "RL-9b",
     "AH-2b",
+    "SF-3",
 ]
 
 
@@ -1619,6 +1736,8 @@ def _run_check(
             return check_RL_9b(body, fm_raw, needs_rl9b_flag)
         if item_id == "AH-2b":
             return check_AH_2b(body)
+        if item_id == "SF-3":
+            return check_SF_3(path, body, fm, artifact_type)
         return {
             "verdict": "NA",
             "evidence": {"reason": f"runner_error: unknown item {item_id}"},

@@ -222,7 +222,7 @@ Grade boundary: agentic items must pass ALL 4 RL-b checks for Safety A; any one 
 
 This section is the canonical source for `BINARY_ITEM_IDS`, `NARRATIVE_PARENT_IDS`, and `ITEM_DIMENSION` consumed by `scripts/merge_findings.py`. CI regenerates `merge-policy.yaml` from these tables — never edit the yaml directly.
 
-### Binary-Evaluated Items (skill rubric, 32)
+### Binary-Evaluated Items (skill rubric, 33)
 
 These items have a deterministic PASS/FAIL/NA verdict from `scripts/rubric_binary_evaluator.py`. The `Dimension` column pins the item to a specific rubric dimension; perspective findings on these items get re-canonicalized in the merge layer (issue #70).
 
@@ -250,6 +250,7 @@ These items have a deterministic PASS/FAIL/NA verdict from `scripts/rubric_binar
 | COMP-Y | Completeness |
 | COMP-Z | Completeness |
 | AH-2b | Completeness |
+| SF-3 | Metadata |
 | SAMP-1 | Prompt Engineering |
 | PE-1 | Prompt Engineering |
 | PE-2 | Prompt Engineering |
@@ -327,6 +328,7 @@ Collisions deliberately omitted (same ID, different dimension per rubric — pin
 | Item | Dimension |
 |---|---|
 | SF-2 | Clarity |
+| SF-3 | Metadata |
 | RL-7 | Clarity |
 | DA-4 | Completeness |
 | TC-1 | Completeness |

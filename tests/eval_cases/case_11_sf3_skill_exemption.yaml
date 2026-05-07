@@ -1,0 +1,36 @@
+id: case-11-sf3-skill-exemption
+kind: clean
+description: SF-3 Skill Exemption — skill artifact naming peer agents must not trigger SF-3 (agent-only scope).
+target_skill: review-skill
+artifacts:
+  primary: tests/fixtures/eval/case_11_sf3_skill_exemption.SKILL.md
+findings_fixture: tests/fixtures/eval/case_11_findings.json
+sprint_contract:
+  - id: C11-1
+    description: "Binary evaluator returns SF-3 NA for skill artifact."
+  - id: C11-2
+    description: "No SF-3 finding in output — skills are orchestrators by design."
+expected:
+  required_findings: []
+  forbidden_findings:
+    - { item: SF-3, dim: Metadata }
+  field_invariants: []
+acceptance:
+  precision: ">= 1.0"
+  recall:    ">= 1.0"
+execution:
+  dispatch:
+    command: /review-skill
+    target_arg: tests/fixtures/eval/case_11_sf3_skill_exemption.SKILL.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_11_sf3_skill_exemption.SKILL.md
+  reviewer_behavior: skills/review-skill/SKILL.md
+notes: |
+  AC3 coverage: skill artifact references peer-agent names ("reviewer",
+  "team-red") in its body prose. SF-3 is agent-only scope — skills are
+  orchestrators by design and therefore exempt. Binary evaluator must
+  return SF-3 NA, not FAIL. No SF-3 finding in synthesised findings.json.

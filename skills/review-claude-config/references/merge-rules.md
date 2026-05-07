@@ -100,6 +100,7 @@ Cap table (each row: FAIL on `item` caps `dimension` at `cap_grade`):
 | SAMP-2 | Metadata | **F** | §Sampling-Param Migration (runtime 400 on Opus 4.7) |
 | META-2 | Metadata | C | §Trigger-Consistency grade boundary |
 | META-4 | Metadata | C | §Trigger-Consistency (third-person discovery risk) |
+| SF-3 | Metadata | C | §Body-Coupling — peer-agent name leakage |
 | SP-2b / SP-4b / IJ-1b | Safety | C | §Tool-Grant Alignment grade boundary |
 | RL-1b / RL-3b / RL-4b / RL-9b | Safety | C | §Agentic Reliability Binary Items grade boundary |
 

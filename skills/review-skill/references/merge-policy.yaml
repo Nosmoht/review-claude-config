@@ -26,6 +26,7 @@ binary_item_ids:
 - COMP-Y
 - COMP-Z
 - AH-2b
+- SF-3
 - SAMP-1
 - PE-1
 - PE-2
@@ -75,6 +76,7 @@ item_dimension:
   COMP-Y: Completeness
   COMP-Z: Completeness
   AH-2b: Completeness
+  SF-3: Metadata
   SAMP-1: Prompt Engineering
   PE-1: Prompt Engineering
   PE-2: Prompt Engineering
@@ -111,6 +113,7 @@ binary_caps:
   - {item: RL-9b, dimension: Safety, cap: C}
 agent_item_dimension:
   SF-2: Clarity
+  SF-3: Metadata
   RL-7: Clarity
   DA-4: Completeness
   TC-1: Completeness

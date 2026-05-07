@@ -34,6 +34,9 @@ from rubric_binary_evaluator import (  # noqa: E402
     SCHEMA_VERSION,
     check_AH_2b,
     check_CE_X,
+    check_SF_3,
+    discover_peer_agent_names,
+    split_content,
     check_CLAR_1,
     check_CLAR_2,
     check_CLAR_3,
@@ -1400,10 +1403,10 @@ class TestSchemaStability:
             assert "evidence" in v, f"{item_id} missing evidence"
             assert isinstance(v["evidence"], dict)
 
-    def test_stats_counts_sum_to_32(self):
+    def test_stats_counts_sum_to_33(self):
         result = evaluate(REVIEW_SKILL_FIXTURE)
         s = result["stats"]
-        assert s["pass"] + s["fail"] + s["na"] == 32
+        assert s["pass"] + s["fail"] + s["na"] == 33
 
 
 REVIEW_SKILL_EXPECTED = {
@@ -1439,6 +1442,7 @@ REVIEW_SKILL_EXPECTED = {
     "RL-4b": "PASS",
     "RL-9b": "PASS",
     "AH-2b": "PASS",
+    "SF-3": "NA",  # skill artifact — SF-3 agent-only scope
 }
 
 REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
@@ -1474,6 +1478,7 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "RL-4b": "FAIL",
     "RL-9b": "NA",
     "AH-2b": "NA",
+    "SF-3": "NA",  # no sibling agents discoverable (single agent in fixture dir after self-exclusion)
 }
 
 SCAFFOLD_SKILL_EXPECTED = {
@@ -1509,6 +1514,7 @@ SCAFFOLD_SKILL_EXPECTED = {
     "RL-4b": "PASS",
     "RL-9b": "FAIL",
     "AH-2b": "NA",
+    "SF-3": "NA",  # skill artifact — SF-3 agent-only scope
 }
 
 
@@ -1529,7 +1535,7 @@ class TestEndToEndFixtures:
         assert fixture.exists(), f"fixture missing: {fixture}"
         result = evaluate(fixture)
         assert result["stats"]["runner_error"] == 0
-        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 32
+        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 33
         actual = {k: v["verdict"] for k, v in result["verdicts"].items()}
         assert actual == expected
 
@@ -1565,21 +1571,21 @@ class TestRepoWideSmokeStrict:
         result = evaluate(path)
         assert result["stats"]["runner_error"] == 0
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 32
+        assert total == 33
 
 
 class TestRepoWideSmokeLenient:
-    """Every skills/*/SKILL.md evaluator invocation returns 32 verdicts;
+    """Every skills/*/SKILL.md evaluator invocation returns 33 verdicts;
     runner_error per skill is logged but not asserted."""
 
-    def test_all_skills_produce_32_verdicts(self):
+    def test_all_skills_produce_33_verdicts(self):
         skills = sorted((REPO_ROOT / "skills").glob("*/SKILL.md"))
         assert len(skills) >= 10, "expected multiple skill targets"
         errors: list[tuple[str, int]] = []
         for p in skills:
             result = evaluate(p)
             total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-            assert total == 32, f"{p}: total {total} != 32"
+            assert total == 33, f"{p}: total {total} != 33"
             if result["stats"]["runner_error"]:
                 errors.append((str(p), result["stats"]["runner_error"]))
         # Surface drift without failing the suite: errors are reported
@@ -1625,9 +1631,9 @@ class TestRunnerErrorHandling:
         p.write_text("", encoding="utf-8")
         result = evaluate(p)
         assert result["stats"]["runner_error"] == 0
-        # All 32 items produce verdicts (mostly NA/FAIL for missing content).
+        # All 33 items produce verdicts (mostly NA/FAIL for missing content).
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 32
+        assert total == 33
 
     def test_no_frontmatter_no_crash(self, tmp_path):
         p = tmp_path / "body-only.md"
@@ -1695,3 +1701,362 @@ class TestToolsList:
 
     def test_empty_string(self):
         assert tools_list({"allowed-tools": ""}) == []
+
+
+# ---------------------------------------------------------------------------
+# SF-3 — peer-agent name body-cross-reference check.
+# ---------------------------------------------------------------------------
+
+
+def _write_agent(directory: pathlib.Path, stem: str, name: str, body: str) -> pathlib.Path:
+    """Write a minimal agent fixture file into an agents/ subdirectory."""
+    agents_dir = directory / "agents"
+    agents_dir.mkdir(parents=True, exist_ok=True)
+    p = agents_dir / f"{stem}.md"
+    p.write_text(
+        f"---\nname: {name}\ndescription: Test agent. Not for other uses.\n---\n{body}",
+        encoding="utf-8",
+    )
+    return p
+
+
+class TestCheckSF3:
+    # ------------------------------------------------------------------
+    # AC2: clean agent → PASS
+    # ------------------------------------------------------------------
+    def test_clean_agent_passes(self, tmp_path):
+        peer = _write_agent(tmp_path, "sibling-agent", "sibling-agent", "body without mentions")
+        subject = _write_agent(tmp_path, "subject-agent", "subject-agent", "This does useful work.")
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        assert result["verdict"] == "PASS"
+
+    # ------------------------------------------------------------------
+    # AC1: body with two peer-name hits → FAIL with file-absolute lines
+    # ------------------------------------------------------------------
+    def test_recommended_review_chain_block_fails(self, tmp_path):
+        peer1 = _write_agent(tmp_path, "reviewer", "reviewer", "body")
+        peer2 = _write_agent(tmp_path, "team-red", "team-red", "body")
+        body_text = (
+            "## Recommended review chain\n"
+            "Dispatch reviewer for analysis.\n"
+            "Dispatch team-red for adversarial check.\n"
+        )
+        subject = _write_agent(
+            tmp_path, "subject-agent", "subject-agent", body_text
+        )
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        assert result["verdict"] == "FAIL"
+        matches = result["evidence"]["matches"]
+        assert len(matches) >= 1
+        # Lines must be file-absolute (include frontmatter offset = 4 lines).
+        for m in matches:
+            assert m["line"] >= 4, f"line {m['line']} not file-absolute (frontmatter = 4 lines)"
+
+    # ------------------------------------------------------------------
+    # AC3: skill artifact → NA
+    # ------------------------------------------------------------------
+    def test_skill_artifact_returns_na(self, tmp_path):
+        # Skills live in skills/<name>/SKILL.md — classify_artifact returns "skill".
+        skill_dir = tmp_path / "skills" / "my-skill"
+        skill_dir.mkdir(parents=True)
+        p = skill_dir / "SKILL.md"
+        p.write_text("---\nname: my-skill\ndescription: Test skill. Not for agents.\n---\nbody", encoding="utf-8")
+        fm, _ = parse_frontmatter(p)
+        _, body = split_content(p)
+        result = check_SF_3(p, body, fm, artifact_type="skill")
+        assert result["verdict"] == "NA"
+        assert "agent" in result["evidence"]["reason"].lower()
+
+    # ------------------------------------------------------------------
+    # AC4c: peer name only inside fenced ``` block → PASS
+    # ------------------------------------------------------------------
+    def test_inside_fenced_block_skipped(self, tmp_path):
+        peer = _write_agent(tmp_path, "peer-agent", "peer-agent", "body")
+        body_text = "Before fence.\n```\npeer-agent is mentioned here\n```\nAfter fence.\n"
+        subject = _write_agent(tmp_path, "subject-agent", "subject-agent", body_text)
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        assert result["verdict"] == "PASS"
+
+    def test_inside_tilde_fenced_block_skipped(self, tmp_path):
+        peer = _write_agent(tmp_path, "peer-agent", "peer-agent", "body")
+        body_text = "Before fence.\n~~~\npeer-agent is mentioned here\n~~~\nAfter fence.\n"
+        subject = _write_agent(tmp_path, "subject-agent", "subject-agent", body_text)
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        assert result["verdict"] == "PASS"
+
+    # ------------------------------------------------------------------
+    # AC4b: bare "reviewer" (no .md in next 30 chars) → PASS-with-warnings
+    # ------------------------------------------------------------------
+    def test_bare_reviewer_word_warns_not_fails(self, tmp_path):
+        _write_agent(tmp_path, "reviewer", "reviewer", "body")
+        body_text = "Ask the reviewer to check the output.\n"
+        subject = _write_agent(tmp_path, "subject-agent", "subject-agent", body_text)
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        # PASS-with-warnings: no FAIL matches.
+        assert result["verdict"] == "PASS"
+        warnings = result["evidence"].get("warnings", [])
+        assert len(warnings) >= 1
+        assert warnings[0]["reason"] == "human-role-disambiguation-needed"
+
+    # ------------------------------------------------------------------
+    # "reviewer.md" (`.md` within 30 chars) → FAIL (peer-file reference)
+    # ------------------------------------------------------------------
+    def test_reviewer_with_md_suffix_fails(self, tmp_path):
+        _write_agent(tmp_path, "reviewer", "reviewer", "body")
+        body_text = "See reviewer.md for details.\n"
+        subject = _write_agent(tmp_path, "subject-agent", "subject-agent", body_text)
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        assert result["verdict"] == "FAIL"
+
+    # ------------------------------------------------------------------
+    # Self-name not matched (subtract own name from peer set).
+    # ------------------------------------------------------------------
+    def test_self_name_not_matched(self, tmp_path):
+        # subject is named "reviewer"; body contains "reviewer" — should PASS (self-skip).
+        _write_agent(tmp_path, "sibling", "sibling", "body")
+        body_text = "The reviewer evaluates the input.\n"
+        subject = _write_agent(tmp_path, "reviewer", "reviewer", body_text)
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        # "reviewer" is own name — excluded from peer set → PASS.
+        assert result["verdict"] == "PASS"
+
+    # ------------------------------------------------------------------
+    # NA when no sibling agents discoverable (evaluator level).
+    # ------------------------------------------------------------------
+    def test_no_sibling_agents_returns_na(self, tmp_path):
+        # Single agent, no siblings after self-exclusion.
+        subject = _write_agent(tmp_path, "lonely-agent", "lonely-agent", "body with lonely-agent mention")
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        assert result["verdict"] == "NA"
+        assert "no sibling agents" in result["evidence"]["reason"].lower()
+
+    # ------------------------------------------------------------------
+    # 30-char window boundary test (AC4b edge).
+    # ------------------------------------------------------------------
+    def test_30_char_window_boundary(self, tmp_path):
+        _write_agent(tmp_path, "reviewer", "reviewer", "body")
+        _write_agent(tmp_path, "sibling", "sibling", "body")
+
+        # ".md" within the 30-char window from m.end() → FAIL.
+        # Use "see reviewer " prefix so the word boundary lookahead passes
+        # (the character after "reviewer" is a space, not \w or -).
+        # After match, m.end() points past "reviewer". The 30-char window is
+        # stripped[m.end():m.end()+30]. With " " + "x"*26 + ".md" after
+        # "reviewer", the window = " x...x.md" (30 chars); ".md" starts at
+        # index 27 (positions 0..29 inclusive) → inside window → FAIL.
+        in_window_body = "see reviewer " + "x" * 26 + ".md"
+        subject_in = _write_agent(tmp_path, "subject-in", "subject-in", in_window_body)
+        fm_in, _ = parse_frontmatter(subject_in)
+        _, body_in = split_content(subject_in)
+        result_in = check_SF_3(subject_in, body_in, fm_in, artifact_type="agent")
+        assert result_in["verdict"] == "FAIL", "'.md' at index 27 of window (in 30-char window) should FAIL"
+
+        # ".md" exactly at offset 30 from m.end() (excluded from window) → WARN.
+        # window ends at m.end()+30 exclusive; ".md" starts at m.end()+30 → excluded.
+        out_window_body = "see reviewer " + "x" * 30 + ".md"
+        subject_out = _write_agent(tmp_path, "subject-out", "subject-out", out_window_body)
+        fm_out, _ = parse_frontmatter(subject_out)
+        _, body_out = split_content(subject_out)
+        result_out = check_SF_3(subject_out, body_out, fm_out, artifact_type="agent")
+        assert result_out["verdict"] == "PASS", "'.md' at offset 30 (outside window) should WARN/PASS"
+
+    # ------------------------------------------------------------------
+    # Frontmatter match skipped (split_content removes frontmatter).
+    # ------------------------------------------------------------------
+    def test_frontmatter_match_skipped_at_evaluator_level(self, tmp_path):
+        # A sibling named "pr-reviewer" appears in a frontmatter <example> block.
+        # split_content returns only the body, so frontmatter-only matches → no FAIL.
+        _write_agent(tmp_path, "pr-reviewer", "pr-reviewer", "body")
+        # The subject has "pr-reviewer" only in the frontmatter description.
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        p = agents_dir / "subject-agent.md"
+        p.write_text(
+            "---\nname: subject-agent\ndescription: Not pr-reviewer related.\n---\n"
+            "This body has no peer names.\n",
+            encoding="utf-8",
+        )
+        fm, _ = parse_frontmatter(p)
+        _, body = split_content(p)
+        result = check_SF_3(p, body, fm, artifact_type="agent")
+        assert result["verdict"] == "PASS"
+
+    # ------------------------------------------------------------------
+    # Mixed long + short name: FAIL for long + WARN for bare "reviewer".
+    # ------------------------------------------------------------------
+    def test_mixed_long_and_short_names_in_body(self, tmp_path):
+        _write_agent(tmp_path, "review-perspective-clarity", "review-perspective-clarity", "body")
+        _write_agent(tmp_path, "reviewer", "reviewer", "body")
+        body_text = (
+            "Dispatch review-perspective-clarity first.\n"
+            "Ask the reviewer to verify.\n"
+        )
+        subject = _write_agent(tmp_path, "subject-agent", "subject-agent", body_text)
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        assert result["verdict"] == "FAIL"
+        matches = result["evidence"]["matches"]
+        warnings = result["evidence"].get("warnings", [])
+        assert len(matches) >= 1, "review-perspective-clarity should be a FAIL match"
+        assert len(warnings) >= 1, "bare reviewer should be a WARN"
+
+    # ------------------------------------------------------------------
+    # Line numbers correct after fenced block (F2 fix pin).
+    # ------------------------------------------------------------------
+    def test_line_numbers_correct_after_fenced_block(self, tmp_path):
+        peer = _write_agent(tmp_path, "peer-agent", "peer-agent", "body")
+        # 4-line frontmatter (---\nname\ndescription\n---) + body:
+        # body line 1: blank
+        # body lines 2-4: fenced block
+        # body line 5: peer-agent mention  ← expected file-absolute line = 4 + 5 = 9
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        p = agents_dir / "subject-agent.md"
+        p.write_text(
+            "---\nname: subject-agent\ndescription: Test. Not for production.\n---\n"
+            "\n```\nsome code\n```\npeer-agent is here\n",
+            encoding="utf-8",
+        )
+        fm, _ = parse_frontmatter(p)
+        _, body = split_content(p)
+        # Count actual frontmatter lines.
+        full_text = p.read_text(encoding="utf-8")
+        fm_line_count = full_text.count("\n") - body.count("\n")
+        result = check_SF_3(p, body, fm, artifact_type="agent")
+        assert result["verdict"] == "FAIL"
+        matches = result["evidence"]["matches"]
+        assert len(matches) == 1
+        reported_line = matches[0]["line"]
+        # Body line of "peer-agent is here" = 5 (1 blank + 3 fence lines + 1 match).
+        expected_abs_line = fm_line_count + 5
+        assert reported_line == expected_abs_line, (
+            f"Expected file-absolute line {expected_abs_line}, got {reported_line}"
+        )
+
+    # ------------------------------------------------------------------
+    # Paired inside + outside fence: exactly 1 FAIL (outside) (team-red R2 §3).
+    # ------------------------------------------------------------------
+    def test_paired_inside_and_outside_fence(self, tmp_path):
+        peer = _write_agent(tmp_path, "peer-agent", "peer-agent", "body")
+        _write_agent(tmp_path, "sibling-b", "sibling-b", "body")
+        body_text = (
+            "```\npeer-agent inside fence\n```\n"
+            "peer-agent outside fence\n"
+        )
+        subject = _write_agent(tmp_path, "subject-agent", "subject-agent", body_text)
+        fm, _ = parse_frontmatter(subject)
+        _, body = split_content(subject)
+        result = check_SF_3(subject, body, fm, artifact_type="agent")
+        assert result["verdict"] == "FAIL"
+        matches = result["evidence"]["matches"]
+        assert len(matches) == 1
+        # The outside-fence match is on the 4th body line.
+        full_text = subject.read_text(encoding="utf-8")
+        fm_line_count = full_text.count("\n") - body.count("\n")
+        assert matches[0]["line"] == fm_line_count + 4
+
+    # ------------------------------------------------------------------
+    # Un-FM agent: frontmatter_line_count == 0 → body-relative lines (F5).
+    # ------------------------------------------------------------------
+    def test_un_frontmatter_agent_line_numbers_body_relative(self, tmp_path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        # Sibling with no frontmatter.
+        sib = agents_dir / "peer-agent.md"
+        sib.write_text("no frontmatter\n", encoding="utf-8")
+        # Subject with no frontmatter.
+        p = agents_dir / "subject-agent.md"
+        p.write_text("line1\nline2\npeer-agent here\n", encoding="utf-8")
+        fm, _ = parse_frontmatter(p)
+        _, body = split_content(p)
+        result = check_SF_3(p, body, fm, artifact_type="agent")
+        # Sibling name = "peer-agent" (stem fallback since no FM).
+        assert result["verdict"] == "FAIL"
+        matches = result["evidence"]["matches"]
+        # line 3 body-relative (no frontmatter offset).
+        assert matches[0]["line"] == 3
+
+    # ------------------------------------------------------------------
+    # Frontmatter line count accurate (6-line FM + match on body line 3 → abs 9). (F1)
+    # ------------------------------------------------------------------
+    def test_frontmatter_line_count_accurate(self, tmp_path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        sib = agents_dir / "peer-agent.md"
+        sib.write_text("---\nname: peer-agent\n---\nbody\n", encoding="utf-8")
+        p = agents_dir / "subject-agent.md"
+        # 6-line frontmatter: --- / name / description / extra1 / extra2 / ---
+        p.write_text(
+            "---\nname: subject-agent\ndescription: Test. Not for production.\nextra1: a\nextra2: b\n---\n"
+            "line1\nline2\npeer-agent here\n",
+            encoding="utf-8",
+        )
+        fm, _ = parse_frontmatter(p)
+        _, body = split_content(p)
+        full_text = p.read_text(encoding="utf-8")
+        fm_line_count = full_text.count("\n") - body.count("\n")
+        assert fm_line_count == 6, f"expected 6 FM lines, got {fm_line_count}"
+        result = check_SF_3(p, body, fm, artifact_type="agent")
+        assert result["verdict"] == "FAIL"
+        matches = result["evidence"]["matches"]
+        # Body line 3 → file-absolute line 9 (6 + 3).
+        assert matches[0]["line"] == 9
+
+    # ------------------------------------------------------------------
+    # Discovery boundary lengths: 2 (excluded), 3 (included), 64 (included), 65 (excluded). (F4)
+    # ------------------------------------------------------------------
+    def test_discovery_boundary_lengths(self, tmp_path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        subject_p = agents_dir / "subject.md"
+        subject_p.write_text("---\nname: subject\n---\nbody\n", encoding="utf-8")
+        for stem, name in [
+            ("two-ch", "ab"),                # len=2 → excluded
+            ("three", "abc"),                # len=3 → included
+            ("sixtyfour", "x" * 64),         # len=64 → included
+            ("sixtyfive", "x" * 65),         # len=65 → excluded
+        ]:
+            (agents_dir / f"{stem}.md").write_text(
+                f"---\nname: {name}\n---\nbody\n", encoding="utf-8"
+            )
+        fm, _ = parse_frontmatter(subject_p)
+        names = discover_peer_agent_names(subject_p)
+        assert "ab" not in names
+        assert "abc" in names
+        assert "x" * 64 in names
+        assert "x" * 65 not in names
+
+    # ------------------------------------------------------------------
+    # Discovery capped at 50 when 51 siblings present. (F4)
+    # ------------------------------------------------------------------
+    def test_discovery_capped_at_50_exactly(self, tmp_path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        subject_p = agents_dir / "subject.md"
+        subject_p.write_text("---\nname: subject\n---\nbody\n", encoding="utf-8")
+        # Create 51 siblings with 3-char names (all valid, sorted alpha).
+        for i in range(51):
+            name = f"s{i:02d}"
+            (agents_dir / f"sibling-{i:02d}.md").write_text(
+                f"---\nname: {name}\n---\nbody\n", encoding="utf-8"
+            )
+        fm, _ = parse_frontmatter(subject_p)
+        names = discover_peer_agent_names(subject_p)
+        assert len(names) == 50
