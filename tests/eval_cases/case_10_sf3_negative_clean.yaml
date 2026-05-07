@@ -1,0 +1,35 @@
+id: case-10-sf3-negative-clean
+kind: clean
+description: SF-3 Negative — agent body contains no peer-agent name references; SF-3 must not fire.
+target_skill: review-agent
+artifacts:
+  primary: tests/fixtures/eval/case_10_sf3_negative.md
+findings_fixture: tests/fixtures/eval/case_10_findings.json
+sprint_contract:
+  - id: C10-1
+    description: "Binary evaluator emits no SF-3 finding (PASS or NA)."
+  - id: C10-2
+    description: "No Metadata finding with checklist_item SF-3 appears in findings."
+expected:
+  required_findings: []
+  forbidden_findings:
+    - { item: SF-3, dim: Metadata }
+  field_invariants: []
+acceptance:
+  precision: ">= 1.0"
+  recall:    ">= 1.0"
+execution:
+  dispatch:
+    command: /review-agent
+    target_arg: tests/fixtures/eval/case_10_sf3_negative.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_10_sf3_negative.md
+  reviewer_behavior: skills/review-agent/SKILL.md
+notes: |
+  AC2 coverage: agent body uses generic role nouns ("configured review agent")
+  without naming any peer agent directly. SF-3 must return PASS (or NA if no
+  discoverable siblings). The synthesised findings.json has no findings.

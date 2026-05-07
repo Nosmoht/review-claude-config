@@ -384,6 +384,48 @@ def strip_code(text: str) -> str:
     return text
 
 
+# SF-3 Peer-Agent-Reference helpers (scoring-rubric.md §Binary-Evaluated Items).
+# strip_code_preserve_lines replaces each fenced block with an equal number of
+# newlines so that line_of_offset() in rubric_binary_evaluator.py returns the
+# same line number for any byte position outside a fence in both the raw body
+# and the stripped body. build_peer_agent_re compiles a word-boundary-safe
+# alternation pattern over a frozenset of known peer-agent names.
+
+CODE_FENCE_BACKTICK = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
+CODE_FENCE_TILDE = re.compile(r"^~~~.*?^~~~", re.DOTALL | re.MULTILINE)
+
+
+def strip_code_preserve_lines(text: str) -> str:
+    """Replace fenced code blocks with newline-only blanks, preserving line numbers.
+
+    The substitution keeps exactly as many newlines as the original block
+    contained, so byte-offset-to-line-number mapping is preserved for all
+    content outside the fenced regions. Used by check_SF_3 to suppress
+    false positives from peer-agent names inside documentation code blocks.
+    """
+
+    def _to_newlines(m: re.Match) -> str:  # type: ignore[type-arg]
+        return "\n" * m.group(0).count("\n")
+
+    text = CODE_FENCE_BACKTICK.sub(_to_newlines, text)
+    text = CODE_FENCE_TILDE.sub(_to_newlines, text)
+    return text
+
+
+def build_peer_agent_re(names: frozenset) -> "re.Pattern | None":
+    """Compile a word-boundary-safe alternation regex for peer-agent name detection.
+
+    Sorts names longest-first so the alternation favours longest prefix wins,
+    preventing ``reviewer`` from matching before ``review-perspective-clarity``.
+    Uses hyphen-resistant boundary assertions (``(?<![\\w-])`` / ``(?![\\w-])``)
+    so ``pre-reviewer-mode`` does not match the ``reviewer`` token.
+    """
+    if not names:
+        return None
+    escaped = [re.escape(n) for n in sorted(names, key=len, reverse=True)]
+    return re.compile(rf"(?<![\w-])({'|'.join(escaped)})(?![\w-])")
+
+
 # WS-2b Conditional-Specificity-with-Marker (scoring-rubric.md — issue #70).
 # `If present / If absent` within 500 chars AFTER a block marker must have a
 # preceding prose predicate within 400 chars BEFORE the marker that names the
@@ -564,6 +606,10 @@ __all__ = [
     "CODE_FENCE",
     "INLINE_CODE",
     "strip_code",
+    "CODE_FENCE_BACKTICK",
+    "CODE_FENCE_TILDE",
+    "strip_code_preserve_lines",
+    "build_peer_agent_re",
     "WS_2B_BLOCK_MARKER",
     "WS_2B_IF_CLAUSE",
     "WS_2B_PROSE_PREDICATE",

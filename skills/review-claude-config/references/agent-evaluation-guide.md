@@ -47,6 +47,7 @@ the `effort` Opus 4.7 compatibility table. If the parent guide overflows
 | TV-6 | Declared `hooks` reference valid event names from the 26-event catalog (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `Stop`, etc.); event-to-CLI-version compatible with target runtime? [If `hooks` present] | Meta |
 | SF-1 | All context self-contained — no external files assumed? | CE |
 | SF-2 | Long body uses headings for structure (not dense prose)? | Clarity |
+| SF-3 | Body does not name peer agents (sibling agents/*.md `name:` fields) outside fenced code blocks. Skill-files exempt. | Meta | n/a |
 | AP-2 | No tools copied from another agent without pruning unused ones? | Safety |
 | AP-3 | `disable-model-invocation: true` present if user-only invocation is appropriate? | Meta |
 | AP-4 | Non-guardrail sections use MUST/CRITICAL ≤3 times total? | PE |

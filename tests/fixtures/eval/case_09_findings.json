@@ -1,0 +1,26 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-09-sf3-positive",
+  "artifact_path": "tests/fixtures/eval/case_09_sf3_positive.md",
+  "artifact_type": "agent",
+  "findings": [
+    {
+      "id": "SF-3:tests/fixtures/eval/case_09_sf3_positive.md:Metadata/v1",
+      "checklist_item": "SF-3",
+      "dimension": "Metadata",
+      "severity": "High",
+      "evidence": "line 12; matched_token='reviewer' — peer-agent name referenced in body prose outside fenced code block",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/eval/case_09_sf3_positive.md",
+      "line_range": "12",
+      "why": "Binary rubric item SF-3 FAIL — agent body names sibling agent 'reviewer' in prose outside a fenced block. This creates implicit peer coupling that breaks skill self-containment and degrades description-based routing.",
+      "validation": "Re-run scripts/rubric_binary_evaluator.py on the artifact and confirm SF-3 verdict PASS after removing or fencing the peer-agent name reference.",
+      "current": "Dispatch reviewer for a second-pass review of all High findings.",
+      "recommended": "Remove the peer-agent name reference from body prose. Use a generic role noun ('the review agent', 'the secondary reviewer') or move the reference into a fenced code block if documenting a specific workflow.",
+      "perspective": "binary-evaluator"
+    }
+  ]
+}

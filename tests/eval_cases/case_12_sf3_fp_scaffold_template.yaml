@@ -1,0 +1,36 @@
+id: case-12-sf3-fp-scaffold-template
+kind: clean
+description: SF-3 FP Scaffold Template — peer-agent name in frontmatter example block must not trigger SF-3 (split_content excludes frontmatter).
+target_skill: review-agent
+artifacts:
+  primary: tests/fixtures/eval/case_12_sf3_fp_scaffold_template.md
+findings_fixture: tests/fixtures/eval/case_12_findings.json
+sprint_contract:
+  - id: C12-1
+    description: "SF-3 returns PASS — peer name in frontmatter description is excluded by split_content."
+  - id: C12-2
+    description: "No SF-3 finding in output."
+expected:
+  required_findings: []
+  forbidden_findings:
+    - { item: SF-3, dim: Metadata }
+  field_invariants: []
+acceptance:
+  precision: ">= 1.0"
+  recall:    ">= 1.0"
+execution:
+  dispatch:
+    command: /review-agent
+    target_arg: tests/fixtures/eval/case_12_sf3_fp_scaffold_template.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_12_sf3_fp_scaffold_template.md
+  reviewer_behavior: skills/review-agent/SKILL.md
+notes: |
+  AC4a coverage: the artifact's body does not reference any peer-agent name
+  in prose. The frontmatter description mentions "pr-reviewer" as a template
+  example, but split_content() returns only the body — so SF-3 never scans
+  the frontmatter. No SF-3 finding expected.

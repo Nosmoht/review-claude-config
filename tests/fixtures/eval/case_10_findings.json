@@ -1,0 +1,8 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-10-sf3-negative",
+  "artifact_path": "tests/fixtures/eval/case_10_sf3_negative.md",
+  "artifact_type": "agent",
+  "findings": []
+}

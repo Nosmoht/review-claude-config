@@ -1,0 +1,36 @@
+id: case-14-sf3-fp-fenced-block
+kind: clean
+description: SF-3 FP Fenced Block — peer-agent names appearing only inside a fenced code block must not trigger SF-3.
+target_skill: review-agent
+artifacts:
+  primary: tests/fixtures/eval/case_14_sf3_fp_fenced_block.md
+findings_fixture: tests/fixtures/eval/case_14_findings.json
+sprint_contract:
+  - id: C14-1
+    description: "SF-3 returns PASS when peer name appears only inside a fenced code block."
+  - id: C14-2
+    description: "No SF-3 finding in output — fenced references are legitimate documentation."
+expected:
+  required_findings: []
+  forbidden_findings:
+    - { item: SF-3, dim: Metadata }
+  field_invariants: []
+acceptance:
+  precision: ">= 1.0"
+  recall:    ">= 1.0"
+execution:
+  dispatch:
+    command: /review-agent
+    target_arg: tests/fixtures/eval/case_14_sf3_fp_fenced_block.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_14_sfp_fenced_block.md
+  reviewer_behavior: skills/review-agent/SKILL.md
+notes: |
+  AC4c coverage: peer-agent names ("reviewer", "team-red") appear only inside
+  a fenced code block. strip_code_preserve_lines() replaces the block with
+  blank lines before scanning, so the names are not visible to the pattern.
+  SF-3 must return PASS. No SF-3 finding in synthesised findings.json.

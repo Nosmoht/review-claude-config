@@ -14,11 +14,11 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 import regenerate_merge_policy as rmp  # noqa: E402
 
 EXPECTED = {
-    "binary_item_ids": 32,
+    "binary_item_ids": 33,
     "narrative_parent_ids": 15,
-    "item_dimension": 33,
+    "item_dimension": 34,
     "binary_caps": 22,
-    "agent_item_dimension": 35,
+    "agent_item_dimension": 36,
 }
 
 TOP_KEYS = (

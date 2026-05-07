@@ -1,0 +1,8 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-11-sf3-skill-exemption",
+  "artifact_path": "tests/fixtures/eval/case_11_sf3_skill_exemption.SKILL.md",
+  "artifact_type": "skill",
+  "findings": []
+}

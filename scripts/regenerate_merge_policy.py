@@ -25,11 +25,11 @@ RUBRIC = REPO_ROOT / "skills/review-claude-config/references/scoring-rubric.md"
 YAML_OUT = REPO_ROOT / "skills/review-skill/references/merge-policy.yaml"
 
 EXPECTED_COUNTS: dict[str, int] = {
-    "binary_item_ids": 32,
+    "binary_item_ids": 33,
     "narrative_parent_ids": 15,
-    "item_dimension": 33,
+    "item_dimension": 34,
     "binary_caps": 22,
-    "agent_item_dimension": 35,
+    "agent_item_dimension": 36,
 }
 
 HEADER_LINES = (
@@ -97,8 +97,8 @@ def parse_rubric(text: str) -> dict:
     """
     lines = text.splitlines(keepends=True)
 
-    # 1) §Item Inventory → ###Binary-Evaluated Items (32 rows: Item | Dimension)
-    binary_idx = _find_table(lines, "Item Inventory", "Binary-Evaluated Items (skill rubric, 32)")
+    # 1) §Item Inventory → ###Binary-Evaluated Items (33 rows: Item | Dimension)
+    binary_idx = _find_table(lines, "Item Inventory", "Binary-Evaluated Items (skill rubric, 33)")
     binary_rows = _parse_pipe_table(lines, binary_idx)
     binary_item_ids: list[str] = [r[0] for r in binary_rows if r and r[0]]
     item_dimension: dict[str, str] = {}
@@ -130,7 +130,7 @@ def parse_rubric(text: str) -> dict:
         if len(r) >= 3 and r[0]:
             binary_caps.append({"item": r[0], "dimension": r[1], "cap": r[2]})
 
-    # 4) §Agent Items (35 rows: Item | Dimension)
+    # 4) §Agent Items (36 rows: Item | Dimension)
     agent_idx = _find_table(lines, "Agent Items")
     agent_rows = _parse_pipe_table(lines, agent_idx)
     agent_item_dimension: dict[str, str] = {}

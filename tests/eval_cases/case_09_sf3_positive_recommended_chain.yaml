@@ -1,0 +1,43 @@
+id: case-09-sf3-positive-recommended-chain
+kind: detection
+description: SF-3 Positive — agent body names peer agents in prose; binary evaluator must emit a High Metadata finding.
+target_skill: review-agent
+artifacts:
+  primary: tests/fixtures/eval/case_09_sf3_positive.md
+findings_fixture: tests/fixtures/eval/case_09_findings.json
+defects:
+  - { item: SF-3, dim: Metadata, sev: High, desc: "Peer-agent name referenced in body prose outside fenced block" }
+sprint_contract:
+  - id: C9-1
+    description: "Binary evaluator emits SF-3 FAIL finding with severity High."
+  - id: C9-2
+    description: "Finding evidence cites the matched peer-agent token and source line."
+  - id: C9-3
+    description: "Finding includes non-empty current and recommended blocks."
+expected:
+  required_findings:
+    - { item: SF-3, dim: Metadata, severity: [High] }
+  forbidden_findings: []
+  field_invariants:
+    - "every High/Medium finding has non-empty evidence"
+    - "every High/Medium finding has non-empty validation"
+    - "every High finding has non-empty current and recommended"
+acceptance:
+  precision: ">= 1.0"
+  recall:    ">= 1.0"
+execution:
+  dispatch:
+    command: /review-agent
+    target_arg: tests/fixtures/eval/case_09_sf3_positive.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_09_sf3_positive.md
+  reviewer_behavior: skills/review-agent/SKILL.md
+notes: |
+  AC1 coverage: body contains peer-agent names ("reviewer", "team-red") in
+  prose outside a fenced code block. Binary evaluator SF-3 check must
+  detect this and emit a High Metadata finding. The synthesised findings.json
+  carries one SF-3 binary-evaluator finding.

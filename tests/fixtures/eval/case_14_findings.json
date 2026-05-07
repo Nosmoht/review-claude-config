@@ -1,0 +1,8 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-14-sf3-fp-fenced-block",
+  "artifact_path": "tests/fixtures/eval/case_14_sf3_fp_fenced_block.md",
+  "artifact_type": "agent",
+  "findings": []
+}
