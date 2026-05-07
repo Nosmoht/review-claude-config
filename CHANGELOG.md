@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0](https://github.com/Nosmoht/review-claude-config/compare/v2.6.0...v2.7.0) (2026-05-07)
+
+
+### Changed
+
+* **skills:** add review-domain-currency advisory skill + domain-researcher agent ([#213](https://github.com/Nosmoht/review-claude-config/issues/213)) ([43f35a9](https://github.com/Nosmoht/review-claude-config/commit/43f35a9719c22565452d78a7203598914e7b4f30))
+
 ## [2.6.0](https://github.com/Nosmoht/review-claude-config/compare/v2.5.0...v2.6.0) (2026-05-07)
 
 
