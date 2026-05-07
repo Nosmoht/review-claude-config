@@ -30,7 +30,8 @@
     "mcp-2026-security-checklist.md": 800,
     "injection-regex-library.md": 1500,
     "audit-report-schema.md": 600,
-    "context-report-schema.md": 600
+    "context-report-schema.md": 600,
+    "description-design-problem.md": 799
   },
   "DOMAIN_CACHE_BUDGET": 800,
   "DEFAULT_BUDGET": 500
