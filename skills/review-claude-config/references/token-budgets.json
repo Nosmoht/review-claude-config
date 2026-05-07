@@ -1,6 +1,6 @@
 {
   "BUDGETS": {
-    "scoring-rubric.md": 12000,
+    "scoring-rubric.md": 13500,
     "tool-grant-decision-tree.md": 800,
     "engineering-baseline.md": 4350,
     "signal-catalog.md": 1400,
@@ -31,7 +31,9 @@
     "injection-regex-library.md": 1500,
     "audit-report-schema.md": 600,
     "context-report-schema.md": 600,
-    "description-design-problem.md": 799
+    "description-design-problem.md": 799,
+    "agent-description-convention.md": 800,
+    "skill-description-convention.md": 800
   },
   "DOMAIN_CACHE_BUDGET": 800,
   "DEFAULT_BUDGET": 500

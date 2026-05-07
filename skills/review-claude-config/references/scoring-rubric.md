@@ -122,6 +122,74 @@ sources (Tier-1 cited per item).
 
 Grade boundary: META-1 ✗ → D/F (dispatch failure); META-2 ✗ → C; META-4 ✗ → C (third-person violation = discovery risk); META-3c ✗ → C (no discriminating keyword); all ✓ → B; all ✓ + no sibling overlap → A.
 
+### Description Quality (DQ-1..DQ-6, Likert) — issue #216
+
+DQ-* are **Likert 1–5** (NOT binary). Smell threshold: score < 3 on any applicable item.
+Applies to **Metadata dimension narrative scoring** only — DQ-* are intentionally NOT
+promoted to the binary Item Inventory in this phase (Phase 3 designs the validator).
+Empirical anchor: Saavedra arXiv 2602.14878 (n=856 tool descriptions, 103 MCP servers,
+ICC 0.76–0.90). Per-primitive applicability: see `references/description-design-problem.md`.
+
+- **DQ-1 Purpose** (Likert 1–5; smell <3): description states what the primitive does — its
+  functional intent — clearly enough that a reviewer can predict activation scope without
+  reading the body. *Likert 5:* single crisp sentence covering domain + action + output type.
+  *Likert 1:* restatement of the filename or entirely absent. *Smell <3:* purpose ambiguous or
+  multi-domain without discriminating scope. *Source: Saavedra arXiv 2602.14878.*
+- **DQ-2 Guidelines** (Likert 1–5; smell <3): description states when and how to invoke the
+  primitive — concrete trigger condition, positive use-case phrase, or "Use this when X"
+  framing. *Smell <3:* no trigger phrase, or trigger phrase is vague ("as needed", "if
+  appropriate"). *Source: Saavedra arXiv 2602.14878.*
+- **DQ-3 Limitations** (Likert 1–5; smell <3): description states what the primitive does NOT
+  handle — explicit out-of-scope clause or "Do NOT use for Y" entry. *Smell <3:* no
+  limitations stated; description implies broader scope than the body supports. *Source:
+  Saavedra arXiv 2602.14878.*
+- **DQ-4 Parameters** (Likert 1–5; smell <3): for parameterized primitives (MCP tools, skills
+  with explicit arguments), description explains each parameter's purpose and accepted values.
+  *Smell <3:* required parameters undocumented or semantics ambiguous. *Source: Saavedra arXiv
+  2602.14878.*
+- **DQ-5 Length** (Likert 1–5; smell <3): description length is calibrated to routing
+  precision — neither so short that it cannot discriminate (sparse routing failure) nor so long
+  that it floods context (catalog-economy failure). Cluster-density heuristic: longer
+  descriptions justified in high-competition clusters (≥5 siblings with overlapping triggers).
+  *Smell <3:* description is either a single bare noun/verb with no scope signal, OR exceeds
+  Anthropic's 1024-char ceiling. *Source: Saavedra arXiv 2602.14878.*
+- **DQ-6 Examples** (Likert 1–5; **Optional** — Saavedra ablation showed no statistically
+  significant degradation when DQ-6 alone was removed; treat as bonus signal, not smell-trigger):
+  description includes ≥1 concrete usage example or trigger phrase the user would type verbatim.
+  *Likert 5:* specific example that unambiguously scopes the primitive. *Likert 1:* absent.
+  Optional: DQ-6 absence does NOT raise a smell flag; DQ-6 presence at Likert ≥4 may upgrade
+  Metadata from B to A. *Source: Saavedra arXiv 2602.14878 (ablation result).*
+
+#### Per-Primitive Applicability
+
+Saavedra empirical scope is MCP-Tool only; other columns are extrapolated engineering guidance
+or repo defaults. Evidence class: P=Proven, E=Engineering guidance, L=Low-evidence, R=Repo
+default. Mirrors `references/description-design-problem.md` lines 43–50.
+
+| Component | MCP-Tool | Skill | Agent | Rule |
+|-----------|----------|-------|-------|------|
+| DQ-1 Purpose | ✓ P | ✓ E | ✓ E | ✓ R |
+| DQ-2 Guidelines | ✓ P | ◐ L | ✓ E | ✓ R |
+| DQ-3 Limitations | ✓ P | ◐ L | ✓ E | ✓ R |
+| DQ-4 Parameters | ✓ P | ◐ L | ◐ L | N/A |
+| DQ-5 Length | ✓ P | ✓ E | ✓ E | N/A |
+| DQ-6 Examples | ✓ P | ◐ L | ◐ L | N/A |
+
+#### DQ-* ↔ META-* Mapping
+
+Relations: `complement` = non-overlapping coverage of the same quality axis;
+`redundant` = one subsumes the other (binary vs Likert on same signal);
+`subsume` = DQ-* entirely replaces the META-* signal for this axis.
+
+| DQ Item | Most-related META | Relation | Note |
+|---------|-------------------|----------|------|
+| DQ-1 Purpose | META-1a | complement | DQ-1 = semantic completeness of purpose; META-1a = token-set overlap with body trigger |
+| DQ-2 Guidelines | META-3a | complement | DQ-2 = how/when prose; META-3a = vague-trigger regex absence |
+| DQ-3 Limitations | META-2 | redundant | META-2 binary-checks anti-pattern regex; DQ-3 Likert-checks adequacy of scope exclusion |
+| DQ-4 Parameters | (no META analogue) | complement | argument semantics outside META scope; DQ-4 fills the gap |
+| DQ-5 Length | META-3b/3c | complement | DQ-5 quality of length calibration; META-3b/3c = sibling overlap and discriminating token |
+| DQ-6 Examples | (no META analogue) | complement | optional bonus signal; META-* have no analogous example-presence check |
+
 ### Ambiguity Markers (Clarity B/C discriminator) — issues #66, #69
 
 - **CLAR-1 Fuzzy-Quantifier-Free**: step parameters contain no fuzzy quantifier. *Regex:* `/\b(slightly|a bit|roughly|somewhat|some)\b/i` (skip `some` inside placeholder paths). *PASS:* "fetch 10 entries". *FAIL:* "fetch roughly 10 entries".
