@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
 
       - id: release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
@@ -91,7 +91,7 @@ jobs:
       # Idempotent: a no-op if the tag already exists.
       - name: Tag + publish GitHub Release
         if: ${{ steps.release.outputs.pr != '' && !inputs.dry-run }}
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
