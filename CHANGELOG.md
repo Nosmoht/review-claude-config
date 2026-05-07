@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0](https://github.com/Nosmoht/review-claude-config/compare/v2.7.1...v2.8.0) (2026-05-07)
+
+
+### Changed
+
+* **references:** add description-design-problem reference ([#215](https://github.com/Nosmoht/review-claude-config/issues/215)) ([#224](https://github.com/Nosmoht/review-claude-config/issues/224)) ([d9b1907](https://github.com/Nosmoht/review-claude-config/commit/d9b1907c8e59b1fcc6eb6194c05b49ace96ed84f))
+
 ## [2.7.1](https://github.com/Nosmoht/review-claude-config/compare/v2.7.0...v2.7.1) (2026-05-07)
 
 
