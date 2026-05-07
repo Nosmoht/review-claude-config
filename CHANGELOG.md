@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.1](https://github.com/Nosmoht/review-claude-config/compare/v2.7.0...v2.7.1) (2026-05-07)
+
+
+### Fixed
+
+* **skills:** swap Tavily MCP for Claude Code WebSearch in review-domain-currency ([#220](https://github.com/Nosmoht/review-claude-config/issues/220)) ([0c544e0](https://github.com/Nosmoht/review-claude-config/commit/0c544e07d46a7eec0c0b6f95f10df1bac003968b))
+
 ## [2.7.0](https://github.com/Nosmoht/review-claude-config/compare/v2.6.0...v2.7.0) (2026-05-07)
 
 
