@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0](https://github.com/Nosmoht/review-claude-config/compare/v2.5.0...v2.6.0) (2026-05-07)
+
+
+### Changed
+
+* **scripts:** add SF-3 peer-reference body-check for agent rubric ([#211](https://github.com/Nosmoht/review-claude-config/issues/211)) ([901c148](https://github.com/Nosmoht/review-claude-config/commit/901c14826c977fb45dafd31e7830b3a8c87acf44))
+
 ## [2.5.0](https://github.com/Nosmoht/review-claude-config/compare/v2.4.4...v2.5.0) (2026-05-07)
 
 
