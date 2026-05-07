@@ -127,7 +127,7 @@ IN REVIEW    — label: status: in-review     BLOCKED — label: status: blocked
 CLOSED — remove status label, close via mcp__github__issue_write (state_reason: completed)
 ```
 
-**Agent track** (`/implement-issue` skill; gated by R1–R4 readiness predicates):
+**Agent track** (`/implement-issue` skill; gated by R1–R5 readiness predicates):
 
 ```
 OPEN (triaged + acceptance criteria machine-checkable)
@@ -148,11 +148,16 @@ The agent track uses `status: needs-review` (machine-set by `scripts/issue-state
 - **Before starting work**: check open issues to avoid duplicates — `gh issue list --repo Nosmoht/review-claude-config`
 - **When a bug/improvement is found**: create issue immediately (`gh issue create` or `mcp__github__issue_write`)
 - **When starting manual work on an issue**: set `status: in-progress` via `mcp__github__issue_write` (method: update, labels: ["status: in-progress", ...existing labels])
-- **When staging an issue for `/implement-issue`**: triage acceptance criteria to satisfy all four readiness predicates, then add `status: ready`. The skill refuses to claim issues without this label. Manual issues do NOT need `status: ready`. Readiness predicates:
+- **When staging an issue for `/implement-issue`**: triage acceptance criteria to satisfy all five readiness predicates, then add `status: ready`. The skill refuses to claim issues without this label. Manual issues do NOT need `status: ready`. Readiness predicates:
   - **R1 — Testable acceptance criteria**: every criterion is a finite, mechanically checkable assertion (Given-When-Then, exit code, regex, HTTP shape).
   - **R2 — Defined deliverable**: the issue names artifacts that change (file paths, behaviors, outputs) and the shape they should take.
   - **R3 — Single interpretation path**: two competent implementers reading the issue produce the same plan.
   - **R4 — Bounded scope**: the issue states what is in scope and (where relevant) out of scope.
+  - **R5 — Necessary** ([ISO/IEC/IEEE 29148:2018 §"Necessary"](https://www.iso.org/obp/ui/#iso:std:iso-iec-ieee:29148:ed-2:v1:en)): every AC mitigates a defect class not already covered. Predicates 1–4 verify form; R5 verifies necessity. Run necessity-check after the form-check (cheap form-check first; necessity-check on parseable ACs). Stakeholder-asserted necessity is not evidence — apply all four sub-heuristics:
+    - **Risk-mitigation predicate** — "What concrete defect/regression class would slip through if this AC were deleted? Name it. If 'none' or 'just re-asserts current behavior' → AC fails."
+    - **Existing-coverage subtraction** — "Does an existing test/AC already fail when this AC fails? If yes, AC is redundant (Beck *Writable*: cost > value when coverage duplicated)."
+    - **Test-the-test inversion** — "Construct an input that violates the spirit but passes this AC, and an input that satisfies the spirit but fails it. Second input existing → AC overfits."
+    - **Structure-insensitive (Beck)** — "Snapshot/byte-identical ACs fail Structure-insensitive. Reframe to behavioral assertion."
 - **Track-collision rule**: an issue carries either `status: ready` (agent track) OR `status: in-progress` (manual track) — never both. To take a `status: ready` issue manually, first remove `status: ready`, then set `status: in-progress`. The agent track's `scripts/issue-state.sh claim` enforces this by requiring `status: ready` AND no assignee; a manually-claimed issue with `status: ready` left on by accident is rejected, surfacing the collision rather than silently overwriting state
 - **When blocked**: replace the active status label with `status: blocked`; document the blocker in an issue comment (the agent track does this via `scripts/issue-state.sh block <N> "<reason>"`)
 - **When ready for review** (PR or peer check, manual track): replace with `status: in-review`
