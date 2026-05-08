@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0](https://github.com/Nosmoht/review-claude-config/compare/v2.9.0...v2.10.0) (2026-05-08)
+
+
+### Changed
+
+* **scripts:** description-graph validator + suite self-audit ([#217](https://github.com/Nosmoht/review-claude-config/issues/217)) ([#250](https://github.com/Nosmoht/review-claude-config/issues/250)) ([123285a](https://github.com/Nosmoht/review-claude-config/commit/123285afdb8abb054aa5f3beab0722f151a0908b))
+
 ## [2.9.0](https://github.com/Nosmoht/review-claude-config/compare/v2.8.0...v2.9.0) (2026-05-07)
 
 
