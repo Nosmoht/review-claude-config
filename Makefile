@@ -1,8 +1,8 @@
-.PHONY: validate lint format schema-validate token-budget test test-cov sync-marketplace-ref
+.PHONY: validate lint format schema-validate token-budget validate-descriptions test test-cov sync-marketplace-ref
 
 PYTHON ?= $(shell test -x .venv/bin/python && echo .venv/bin/python || echo python3)
 
-validate: lint format schema-validate token-budget test
+validate: lint format schema-validate token-budget validate-descriptions test
 
 lint:
 	ruff check hooks/ scripts/
@@ -18,6 +18,9 @@ schema-validate:
 
 token-budget:
 	$(PYTHON) scripts/validate_token_budgets.py
+
+validate-descriptions:
+	PYTHON=$(PYTHON) bash bin/run-validate-descriptions.sh
 
 test:
 	$(PYTHON) -m pytest tests/ -v --tb=short
