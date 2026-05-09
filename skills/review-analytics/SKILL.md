@@ -6,7 +6,7 @@ description: >
   'analyze review history'. Do NOT use for freshness or integrity — use
   /check-repo-health.
 argument-hint: "[folder] [--validation]"
-allowed-tools: Read, Glob
+allowed-tools: Bash, Read, Glob
 ---
 
 # Review Analytics
@@ -21,7 +21,7 @@ If `$ARGUMENTS` contains the standalone token `--validation`, set `validation_mo
 
 If no target folder remains, use the current working directory.
 
-**Resolve report directory:** Load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to compute `<repo-slug>` (= `sanitize(basename(target_dir))` — lowercase, alphanumeric + hyphens only). The report directory is `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
+**Resolve report directory:** Run `bash bin/repo-slug.sh "$(pwd)"` and capture stdout as `<repo-slug>`. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.) The report directory is `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 
 Glob `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-review-*.md` to find all review reports. Sort by filename (timestamps sort lexicographically).
 
@@ -213,3 +213,12 @@ If no regressions (classification is "Improving" or "Stable"), skip the menu —
 - **Timestamp sorting is lexicographic.** YYYY-MM-DDTHHMMSS format sorts correctly as strings.
 - **Track by path first, partition by producer.** `type + path` identifies the artifact; `generated_by + type + path` identifies the analytics series. `name` is only a label.
 - **Grade comparison order.** A > B > C > D > F for trend computation.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

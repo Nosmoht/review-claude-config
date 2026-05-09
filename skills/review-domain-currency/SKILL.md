@@ -183,8 +183,7 @@ Compute the output path using the slug-scoping convention from
 ${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/domain-currency-{ts}.md
 ```
 
-**Slug semantics**: `slug = sanitize(basename(target_repo_root))` where
-`target_repo_root` is the git-tracked root of the *audited file's* repo.
+**Slug computation**: Run `bash bin/repo-slug.sh "$(pwd)"` and capture stdout as `<repo-slug>`. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.) The CWD must be the git-tracked root of the *audited file's* repo at invocation time.
 Resolution algorithm:
 
 1. `cd` to the audited file's directory; run
@@ -248,7 +247,8 @@ The report header must include:
 
 ## Two-Actor Design Rationale
 
-The orchestrator skill grants `Write` (report) + `Bash` (salt + timestamp) +
+The orchestrator skill grants `Write` (report) + `Bash` (salt + timestamp;
+and `bash bin/repo-slug.sh:*` for deterministic slug computation) +
 `Agent` (dispatch) + `WebSearch` (preflight probe only); the researcher agent
 grants `Read/Grep/Glob` (body inspection) + `WebSearch` (the actual query
 loop). The researcher does NOT grant `Edit/Write/Bash/WebFetch/Agent` — even

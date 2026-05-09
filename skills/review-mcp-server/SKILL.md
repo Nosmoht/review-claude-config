@@ -7,7 +7,7 @@ description: >
   'review .mcp.json'. Do NOT use for skills, agents, rules, hooks, or
   settings.json.
 argument-hint: <path-to-.mcp.json>
-allowed-tools: Read, Write, Glob, Grep, WebSearch
+allowed-tools: Bash, Read, Write, Glob, Grep, WebSearch
 ---
 
 # Review MCP Server Configuration
@@ -43,7 +43,7 @@ domain_cache: |
 1. **Load references.** Read:
    - Scoring rubric: Glob `**/review-claude-config/references/scoring-rubric.md`
    - Source quality criteria: Glob `**/review-claude-config/references/source-quality-criteria.md`
-   - Repo identification: Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`
+   - Repo slug: run `bash bin/repo-slug.sh "$(pwd)"` and capture stdout as `<repo-slug>`. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
    - MCP evaluation guide: `skills/review-claude-config/references/mcp-evaluation-guide.md`
 
 2. **Probe tool availability.** Test WebSearch with a trivial query. Record `websearch_available`.
@@ -114,3 +114,12 @@ Before Write: scan the assembled report (frontmatter `target:`, optional `origin
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every High or Medium recommendation must include evidence and a concrete rewrite.**
 - **Parse failure = Critical.** Invalid JSON is the most dangerous finding (all subsequent checks are meaningless).
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

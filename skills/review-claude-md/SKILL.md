@@ -6,7 +6,7 @@ description: >
   or after /audit-repo flags a missing or low-quality CLAUDE.md. Do NOT use
   for skills, agents, or rules — use /review-skill, /review-agent, or /review-rule.
 argument-hint: <path-to-CLAUDE.md>
-allowed-tools: Read, Write, Glob, WebSearch, WebFetch
+allowed-tools: Bash, Read, Write, Glob, WebSearch, WebFetch
 ---
 
 # Review Claude MD
@@ -54,7 +54,7 @@ Locate the `review-claude-config` skill directory (sibling skill in the same plu
 
 Use Glob to find the files if the path is not immediately known: `**/review-claude-config/references/scoring-rubric.md`
 
-Also load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`.
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
 
 **If any of these files is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
 
@@ -225,3 +225,12 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 - **Present the full certificate before any follow-up actions.**
 - **Run Command Inventory Verification for every command listed** — never skip this step.
 - **Use only 4 dimensions.** Never score CLAUDE.md on Safety or Metadata — those dimensions apply to executable skills/agents, not configuration documents.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

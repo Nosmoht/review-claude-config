@@ -8,7 +8,7 @@ description: >
   Do NOT use for narrow error classification against MAST taxonomy —
   use /classify-trace-errors instead.
 argument-hint: <path-to-transcript.jsonl>
-allowed-tools: Read, Write, Glob, Grep
+allowed-tools: Bash, Read, Write, Glob, Grep
 ---
 
 # Review Session Trace
@@ -44,7 +44,7 @@ Verify Grep works by running a trivial pattern on the transcript (e.g., `"uuid"`
 
 Read `references/transcript-schema.md` for the JSONL entry structure.
 
-Also load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`.
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
 
 ### Step 2: Sample the Transcript
 
@@ -184,3 +184,12 @@ Return the report in this exact format:
 - **Context budget discipline.** Do not read the full transcript into context. Use Grep for bulk extraction, Read with offset/limit for sampling. Transcripts can be 100K+ tokens.
 - **Evidence over inference.** Report only patterns with concrete line-number evidence. Do not speculate about intent.
 - **Present the full report before any follow-up actions.**
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

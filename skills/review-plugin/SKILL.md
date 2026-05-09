@@ -40,7 +40,6 @@ revision.
 1. **Load references.** Read:
    - Scoring rubric: Glob `**/review-claude-config/references/scoring-rubric.md`
    - Source quality criteria: Glob `**/review-claude-config/references/source-quality-criteria.md`
-   - Repo identification: Glob `**/review-claude-config/references/repo-identification.md`
    - Plugin evaluation guide: `references/plugin-evaluation-guide.md`
    - Injection regex library (shared with `/review-mcp-server`): Glob `**/review-mcp-server/references/injection-regex-library.md`. If Glob returns 0 hits, skip Step D and surface `IJ-skipped: injection-regex-library.md not found — install the /review-mcp-server skill or pass --skip-injection-scan` in the certificate.
 2. Build a primitive inventory of the plugin via Glob:

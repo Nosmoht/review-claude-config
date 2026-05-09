@@ -42,7 +42,7 @@ report_timestamp: YYYY-MM-DDTHHMMSS
 
 ### Step 1: Locate Report
 
-**Resolve report directory:** Load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to compute `<repo-slug>` (= `sanitize(basename(CWD))` — lowercase, alphanumeric + hyphens only). The report directory is `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
+**Resolve report directory:** Run `bash bin/repo-slug.sh "$(pwd)"` and capture stdout as `<repo-slug>`. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.) The report directory is `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 
 If `$ARGUMENTS` contains a file path, use it. Otherwise, Glob `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-review-skill.md` and select the most recent report by filename timestamp.
 
@@ -299,3 +299,7 @@ On "Verify improvements": invoke `/review-skill` with the skill path. On "Apply 
 - **Audit-fix chain.** Always commit the report before committing fixes.
 - **Preserve file structure.** Edits replace text blocks only. Never rewrite entire files.
 - **High/Medium first.** Always process High and Medium recommendations before Low. Low impact recommendations are only offered after High/Medium are resolved, or when no High/Medium exist.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted for git operations, `realpath`, and `bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>` deterministically per `references/repo-identification.md`. The command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces the slug-resolver scope. The slug-resolver script is read-only (stdout slug, no FS writes), so that grant carries no write-amplification risk.

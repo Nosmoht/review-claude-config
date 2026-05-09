@@ -7,7 +7,7 @@ description: >
   optimizing a Claude Code setup. Do NOT use to audit source code tokens — use
   /audit-repo for that.
 argument-hint: "[folder]"
-allowed-tools: Agent, Read, Write, Glob, Grep
+allowed-tools: Agent, Bash, Read, Write, Glob, Grep
 disable-model-invocation: true
 ---
 
@@ -29,8 +29,7 @@ Read these files from this skill's `references/` directory:
 - `references/context-report-schema.md` — report structure and YAML schema
 - `references/healthy-baselines.md` — per-component thresholds
 
-Load repo-identification reference to resolve suite-root and repo-slug:
-- Locate via Glob: `**/review-claude-config/references/repo-identification.md`
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `**/review-claude-config/references/repo-identification.md` describes the sanitize algorithm.)
 
 **Step 2: Resolve target.**
 
@@ -221,7 +220,7 @@ Checkbox list: one item per recommendation with specific file path and action.
 
 Offer to write to: `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/<YYYY-MM-DDTHHMMSS>-audit-context-budget.md`
 
-Resolve `<repo-slug>` per `repo-identification.md`. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
+Use the `<repo-slug>` value already resolved via `bash bin/repo-slug.sh "$(pwd)"`. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
 
 ## Hard Rules
 
@@ -232,3 +231,12 @@ Resolve `<repo-slug>` per `repo-identification.md`. Include `repo: <slug>` and o
 - Limitations section appears before recommendations in every report.
 - Bash is restricted to the scanner subagent. Top-level workflow uses Read/Glob/Grep only.
 - When the target is a plugin repo (`skills/*/SKILL.md` at root), note that `/check-repo-health tokens` handles internal reference budgets.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

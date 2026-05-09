@@ -8,7 +8,7 @@ description: >
   Do NOT use for fresh research synthesis without prior coverage matrix —
   use /audit-context-budget or per-dimension issues instead.
 argument-hint: "[dimension|all]"
-allowed-tools: Read, Write, Edit, Glob, Grep, WebSearch, WebFetch
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, WebSearch, WebFetch
 disable-model-invocation: true
 ---
 
@@ -23,7 +23,9 @@ This skill maintains `docs/dimension-evidence-coverage.md` as a living artifact.
 
 ## Workflow
 
-### Step 1: Load Coverage Matrix and Cadence Doc
+### Step 1: Resolve Repo Slug and Load Coverage Matrix
+
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
 
 Read these files JIT:
 - `docs/dimension-evidence-coverage.md` — current matrix with `last_audited:` per dimension
@@ -87,3 +89,12 @@ If a Tier-1 source surfaces that *contradicts* an existing rubric item (e.g., li
 - **Do NOT edit scoring-rubric.md or engineering-baseline.md mid-session.** Cache-prefix invariant per CLAUDE.md.
 - **Do NOT skip the Tier-1 filter.** Tutorials, blog posts without metrics, and Stack Overflow answers do not satisfy web-research rule.
 - **Always cite the search-trail** in the refresh report — queries tried, sources rejected, why.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

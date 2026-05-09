@@ -6,7 +6,7 @@ description: >
   when asked to 'review rule' or dispatched by /review-claude-config. Do
   NOT use for skills or agents — use /review-skill or /review-agent.
 argument-hint: <path-to-rule.md>
-allowed-tools: Read, Write, Glob, WebSearch, WebFetch
+allowed-tools: Bash, Read, Write, Glob, WebSearch, WebFetch
 ---
 
 # Review Rule
@@ -53,7 +53,7 @@ Locate the `review-claude-config` skill directory (sibling skill in the same plu
 
 Use Glob to find the files if the path is not immediately known: `**/review-claude-config/references/scoring-rubric.md`
 
-Also load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`.
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
 
 **If any of these files is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
 
@@ -188,3 +188,12 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 - **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present the full certificate before any follow-up actions.**
 - **Use only 3 dimensions.** Never score rules on PE, CE, Safety, or Metadata.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.
