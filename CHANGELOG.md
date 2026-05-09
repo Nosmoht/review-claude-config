@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.1](https://github.com/Nosmoht/review-claude-config/compare/v2.10.0...v2.10.1) (2026-05-09)
+
+
+### Fixed
+
+* **skills:** unify repo-slug resolution via bin/repo-slug.sh ([#162](https://github.com/Nosmoht/review-claude-config/issues/162)) ([#252](https://github.com/Nosmoht/review-claude-config/issues/252)) ([e5a2403](https://github.com/Nosmoht/review-claude-config/commit/e5a240355d25bbea3d9b59ebc5fa055c5b6b6e87))
+
 ## [2.10.0](https://github.com/Nosmoht/review-claude-config/compare/v2.9.0...v2.10.0) (2026-05-08)
 
 
