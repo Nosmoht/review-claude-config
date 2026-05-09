@@ -6,7 +6,7 @@ description: >
   primitives, or as a pre-release gate. Do NOT use for quality review — use
   /review-claude-config.
 argument-hint: "[folder]"
-allowed-tools: Agent, Read, Glob, Grep, Write
+allowed-tools: Agent, Bash, Read, Glob, Grep, Write
 disable-model-invocation: true
 ---
 
@@ -323,6 +323,8 @@ Registration: N consistent, N issues
 
 Present the full report.
 
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
+
 Confirm via AskUserQuestion (header: "Save report"):
 - Option 1 label: "Save report" (Recommended) — description: `"Write to ${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-validate-deps.md"`
 - Option 2 label: "Skip" — description: `"Display the path that would have been used"`
@@ -359,3 +361,12 @@ If the overall verdict is HEALTHY, skip the menu — just present the report.
 - **Present all findings before asking** about persistence.
 - **Subagent permission isolation.** Subagent-delegation references are
   informational only — subagents do not inherit parent tool grants.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

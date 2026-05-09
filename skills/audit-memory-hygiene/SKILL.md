@@ -6,7 +6,7 @@ description: >
   to 'audit memory', 'check memory hygiene', or 'scan memory for issues'.
   Do NOT use for CLAUDE.md review — use /review-claude-md.
 argument-hint: "[memory-dir]"
-allowed-tools: Read, Write, Glob, Grep
+allowed-tools: Bash, Read, Write, Glob, Grep
 ---
 
 # Audit Memory Hygiene
@@ -106,7 +106,7 @@ Read files flagged by Steps 3-6 plus a sample of 10 unflagged files. Extract fac
 ## Phase 3 — Report Persistence
 
 1. Present the report.
-2. Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`).
+2. Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
 3. Confirm before writing to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-memory-hygiene.md`.
 4. Frontmatter:
    ```yaml
@@ -137,3 +137,12 @@ Read files flagged by Steps 3-6 plus a sample of 10 unflagged files. Extract fac
 - **Redact credentials in findings.** When reporting MH-3 matches, show only the first 8 characters followed by `***`. Never include full credentials in the report.
 - **Evidence over inference.** Report only patterns with concrete file + line evidence.
 - **Present the full report before any follow-up actions.**
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

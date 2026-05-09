@@ -6,7 +6,7 @@ description: >
   coverage. Do NOT use for repo-structure audit — use /audit-repo instead.
   Do NOT use for existing-skill quality review — use /review-claude-config instead.
 argument-hint: [folder]
-allowed-tools: Agent, Read, Write, Glob, Grep, WebSearch, WebFetch
+allowed-tools: Agent, Bash, Read, Write, Glob, Grep, WebSearch, WebFetch
 disable-model-invocation: true
 ---
 
@@ -396,7 +396,7 @@ Read `references/report-template.md` for the report body structure (see `## Repo
 After presenting all suggestions, confirm before writing:
 "Save suggestions report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-suggest-skills.md`?"
 
-Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`). Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.) Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
 
 If the user declines, skip report writing but still display the report path that would have been used.
 
@@ -432,3 +432,12 @@ On "Scaffold a suggested skill": ask which skill from the suggestions, then invo
 - **Present all suggestions before asking** about follow-up actions.
 - **Error handling.** If the Phase 1 scan agent fails entirely, report the error and stop. If a Phase 2 analysis agent fails, report the failure with partial results and continue with remaining categories. Never silently skip.
 - **Graceful degradation.** Works without WebSearch (model knowledge only, marked accordingly). Works without WebFetch (WebSearch snippets only).
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

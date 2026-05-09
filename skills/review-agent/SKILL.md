@@ -6,7 +6,7 @@ description: >
   dispatched by /review-claude-config. Do NOT use for skills or rules — use
   /review-skill or /review-rule.
 argument-hint: <path-to-agent.md>
-allowed-tools: Read, Write, Glob, WebSearch, WebFetch
+allowed-tools: Bash, Read, Write, Glob, WebSearch, WebFetch
 ---
 
 # Review Agent
@@ -53,7 +53,7 @@ Locate the `review-claude-config` skill directory (sibling skill in the same plu
 
 Use Glob to find the files if the path is not immediately known: `**/review-claude-config/references/scoring-rubric.md`
 
-Also load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`.
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
 
 **If any of these files is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
 
@@ -198,7 +198,7 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 
 - **Read-only on the analyzed agent.** Never modify the agent being reviewed. Write only to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`.
 - **Credential scope (PII/secret redaction).** Before writing content quoted from the analyzed agent to the report path: (1) truncate `evidence` / `current` blocks at 500 characters, (2) redact token-like substrings matching `/[A-Za-z0-9_\-]{20,}/` with `<REDACTED>`, (3) skip writes entirely when the analyzed path matches `**/*.env`, `**/.ssh/**`, or `**/credentials.*` — emit a `{"status": "skipped", "reason": "credential-scope"}` stub instead.
-- **Tier A tool justification:** Write + WebSearch/WebFetch are present because: (1) Write is restricted to the `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` directory only — never to the analyzed agent path, never outside this report directory, (2) WebSearch is used only for domain research during Phase 2 Step A goal inference, never for file modification (it is a read-only network tool by Anthropic spec), (3) WebFetch is restricted to fetching documentation URLs identified by WebSearch results during the same domain-research step — used only for evidence gathering on Goal Alignment, never for arbitrary URLs, never for file modification, and bounded to a single fetch per review per the resource caps. Read and Glob are read-only and need no per-tool binding (SP-2b applies to mutating tools only). The read-only Hard Rule above prevents any write-to-analyzed-agent risk; combined with the Write path restriction, this confines all mutations to the report directory allowlist.
+- **Tier A tool justification:** Write + WebSearch/WebFetch are present because: (1) Write is restricted to the `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/` directory only — never to the analyzed agent path, never outside this report directory, (2) WebSearch is used only for domain research during Phase 2 Step A goal inference, never for file modification (it is a read-only network tool by Anthropic spec), (3) WebFetch is restricted to fetching documentation URLs identified by WebSearch results during the same domain-research step — used only for evidence gathering on Goal Alignment, never for arbitrary URLs, never for file modification, and bounded to a single fetch per review per the resource caps. (4) Bash(bash bin/repo-slug.sh:*) computes the deterministic repo-slug used in report paths. Read and Glob are read-only and need no per-tool binding (SP-2b applies to mutating tools only). The read-only Hard Rule above prevents any write-to-analyzed-agent risk; combined with the Write path restriction, this confines all mutations to the report directory allowlist.
 - **Apply the rubric strictly.** Do not inflate grades.
 - **Every High or Medium recommendation must include evidence and a concrete rewrite** — not just "improve X."
 - **Present the full certificate before any follow-up actions.**

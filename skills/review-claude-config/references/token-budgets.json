@@ -33,7 +33,8 @@
     "context-report-schema.md": 600,
     "description-design-problem.md": 799,
     "agent-description-convention.md": 800,
-    "skill-description-convention.md": 800
+    "skill-description-convention.md": 800,
+    "repo-identification.md": 1000
   },
   "DOMAIN_CACHE_BUDGET": 800,
   "DEFAULT_BUDGET": 500

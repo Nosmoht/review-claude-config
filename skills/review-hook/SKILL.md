@@ -5,7 +5,7 @@ description: >
   Completeness, Goal Alignment, Safety, Metadata). Use when asked to 'review
   hook' or after /develop-hooks. Do NOT use for skills or agents.
 argument-hint: <path-to-hooks.json or path-to-hook-script.py>
-allowed-tools: Read, Write, Glob, WebSearch, WebFetch
+allowed-tools: Bash, Read, Write, Glob, WebSearch, WebFetch
 ---
 
 # Review Hook
@@ -54,7 +54,7 @@ Locate the `review-claude-config` skill directory. Read these shared references:
 
 Use Glob to find the files if the path is not immediately known: `**/review-claude-config/references/scoring-rubric.md`
 
-Also load `repo-identification.md` via Glob `**/review-claude-config/references/repo-identification.md` to resolve `suite-root` and `repo-slug`.
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
 
 **If any of these files is not found, abort with error:** "Required reference not found. Ensure review-claude-config is installed as a sibling skill."
 
@@ -199,3 +199,12 @@ In orchestrated mode, the orchestrator logs this and continues with remaining it
 - **Every High or Medium recommendation must include evidence and a concrete rewrite.**
 - **Present the full certificate before any follow-up actions.**
 - **Evaluate the full hook unit** (hooks.json entry + all referenced scripts). Do not score hooks.json alone.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

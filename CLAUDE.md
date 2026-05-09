@@ -233,6 +233,7 @@ Diff-checkable never-violate rules. The `builder-evaluator` subagent enforces th
 - Review, suggest, and audit skills are read-only on analyzed files except for reports (`${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`)
 - Apply skills and `scaffold-skill` modify files and require confirmation gates
 - When changing primitive descriptions, run `make validate-descriptions` to verify no description-graph regressions (name collisions, reciprocal-asymmetry breaks, token-grade violations)
+- Skills that emit reports use `bash bin/repo-slug.sh "$(pwd)"` to compute `<repo-slug>` deterministically; see `skills/review-claude-config/references/repo-identification.md §Canonical Implementation`
 
 ## Research References
 

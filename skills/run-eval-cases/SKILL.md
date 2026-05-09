@@ -136,6 +136,8 @@ For BLOCKED cases: show which skill or fixture was missing and what it would hav
 
 ### Step 3: Persist
 
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
+
 Confirm via AskUserQuestion (header: "Save report"):
 - Option 1 label: "Save report" (Recommended) — description: `"Write to ${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-eval-cases.md"`
 - Option 2 label: "Skip" — description: `"Discard the report"`
@@ -157,6 +159,17 @@ On "Re-run a specific case": invoke `/run-eval-cases` with the specified case nu
 - **Cleanup runs even on failure.** Delete `.claude/eval-temp/` at the end of Phase 3 regardless of case outcomes. For `behavior_scaffold` cases, run `case.execution.cleanup` immediately after each scenario, BEFORE moving to the next.
 - **BLOCKED is not FAIL.** If a required skill or fixture is missing, mark the case BLOCKED, exclude it from the pass/fail count, and report it separately.
 - **Stop conditions.** If a Phase 2 dispatch agent fails entirely (crash or error), mark every sprint_contract criterion FAIL for that case, note the error, and continue with the next case. Do not retry.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted for: (1) workspace
+pre-clean (`rm -rf .claude/eval-temp && mkdir -p .claude/eval-temp`), (2)
+artifact staging (`cp`) per the `behavior_scaffold` case kind, (3) cleanup
+(`rm -rf .claude/eval-temp`), and (4) `bash bin/repo-slug.sh "$(pwd)"` to
+compute the canonical `<repo-slug>` deterministically per
+`references/repo-identification.md`. The command-level allowlist
+`Bash(bash bin/repo-slug.sh:*)` enforces scope for the slug resolver; the
+workspace and staging commands are bounded to `.claude/eval-temp/`.
 - **Sprint contracts are fixed.** Do not adjust criteria based on what the review actually produces. Evaluate actual output against the YAML criteria as written.
 - **Present all results before asking** about persistence.
 - **Scaffold doc revert is mandatory** for `behavior_scaffold` cases. The scaffold writes to shared docs (README.md, CLAUDE.md). Always revert those changes after each scenario, even if criteria passed. Record whether revert succeeded.

@@ -5,7 +5,7 @@ description: >
   intervention matrix. Use when setting up or diagnosing a Claude Code
   configuration. Do NOT use for skill-gap suggestion only — use /suggest-skills instead.
 argument-hint: [folder]
-allowed-tools: Agent, Read, Write, Glob, Grep, WebSearch, WebFetch
+allowed-tools: Agent, Bash, Read, Write, Glob, Grep, WebSearch, WebFetch
 disable-model-invocation: true
 ---
 
@@ -39,8 +39,7 @@ Read from the sibling `suggest-skills` skill's references:
 - Locate via Glob: `**/review-claude-config/references/signal-catalog.md`
 - This provides the Application Signal Table and Skills Repository Signal Table for Phase 4B skill detection
 
-Load repo-identification reference to resolve suite-root and repo-slug:
-- Locate via Glob: `**/review-claude-config/references/repo-identification.md`
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
 
 ### Step 2: Initial Target Assessment
 
@@ -449,7 +448,7 @@ On "Apply audit findings": invoke `/apply-audit-findings` with the report path. 
 ## Hard Rules
 
 - **Read-only on target repository.** Never modify any existing file. The only file this skill writes is the audit report at `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-repo.md`.
-- **Bash only in sub-agents.** Bash is intentionally excluded from top-level allowed-tools and only granted to Phase 2/3 sub-agents. Sub-agent instructions explicitly prohibit write commands.
+- **Bash scope.** At the top level, Bash is used only for `bash bin/repo-slug.sh "$(pwd)"` (slug resolution). All other Bash use is restricted to Phase 2/3 sub-agents, which explicitly prohibit write commands.
 - **Scan limits enforced.** Max 50 lines per file read, max 4 directory levels, max 500 files per listing. For very large repos (>5000 files), focus on root configs and first-level subdirectories.
 - **Every recommendation needs evidence.** Cite specific file paths, metrics, or absence evidence. Never recommend a primitive without explaining what analysis data supports it.
 - **Expose uncertainty honestly.** Every intervention must include `evidence_class` and `confidence`; do not present heuristic or repo-policy mappings as settled science.
@@ -458,3 +457,12 @@ On "Apply audit findings": invoke `/apply-audit-findings` with the report path. 
 - **Error handling.** If Phase 2 scan agent fails entirely, report the error and stop. If Phase 3 analyzer fails, report partial results and continue to Phase 4 with available data. Never silently skip.
 - **Graceful degradation.** Works without WebSearch (model knowledge only for validation, marked accordingly). Works without WebFetch.
 - **Stop conditions.** If target folder does not exist, has no files, or is not accessible: report and stop immediately.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

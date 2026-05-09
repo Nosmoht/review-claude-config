@@ -5,7 +5,7 @@ description: >
   contradictions, and tier compliance. Use every 90 days or when evidence
   sources change. Do NOT use to check skill quality — use /review-claude-config.
 argument-hint: "[--scope all|labels|freshness|contradictions|tiers]"
-allowed-tools: Read, Write, Glob, Grep, AskUserQuestion
+allowed-tools: Bash, Read, Write, Glob, Grep, AskUserQuestion
 disable-model-invocation: true
 ---
 
@@ -48,7 +48,9 @@ exists at skills/review-claude-config/references/evidence-contract.md."
 
 ### Step 2: Check trigger conditions
 
-Resolve `<repo-slug>` per `repo-identification.md` (Glob `**/review-claude-config/references/repo-identification.md`). Then Glob `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-evidence-layer.md` to find the most recent run.
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.)
+
+Glob `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/*-evidence-layer.md` to find the most recent run.
 
 For each result, extract the date from the filename (format `YYYY-MM-DDTHHMMSS`).
 If a filename does not match this format, skip it with a note: "Skipped unrecognized
@@ -301,3 +303,12 @@ If all checks passed with zero findings, skip the menu and confirm the healthy s
 - Always present the full report even when all checks pass.
 - Provenance is the primary audit goal: every "Proven result" claim must have a traceable
   primary source; flag any that do not.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.

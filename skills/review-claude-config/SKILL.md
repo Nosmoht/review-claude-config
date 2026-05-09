@@ -6,7 +6,7 @@ description: >
   shipping new skills. Do NOT use for a single item — use /review-skill,
   /review-agent, or /review-rule.
 argument-hint: "[folder] [--validation]"
-allowed-tools: Agent, Read, Write, Glob, WebSearch, WebFetch
+allowed-tools: Agent, Bash, Read, Write, Glob, WebSearch, WebFetch
 ---
 
 # Review Claude Config
@@ -291,7 +291,7 @@ If `validation_mode = true`, skip this entire phase.
 After presenting all reports to the user, confirm before writing:
 "Save review report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-claude-config.md`?"
 
-Resolve `<repo-slug>` per `references/repo-identification.md`. Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
+Resolve `<repo-slug>` by running `bash bin/repo-slug.sh "$(pwd)"` and capturing stdout. (For documentation reference only, not the operational source-of-truth: `references/repo-identification.md` describes the sanitize algorithm.) Include `repo: <slug>` and optionally `origin: <git-remote-url>` in frontmatter.
 
 If the user declines, skip report writing but still display the report path that would have been used.
 
@@ -378,3 +378,12 @@ On "Apply review findings": invoke `/apply-review-findings` with the report path
 - **Present all reports before asking** about follow-up actions.
 - **Error handling:** If an analysis agent fails, report the failure with partial results and continue with remaining items. Never silently skip.
 - **Baseline version lock.** When a prior review report exists for the same target directory, use the same `baseline_version` as the prior report. If the current engineering baseline is newer, present the user with a choice: "Prior review used baseline v{prior}. Current baseline is v{current}. Use [prior|current]?" A baseline change is equivalent to a rubric change and must be a conscious decision, not an implicit drift.
+
+## Tier A Tool Justification
+
+**Tier A tool justification (Bash):** Bash is granted exclusively for
+`bash bin/repo-slug.sh "$(pwd)"` to compute the canonical `<repo-slug>`
+deterministically per `references/repo-identification.md`. The
+command-level allowlist `Bash(bash bin/repo-slug.sh:*)` enforces scope.
+The script is read-only (stdout slug, no FS writes), so this Tier-A grant
+carries no write-amplification risk.
