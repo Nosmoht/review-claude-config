@@ -94,12 +94,14 @@ Sources: 12 Tier 1 sources (Anthropic platform docs current 2026, Anthropic Engi
 
 ### Finding 4: Role Assignment Causes Performance Degradation
 
-**Status:** NEW
+**Status:** NEW (revised 2026-05-13 after paper-body verification)
 **Sources:**
-- [arXiv 2602.12285](https://arxiv.org/abs/2602.12285) — "From Biased Chatbots to Biased Agents" (Tier 1, AAAI 2026 TrustAgent Workshop)
 - [arXiv 2603.18507](https://arxiv.org/abs/2603.18507) — "Expert Personas Improve LLM Alignment but Damage Accuracy: PRISM" (Tier 1, 2026)
+- [arXiv 2311.10054v3](https://arxiv.org/abs/2311.10054) — Zheng et al., "When 'A Helpful Assistant' Is Not Really Helpful" (Tier 1, EMNLP 2024 Findings)
 
-**Key finding:** Task-irrelevant demographic persona cues cause up to 26.2% performance degradation across 23 personas and 5 operational domains (arXiv 2602.12285). The effect is domain-dependent, representing "an overlooked vulnerability in current LLM agentic systems." Expert personas show asymmetric effects: they improve alignment on generative tasks but degrade accuracy on discriminative tasks. The PRISM framework uses intent-conditioned gated LoRA adapters to selectively apply personas by task type, suggesting role priming should not be uniform. [Proven result]
+**Key finding:** Length-controlled MMLU evidence from Sclar et al. (2603.18507): minimum persona (~5 tokens) damages baseline 71.6% → 68.0% (−3.6pp); long expert persona (~150 tokens) damages 71.6% → 66.3% (−5.3pp). Effect monotone with persona length. MT-Bench (alignment-leaning) shows reversed direction: long expert helps Extraction +0.65, STEM +0.60, but damages Coding −0.65 / Humanities −0.20 / Math −0.10. Safety Monitor persona increases refusal rate +17.7pp. The PRISM mechanism routes 97.6–99.4% of reasoning queries to no-persona base model — strong evidence that reasoning-heavy tasks should NOT prime with persona. Cross-validated by Zheng et al. (2311.10054v3) across 162 personas, 9 OSS models — directionally consistent (gendered roles and out-of-domain roles underperform), absolute effects small. [Proven result]
+
+**Note on earlier "26.2% degradation" claim:** earlier versions of this finding cited arXiv:2602.12285 with a 26.2% magnitude. That arXiv ID does not resolve and the 26.2% figure is not present in either Sclar or Zheng paper bodies. The defensible headline number is Sclar's MMLU −5.3pp; corrected 2026-05-13.
 **Relevance to skill writing:** Skill system prompts and agent descriptions should use functional role definitions (e.g., "code reviewer focused on security vulnerabilities") rather than demographic or broad expert personas. If a skill performs both generative and discriminative tasks, consider task-type-conditional role framing.
 
 ---
@@ -145,7 +147,7 @@ Sources: 12 Tier 1 sources (Anthropic platform docs current 2026, Anthropic Engi
 | Skills specification | EXTENDS | Cross-surface availability, API upload endpoint, token budgets formalized (100 / <5k / unlimited) |
 | Agent harness | NEW | Planner-generator-evaluator, sprint contracts, simplification principle, cost/quality data |
 | SDK hooks | NEW | 19 events (vs. 6 previously), permission priority model, subagent isolation, async hooks |
-| Role assignment | NEW | Up to 26.2% degradation from irrelevant personas; task-type-dependent effectiveness |
+| Role assignment | NEW | MMLU −5.3pp from long expert persona (Sclar 2603.18507, length-controlled); reasoning queries route 97.6–99.4% to no-persona base; effects task-type-dependent |
 | Skill composition | NEW | DAG outperforms flat; 26.1% community skills vulnerable; phase transition in large libraries; 8x/15x distillation gains |
 | Least privilege | NEW | MiniScope 1-6% overhead; STPA formal safety; capability-enhanced MCP |
 | Reliability | CONFIRMS | ICLR 2026 publication; no contradictions with existing guidance |

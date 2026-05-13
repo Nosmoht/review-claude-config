@@ -216,7 +216,7 @@ These rules apply when writing or generating Claude Code skills, agents, or rule
 Use natural phrasing — avoid MUST/CRITICAL/ALWAYS. Claude 4.6 overtriggers on aggressive language (Anthropic Claude 4 Best Practices). Write "use this tool when…" not "ALWAYS use this tool when…".
 
 ### Role Statements
-Use functional roles only: "You are a [functional role] that [purpose]." Demographic or broad expert personas (e.g., "You are a senior SRE") cause up to 26.2% performance degradation from irrelevant persona cues (arXiv:2602.12285, AAAI 2026). Expert personas help generative tasks but hurt discriminative tasks (arXiv:2603.18507).
+Use functional roles only: "You are a [functional role] that [purpose]." Demographic, expert, or narrative personas damage accuracy on knowledge tasks — length-controlled evidence: minimum persona (~5 tokens) damages MMLU by −3.6pp; long expert persona (~150 tokens) damages MMLU by −5.3pp (arXiv:2603.18507 Sclar et al., PRISM). Effect direction confirmed across 162 personas in arXiv:2311.10054v3 (Zheng et al., EMNLP 2024 Findings — small absolute effects, no persona consistently improves accuracy). Anthropic's own prompt-engineering guidance: "one sentence naming expertise + context"; multi-sentence character backstories are explicitly discouraged.
 
 ### Examples
 3-5 examples maximum, in `<example>` tags. Over-prompting actively degrades performance (arXiv:2509.13196). For agents, examples go in the `description` field frontmatter. For skills, they may appear in the body's trigger/activation section.

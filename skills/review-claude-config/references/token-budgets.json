@@ -1,8 +1,9 @@
 {
   "BUDGETS": {
     "scoring-rubric.md": 13500,
+    "quality-patterns.md": 550,
     "tool-grant-decision-tree.md": 800,
-    "engineering-baseline.md": 4350,
+    "engineering-baseline.md": 4400,
     "signal-catalog.md": 1400,
     "skill-evaluation-guide.md": 1700,
     "agent-evaluation-guide.md": 2200,
@@ -17,7 +18,7 @@
     "mcp-server-template.md": 800,
     "detection-rules.md": 1500,
     "detector-rules.md": 1500,
-    "engineering-baseline-provenance.md": 1500,
+    "engineering-baseline-provenance.md": 1600,
     "reference-patterns.md": 800,
     "cross-skill-dependencies.md": 600,
     "review-report-contract.md": 1500,

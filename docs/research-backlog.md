@@ -131,24 +131,23 @@ Each item includes: the gap, why it matters (observed failure mode), what to res
 
 ---
 
-## 7. Persona-magnitude source attribution
+## 7. Persona-magnitude source attribution — RESOLVED 2026-05-13
 
-**Gap:** Two Tier-1 citations underpin the repo's persona-antipattern rule (`research/claude-code/skill-agent-format-conventions.md:219`) but their bodies have not been independently read:
+**Resolution:** Deep research on 2026-05-13 (see `docs/probe-runs/deep-research-open-questions-2026-05-13.md`) verified the paper bodies and produced the following corrections:
 
-- **arXiv:2602.12285** (Cao/Sun/Yue, AAAI 2026 TrustAgent Workshop) — cited for the "26.2% degradation" claim. Abstract verified (it is for *demographic* persona cues across strategic-reasoning/planning/technical-ops benchmarks). Body unread. Workshop paper: 6 pages, 4 figures.
-- **arXiv:2603.18507** (Hu/Rostami/Thomason, PRISM) — cited for "expert personas help generative tasks but damage discriminative tasks". Abstract direction verified; magnitude not in abstract.
+- **arXiv:2602.12285 does not resolve.** The ID was either fabricated or a typo for one of the actual papers below. Removed from all citations.
+- **arXiv:2603.18507** (Sclar et al., PRISM) — paper body verified. Length-controlled MMLU evidence: baseline 71.6% → long expert persona 66.3% (−5.3pp); minimum persona 68.0% (−3.6pp). MT-Bench alignment-leaning subtasks show reversed direction (Extraction +0.65, STEM +0.60; Coding −0.65). PRISM routes 97.6–99.4% of reasoning queries to no-persona base model. Models: Qwen2.5-7B, Llama-3.1-8B, Mistral-7B, Mixtral-8x7B, R1-Llama-8B, R1-Qwen-7B.
+- **arXiv:2311.10054v3** (Zheng et al., EMNLP 2024 Findings) — paper body verified. 162 personas across 9 OSS models (FLAN-T5-XXL, Llama-3, Mistral-7B, Qwen2.5 3B–72B; no GPT-4, no Claude). MMLU subset only (2,410 questions). No persona consistently improves accuracy; gendered and out-of-domain roles underperform.
+- **The "26.2% degradation" claim does not appear in either paper body.** Removed from all citations.
 
-**Observed risk:** PE-3 binary persona-detection rubric item (Wave 2 work, future issue) requires verified magnitudes to calibrate severity caps. Citing abstract-only attribution is acceptable for a directional rule but not for a binary cap.
-
-**Research targets:**
-- Read arXiv:2602.12285 PDF body. Extract: exact benchmarks (named), exact models (named), exact demographic cue patterns tested, exact magnitude breakdown per benchmark
-- Read arXiv:2603.18507 PDF body. Extract: generative-task magnitude, discriminative-task magnitude, PRISM intent-routing mechanism for relevant excerpts
-- Cross-check against Zheng arXiv:2311.10054 (EMNLP Findings 2024) and Basil/Mollick arXiv:2512.05858 (Dec 2025 preprint, GPQA Diamond + MMLU-Pro on 6 models) for direction-consistency
-
-**Done when:**
-- `engineering-baseline-provenance.md` contains a per-paper magnitude table for the four sources above
-- The "26.2% degradation" claim in `engineering-baseline.md:13` and `skill-agent-format-conventions.md:219` is paired with the verified benchmark name and model family (not just the citation)
-- PE-3 severity cap (Wave 2) can cite the verified magnitude directly
+**Done:**
+- ✅ `engineering-baseline-provenance.md` updated with verified IDs and magnitudes (2026-05-13)
+- ✅ `skill-agent-format-conventions.md:219` rewritten with Sclar magnitudes and length-controlled framing
+- ✅ `agent-composition-framework.md` (3 locations) updated with corrected IDs and magnitudes
+- ✅ `anthropic-equipping-agents-with-skills.md` Finding 4 rewritten
+- ✅ `skill-fix-guide.md` evidence anchor updated
+- ✅ `CLAUDE.md` Working Guidelines persona reference updated
+- ✅ PE-3 redesigned (PR #274 closed) — Binary regex approach abandoned in favor of LLM-Judge with corrected anchors
 
 **Where findings land:**
 - `engineering-baseline-provenance.md` per-paper magnitude table (additive)

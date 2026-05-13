@@ -16,7 +16,7 @@ Maps each technique in `engineering-baseline.md` to its backing sources and tier
 | Technique | Evidence Class | Sources | Tier |
 |-----------|---------------|---------|------|
 | Structured Output | Proven result | Schulhoff et al. arXiv:2406.06608 | 1 |
-| Role Priming | Engineering guidance | arXiv:2603.18507; arXiv:2311.10054v3; arXiv:2602.12285 (AAAI 2026); arXiv:2512.05858 (Basil/Mollick, GPQA+MMLU-Pro) | 1 |
+| Role Priming | Engineering guidance | arXiv:2603.18507 (Sclar et al., PRISM — MMLU −5.3pp from long expert persona, length-controlled); arXiv:2311.10054v3 (Zheng et al., EMNLP 2024 Findings — 162 personas, small effects); arXiv:2512.05858 (Basil/Mollick, GPQA+MMLU-Pro) | 1 |
 | Stepwise Decision Flow | Engineering guidance | (engineering practice — no primary benchmark) | — |
 | Few-Shot Examples | Engineering guidance | arXiv:2509.13196 (7 models); Anthropic Claude 4 Best Practices, April 2026 | 1 |
 | Constraint Specification | Proven result | Schulhoff et al. arXiv:2406.06608 | 1 |
@@ -67,7 +67,7 @@ Maps each technique in `engineering-baseline.md` to its backing sources and tier
 
 **Anthropic (Tier 1):** Effective Context Engineering (2025); Writing Tools for Agents (2025); Building Effective Agents (2025); Claude 4 Best Practices (April 2026); Effective Harnesses for Long-Running Agents (March 2026); Agent SDK Hooks (April 2026); Claude Code Best Practices (2025).
 
-**Research — arXiv (Tier 1):** Schulhoff et al. arXiv:2406.06608; Mei et al. arXiv:2507.13334; Qi et al. arXiv:2505.16944; arXiv:2603.18507; arXiv:2311.10054v3; arXiv:2602.12285; arXiv:2512.05858; arXiv:2509.13196; arXiv:2511.20836; arXiv:2603.22608; arXiv:2510.05381; arXiv:2512.02246; arXiv:2510.00615; arXiv:2601.07190; arXiv:2510.11967; arXiv:2508.07479; arXiv:2510.10276; arXiv:2511.02230; arXiv:2512.11147; arXiv:2601.08012.
+**Research — arXiv (Tier 1):** Schulhoff et al. arXiv:2406.06608; Mei et al. arXiv:2507.13334; Qi et al. arXiv:2505.16944; arXiv:2603.18507 (Sclar PRISM); arXiv:2311.10054v3 (Zheng EMNLP 2024 Findings); arXiv:2512.05858 (Basil/Mollick); arXiv:2509.13196; arXiv:2511.20836; arXiv:2603.22608; arXiv:2510.05381; arXiv:2512.02246; arXiv:2510.00615; arXiv:2601.07190; arXiv:2510.11967; arXiv:2508.07479; arXiv:2510.10276; arXiv:2511.02230; arXiv:2512.11147; arXiv:2601.08012.
 
 **Vendor (Tier 2/3):** Fast.io; Maxim.ai; AWS Prescriptive Guidance; Chroma 2025 Context Rot.
 

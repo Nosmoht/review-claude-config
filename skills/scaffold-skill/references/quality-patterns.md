@@ -10,7 +10,7 @@ Translates `engineering-baseline.md` from evaluator checks into generator direct
 Description in user-task terms. Include ≥1 trigger phrase + ≥1 counter-case. Format: `<Verb> <output>. Use when <trigger>. Do NOT use for <exclusion>.`
 
 ### Role
-`"You are a [role] that [purpose]."` No demographic/expert personas — 26.2% degradation risk. Role adds behavioral context, not credential-stacking.
+`"You are a [role] that [purpose]."` No demographic/expert/narrative personas — Sclar arXiv:2603.18507 measures MMLU −5.3pp from long expert persona (length-controlled). Role adds behavioral context, not credential-stacking.
 
 ### Instruction Language
 Natural phrasing only. No MUST/CRITICAL/ALWAYS (overtrigger on Claude 4.6). Branch conditions: observable tests, not "if needed".

@@ -20,7 +20,7 @@ The framework is a **synthetic recommendation** — its three constituent claims
 
 Three observations:
 
-1. **WHO is *not* persona-narrative.** Empirical evidence — Cao/Sun/Yue arXiv:2602.12285 (AAAI 2026 TrustAgent Workshop, 26.2% degradation for demographic personas), Basil/Mollick arXiv:2512.05858 (expert personas don't improve factual accuracy on GPQA Diamond / MMLU-Pro across 6 models), Zheng arXiv:2311.10054 (EMNLP Findings 2024, minimum personas still degrade MMLU 71.6% → 68.0%) — disqualifies the narrative-persona form. The WHO axis captures *structured behavioral specification* per [`skill-agent-format-conventions.md` §Role Statements](../claude-code/skill-agent-format-conventions.md): `You are a <noun-phrase> that <verb-phrase>` + structured constraints.
+1. **WHO is *not* persona-narrative.** Empirical evidence — Sclar et al. arXiv:2603.18507 (PRISM, length-controlled MMLU: minimum persona −3.6pp, long expert persona −5.3pp; reasoning queries route 97.6–99.4% to no-persona base), Zheng arXiv:2311.10054v3 (EMNLP Findings 2024, 162 personas across 9 OSS models, small but directionally consistent degradation), Basil/Mollick arXiv:2512.05858 (expert personas don't improve factual accuracy on GPQA Diamond / MMLU-Pro across 6 models) — disqualifies the narrative-persona form. The WHO axis captures *structured behavioral specification* per [`skill-agent-format-conventions.md` §Role Statements](../claude-code/skill-agent-format-conventions.md): `You are a <noun-phrase> that <verb-phrase>` + structured constraints.
 2. **HOW is often persona-bound but conceptually orthogonal.** Some methods (PR review) are shared across roles; some (threat modeling) are role-specific. Default: treat as orthogonal until evidence collapses an axis.
 3. **WHAT is the largest axis.** Languages, frameworks, infrastructure stacks — N can grow to 50+. JIT-loading wins on this axis.
 
@@ -83,7 +83,7 @@ The three claims composing `EHJ` are each Tier-1 evidenced, with explicit scope:
 
 | Claim | Evidence | Tier | Scope caveat |
 |---|---|---|---|
-| Narrative-persona prompts don't improve and can harm performance | Cao/Sun/Yue arXiv:2602.12285 (26.2%, AAAI 2026), Basil/Mollick arXiv:2512.05858 (GPQA Diamond + MMLU-Pro, 6 models), Zheng arXiv:2311.10054 (162 roles, 4 model families, EMNLP Findings 2024), Hu/Rostami/Thomason arXiv:2603.18507 (expert generative-vs-discriminative trade-off) | 1 | Studies test *narrative-demographic personas on factual MCQ benchmarks*. EHJ extrapolates to *behavioral role-specs in agentic code review*. Transfer is plausible but not measured. |
+| Narrative-persona prompts don't improve and can harm performance | Sclar et al. arXiv:2603.18507 (PRISM — length-controlled MMLU: −5.3pp long expert persona, −3.6pp minimum; reasoning queries route 97.6–99.4% to no-persona base), Zheng arXiv:2311.10054v3 (162 personas, 9 OSS models, EMNLP Findings 2024 — small but consistent degradation), Basil/Mollick arXiv:2512.05858 (GPQA Diamond + MMLU-Pro, 6 models) | 1 | Studies test *narrative-demographic personas on factual MCQ benchmarks*. EHJ extrapolates to *behavioral role-specs in agentic code review*. Transfer is plausible but not measured. |
 | JIT-retrieval beats eager pre-loading for variable context | Anthropic Effective Context Engineering doctrine | 1 (qualitative) | Anthropic's own doctrine, no quantitative effect-size cited. |
 | Stable system-prompt prefix yields cache benefit in multi-agent workflows | KVFlow arXiv:2507.07400 (vs SGLang on open-weight serving) | 1 (principle only) | KVFlow's 1.83× / 2.19× magnitudes are *not* directly applicable to Anthropic's cache. The principle transfers; the magnitude needs separate measurement. |
 
@@ -106,10 +106,9 @@ The *combination* — choosing `EHJ` over `EHH`, `EJJ`, `EEH`, etc. — has not 
 
 Tier 1:
 
-- [Cao, Sun, Yue — "From Biased Chatbots to Biased Agents" (arXiv:2602.12285, AAAI 2026 TrustAgent Workshop)](https://arxiv.org/abs/2602.12285)
+- [Sclar et al. — "Expert Personas Improve LLM Alignment but Damage Accuracy: PRISM" (arXiv:2603.18507)](https://arxiv.org/abs/2603.18507) — length-controlled MMLU evidence; PRISM intent-routing mechanism
+- [Zheng et al. — "When 'A Helpful Assistant' Is Not Really Helpful" (arXiv:2311.10054v3, EMNLP Findings 2024)](https://arxiv.org/abs/2311.10054) — 162 personas, 9 OSS models
 - [Basil, Shapiro, Mollick et al. — "Playing Pretend: Expert Personas Don't Improve Factual Accuracy" (arXiv:2512.05858)](https://arxiv.org/abs/2512.05858)
-- [Zheng et al. — "When 'A Helpful Assistant' Is Not Really Helpful" (arXiv:2311.10054, EMNLP Findings 2024)](https://arxiv.org/abs/2311.10054)
-- [Hu, Rostami, Thomason — "Expert Personas Improve LLM Alignment but Damage Accuracy: PRISM" (arXiv:2603.18507)](https://arxiv.org/abs/2603.18507)
 - [KVFlow: Efficient Prefix Caching for LLM-Based Multi-Agent Workflows (arXiv:2507.07400)](https://arxiv.org/abs/2507.07400)
 - [Anthropic — Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
 - [Anthropic — Equipping Agents for the Real World with Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills)

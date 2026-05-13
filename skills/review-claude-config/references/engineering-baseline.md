@@ -10,7 +10,7 @@ last_refreshed: 2026-04-29
 
 **Structured Output** `[Proven result]` — Define exact output structure when the task depends on reliable formatting. Check: is the expected output shape explicit?
 
-**Role Priming** `[Engineering guidance]` — Use a functional role statement when domain context materially changes judgment. Use functional descriptions ("You are a dependency checker that…"), not demographic or expert personas — they improve generative tasks but damage factual accuracy on discriminative tasks. Task-irrelevant cues cause up to 26.2% degradation. Check: does the role add behavioral context, or is it decorative?
+**Role Priming** `[Engineering guidance]` — Use a functional role statement when domain context materially changes judgment. Use functional descriptions ("You are a dependency checker that…"), not demographic, expert, or narrative personas — they damage factual accuracy on knowledge tasks (length-controlled MMLU: −3.6pp minimum persona, −5.3pp long expert persona; Sclar arXiv:2603.18507 PRISM). Reasoning queries route 97.6–99.4% to no-persona base in PRISM — strong evidence to avoid persona priming on reasoning-heavy tasks. Check: does the role add behavioral context, or is it decorative?
 
 **Stepwise Decision Flow** `[Engineering guidance]` — Break fragile reasoning into explicit ordered steps for analysis, validation, or branching work. Check: are complex decisions sequenced instead of left implicit?
 
