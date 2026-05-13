@@ -2,6 +2,18 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.1](https://github.com/Nosmoht/review-claude-config/compare/v2.11.0...v2.11.1) (2026-05-13)
+
+
+### Changed
+
+* **rubric:** remove 3 SEMANTIC binary items (PE-1, PE-2, CLAR-1) ([3b9604b](https://github.com/Nosmoht/review-claude-config/commit/3b9604b9db0860f7f4a50ae308a853176df861a8))
+
+
+### Fixed
+
+* **provenance:** correct fabricated arXiv-ID + magnitude across 9 files ([c9f1500](https://github.com/Nosmoht/review-claude-config/commit/c9f15008ae1e3c37c2e0d5687964e776ec92040b))
+
 ## [2.11.0](https://github.com/Nosmoht/review-claude-config/compare/v2.10.1...v2.11.0) (2026-05-13)
 
 
