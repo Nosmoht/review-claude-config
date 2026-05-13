@@ -203,6 +203,7 @@ Diff-checkable never-violate rules. The `builder-evaluator` subagent enforces th
 ## Development Conventions
 
 - Language: English
+- Role statements for agents/skills: use functional form (`You are a <noun-phrase> that <verb-phrase>`); avoid demographic or expert persona prefixes. See [`research/claude-code/skill-agent-format-conventions.md`](research/claude-code/skill-agent-format-conventions.md) §Role Statements for the rule and evidence anchors (arXiv:2602.12285, arXiv:2603.18507).
 - Reference file budgets: see `scripts/validate_token_budgets.py` BUDGETS map (authoritative); default `<=500` tokens, named files have justified higher budgets
 - Treat exact thresholds and workflow conventions as `Repo default` unless stronger evidence exists
 - Domain cache contains only universal methodology entries (7 total); domain-specific knowledge is researched at runtime. Universal entries follow the repo's 90-day refresh cadence
