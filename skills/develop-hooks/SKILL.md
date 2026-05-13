@@ -1,8 +1,10 @@
 ---
 name: develop-hooks
 description: >
-  Creates a hook script and registers it in hooks.json. Use when adding
-  automation to enforce quality gates, inject context, or control permissions.
+  Creates a hook script and registers it in `hooks/hooks.json`. Triggered
+  manually via `/develop-hooks [hook-type] <hook-name>`. Use when authoring
+  files under `hooks/` for events PreToolUse, PostToolUse, SubagentStart,
+  SubagentStop, or SessionEnd, or when `hooks/hooks.json` needs a new entry.
   Do NOT use for always-on rules — use /scaffold-rule.
 argument-hint: "[hook-type] <hook-name>"
 allowed-tools: Read, Write, Edit, Glob, Bash

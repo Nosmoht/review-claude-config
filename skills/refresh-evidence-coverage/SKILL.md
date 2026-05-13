@@ -1,12 +1,14 @@
 ---
 name: refresh-evidence-coverage
 description: >
-  Re-audits the dimension-evidence coverage matrix on a quartärly (90-day)
-  cadence by running per-dimension web research against documented anchor
-  queries, integrating new Tier-1 sources into rubric/baseline/research
-  files. Use when asked to 'refresh evidence coverage' or '/refresh-evidence-coverage'.
-  Do NOT use for fresh research synthesis without prior coverage matrix —
-  use /audit-context-budget or per-dimension issues instead.
+  Re-audits the dimension-evidence coverage matrix by running per-dimension
+  web research against documented anchor queries, integrating new Tier-1
+  sources into rubric/baseline/research files. Triggered manually via
+  `/refresh-evidence-coverage [dimension|all]`. Use when
+  `docs/dimension-evidence-coverage.md` shows `last_audited` >90 days for the
+  target dimension, or when a new Tier-1 paper for that dimension is added
+  under `research/`. Do NOT use for fresh research synthesis without a prior
+  coverage matrix — use /audit-context-budget or per-dimension issues instead.
 argument-hint: "[dimension|all]"
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, WebSearch, WebFetch
 disable-model-invocation: true
