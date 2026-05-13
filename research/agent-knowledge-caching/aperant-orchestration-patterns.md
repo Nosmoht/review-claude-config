@@ -1,5 +1,5 @@
 ---
-last_refreshed: 2026-04-19
+last_refreshed: 2026-05-13
 ---
 
 # Aperant Orchestration Patterns: Shared-Prefix, KV-Cache, Atomic Writes
@@ -83,6 +83,16 @@ Measured shared-prefix size for this repo (2026-04-19, Opus 4.7 tokenizer):
 - **Total: ~5,220 tokens** → qualifies for Opus cache (≥4,096) with ~25 % headroom.
 
 Hard floor: **4,200 tokens** to preserve cache qualification under future trim.
+
+## Multi-Agent Cache Benefits (Academic Evidence)
+
+Aperant's pricing-side numbers (10× cache-hit cost reduction) come from Anthropic platform docs. The independent academic anchor for **multi-agent-specific** cache speedup is KVFlow ([arXiv:2507.07400](https://arxiv.org/abs/2507.07400)):
+
+- **1.83× speedup** for single workflows with large prompts vs SGLang hierarchical radix cache.
+- **2.19× speedup** for scenarios with many concurrent workflows.
+- Targets exactly the shared-prefix + many-subagent pattern this repo uses for multi-perspective review.
+
+This is a Tier-1 evidence anchor that supports the broader EHJ composition framework's Domain-JIT axis (stable system-prompt prefix across persona × language × method combinations). Note: a previously considered citation (Sinha personal blog, "F5 — Squashing Bugs", 39-64 % TTFT improvement, GPT-4.1-mini, N=60) was downgraded to Tier 3 on inspection (single-individual experiment, no peer review) and is explicitly excluded.
 
 ## KV-Cache Hit Metrics (monitoring)
 
@@ -185,6 +195,7 @@ Aperant applies this to `implementation_plan.json`, `task_metadata.json`, `proje
 Tier 1:
 - [Anthropic Prompt Caching docs](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) — accessed 2026-04-19
 - [Aperant PR #1785 — atomic file writes](https://github.com/AndyMik90/Aperant/pull/1785) — merged 2026-02
+- [KVFlow: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows (arXiv:2507.07400)](https://arxiv.org/abs/2507.07400) — 1.83× / 2.19× speedup vs SGLang hierarchical radix cache
 
 Tier 2:
 - [Manus: Context Engineering Lessons](https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus) — "KV-cache hit rate = single most important metric"
