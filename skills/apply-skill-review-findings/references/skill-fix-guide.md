@@ -39,7 +39,7 @@ Numbered steps must remain sequentially coherent after edits. Conditional branch
 
 ## Decorative-to-Functional Role-Statement Rewrite
 
-Per [`skill-agent-format-conventions.md` §Role Statements](../../../research/claude-code/skill-agent-format-conventions.md), role statements must use functional form (`You are a <noun-phrase> that <verb-phrase>`) — no decorative adjectives. Evidence: arXiv:2602.12285, arXiv:2603.18507.
+Per [`skill-agent-format-conventions.md` §Role Statements](../../../research/claude-code/skill-agent-format-conventions.md), role statements must use functional form (`You are a <noun-phrase> that <verb-phrase>`) — no decorative adjectives. Evidence: arXiv:2603.18507 (Sclar PRISM — MMLU −5.3pp from long expert persona); arXiv:2311.10054v3 (Zheng EMNLP 2024 Findings). Token-inventory and BOUNDARY exemplars: [`docs/probe-runs/role-statement-form-spec.md`](../../../docs/probe-runs/role-statement-form-spec.md) (out-of-tree anchor material for future LLM-Judge).
 
 **Detection** — scan body opening lines for an adjective between `You are a/an` and the role-noun (e.g., `strict`, `disciplined`, `expert`, `experienced`, `senior`, `world-class`, `meticulous`, `rigorous`). The list is non-exhaustive; flag any adjective that decorates the role-noun without naming a verifiable behavior.
 

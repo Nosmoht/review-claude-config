@@ -81,9 +81,6 @@ from rubric_patterns import (  # noqa: E402
     COMP_V_ANCHOR,
     COMP_V_TRIGGER,
     COMP_V_WINDOW,
-    FUZZY_QUANTIFIER,
-    PE_1_PATTERN,
-    PE_2_PATTERN,
     WS_2B_BLOCK_MARKER,
     WS_2B_IF_CLAUSE,
     WS_2B_MARKER_WINDOW,
@@ -97,7 +94,6 @@ from rubric_patterns import (  # noqa: E402
     WS_6_COMPARATOR,
     build_peer_agent_re,
     is_third_person,
-    passes_clar1,
     passes_clar2,
     rd_5b_has_mapping_clause,
     rd_5b_schemes_present,
@@ -915,16 +911,6 @@ def check_META_4(fm: dict) -> dict:
     return _fail(reason="first-person or second-person imperative in description")
 
 
-def check_CLAR_1(body: str) -> dict:
-    if passes_clar1(body):
-        return _pass(reason="no fuzzy quantifier")
-    match = FUZZY_QUANTIFIER.search(body)
-    return _fail(
-        line=line_of_offset(body, match.start()),
-        match=match.group(0),
-    )
-
-
 def check_CLAR_2(body: str) -> dict:
     if passes_clar2(body):
         return {"verdict": "PASS", "evidence": {"reason": "no bare pronoun+verb", "heuristic": True}}
@@ -1161,30 +1147,6 @@ def check_SAMP_2(fm_raw: str) -> dict:
     if match:
         return _fail(match=match.group(0), location="frontmatter")
     return _na("no sampling param in frontmatter")
-
-
-def check_PE_1(body: str) -> dict:
-    """CoT-scaffolding in body prose (code-fenced exemplars excluded)."""
-    stripped = strip_code(body)
-    match = PE_1_PATTERN.search(stripped)
-    if match:
-        return _fail(
-            line=line_of_offset(body, body.find(match.group(0))) if match.group(0) in body else None,
-            match=match.group(0),
-        )
-    return {"verdict": "PASS", "evidence": {"reason": "no CoT scaffolding in prose"}}
-
-
-def check_PE_2(body: str) -> dict:
-    """Hedges in directives (code-fenced exemplars excluded)."""
-    stripped = strip_code(body)
-    match = PE_2_PATTERN.search(stripped)
-    if match:
-        return _fail(
-            line=line_of_offset(body, body.find(match.group(0))) if match.group(0) in body else None,
-            match=match.group(0),
-        )
-    return {"verdict": "PASS", "evidence": {"reason": "no hedge in directive prose"}}
 
 
 def check_SP_2b(body: str, fm: dict) -> dict:
@@ -1630,7 +1592,6 @@ BINARY_ITEM_IDS: list[str] = [
     "META-3b",
     "META-3c",
     "META-4",
-    "CLAR-1",
     "CLAR-2",
     "CLAR-3",
     "CLAR-4",
@@ -1646,8 +1607,6 @@ BINARY_ITEM_IDS: list[str] = [
     "COMP-W",
     "SAMP-1",
     "SAMP-2",
-    "PE-1",
-    "PE-2",
     "SP-2b",
     "SP-4b",
     "IJ-1b",
@@ -1684,8 +1643,6 @@ def _run_check(
             return check_META_3c(path, fm, artifact_type)
         if item_id == "META-4":
             return check_META_4(fm)
-        if item_id == "CLAR-1":
-            return check_CLAR_1(body)
         if item_id == "CLAR-2":
             return check_CLAR_2(body)
         if item_id == "CLAR-3":
@@ -1716,10 +1673,6 @@ def _run_check(
             return check_SAMP_1(body)
         if item_id == "SAMP-2":
             return check_SAMP_2(fm_raw)
-        if item_id == "PE-1":
-            return check_PE_1(body)
-        if item_id == "PE-2":
-            return check_PE_2(body)
         if item_id == "SP-2b":
             return check_SP_2b(body, fm)
         if item_id == "SP-4b":

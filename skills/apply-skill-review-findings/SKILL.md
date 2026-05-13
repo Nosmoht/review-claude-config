@@ -159,7 +159,7 @@ If manual-only findings are present, also show:
 | # | Recommendation | Impact | Reason | Why it matters |
 |---|----------------|--------|--------|----------------|
 | 1 | Clarify rubric language | Medium | Missing Current/Recommended anchors | `WS-2b`: conditionals lack measurable criteria |
-| 2 | Tighten step boundary | High  | Anchor text not found in artifact (synthesized evidence) | Binary item `CLAR-1` FAIL — see scoring-rubric.md BOUNDARY exemplar |
+| 2 | Tighten step boundary | High  | Anchor text not found in artifact (synthesized evidence) | Binary item `CLAR-2` FAIL — see scoring-rubric.md BOUNDARY exemplar |
 ```
 
 The Manual Follow-Up `Why it matters` column gives the user actionable context for findings that cannot drive an automatic Edit; it is the same `why` value mapped in Step 2.2/2.3.

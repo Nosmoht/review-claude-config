@@ -135,7 +135,7 @@ Then show a manual-only summary when applicable:
 | # | Item | Type | Recommendation | Impact | Reason | Why it matters |
 |---|------|------|----------------|--------|--------|----------------|
 | 1 | review-skill | Skill | Clarify workflow policy | Medium | Missing Current/Recommended anchors | `WS-2b`: conditionals lack measurable criteria |
-| 2 | my-agent | Agent | Tighten step boundary | High | Synthesized evidence summary | Binary item `CLAR-1` FAIL — see scoring-rubric.md BOUNDARY exemplar |
+| 2 | my-agent | Agent | Tighten step boundary | High | Synthesized evidence summary | Binary item `CLAR-2` FAIL — see scoring-rubric.md BOUNDARY exemplar |
 ```
 
 The Manual Follow-Up `Why it matters` column gives the user actionable context for findings that cannot drive an automatic Edit.

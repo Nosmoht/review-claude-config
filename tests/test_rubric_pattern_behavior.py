@@ -20,10 +20,7 @@ from rubric_patterns import (  # noqa: E402
     AGENTIC_LOOP_PATTERN,
     BARE_PRONOUN_VERB,
     FIRST_PERSON,
-    FUZZY_QUANTIFIER,
     LOOP_PATTERN,
-    PE_1_PATTERN,
-    PE_2_PATTERN,
     SECOND_PERSON,
     TERMINATION_PREDICATE,
     _inside_hitl_cycle,
@@ -80,31 +77,6 @@ class TestSecondPersonPattern:
     )
     def test_match(self, text, expected):
         assert bool(SECOND_PERSON.search(text)) is expected
-
-
-class TestFuzzyQuantifierPattern:
-    """CLAR-1: ``\\b(slightly|a\\s+bit|roughly|somewhat|some)\\b``,
-    case-INsensitive."""
-
-    @pytest.mark.parametrize(
-        "text,expected",
-        [
-            ("fetch slightly more data", True),
-            ("Slightly used", True),  # case-insensitive
-            ("fetch a bit of data", True),
-            ("a    bit of whitespace", True),  # \s+ allows multiple
-            ("roughly 10 records", True),
-            ("somewhat unusual", True),
-            ("some stuff", True),
-            ("fetch 10 records", False),
-            ("slightlymisspelled", False),  # word boundary required
-            ("abitofamatch", False),
-            ("", False),
-        ],
-        ids=lambda v: repr(v) if isinstance(v, str) else v,
-    )
-    def test_match(self, text, expected):
-        assert bool(FUZZY_QUANTIFIER.search(text)) is expected
 
 
 class TestBarePronounVerbPattern:
@@ -249,58 +221,6 @@ class TestAgenticLoopPattern:
     )
     def test_match(self, text, expected):
         assert bool(AGENTIC_LOOP_PATTERN.search(text)) is expected
-
-
-class TestPE1Pattern:
-    """Reasoning-model anti-pattern: scaffolding directives only.
-
-    Bare ``think carefully`` does NOT match — it's a legitimate reviewer
-    instruction. Only matches when paired with scaffolding form (``step by
-    step``, ``carefully about X``, ``let's think about/through``)."""
-
-    @pytest.mark.parametrize(
-        "text,expected",
-        [
-            ("think step by step", True),
-            ("Think Step By Step about it", True),
-            ("reason step by step", True),
-            ("reason carefully about X", True),
-            ("let's think about Y", True),
-            ("let's think through Z", True),
-            ("Let's think", True),  # bare 'let's think' matches
-            ("think carefully", False),  # bare 'think carefully' must NOT match
-            ("step-by-step guide", False),  # no 'think'/'reason' verb
-            ("", False),
-        ],
-        ids=lambda v: repr(v) if isinstance(v, str) else v,
-    )
-    def test_match(self, text, expected):
-        assert bool(PE_1_PATTERN.search(text)) is expected
-
-
-class TestPE2Pattern:
-    """Reasoning-model anti-pattern: hedge words in directives.
-
-    ``as needed`` is intentionally EXCLUDED — collides with Anthropic's
-    progressive-disclosure phrasing (``loaded on demand as needed``)."""
-
-    @pytest.mark.parametrize(
-        "text,expected",
-        [
-            ("try to do this", True),
-            ("Try To attempt", True),
-            ("if possible, do X", True),
-            ("as appropriate", True),
-            ("when useful, log", True),
-            ("as needed", False),  # documented exclusion
-            ("loaded as needed", False),
-            ("must do this", False),
-            ("", False),
-        ],
-        ids=lambda v: repr(v) if isinstance(v, str) else v,
-    )
-    def test_match(self, text, expected):
-        assert bool(PE_2_PATTERN.search(text)) is expected
 
 
 class TestInsideHitlCycle:

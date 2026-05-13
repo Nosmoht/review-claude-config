@@ -14,7 +14,7 @@
     "checklist_item": {
       "type": "string",
       "minLength": 1,
-      "description": "Rubric item id (e.g. 'CLAR-1', 'COMP-X', 'SAMP-2'). Source: skills/review-claude-config/references/scoring-rubric.md."
+      "description": "Rubric item id (e.g. 'CLAR-2', 'COMP-X', 'SAMP-2'). Source: skills/review-claude-config/references/scoring-rubric.md."
     },
     "dimension": {
       "type": "string",

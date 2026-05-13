@@ -11,7 +11,6 @@ binary_item_ids:
 - META-3c
 - META-4
 - SAMP-2
-- CLAR-1
 - CLAR-2
 - CLAR-3
 - CLAR-4
@@ -28,8 +27,6 @@ binary_item_ids:
 - AH-2b
 - SF-3
 - SAMP-1
-- PE-1
-- PE-2
 - SP-2b
 - SP-4b
 - IJ-1b
@@ -61,7 +58,6 @@ item_dimension:
   META-3c: Metadata
   META-4: Metadata
   SAMP-2: Metadata
-  CLAR-1: Clarity
   CLAR-2: Clarity
   CLAR-3: Clarity
   CLAR-4: Clarity
@@ -78,8 +74,6 @@ item_dimension:
   AH-2b: Completeness
   SF-3: Metadata
   SAMP-1: Prompt Engineering
-  PE-1: Prompt Engineering
-  PE-2: Prompt Engineering
   SP-2b: Safety
   SP-4b: Safety
   IJ-1b: Safety
@@ -89,7 +83,6 @@ item_dimension:
   RL-9b: Safety
   WS-4: Clarity
 binary_caps:
-  - {item: CLAR-1, dimension: Clarity, cap: C}
   - {item: CLAR-2, dimension: Clarity, cap: C}
   - {item: CLAR-3, dimension: Clarity, cap: C}
   - {item: CLAR-4, dimension: Clarity, cap: C}
@@ -98,8 +91,6 @@ binary_caps:
   - {item: COMP-W, dimension: Completeness, cap: C}
   - {item: AH-2b, dimension: Completeness, cap: C}
   - {item: CE-X, dimension: Context Engineering, cap: C}
-  - {item: PE-1, dimension: Prompt Engineering, cap: C}
-  - {item: PE-2, dimension: Prompt Engineering, cap: C}
   - {item: SAMP-1, dimension: Prompt Engineering, cap: C}
   - {item: SAMP-2, dimension: Metadata, cap: F}
   - {item: META-2, dimension: Metadata, cap: C}

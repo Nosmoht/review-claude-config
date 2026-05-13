@@ -101,8 +101,8 @@ def _high_finding(**overrides) -> dict:
     """A minimally-valid High-severity finding (must include Current/Recommended
     per the conditional rule)."""
     base = {
-        "id": "CLAR-1:skills/x/SKILL.md:Clarity/v1",
-        "checklist_item": "CLAR-1",
+        "id": "CLAR-2:skills/x/SKILL.md:Clarity/v1",
+        "checklist_item": "CLAR-2",
         "dimension": "Clarity",
         "severity": "High",
         "evidence": "line 12; match='slightly more'",
@@ -171,7 +171,7 @@ class TestFindingValidation:
 
         verdicts_doc = {
             "verdicts": {
-                "CLAR-1": {
+                "CLAR-2": {
                     "verdict": "FAIL",
                     "evidence": {"line": 12, "match": "slightly more"},
                 }

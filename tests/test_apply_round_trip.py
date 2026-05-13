@@ -151,7 +151,7 @@ class TestApplyabilityGateContract:
         # never a literal artifact substring.
         f = {
             "current": "line 12; match='slightly more'",
-            "recommended": "Apply the BOUNDARY PASS exemplar for CLAR-1 in scoring-rubric.md.",
+            "recommended": "Apply the BOUNDARY PASS exemplar for CLAR-2 in scoring-rubric.md.",
         }
         artifact = "fetch slightly more data on line twelve"
         cls, reason = classify(f, artifact)
@@ -206,7 +206,7 @@ class TestSynthesizedBinaryFindingsAreNonApplyable:
     def test_synthesized_current_matches_evidence_shape(self):
         from merge_findings import synthesize_binary_findings
 
-        doc = self._verdicts_doc(CLAR_1="FAIL", CLAR_2="FAIL")
+        doc = self._verdicts_doc(CLAR_2="FAIL", CLAR_3="FAIL")
         findings = synthesize_binary_findings(doc, "skills/foo/SKILL.md")
         assert findings, "FAILs must produce findings"
         for f in findings:
@@ -217,14 +217,14 @@ class TestSynthesizedBinaryFindingsAreNonApplyable:
     def test_synthesized_current_is_non_substring_of_typical_artifact(self):
         from merge_findings import synthesize_binary_findings
 
-        # An artifact that contains the matched fragment ("stub-CLAR-1") in a
-        # natural context — the composed `current` ("line 100; match='stub-CLAR-1'")
+        # An artifact that contains the matched fragment ("stub-CLAR-2") in a
+        # natural context — the composed `current` ("line 100; match='stub-CLAR-2'")
         # is NEVER a substring of such an artifact.
         artifact = (
-            "# Skill\n\nStep 1: stub-CLAR-1 occurs naturally on this line.\n"
+            "# Skill\n\nStep 1: stub-CLAR-2 occurs naturally on this line.\n"
             "Step 2: stub-CLAR-2 also appears here in plain prose.\n"
         )
-        doc = self._verdicts_doc(CLAR_1="FAIL", CLAR_2="FAIL")
+        doc = self._verdicts_doc(CLAR_2="FAIL", CLAR_3="FAIL")
         findings = synthesize_binary_findings(doc, "skills/foo/SKILL.md")
         for f in findings:
             assert f["current"] not in artifact
@@ -234,8 +234,8 @@ class TestSynthesizedBinaryFindingsAreNonApplyable:
         is always Manual-only with the synthesized-evidence reason."""
         from merge_findings import synthesize_binary_findings
 
-        artifact = "any content here including stub-CLAR-1 in natural prose"
-        doc = self._verdicts_doc(CLAR_1="FAIL", CLAR_2="FAIL", META_4="FAIL")
+        artifact = "any content here including stub-CLAR-2 in natural prose"
+        doc = self._verdicts_doc(CLAR_2="FAIL", CLAR_3="FAIL", META_4="FAIL")
         findings = synthesize_binary_findings(doc, "skills/foo/SKILL.md")
         assert findings, "FAILs must produce findings"
         for f in findings:
@@ -299,13 +299,13 @@ class TestRoundTripFixedFindingsDoNotReappear:
         from merge_findings import synthesize_binary_findings
 
         run_a = synthesize_binary_findings(
-            self._verdicts_doc(CLAR_1="FAIL"), "skills/foo/SKILL.md"
+            self._verdicts_doc(CLAR_2="FAIL"), "skills/foo/SKILL.md"
         )
         run_b = synthesize_binary_findings(
-            self._verdicts_doc(CLAR_1="PASS"), "skills/foo/SKILL.md"
+            self._verdicts_doc(CLAR_2="PASS"), "skills/foo/SKILL.md"
         )
-        assert any(f["checklist_item"] == "CLAR-1" for f in run_a)
-        assert not any(f["checklist_item"] == "CLAR-1" for f in run_b)
+        assert any(f["checklist_item"] == "CLAR-2" for f in run_a)
+        assert not any(f["checklist_item"] == "CLAR-2" for f in run_b)
 
     def test_partial_fix_subset_property(self):
         """If only one of multiple FAILs is fixed, the run-B finding ID set
@@ -313,15 +313,15 @@ class TestRoundTripFixedFindingsDoNotReappear:
         from merge_findings import synthesize_binary_findings
 
         run_a = synthesize_binary_findings(
-            self._verdicts_doc(CLAR_1="FAIL", CLAR_2="FAIL"), "skills/foo/SKILL.md"
+            self._verdicts_doc(CLAR_2="FAIL", CLAR_3="FAIL"), "skills/foo/SKILL.md"
         )
         run_b = synthesize_binary_findings(
-            self._verdicts_doc(CLAR_1="PASS", CLAR_2="FAIL"), "skills/foo/SKILL.md"
+            self._verdicts_doc(CLAR_2="PASS", CLAR_3="FAIL"), "skills/foo/SKILL.md"
         )
         ids_a = {f["id"] for f in run_a}
         ids_b = {f["id"] for f in run_b}
         assert ids_b < ids_a
-        assert all("CLAR-2" in i for i in ids_b)
+        assert all("CLAR-3" in i for i in ids_b)
 
 
 class TestSidecarRoundTripPipeline:
@@ -339,7 +339,7 @@ class TestSidecarRoundTripPipeline:
 
         verdicts_doc = {
             "verdicts": {
-                "CLAR-1": {
+                "CLAR-2": {
                     "verdict": "FAIL",
                     "evidence": {"line": 12, "match": "slightly more"},
                 },

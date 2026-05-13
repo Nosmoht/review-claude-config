@@ -43,7 +43,7 @@ A(90+)=Exemplary, B(80-89)=Good, C(70-79)=Adequate, D(60-69)=Below average, F(<6
 ### 3. Prompt Engineering (15%)
 - **A**: Structured output via tool-calling or schema directives (not prefill), role priming, 3-5 canonical few-shot examples, explicit constraints, verification criteria, evidence-first wording; no hedges ("try to", "if possible", "as appropriate") in reasoning-model directives.
 - **B**: 3+ techniques effective; output and constraints explicit; minor gaps.
-- **C**: Uses 1-2 techniques or uses them ineffectively. *Test: PE-1 ✗ (CoT scaffolding aimed at reasoning-class models) OR PE-2 ✗ (hedge in directive) OR body relies entirely on implicit model behavior → C or below.*
+- **C**: Uses 1-2 techniques or uses them ineffectively. *Test: body relies entirely on implicit model behavior → C or below.*
 - **D**: 1 technique inconsistent; output partially defined; mostly implicit.
 - **F**: Raw instructions with no prompting techniques. No output format, no examples, no constraints.
 
@@ -192,7 +192,6 @@ Relations: `complement` = non-overlapping coverage of the same quality axis;
 
 ### Ambiguity Markers (Clarity B/C discriminator) — issues #66, #69
 
-- **CLAR-1 Fuzzy-Quantifier-Free**: step parameters contain no fuzzy quantifier. *Regex:* `/\b(slightly|a bit|roughly|somewhat|some)\b/i` (skip `some` inside placeholder paths). *PASS:* "fetch 10 entries". *FAIL:* "fetch roughly 10 entries".
 - **CLAR-2 Resolved-Pronoun**: pronouns referring to prior tool outputs (`it`/`them`/`that`/`this`/`those`) have an explicit antecedent in the same or immediately-preceding step. *Verification:* LLM-binary. *PASS:* "parse the grep output; store the matches". *FAIL:* "parse the output; then process them".
 - **CLAR-3 Stop/Recovery** — issue #69: every `abort|refuse|bail|halt|timeout` occurrence in the workflow body (NOT bare `stop`, which has high false-positive rate in benign terminal phrasing like "report and stop") pairs with a named recovery target within 200 characters. *Verification:* two-pass regex. **Trigger:** `/\b(abort|refuse|bail|halt|timeout)\b/i`. **Recovery within 200 chars of each trigger match:** `/(status\s*[:=]\s*(terminal|partial|missing|failure|success)|write\s+[^.]{0,80}\s+stub|append\s+[^.]{0,80}\s+to\s+|fall\s?back\s+to|continue\s+to\s+(step|b\.)|retry\s+with|report\s+and\s+(stop|exit|terminate)|terminal\s+(stop|state|action)|NONE\s*[—-]\s*terminal)/i`. JSON-style `status: "missing"` and `status=terminal` both satisfy the recovery predicate (`[:=]` covers either). Bare `stop` without `abort/halt/timeout` context is excluded from the trigger to prevent false-positives on benign termination language. *PASS:* "On timeout, write a `{\"status\": \"missing\"}` stub and continue to step b.4." *FAIL:* "Collect errors per perspective; do not abort the whole dispatch." (trigger `abort` present, no recovery predicate within 200 chars.) Source: arXiv:2503.13657 §MAST-F7 "silent recovery"; OWASP LLM05:2025 (Improper Output Handling).
 - **CLAR-4 Step-Dependency-Mitigation** — issue #69: every step declaring a numbered upstream dependency (`depends on:`, `after step N`, `requires output of`, `after b.N completed`) also names a failure branch when the upstream fails. *Verification:* LLM-binary — for each dependency occurrence, require either an inline `if <upstream> (fails|missing|unavailable|stubbed)` clause within 5 lines OR a cross-reference to a named "Error Handling" / "Degraded Mode" / "Fallback" block. *PASS:* "b.5 depends on b.4 completed; if b.4 wrote a `status: missing` stub, merge_findings.py degrades per b.7." *FAIL:* "b.5 depends on b.4 completed." Source: arXiv:2503.13657 §MAST-F8 (dependency-skip failure) — distilled for this repo in `research/multi-primitive-dependencies/multi-primitive-dependency-integrity.md`.
@@ -205,7 +204,7 @@ Relations: `complement` = non-overlapping coverage of the same quality axis;
 - **WS-7 Lexical-Overlap-Verification** — issue #93: token-presence-triggered classification/routing pairs with a semantic verification predicate within 200 chars. *Verification:* LLM-binary. **Trigger:** `/(if|when)\s+the\s+(file|description|input|argument|user|content)\s+(contains|mentions|includes|has)\s+/i`. **Verification predicate within 200 chars:** regex match (`/match(es)?\s+\^|matches\s+pattern|regex/i`), schema check (`/frontmatter|schema|field|type:/i`), structured extraction, or explicit "verify the keyword is in scope X" instruction. *PASS:* "If frontmatter `type:` field equals `agent`, dispatch." *FAIL:* "If the file mentions hooks, treat it as a hook." Source: arXiv:1902.01007 (McCoy HANS — lexical-overlap heuristic).
 - **WS-8 Distractor-Isolation** — issue #93: multi-source-context step (≥2 references loaded) names an isolation marker. *Verification:* LLM-binary. **Trigger:** step body contains ≥2 reference-load patterns (`/Read\s+[`'"]?[a-z_/-]+\.md|references/[a-z_/-]+\.md/i`). **Isolation marker within step:** `/(focus|use|apply|reference|consult)\s+(only|just|specifically)\s+/i` paired with a named reference, OR `/(ignore|skip|bypass|do\s+not\s+(read|use|consult))/i` paired with a named reference. *PASS:* "Read A.md AND B.md. For step 3, apply only A.md's rules." *FAIL:* "Read A.md and B.md. Then process the input." (no scope marker). Source: arXiv:1911.03343 (Kassner mispriming); arXiv:1907.13528 (Ettinger).
 
-Grade boundary: CLAR-1 ✗ OR CLAR-2 ✗ OR CLAR-3 ✗ OR CLAR-4 ✗ OR WS-2b ✗ OR WS-5b ✗ OR WS-6 ✗ OR WS-7 ✗ OR WS-8 ✗ OR RD-5b ✗ → Clarity capped at C. Source: arXiv:2507.11525; arXiv:2512.14754; arXiv:2503.13657 MAST F7/F8; arXiv:1912.13283 + arXiv:1902.01007 + arXiv:1911.03343 + arXiv:1907.13528 (linguistic-failure cluster, see `research/llm-linguistic-failures/cluster-overview.md`).
+Grade boundary: CLAR-2 ✗ OR CLAR-3 ✗ OR CLAR-4 ✗ OR WS-2b ✗ OR WS-5b ✗ OR WS-6 ✗ OR WS-7 ✗ OR WS-8 ✗ OR RD-5b ✗ → Clarity capped at C. Source: arXiv:2507.11525; arXiv:2512.14754; arXiv:2503.13657 MAST F7/F8; arXiv:1912.13283 + arXiv:1902.01007 + arXiv:1911.03343 + arXiv:1907.13528 (linguistic-failure cluster, see `research/llm-linguistic-failures/cluster-overview.md`).
 
 ### Observation-Masking Parity (CE Grade-A) — issue #5
 
@@ -234,11 +233,6 @@ justification (when applied) are logged in the report certificate.
 
 - **SAMP-1 (PE-body)**: skill/agent body free of hardcoded `temperature`/`top_p`/`top_k` (regex `/\b(temperature|top_p|top_k)\s*[:=]/i`). FAIL caps PE at C.
 - **SAMP-2 (Metadata frontmatter)**: frontmatter override block free of removed sampling params. FAIL is hard F (runtime 400-error on Opus 4.7). Doubly justified on Opus 4.7 (2026-04-16): native-thinking models return HTTP 400 on non-default sampling params.
-
-### Reasoning-Model Anti-Patterns (PE B/C discriminator) — issue #63
-
-- **PE-1 CoT-Scaffolding**: body (code-fenced exemplars excluded) free of explicit step-by-step reasoning scaffolding (regex `/\b(think\s+step\s+by\s+step|reason\s+(step\s+by\s+step|carefully\s+about)|let'?s\s+think(\s+(about|through))?)\b/i`). FAIL caps PE at C. Source: `research/prompt-engineering/prompt-engineering-techniques.md` §Opus 4.7.
-- **PE-2 Hedge-Free-Directives**: body (code-fenced exemplars excluded) free of hedge phrases in directives (regex `/\b(try\s+to|if\s+possible|as\s+appropriate|when\s+useful)\b/i`). FAIL caps PE at C. Source: `research/prompt-engineering/prompt-engineering-techniques.md` §Opus 4.7.
 
 ### Tool-Grant Alignment (Safety B/C discriminator) — issue #69
 
@@ -290,7 +284,7 @@ Grade boundary: agentic items must pass ALL 4 RL-b checks for Safety A; any one 
 
 This section is the canonical source for `BINARY_ITEM_IDS`, `NARRATIVE_PARENT_IDS`, and `ITEM_DIMENSION` consumed by `scripts/merge_findings.py`. CI regenerates `merge-policy.yaml` from these tables — never edit the yaml directly.
 
-### Binary-Evaluated Items (skill rubric, 33)
+### Binary-Evaluated Items (skill rubric, 30)
 
 These items have a deterministic PASS/FAIL/NA verdict from `scripts/rubric_binary_evaluator.py`. The `Dimension` column pins the item to a specific rubric dimension; perspective findings on these items get re-canonicalized in the merge layer (issue #70).
 
@@ -303,7 +297,6 @@ These items have a deterministic PASS/FAIL/NA verdict from `scripts/rubric_binar
 | META-3c | Metadata |
 | META-4 | Metadata |
 | SAMP-2 | Metadata |
-| CLAR-1 | Clarity |
 | CLAR-2 | Clarity |
 | CLAR-3 | Clarity |
 | CLAR-4 | Clarity |
@@ -320,8 +313,6 @@ These items have a deterministic PASS/FAIL/NA verdict from `scripts/rubric_binar
 | AH-2b | Completeness |
 | SF-3 | Metadata |
 | SAMP-1 | Prompt Engineering |
-| PE-1 | Prompt Engineering |
-| PE-2 | Prompt Engineering |
 | SP-2b | Safety |
 | SP-4b | Safety |
 | IJ-1b | Safety |
@@ -358,7 +349,6 @@ When a binary item FAILs, the dimension is capped at `cap_grade` (cannot be bett
 
 | Item | Dimension | Cap |
 |---|---|---|
-| CLAR-1 | Clarity | C |
 | CLAR-2 | Clarity | C |
 | CLAR-3 | Clarity | C |
 | CLAR-4 | Clarity | C |
@@ -367,8 +357,6 @@ When a binary item FAILs, the dimension is capped at `cap_grade` (cannot be bett
 | COMP-W | Completeness | C |
 | AH-2b | Completeness | C |
 | CE-X | Context Engineering | C |
-| PE-1 | Prompt Engineering | C |
-| PE-2 | Prompt Engineering | C |
 | SAMP-1 | Prompt Engineering | C |
 | SAMP-2 | Metadata | F |
 | META-2 | Metadata | C |

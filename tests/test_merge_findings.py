@@ -322,11 +322,11 @@ class TestLayer1_5BoundaryCaps:
         assert grades["Metadata"] == "A"
         assert caps == []
 
-    def test_clar_1_fail_caps_clarity_at_c(self):
-        doc = _verdicts_doc(CLAR_1="FAIL")
+    def test_clar_2_fail_caps_clarity_at_c(self):
+        doc = _verdicts_doc(CLAR_2="FAIL")
         grades, caps = layer1_5_binary_boundary_cap(self._baseline_grades(), doc)
         assert grades["Clarity"] == "C"
-        assert any(c["item"] == "CLAR-1" and c["applied"] for c in caps)
+        assert any(c["item"] == "CLAR-2" and c["applied"] for c in caps)
 
     def test_samp_2_fail_is_hard_f(self):
         doc = _verdicts_doc(SAMP_2="FAIL")
@@ -348,7 +348,7 @@ class TestLayer1_5BoundaryCaps:
     def test_cap_is_monotone_never_upgrades(self):
         grades = self._baseline_grades()
         grades["Clarity"] = "F"  # already worst; cap to C must NOT upgrade
-        doc = _verdicts_doc(CLAR_1="FAIL")
+        doc = _verdicts_doc(CLAR_2="FAIL")
         grades_out, caps = layer1_5_binary_boundary_cap(grades, doc)
         assert grades_out["Clarity"] == "F"
         # Cap recorded but not applied.
@@ -368,11 +368,11 @@ class TestLayer1_5BoundaryCaps:
         assert caps == []
 
     def test_pe_fails_cap_pe_at_c(self):
-        doc = _verdicts_doc(PE_1="FAIL", SAMP_1="FAIL")
+        doc = _verdicts_doc(SAMP_1="FAIL")
         grades, caps = layer1_5_binary_boundary_cap(self._baseline_grades(), doc)
         assert grades["Prompt Engineering"] == "C"
         cap_items = {c["item"] for c in caps}
-        assert {"PE-1", "SAMP-1"} <= cap_items
+        assert {"SAMP-1"} <= cap_items
 
     def test_comp_w_caps_completeness_at_c(self):
         doc = _verdicts_doc(COMP_W="FAIL")
@@ -1163,7 +1163,7 @@ class TestAdvisoryDemote:
                     "artifact_path": "skills/foo/SKILL.md",
                     "artifact_type": "skill",
                     "verdicts": {
-                        "CLAR-1": {
+                        "CLAR-2": {
                             "verdict": "FAIL",
                             "evidence": {"line": 42, "match": "ambiguous"},
                         }
@@ -1175,7 +1175,7 @@ class TestAdvisoryDemote:
         result = merge_directory(tmp_path)
         assert result["demoted_perspective_findings"] == 0
         high = [f for f in result["findings"] if f.get("severity") == "High"]
-        assert any(f.get("checklist_item") == "CLAR-1" for f in high)
+        assert any(f.get("checklist_item") == "CLAR-2" for f in high)
 
 
 class TestFindRepoRoot:
@@ -1397,10 +1397,10 @@ class TestLazyLoadPolicy:
         """Sanity: lazy-loaded values match the YAML committed in the repo."""
         import merge_findings
 
-        assert len(merge_findings.BINARY_ITEM_IDS) == 33
+        assert len(merge_findings.BINARY_ITEM_IDS) == 30
         assert len(merge_findings.NARRATIVE_PARENT_IDS) == 15
-        assert len(merge_findings.ITEM_DIMENSION) == 34
-        assert len(merge_findings.BINARY_CAPS) == 22
+        assert len(merge_findings.ITEM_DIMENSION) == 31
+        assert len(merge_findings.BINARY_CAPS) == 19
         assert len(merge_findings.AGENT_ITEM_DIMENSION) == 36
         # Shape preservation — frozenset of strings, list-of-3-tuples.
         assert isinstance(merge_findings.BINARY_ITEM_IDS, frozenset)

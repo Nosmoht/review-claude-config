@@ -44,12 +44,6 @@ def is_third_person(description: str) -> bool:
     return True
 
 
-# CLAR-1 Fuzzy-Quantifier-Free (scoring-rubric.md L114).
-FUZZY_QUANTIFIER = re.compile(
-    r"\b(slightly|a\s+bit|roughly|somewhat|some)\b",
-    re.IGNORECASE,
-)
-
 # CLAR-2 proxy: bare action-verb directly followed by a bare pronoun.
 # Rubric labels CLAR-2 as LLM-binary; this is the deterministic proxy
 # used by the existing tests and reused by the runner.
@@ -59,11 +53,6 @@ BARE_PRONOUN_VERB = re.compile(
     r"(it|them|that|this|those)\b",
     re.IGNORECASE,
 )
-
-
-def passes_clar1(text: str) -> bool:
-    """Return True when the text contains no fuzzy quantifier."""
-    return FUZZY_QUANTIFIER.search(text) is None
 
 
 def passes_clar2(text: str) -> bool:
@@ -346,33 +335,10 @@ AGENTIC_LOOP_PATTERN = re.compile(
 AGENTIC_WRITE_TOOLS = frozenset({"Write", "Bash", "Edit"})
 
 
-# PE-1 Reasoning-Model CoT-Scaffolding (scoring-rubric.md §Reasoning-Model
-# Anti-Patterns). Opus 4.7 reasons natively at higher effort; explicit
-# step-by-step scaffolding underperforms. `think carefully` alone is NOT
-# matched (too generic in prose — "think carefully about tool choice" is
-# legitimate reviewer instruction); only scaffolding-form directives.
-PE_1_PATTERN = re.compile(
-    r"\b(think\s+step\s+by\s+step|"
-    r"reason\s+(?:step\s+by\s+step|carefully\s+about)|"
-    r"let'?s\s+think(?:\s+(?:about|through))?)\b",
-    re.IGNORECASE,
-)
-
-# PE-2 Reasoning-Model Hedge-Density (scoring-rubric.md §Reasoning-Model
-# Anti-Patterns). Opus 4.7 interprets prompts literally; hedges in
-# directives are interpreted as permission to skip. `as needed` is
-# intentionally EXCLUDED — it collides with Anthropic's progressive-
-# disclosure canonical phrasing ("loaded on demand as needed").
-PE_2_PATTERN = re.compile(
-    r"\b(try\s+to|if\s+possible|as\s+appropriate|when\s+useful)\b",
-    re.IGNORECASE,
-)
-
-# Code-fence and inline-code stripping for PE-* checks. PE-1 and PE-2
-# scan prose only — anti-pattern catalogs (boundary exemplars, rule
-# templates, synthetic test artifacts in run-eval-cases) legitimately
-# quote these phrases inside ```code blocks``` or `inline code`, and
-# should not trigger a FAIL.
+# Code-fence and inline-code stripping for prose-scoped checks.
+# Anti-pattern catalogs (boundary exemplars, rule templates, synthetic
+# test artifacts in run-eval-cases) legitimately quote phrases inside
+# ```code blocks``` or `inline code` and should not trigger a FAIL.
 CODE_FENCE = re.compile(r"```.*?```", re.DOTALL)
 INLINE_CODE = re.compile(r"`[^`\n]+`")
 
@@ -589,9 +555,7 @@ __all__ = [
     "FIRST_PERSON",
     "SECOND_PERSON",
     "is_third_person",
-    "FUZZY_QUANTIFIER",
     "BARE_PRONOUN_VERB",
-    "passes_clar1",
     "passes_clar2",
     "LOOP_PATTERN",
     "TERMINATION_PREDICATE",
@@ -601,8 +565,6 @@ __all__ = [
     "AGENTIC_DISPATCH_PATTERN",
     "AGENTIC_LOOP_PATTERN",
     "AGENTIC_WRITE_TOOLS",
-    "PE_1_PATTERN",
-    "PE_2_PATTERN",
     "CODE_FENCE",
     "INLINE_CODE",
     "strip_code",

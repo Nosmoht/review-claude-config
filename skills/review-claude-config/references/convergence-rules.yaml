@@ -10,7 +10,6 @@ DETERMINISTIC_SUBSET:
   - AH-2
   - AH-2b
   - CE-X
-  - CLAR-1
   - CLAR-2
   - CLAR-3
   - CLAR-4
@@ -29,8 +28,6 @@ DETERMINISTIC_SUBSET:
   - META-3b
   - META-3c
   - META-4
-  - PE-1
-  - PE-2
   - RD-5
   - RD-5b
   - RL-1

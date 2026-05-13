@@ -37,7 +37,6 @@ from rubric_binary_evaluator import (  # noqa: E402
     check_SF_3,
     discover_peer_agent_names,
     split_content,
-    check_CLAR_1,
     check_CLAR_2,
     check_CLAR_3,
     check_CLAR_4,
@@ -55,8 +54,6 @@ from rubric_binary_evaluator import (  # noqa: E402
     check_RL_1b,
     check_RL_3b,
     check_RL_4b,
-    check_PE_1,
-    check_PE_2,
     check_RL_9b,
     check_SAMP_1,
     check_SAMP_2,
@@ -399,14 +396,6 @@ class TestMETA4:
 
     def test_absent_description_na(self):
         assert check_META_4({})["verdict"] == "NA"
-
-
-class TestCLAR1:
-    def test_exact_quantifier_passes(self):
-        assert check_CLAR_1("retry 3 times")["verdict"] == "PASS"
-
-    def test_fuzzy_fails(self):
-        assert check_CLAR_1("retry roughly 10 times")["verdict"] == "FAIL"
 
 
 class TestCLAR2:
@@ -783,61 +772,6 @@ class TestSAMP2:
 
     def test_temperature_in_frontmatter_fails(self):
         assert check_SAMP_2("name: foo\ntemperature: 0.3")["verdict"] == "FAIL"
-
-
-class TestPE1:
-    def test_clean_body_passes(self):
-        assert check_PE_1("Verify the output matches the schema.")["verdict"] == "PASS"
-
-    def test_think_step_by_step_fails(self):
-        assert check_PE_1("Think step by step before answering.")["verdict"] == "FAIL"
-
-    def test_reason_carefully_about_fails(self):
-        assert check_PE_1("Reason carefully about each tool call.")["verdict"] == "FAIL"
-
-    def test_lets_think_fails(self):
-        assert check_PE_1("Let's think through this problem.")["verdict"] == "FAIL"
-
-    def test_benign_think_carefully_passes(self):
-        # 'think carefully' alone must NOT fire — too common in benign prose.
-        assert check_PE_1("Think carefully about tool choice.")["verdict"] == "PASS"
-
-    def test_code_block_exemplar_passes(self):
-        # Phrases quoted inside code fences are anti-pattern catalog entries.
-        body = "The following is a known anti-pattern:\n```\nThink step by step first.\n```\nThe correct directive is to verify output."
-        assert check_PE_1(body)["verdict"] == "PASS"
-
-    def test_inline_code_exemplar_passes(self):
-        body = "Avoid phrases like `think step by step` in directives."
-        assert check_PE_1(body)["verdict"] == "PASS"
-
-
-class TestPE2:
-    def test_clean_body_passes(self):
-        assert check_PE_2("Write the report. Abort on unwritable path.")["verdict"] == "PASS"
-
-    def test_try_to_fails(self):
-        assert check_PE_2("Try to format the response.")["verdict"] == "FAIL"
-
-    def test_if_possible_fails(self):
-        assert check_PE_2("Return JSON if possible.")["verdict"] == "FAIL"
-
-    def test_as_appropriate_fails(self):
-        assert check_PE_2("Handle errors as appropriate.")["verdict"] == "FAIL"
-
-    def test_as_needed_not_flagged(self):
-        # 'as needed' is intentionally excluded — collides with Anthropic's
-        # progressive-disclosure canonical phrasing ("loaded as needed").
-        body = "Progressive disclosure: resources are loaded as needed."
-        assert check_PE_2(body)["verdict"] == "PASS"
-
-    def test_code_block_exemplar_passes(self):
-        body = "Known anti-pattern:\n```\nTry to handle it if possible.\n```\nUse concrete triggers instead."
-        assert check_PE_2(body)["verdict"] == "PASS"
-
-    def test_inline_code_exemplar_passes(self):
-        body = "Reviewers flag hedges like `try to` and `if possible` in directives."
-        assert check_PE_2(body)["verdict"] == "PASS"
 
 
 class TestSP2b:
@@ -1403,10 +1337,10 @@ class TestSchemaStability:
             assert "evidence" in v, f"{item_id} missing evidence"
             assert isinstance(v["evidence"], dict)
 
-    def test_stats_counts_sum_to_33(self):
+    def test_stats_counts_sum_to_30(self):
         result = evaluate(REVIEW_SKILL_FIXTURE)
         s = result["stats"]
-        assert s["pass"] + s["fail"] + s["na"] == 33
+        assert s["pass"] + s["fail"] + s["na"] == 30
 
 
 REVIEW_SKILL_EXPECTED = {
@@ -1416,7 +1350,6 @@ REVIEW_SKILL_EXPECTED = {
     "META-3b": "NA",  # frozen fixture has no SKILL.md siblings → no-sibling NA
     "META-3c": "NA",  # frozen fixture has no SKILL.md siblings → no-sibling NA
     "META-4": "PASS",
-    "CLAR-1": "PASS",
     "CLAR-2": "PASS",  # issue #104: antecedent-aware narrowing
     "CLAR-3": "FAIL",
     "CLAR-4": "PASS",
@@ -1432,8 +1365,6 @@ REVIEW_SKILL_EXPECTED = {
     "COMP-W": "NA",  # issue #103: ``for each`` removed from LOOP_PATTERN
     "SAMP-1": "NA",
     "SAMP-2": "NA",
-    "PE-1": "PASS",
-    "PE-2": "PASS",
     "SP-2b": "PASS",
     "SP-4b": "PASS",
     "IJ-1b": "PASS",  # issue #107: "Validate the file exists" now matches
@@ -1452,7 +1383,6 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "META-3b": "NA",  # Issue #74: skill-to-skill semantics; agent policy pending #75.
     "META-3c": "NA",  # skill-only scope per check_META_3c
     "META-4": "PASS",
-    "CLAR-1": "PASS",
     "CLAR-2": "PASS",
     "CLAR-3": "NA",
     "CLAR-4": "NA",
@@ -1468,8 +1398,6 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "COMP-W": "NA",  # issue #103
     "SAMP-1": "NA",
     "SAMP-2": "NA",
-    "PE-1": "PASS",
-    "PE-2": "PASS",
     "SP-2b": "NA",
     "SP-4b": "NA",
     "IJ-1b": "NA",
@@ -1488,7 +1416,6 @@ SCAFFOLD_SKILL_EXPECTED = {
     "META-3b": "NA",  # frozen fixture has no SKILL.md siblings → no-sibling NA
     "META-3c": "NA",  # frozen fixture has no SKILL.md siblings → no-sibling NA
     "META-4": "PASS",
-    "CLAR-1": "PASS",
     "CLAR-2": "PASS",  # issue #104
     "CLAR-3": "PASS",  # issue #105
     "CLAR-4": "NA",
@@ -1504,8 +1431,6 @@ SCAFFOLD_SKILL_EXPECTED = {
     "COMP-W": "NA",  # issue #103
     "SAMP-1": "NA",
     "SAMP-2": "NA",
-    "PE-1": "PASS",
-    "PE-2": "PASS",
     "SP-2b": "PASS",
     "SP-4b": "FAIL",
     "IJ-1b": "PASS",
@@ -1535,7 +1460,7 @@ class TestEndToEndFixtures:
         assert fixture.exists(), f"fixture missing: {fixture}"
         result = evaluate(fixture)
         assert result["stats"]["runner_error"] == 0
-        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 33
+        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 30
         actual = {k: v["verdict"] for k, v in result["verdicts"].items()}
         assert actual == expected
 
@@ -1571,21 +1496,21 @@ class TestRepoWideSmokeStrict:
         result = evaluate(path)
         assert result["stats"]["runner_error"] == 0
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 33
+        assert total == 30
 
 
 class TestRepoWideSmokeLenient:
-    """Every skills/*/SKILL.md evaluator invocation returns 33 verdicts;
+    """Every skills/*/SKILL.md evaluator invocation returns 30 verdicts;
     runner_error per skill is logged but not asserted."""
 
-    def test_all_skills_produce_33_verdicts(self):
+    def test_all_skills_produce_30_verdicts(self):
         skills = sorted((REPO_ROOT / "skills").glob("*/SKILL.md"))
         assert len(skills) >= 10, "expected multiple skill targets"
         errors: list[tuple[str, int]] = []
         for p in skills:
             result = evaluate(p)
             total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-            assert total == 33, f"{p}: total {total} != 33"
+            assert total == 30, f"{p}: total {total} != 30"
             if result["stats"]["runner_error"]:
                 errors.append((str(p), result["stats"]["runner_error"]))
         # Surface drift without failing the suite: errors are reported
@@ -1631,9 +1556,9 @@ class TestRunnerErrorHandling:
         p.write_text("", encoding="utf-8")
         result = evaluate(p)
         assert result["stats"]["runner_error"] == 0
-        # All 33 items produce verdicts (mostly NA/FAIL for missing content).
+        # All 30 items produce verdicts (mostly NA/FAIL for missing content).
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 33
+        assert total == 30
 
     def test_no_frontmatter_no_crash(self, tmp_path):
         p = tmp_path / "body-only.md"

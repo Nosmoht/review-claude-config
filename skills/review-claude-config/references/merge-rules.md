@@ -91,11 +91,10 @@ Cap table (each row: FAIL on `item` caps `dimension` at `cap_grade`):
 
 | Item | Dimension | Cap | Rubric source |
 |---|---|---|---|
-| CLAR-1 / CLAR-2 / CLAR-3 / CLAR-4 | Clarity | C | §Ambiguity Markers grade boundary |
+| CLAR-2 / CLAR-3 / CLAR-4 | Clarity | C | §Ambiguity Markers grade boundary |
 | COMP-W | Completeness | C | §Verification Criteria (MAST-F14) |
 | AH-2b | Completeness | C | §Argument Handling grade boundary |
 | CE-X | Context Engineering | C | §Observation-Masking Parity gate |
-| PE-1 / PE-2 | Prompt Engineering | C | §Reasoning-Model Anti-Patterns |
 | SAMP-1 | Prompt Engineering | C | §Sampling-Param Migration |
 | SAMP-2 | Metadata | **F** | §Sampling-Param Migration (runtime 400 on Opus 4.7) |
 | META-2 | Metadata | C | §Trigger-Consistency grade boundary |
