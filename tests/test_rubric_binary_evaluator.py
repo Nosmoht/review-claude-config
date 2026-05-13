@@ -57,6 +57,7 @@ from rubric_binary_evaluator import (  # noqa: E402
     check_RL_4b,
     check_PE_1,
     check_PE_2,
+    check_PE_3,
     check_RL_9b,
     check_SAMP_1,
     check_SAMP_2,
@@ -840,6 +841,72 @@ class TestPE2:
         assert check_PE_2(body)["verdict"] == "PASS"
 
 
+class TestPE3:
+    def test_functional_form_passes(self):
+        body = "You are a dependency checker that validates SemVer ranges."
+        result = check_PE_3(body)
+        assert result["verdict"] == "PASS"
+
+    def test_demographic_prefix_fails_high(self):
+        body = "You are an expert evaluator that verifies ACs."
+        result = check_PE_3(body)
+        assert result["verdict"] == "FAIL"
+        assert result["evidence"]["severity"] == "High"
+        assert result["evidence"]["match"] == "expert"
+
+    def test_senior_demographic_fails_high(self):
+        body = "You are a senior staff engineer that designs Python services."
+        result = check_PE_3(body)
+        assert result["verdict"] == "FAIL"
+        assert result["evidence"]["severity"] == "High"
+        assert result["evidence"]["match"] == "senior"
+
+    def test_multi_token_python_expert_fails_high(self):
+        # Gaming vector: decoration moved off the first token via compound noun.
+        body = "You are a Python expert that explains type-system edge cases."
+        result = check_PE_3(body)
+        assert result["verdict"] == "FAIL"
+        assert result["evidence"]["severity"] == "High"
+        assert result["evidence"]["match"] == "expert"
+
+    def test_decoration_fails_medium(self):
+        body = "You are a meticulous reviewer that audits skill quality."
+        result = check_PE_3(body)
+        assert result["verdict"] == "FAIL"
+        assert result["evidence"]["severity"] == "Medium"
+        assert result["evidence"]["match"] == "meticulous"
+
+    def test_strict_but_fair_decoration_fails_medium(self):
+        body = "You are a strict but fair evaluator that scores rubrics."
+        result = check_PE_3(body)
+        assert result["verdict"] == "FAIL"
+        assert result["evidence"]["severity"] == "Medium"
+        assert result["evidence"]["match"] == "strict"
+
+    def test_no_opener_is_na(self):
+        body = "Workflow starts with reading the file."
+        assert check_PE_3(body)["verdict"] == "NA"
+
+    def test_definite_article_is_na(self):
+        # `You are the …` is out-of-scope per skill-fix-guide §Limitations.
+        body = "You are the strict reviewer that audits PRs."
+        assert check_PE_3(body)["verdict"] == "NA"
+
+    def test_code_fenced_exemplar_does_not_fire(self):
+        body = (
+            "Anti-pattern (do not write this):\n"
+            "```\n"
+            "You are an expert evaluator that verifies ACs.\n"
+            "```\n"
+            "You are a checker that validates ranges.\n"
+        )
+        assert check_PE_3(body)["verdict"] == "PASS"
+
+    def test_blockquoted_exemplar_does_not_fire(self):
+        body = "> You are an expert evaluator that does X.\nYou are a checker that validates ranges.\n"
+        assert check_PE_3(body)["verdict"] == "PASS"
+
+
 class TestSP2b:
     def test_absent_tools_na(self):
         assert check_SP_2b("body", {})["verdict"] == "NA"
@@ -1403,10 +1470,10 @@ class TestSchemaStability:
             assert "evidence" in v, f"{item_id} missing evidence"
             assert isinstance(v["evidence"], dict)
 
-    def test_stats_counts_sum_to_33(self):
+    def test_stats_counts_sum_to_34(self):
         result = evaluate(REVIEW_SKILL_FIXTURE)
         s = result["stats"]
-        assert s["pass"] + s["fail"] + s["na"] == 33
+        assert s["pass"] + s["fail"] + s["na"] == 34
 
 
 REVIEW_SKILL_EXPECTED = {
@@ -1434,6 +1501,7 @@ REVIEW_SKILL_EXPECTED = {
     "SAMP-2": "NA",
     "PE-1": "PASS",
     "PE-2": "PASS",
+    "PE-3": "NA",
     "SP-2b": "PASS",
     "SP-4b": "PASS",
     "IJ-1b": "PASS",  # issue #107: "Validate the file exists" now matches
@@ -1470,6 +1538,7 @@ REVIEW_PERSPECTIVE_CLARITY_AGENT_EXPECTED = {
     "SAMP-2": "NA",
     "PE-1": "PASS",
     "PE-2": "PASS",
+    "PE-3": "NA",
     "SP-2b": "NA",
     "SP-4b": "NA",
     "IJ-1b": "NA",
@@ -1506,6 +1575,7 @@ SCAFFOLD_SKILL_EXPECTED = {
     "SAMP-2": "NA",
     "PE-1": "PASS",
     "PE-2": "PASS",
+    "PE-3": "NA",
     "SP-2b": "PASS",
     "SP-4b": "FAIL",
     "IJ-1b": "PASS",
@@ -1535,7 +1605,7 @@ class TestEndToEndFixtures:
         assert fixture.exists(), f"fixture missing: {fixture}"
         result = evaluate(fixture)
         assert result["stats"]["runner_error"] == 0
-        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 33
+        assert result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"] == 34
         actual = {k: v["verdict"] for k, v in result["verdicts"].items()}
         assert actual == expected
 
@@ -1571,21 +1641,21 @@ class TestRepoWideSmokeStrict:
         result = evaluate(path)
         assert result["stats"]["runner_error"] == 0
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 33
+        assert total == 34
 
 
 class TestRepoWideSmokeLenient:
-    """Every skills/*/SKILL.md evaluator invocation returns 33 verdicts;
+    """Every skills/*/SKILL.md evaluator invocation returns 34 verdicts;
     runner_error per skill is logged but not asserted."""
 
-    def test_all_skills_produce_33_verdicts(self):
+    def test_all_skills_produce_34_verdicts(self):
         skills = sorted((REPO_ROOT / "skills").glob("*/SKILL.md"))
         assert len(skills) >= 10, "expected multiple skill targets"
         errors: list[tuple[str, int]] = []
         for p in skills:
             result = evaluate(p)
             total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-            assert total == 33, f"{p}: total {total} != 33"
+            assert total == 34, f"{p}: total {total} != 34"
             if result["stats"]["runner_error"]:
                 errors.append((str(p), result["stats"]["runner_error"]))
         # Surface drift without failing the suite: errors are reported
@@ -1631,9 +1701,9 @@ class TestRunnerErrorHandling:
         p.write_text("", encoding="utf-8")
         result = evaluate(p)
         assert result["stats"]["runner_error"] == 0
-        # All 33 items produce verdicts (mostly NA/FAIL for missing content).
+        # All 34 items produce verdicts (mostly NA/FAIL for missing content).
         total = result["stats"]["pass"] + result["stats"]["fail"] + result["stats"]["na"]
-        assert total == 33
+        assert total == 34
 
     def test_no_frontmatter_no_crash(self, tmp_path):
         p = tmp_path / "body-only.md"

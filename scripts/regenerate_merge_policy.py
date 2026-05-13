@@ -25,10 +25,10 @@ RUBRIC = REPO_ROOT / "skills/review-claude-config/references/scoring-rubric.md"
 YAML_OUT = REPO_ROOT / "skills/review-skill/references/merge-policy.yaml"
 
 EXPECTED_COUNTS: dict[str, int] = {
-    "binary_item_ids": 33,
+    "binary_item_ids": 34,
     "narrative_parent_ids": 15,
-    "item_dimension": 34,
-    "binary_caps": 22,
+    "item_dimension": 35,
+    "binary_caps": 23,
     "agent_item_dimension": 36,
 }
 
@@ -98,7 +98,7 @@ def parse_rubric(text: str) -> dict:
     lines = text.splitlines(keepends=True)
 
     # 1) §Item Inventory → ###Binary-Evaluated Items (33 rows: Item | Dimension)
-    binary_idx = _find_table(lines, "Item Inventory", "Binary-Evaluated Items (skill rubric, 33)")
+    binary_idx = _find_table(lines, "Item Inventory", "Binary-Evaluated Items (skill rubric, 34)")
     binary_rows = _parse_pipe_table(lines, binary_idx)
     binary_item_ids: list[str] = [r[0] for r in binary_rows if r and r[0]]
     item_dimension: dict[str, str] = {}

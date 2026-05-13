@@ -30,6 +30,7 @@ binary_item_ids:
 - SAMP-1
 - PE-1
 - PE-2
+- PE-3
 - SP-2b
 - SP-4b
 - IJ-1b
@@ -80,6 +81,7 @@ item_dimension:
   SAMP-1: Prompt Engineering
   PE-1: Prompt Engineering
   PE-2: Prompt Engineering
+  PE-3: Prompt Engineering
   SP-2b: Safety
   SP-4b: Safety
   IJ-1b: Safety
@@ -100,6 +102,7 @@ binary_caps:
   - {item: CE-X, dimension: Context Engineering, cap: C}
   - {item: PE-1, dimension: Prompt Engineering, cap: C}
   - {item: PE-2, dimension: Prompt Engineering, cap: C}
+  - {item: PE-3, dimension: Prompt Engineering, cap: C}
   - {item: SAMP-1, dimension: Prompt Engineering, cap: C}
   - {item: SAMP-2, dimension: Metadata, cap: F}
   - {item: META-2, dimension: Metadata, cap: C}

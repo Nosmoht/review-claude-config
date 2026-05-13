@@ -1397,10 +1397,10 @@ class TestLazyLoadPolicy:
         """Sanity: lazy-loaded values match the YAML committed in the repo."""
         import merge_findings
 
-        assert len(merge_findings.BINARY_ITEM_IDS) == 33
+        assert len(merge_findings.BINARY_ITEM_IDS) == 34
         assert len(merge_findings.NARRATIVE_PARENT_IDS) == 15
-        assert len(merge_findings.ITEM_DIMENSION) == 34
-        assert len(merge_findings.BINARY_CAPS) == 22
+        assert len(merge_findings.ITEM_DIMENSION) == 35
+        assert len(merge_findings.BINARY_CAPS) == 23
         assert len(merge_findings.AGENT_ITEM_DIMENSION) == 36
         # Shape preservation — frozenset of strings, list-of-3-tuples.
         assert isinstance(merge_findings.BINARY_ITEM_IDS, frozenset)

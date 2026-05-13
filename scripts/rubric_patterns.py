@@ -368,6 +368,114 @@ PE_2_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# PE-3 Functional-Role-Statement (scoring-rubric.md §Role-Statement Form).
+# Two-pass check: first locate a `You are an? <noun-phrase>` opener within
+# the in-scope body region, then tokenise the captured noun-phrase and
+# check each token against two closed sets. Multi-token scan blocks the
+# compound-noun gaming vector (`You are a Python expert that …`).
+#
+# Trigger: case-insensitive, multiline; captures the noun-phrase between
+# `You are an?` and the next clause boundary (`that|who|which|,|.`). The
+# 120-char ceiling on the capture prevents runaway matches across body
+# sections.
+PE_3_TRIGGER = re.compile(
+    r"^\s*You are an?\s+([^.\n]{1,120}?)\s+(?:that|who|which|,|\.)",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+# Demographic adjectives — evidence-anchored to arXiv:2602.12285,
+# arXiv:2512.05858, arXiv:2603.18507, arXiv:2311.10054v3. Hyphenated
+# `world-class` is tokenised on `[\s-]+` so its component tokens
+# (`world`, `class`) are included.
+PE_3_DEMOGRAPHIC_TOKENS = frozenset(
+    {
+        "expert",
+        "senior",
+        "experienced",
+        "principal",
+        "world-class",
+        "world",
+        "class",
+        "veteran",
+        "seasoned",
+        "professional",
+    }
+)
+
+# Decoration adjectives — applier-side blacklist mirror from
+# `skills/apply-skill-review-findings/references/skill-fix-guide.md
+# §Decorative-to-Functional Role-Statement Rewrite`. List is illustrative
+# of the documented anti-pattern, not exhaustive; PE-3 detects the
+# closed-list cases deterministically and defers long-tail decoration to
+# narrative perspective review.
+PE_3_DECORATION_TOKENS = frozenset(
+    {
+        "meticulous",
+        "rigorous",
+        "disciplined",
+        "strict",
+        "careful",
+        "thorough",
+        "thoughtful",
+        "pragmatic",
+        "helpful",
+        "friendly",
+        "brilliant",
+        "talented",
+        "exceptional",
+        "extraordinary",
+        "outstanding",
+    }
+)
+
+# PE-3 in-scope body region: first 20 non-blockquote, non-`anti-pattern|
+# before|example` lines after frontmatter close.
+PE_3_OPENING_LINE_BUDGET = 20
+PE_3_EXAMPLE_MARKER = re.compile(
+    r"\b(anti-?pattern|before|example|exemplar)\b",
+    re.IGNORECASE,
+)
+
+
+def pe_3_scope(body: str) -> str:
+    """Return the in-scope body region for PE-3: the first
+    ``PE_3_OPENING_LINE_BUDGET`` non-blockquote, non-example-marker lines
+    of ``strip_code(body)``. Code fences and inline code are stripped first
+    so anti-pattern catalogs inside ```code blocks``` do not trigger PE-3.
+    """
+    stripped = strip_code(body)
+    in_scope: list[str] = []
+    for line in stripped.splitlines():
+        stripped_line = line.lstrip()
+        if stripped_line.startswith(">"):
+            continue
+        if PE_3_EXAMPLE_MARKER.search(line):
+            continue
+        in_scope.append(line)
+        if len(in_scope) >= PE_3_OPENING_LINE_BUDGET:
+            break
+    return "\n".join(in_scope)
+
+
+def pe_3_classify(noun_phrase: str) -> tuple[str, str | None, str | None]:
+    """Classify the captured noun-phrase against the demographic and
+    decoration closed sets. Returns ``(verdict, severity, match)`` where
+    verdict ∈ {"PASS", "FAIL"}, severity ∈ {"High", "Medium", None}, and
+    ``match`` carries the offending lowercase token (or None on PASS).
+
+    Demographic match wins over decoration (higher-severity precedence).
+    Tokens are split on whitespace and hyphens and lowercased.
+    """
+    tokens = [t for t in re.split(r"[\s-]+", noun_phrase.lower()) if t]
+    for token in tokens:
+        if token in PE_3_DEMOGRAPHIC_TOKENS:
+            return ("FAIL", "High", token)
+    for token in tokens:
+        if token in PE_3_DECORATION_TOKENS:
+            return ("FAIL", "Medium", token)
+    return ("PASS", None, None)
+
+
 # Code-fence and inline-code stripping for PE-* checks. PE-1 and PE-2
 # scan prose only — anti-pattern catalogs (boundary exemplars, rule
 # templates, synthetic test artifacts in run-eval-cases) legitimately
@@ -603,6 +711,13 @@ __all__ = [
     "AGENTIC_WRITE_TOOLS",
     "PE_1_PATTERN",
     "PE_2_PATTERN",
+    "PE_3_TRIGGER",
+    "PE_3_DEMOGRAPHIC_TOKENS",
+    "PE_3_DECORATION_TOKENS",
+    "PE_3_OPENING_LINE_BUDGET",
+    "PE_3_EXAMPLE_MARKER",
+    "pe_3_scope",
+    "pe_3_classify",
     "CODE_FENCE",
     "INLINE_CODE",
     "strip_code",

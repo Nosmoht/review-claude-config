@@ -240,6 +240,12 @@ justification (when applied) are logged in the report certificate.
 - **PE-1 CoT-Scaffolding**: body (code-fenced exemplars excluded) free of explicit step-by-step reasoning scaffolding (regex `/\b(think\s+step\s+by\s+step|reason\s+(step\s+by\s+step|carefully\s+about)|let'?s\s+think(\s+(about|through))?)\b/i`). FAIL caps PE at C. Source: `research/prompt-engineering/prompt-engineering-techniques.md` §Opus 4.7.
 - **PE-2 Hedge-Free-Directives**: body (code-fenced exemplars excluded) free of hedge phrases in directives (regex `/\b(try\s+to|if\s+possible|as\s+appropriate|when\s+useful)\b/i`). FAIL caps PE at C. Source: `research/prompt-engineering/prompt-engineering-techniques.md` §Opus 4.7.
 
+### Role-Statement Form (PE B/C discriminator) — issue #273
+
+- **PE-3 Functional-Role-Statement**: the body-opening role statement uses functional form (`You are a <noun-phrase> that <verb-phrase>`) without a decorative or demographic adjective inside the noun-phrase. *Verification:* two-pass regex on `strip_code(body)` scoped to the first 20 non-blockquote, non-`anti-pattern|before|example` body lines (scope mirrors `skills/apply-skill-review-findings/references/skill-fix-guide.md §Decorative-to-Functional Role-Statement Rewrite §Out-of-scope`). **Pass 1 (Trigger)**: locate the first match of `/^\s*You are an?\s+([^.\n]{1,120}?)\s+(?:that|who|which|,|\.)/im`; capture group 1 is the role-noun-phrase. If no match → NA. **Pass 2 (Form-check)**: tokenise the captured noun-phrase on `[\s-]+` (whitespace and hyphens) and lowercase each token; for each token, test membership against two closed sets — **Demographic set**: `{expert, senior, experienced, principal, world-class, world, class, veteran, seasoned, professional}` (hyphenated `world-class` tokenises to `world` + `class`, so both root tokens are listed); **Decoration set**: `{meticulous, rigorous, disciplined, strict, careful, thorough, thoughtful, pragmatic, helpful, friendly, brilliant, talented, exceptional, extraordinary, outstanding}`. If any token is in the demographic set → FAIL with `severity: High` (carry the offending token in `evidence.match`). Else if any token is in the decoration set → FAIL with `severity: Medium`. Else → PASS. *Gaming-resistance pair*: the closed-list closure + multi-token scan + body-opening-and-code-stripped location anchor together constitute the intent-grounded predicate per [`engineering-baseline.md §Gaming-Resistant Criteria`](engineering-baseline.md). Closed lists are evidence-anchored (the four arXiv sources below); multi-token scan blocks the compound-noun gaming vector (`You are a Python expert that …` → token `expert` matches even though it is not the first token). *Known scope limitations*: definite-article openers (`You are the strict X`) and decoration moved post-noun (`reviewer of extraordinary skill`) are out-of-scope here and inherit the `skill-fix-guide.md §Limitations` manual-review treatment. *PASS exemplars*: `You are a dependency checker that validates SemVer ranges and reports conflicts.`; `You are an evaluator that verifies acceptance criteria via runnable predicates.`; `You are a security analyst that audits Terraform IAM policies.` *FAIL exemplars (High)*: `You are an expert evaluator that verifies ACs.` (`expert` ∈ demographic); `You are a senior staff engineer that designs Python services.` (`senior` ∈ demographic); `You are a Python expert that explains type-system edge cases.` (multi-token; `expert` ∈ demographic). *FAIL exemplars (Medium)*: `You are a meticulous reviewer that audits skill quality.` (`meticulous` ∈ decoration); `You are a strict but fair evaluator that scores rubrics.` (`strict` ∈ decoration). Source: arXiv:2602.12285 (Cao/Sun/Yue, AAAI 2026 TrustAgent Workshop — demographic personas degrade); arXiv:2512.05858 (Basil/Mollick — expert personas don't improve factual accuracy across 6 model families on GPQA Diamond + MMLU-Pro); arXiv:2603.18507 (Hu/Rostami/Thomason PRISM — expert generative-vs-discriminative trade-off); arXiv:2311.10054v3 (Zheng EMNLP Findings 2024 — 162 roles, MMLU 71.6% → 68.0%). Magnitudes intentionally omitted from the item body pending `docs/research-backlog.md` #7 (paper-body verification).
+
+Grade boundary: PE-3 ✗ → Prompt Engineering capped at C. Severity tag — `High` on demographic-set match (4 Tier-1 sources, evidence-anchored); `Medium` on decoration-set match (one Tier-1 source + applier-side guide). Both feed the same dimension cap; severity differentiates finding emphasis only.
+
 ### Tool-Grant Alignment (Safety B/C discriminator) — issue #69
 
 Rationale: the 2026-04-20 `/review-skill` re-test showed Run-A Integration accepting `Hard Rules`-level tool bindings that Run-B Integration rejected as "not in body" on identical artifacts. Making location agnostic (frontmatter / body / Hard Rules / referenced policy file all count) removes the flip. The un-suffixed IDs `SP-2`, `SP-4`, `IJ-1` are reused with different semantics in `skills/review-settings/references/settings-evaluation-guide.md` and `skills/review-claude-config/references/mcp-evaluation-guide.md` — the `-b` suffix here is specifically to avoid that namespace overlap.
@@ -290,7 +296,7 @@ Grade boundary: agentic items must pass ALL 4 RL-b checks for Safety A; any one 
 
 This section is the canonical source for `BINARY_ITEM_IDS`, `NARRATIVE_PARENT_IDS`, and `ITEM_DIMENSION` consumed by `scripts/merge_findings.py`. CI regenerates `merge-policy.yaml` from these tables — never edit the yaml directly.
 
-### Binary-Evaluated Items (skill rubric, 33)
+### Binary-Evaluated Items (skill rubric, 34)
 
 These items have a deterministic PASS/FAIL/NA verdict from `scripts/rubric_binary_evaluator.py`. The `Dimension` column pins the item to a specific rubric dimension; perspective findings on these items get re-canonicalized in the merge layer (issue #70).
 
@@ -322,6 +328,7 @@ These items have a deterministic PASS/FAIL/NA verdict from `scripts/rubric_binar
 | SAMP-1 | Prompt Engineering |
 | PE-1 | Prompt Engineering |
 | PE-2 | Prompt Engineering |
+| PE-3 | Prompt Engineering |
 | SP-2b | Safety |
 | SP-4b | Safety |
 | IJ-1b | Safety |
@@ -369,6 +376,7 @@ When a binary item FAILs, the dimension is capped at `cap_grade` (cannot be bett
 | CE-X | Context Engineering | C |
 | PE-1 | Prompt Engineering | C |
 | PE-2 | Prompt Engineering | C |
+| PE-3 | Prompt Engineering | C |
 | SAMP-1 | Prompt Engineering | C |
 | SAMP-2 | Metadata | F |
 | META-2 | Metadata | C |

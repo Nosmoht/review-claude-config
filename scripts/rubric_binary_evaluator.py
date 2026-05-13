@@ -84,6 +84,7 @@ from rubric_patterns import (  # noqa: E402
     FUZZY_QUANTIFIER,
     PE_1_PATTERN,
     PE_2_PATTERN,
+    PE_3_TRIGGER,
     WS_2B_BLOCK_MARKER,
     WS_2B_IF_CLAUSE,
     WS_2B_MARKER_WINDOW,
@@ -99,6 +100,8 @@ from rubric_patterns import (  # noqa: E402
     is_third_person,
     passes_clar1,
     passes_clar2,
+    pe_3_classify,
+    pe_3_scope,
     rd_5b_has_mapping_clause,
     rd_5b_schemes_present,
     strip_code,
@@ -1187,6 +1190,32 @@ def check_PE_2(body: str) -> dict:
     return {"verdict": "PASS", "evidence": {"reason": "no hedge in directive prose"}}
 
 
+def check_PE_3(body: str) -> dict:
+    """Functional-role-statement form (scoring-rubric.md §Role-Statement Form).
+
+    Scopes detection to the first ``PE_3_OPENING_LINE_BUDGET`` non-blockquote,
+    non-example-marker body lines of ``strip_code(body)``; locates a
+    ``You are an? <noun-phrase>`` opener and tokenises the noun-phrase
+    against demographic and decoration closed sets. Multi-token scan
+    blocks compound-noun gaming (``Python expert``).
+    """
+    scope = pe_3_scope(body)
+    match = PE_3_TRIGGER.search(scope)
+    if not match:
+        return _na("no body-opening role statement in scope")
+    noun_phrase = match.group(1)
+    verdict, severity, offending = pe_3_classify(noun_phrase)
+    if verdict == "PASS":
+        return _pass(reason="functional role-statement form", noun_phrase=noun_phrase)
+    line = line_of_offset(body, body.find(match.group(0))) if match.group(0) in body else None
+    return _fail(
+        line=line,
+        match=offending,
+        severity=severity,
+        noun_phrase=noun_phrase,
+    )
+
+
 def check_SP_2b(body: str, fm: dict) -> dict:
     tools = tools_list(fm)
     if not tools:
@@ -1648,6 +1677,7 @@ BINARY_ITEM_IDS: list[str] = [
     "SAMP-2",
     "PE-1",
     "PE-2",
+    "PE-3",
     "SP-2b",
     "SP-4b",
     "IJ-1b",
@@ -1720,6 +1750,8 @@ def _run_check(
             return check_PE_1(body)
         if item_id == "PE-2":
             return check_PE_2(body)
+        if item_id == "PE-3":
+            return check_PE_3(body)
         if item_id == "SP-2b":
             return check_SP_2b(body, fm)
         if item_id == "SP-4b":

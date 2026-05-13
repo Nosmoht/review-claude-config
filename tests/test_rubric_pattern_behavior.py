@@ -24,6 +24,11 @@ from rubric_patterns import (  # noqa: E402
     LOOP_PATTERN,
     PE_1_PATTERN,
     PE_2_PATTERN,
+    PE_3_DECORATION_TOKENS,
+    PE_3_DEMOGRAPHIC_TOKENS,
+    PE_3_TRIGGER,
+    pe_3_classify,
+    pe_3_scope,
     SECOND_PERSON,
     TERMINATION_PREDICATE,
     _inside_hitl_cycle,
@@ -276,6 +281,100 @@ class TestPE1Pattern:
     )
     def test_match(self, text, expected):
         assert bool(PE_1_PATTERN.search(text)) is expected
+
+
+class TestPE3Pattern:
+    """Role-statement form: ``You are a <noun-phrase> that …`` without
+    decorative/demographic adjectives. Multi-token scan blocks the
+    compound-noun gaming vector (``Python expert``).
+
+    Anchors: scoring-rubric.md §Role-Statement Form; engineering-baseline.md
+    Role Priming entry; skill-fix-guide.md §Decorative-to-Functional
+    Role-Statement Rewrite.
+    """
+
+    @pytest.mark.parametrize(
+        "text,expect_match,expected_capture",
+        [
+            ("You are a checker that validates ranges.", True, "checker"),
+            ("You are an evaluator that verifies ACs.", True, "evaluator"),
+            ("You are a senior staff engineer that designs services.", True, "senior staff engineer"),
+            ("You are a Python expert that explains edge cases.", True, "Python expert"),
+            ("You are the strict reviewer that audits PRs.", False, None),  # definite article — out-of-scope
+            ("Workflow starts with reading the file.", False, None),  # no opener
+            ("", False, None),
+        ],
+        ids=lambda v: repr(v) if isinstance(v, str) else v,
+    )
+    def test_trigger(self, text, expect_match, expected_capture):
+        m = PE_3_TRIGGER.search(text)
+        assert bool(m) is expect_match
+        if m and expected_capture is not None:
+            assert m.group(1) == expected_capture
+
+    @pytest.mark.parametrize(
+        "noun_phrase,verdict,severity,match_token",
+        [
+            ("checker", "PASS", None, None),
+            ("evaluator", "PASS", None, None),
+            ("security analyst", "PASS", None, None),
+            ("dependency checker", "PASS", None, None),
+            ("senior staff engineer", "FAIL", "High", "senior"),
+            ("Python expert", "FAIL", "High", "expert"),
+            ("experienced security analyst", "FAIL", "High", "experienced"),
+            ("world-class reviewer", "FAIL", "High", "world"),
+            ("meticulous reviewer", "FAIL", "Medium", "meticulous"),
+            ("strict but fair evaluator", "FAIL", "Medium", "strict"),
+            ("brilliant agent", "FAIL", "Medium", "brilliant"),
+        ],
+        ids=lambda v: repr(v) if isinstance(v, str) else v,
+    )
+    def test_classify(self, noun_phrase, verdict, severity, match_token):
+        v, sev, tok = pe_3_classify(noun_phrase)
+        assert v == verdict
+        assert sev == severity
+        assert tok == match_token
+
+    def test_demographic_precedence_over_decoration(self):
+        # "senior strict reviewer" carries one demographic + one decoration —
+        # demographic wins the severity tag.
+        v, sev, tok = pe_3_classify("senior strict reviewer")
+        assert v == "FAIL"
+        assert sev == "High"
+        assert tok == "senior"
+
+    def test_scope_strips_code_fences(self):
+        body = (
+            "Heading\n"
+            "```\n"
+            "You are an expert evaluator that does X.\n"
+            "```\n"
+            "You are a checker that validates Y.\n"
+        )
+        # Code-fenced anti-pattern catalog entries must not trigger PE-3.
+        scope = pe_3_scope(body)
+        assert "expert evaluator" not in scope
+        assert "checker that validates" in scope
+
+    def test_scope_skips_blockquote(self):
+        body = "> You are an expert evaluator that does X.\nYou are a checker that validates Y.\n"
+        scope = pe_3_scope(body)
+        assert "expert evaluator" not in scope
+        assert "checker" in scope
+
+    def test_scope_skips_example_marker_lines(self):
+        body = (
+            "Anti-pattern: You are an expert evaluator that does X.\n"
+            "You are a checker that validates Y.\n"
+        )
+        scope = pe_3_scope(body)
+        assert "expert evaluator" not in scope
+        assert "checker" in scope
+
+    def test_closed_sets_disjoint(self):
+        # Demographic and decoration sets are intentionally disjoint —
+        # any overlap would create ambiguous severity tagging.
+        assert PE_3_DEMOGRAPHIC_TOKENS.isdisjoint(PE_3_DECORATION_TOKENS)
 
 
 class TestPE2Pattern:
