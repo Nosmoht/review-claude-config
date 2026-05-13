@@ -2,8 +2,11 @@
 name: validate-primitive-dependencies
 description: >
   Maps cross-primitive references and flags integrity problems: broken refs,
-  orphaned files, cycles. Use before committing a skill, after renaming
-  primitives, or as a pre-release gate. Do NOT use for quality review — use
+  orphaned files, cycles. Triggered manually via
+  `/validate-primitive-dependencies [folder]`. Use when a commit diff touches
+  `skills/*/SKILL.md`, `agents/*.md`, `hooks/*.py`, or files under
+  `.claude/skills/`; or after renaming a primitive (`name:` field change); or
+  as a pre-release gate. Do NOT use for quality review — use
   /review-claude-config.
 argument-hint: "[folder]"
 allowed-tools: Agent, Bash, Read, Glob, Grep, Write

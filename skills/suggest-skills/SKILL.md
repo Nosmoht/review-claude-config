@@ -2,9 +2,13 @@
 name: suggest-skills
 description: >
   Analyzes a repository to identify missing Claude Code skills with skeleton
-  SKILL.md per suggestion. Use when setting up Claude Code or expanding skill
-  coverage. Do NOT use for repo-structure audit — use /audit-repo instead.
-  Do NOT use for existing-skill quality review — use /review-claude-config instead.
+  SKILL.md per suggestion. Triggered manually via `/suggest-skills [folder]`.
+  Use when scaffolding initial primitives in a target folder that has no
+  `.claude/skills/` or `agents/` directory, or when known signals
+  (`pyproject.toml`, `Makefile`, repeated error patterns) suggest skill
+  candidates that do not yet exist. Do NOT use for repo-structure audit —
+  use /audit-repo instead. Do NOT use for existing-skill quality review —
+  use /review-claude-config instead.
 argument-hint: [folder]
 allowed-tools: Agent, Bash, Read, Write, Glob, Grep, WebSearch, WebFetch
 disable-model-invocation: true

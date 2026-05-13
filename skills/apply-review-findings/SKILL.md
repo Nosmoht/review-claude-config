@@ -2,7 +2,10 @@
 name: apply-review-findings
 description: >
   Applies findings from a /review-claude-config batch report to all reviewed
-  files. Use after /review-claude-config on a folder. Do NOT use for
+  files. Triggered manually via `/apply-review-findings [report-path]`. Use
+  when `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/`
+  contains a batch review report (typically `batch-*.md` or a report referenced
+  by /review-claude-config output) with unaddressed findings. Do NOT use for
   single-item reports — use the type-specific /apply-*-review-findings skills.
 argument-hint: "[report-path]"
 allowed-tools: Agent, Read, Edit, Glob, Bash
