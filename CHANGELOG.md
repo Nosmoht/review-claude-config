@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.0](https://github.com/Nosmoht/review-claude-config/compare/v2.10.1...v2.11.0) (2026-05-13)
+
+
+### Changed
+
+* **skills:** tighten descriptions for 5 weak-trigger skills ([#271](https://github.com/Nosmoht/review-claude-config/issues/271)) ([183b8db](https://github.com/Nosmoht/review-claude-config/commit/183b8dbd8bdb2cc3564e5f1707fa2fcada7d239d))
+
 ## [2.10.1](https://github.com/Nosmoht/review-claude-config/compare/v2.10.0...v2.10.1) (2026-05-09)
 
 
