@@ -1,7 +1,7 @@
 ---
 name: engineering-baseline-provenance
 description: Source provenance map for engineering-baseline.md — used by evidence-layer audits and baseline refresh, not loaded at runtime by review skills
-last_refreshed: 2026-04-12
+last_refreshed: 2026-05-13
 ---
 
 # Engineering Baseline Provenance
@@ -16,7 +16,7 @@ Maps each technique in `engineering-baseline.md` to its backing sources and tier
 | Technique | Evidence Class | Sources | Tier |
 |-----------|---------------|---------|------|
 | Structured Output | Proven result | Schulhoff et al. arXiv:2406.06608 | 1 |
-| Role Priming | Engineering guidance | arXiv:2603.18507; arXiv:2311.10054v3; arXiv:2602.12285 (AAAI 2026) | 1 |
+| Role Priming | Engineering guidance | arXiv:2603.18507; arXiv:2311.10054v3; arXiv:2602.12285 (AAAI 2026); arXiv:2512.05858 (Basil/Mollick, GPQA+MMLU-Pro) | 1 |
 | Stepwise Decision Flow | Engineering guidance | (engineering practice — no primary benchmark) | — |
 | Few-Shot Examples | Engineering guidance | arXiv:2509.13196 (7 models); Anthropic Claude 4 Best Practices, April 2026 | 1 |
 | Constraint Specification | Proven result | Schulhoff et al. arXiv:2406.06608 | 1 |
@@ -32,7 +32,7 @@ Maps each technique in `engineering-baseline.md` to its backing sources and tier
 
 | Technique | Evidence Class | Sources | Tier |
 |-----------|---------------|---------|------|
-| Context Budget | Proven result | Mei et al. arXiv:2507.13334; Anthropic, Effective Context Engineering (2025) | 1 |
+| Context Budget | Proven result | Mei et al. arXiv:2507.13334; Anthropic, Effective Context Engineering (2025); Chroma 2025 Context Rot | 1/2 |
 | Just-in-Time Retrieval | Engineering guidance | Anthropic, Effective Context Engineering (2025) | 1 |
 | Subagent Isolation | Engineering guidance | Anthropic Agent SDK, 26-event hook system with deny>ask>allow priority | 1 |
 | Reference File Separation | Engineering guidance | (engineering practice — no primary benchmark) | — |
@@ -49,7 +49,7 @@ Maps each technique in `engineering-baseline.md` to its backing sources and tier
 | Knowledge Gap Detection | Engineering guidance | (engineering practice — no primary benchmark) | — |
 | Dynamic Tool Loadout | Low-evidence area | (heuristic — no primary benchmark) | — |
 | Context Compression | Engineering guidance | ACON arXiv:2510.00615; Focus arXiv:2601.07190; Context-Folding arXiv:2510.11967 | 1 |
-| Context Placement | Proven result | arXiv:2508.07479 (COLM 2025); arXiv:2510.10276 | 1 |
+| Context Placement | Proven result | arXiv:2508.07479 (COLM 2025); arXiv:2510.10276; Chroma 2025 Context Rot | 1/2 |
 
 ## Tool Design Techniques
 
@@ -67,8 +67,8 @@ Maps each technique in `engineering-baseline.md` to its backing sources and tier
 
 **Anthropic (Tier 1):** Effective Context Engineering (2025); Writing Tools for Agents (2025); Building Effective Agents (2025); Claude 4 Best Practices (April 2026); Effective Harnesses for Long-Running Agents (March 2026); Agent SDK Hooks (April 2026); Claude Code Best Practices (2025).
 
-**Research — arXiv (Tier 1):** Schulhoff et al. arXiv:2406.06608; Mei et al. arXiv:2507.13334; Qi et al. arXiv:2505.16944; arXiv:2603.18507; arXiv:2311.10054v3; arXiv:2602.12285; arXiv:2509.13196; arXiv:2511.20836; arXiv:2603.22608; arXiv:2510.05381; arXiv:2512.02246; arXiv:2510.00615; arXiv:2601.07190; arXiv:2510.11967; arXiv:2508.07479; arXiv:2510.10276; arXiv:2511.02230; arXiv:2512.11147; arXiv:2601.08012.
+**Research — arXiv (Tier 1):** Schulhoff et al. arXiv:2406.06608; Mei et al. arXiv:2507.13334; Qi et al. arXiv:2505.16944; arXiv:2603.18507; arXiv:2311.10054v3; arXiv:2602.12285; arXiv:2512.05858; arXiv:2509.13196; arXiv:2511.20836; arXiv:2603.22608; arXiv:2510.05381; arXiv:2512.02246; arXiv:2510.00615; arXiv:2601.07190; arXiv:2510.11967; arXiv:2508.07479; arXiv:2510.10276; arXiv:2511.02230; arXiv:2512.11147; arXiv:2601.08012.
 
-**Vendor (Tier 2/3):** Fast.io; Maxim.ai; AWS Prescriptive Guidance.
+**Vendor (Tier 2/3):** Fast.io; Maxim.ai; AWS Prescriptive Guidance; Chroma 2025 Context Rot.
 
 Full research details in `research/` files.
