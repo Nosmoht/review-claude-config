@@ -14,6 +14,7 @@ Each item includes: the gap, why it matters (observed failure mode), what to res
 | 4 | Least-privilege tool grants | DONE | `research/tool-least-privilege/` | Safety dimension, baseline Tool Set Curation |
 | 5 | Low-evidence baseline refresh | PARTIAL | (updates existing research files) | Baseline evidence classes |
 | 6 | Agent definition quality benchmarks | DONE | `research/agent-definition-quality/` | Agent checklist (+3 items), baseline (2 updates), review-agent SKILL.md |
+| 7 | Persona-magnitude source attribution | TODO | (verification only; updates `engineering-baseline-provenance.md`) | Severity calibration for PE-3 (rubric work, deferred to Wave 2) |
 
 ---
 
@@ -127,6 +128,32 @@ Each item includes: the gap, why it matters (observed failure mode), what to res
 - Engineering baseline: 2 inline updates (Activation Precision, Constraint Load)
 - Review-agent SKILL.md: definition-runtime separation reviewer guidance
 - Eval cases: Case 7 for new item discrimination testing
+
+---
+
+## 7. Persona-magnitude source attribution
+
+**Gap:** Two Tier-1 citations underpin the repo's persona-antipattern rule (`research/claude-code/skill-agent-format-conventions.md:219`) but their bodies have not been independently read:
+
+- **arXiv:2602.12285** (Cao/Sun/Yue, AAAI 2026 TrustAgent Workshop) — cited for the "26.2% degradation" claim. Abstract verified (it is for *demographic* persona cues across strategic-reasoning/planning/technical-ops benchmarks). Body unread. Workshop paper: 6 pages, 4 figures.
+- **arXiv:2603.18507** (Hu/Rostami/Thomason, PRISM) — cited for "expert personas help generative tasks but damage discriminative tasks". Abstract direction verified; magnitude not in abstract.
+
+**Observed risk:** PE-3 binary persona-detection rubric item (Wave 2 work, future issue) requires verified magnitudes to calibrate severity caps. Citing abstract-only attribution is acceptable for a directional rule but not for a binary cap.
+
+**Research targets:**
+- Read arXiv:2602.12285 PDF body. Extract: exact benchmarks (named), exact models (named), exact demographic cue patterns tested, exact magnitude breakdown per benchmark
+- Read arXiv:2603.18507 PDF body. Extract: generative-task magnitude, discriminative-task magnitude, PRISM intent-routing mechanism for relevant excerpts
+- Cross-check against Zheng arXiv:2311.10054 (EMNLP Findings 2024) and Basil/Mollick arXiv:2512.05858 (Dec 2025 preprint, GPQA Diamond + MMLU-Pro on 6 models) for direction-consistency
+
+**Done when:**
+- `engineering-baseline-provenance.md` contains a per-paper magnitude table for the four sources above
+- The "26.2% degradation" claim in `engineering-baseline.md:13` and `skill-agent-format-conventions.md:219` is paired with the verified benchmark name and model family (not just the citation)
+- PE-3 severity cap (Wave 2) can cite the verified magnitude directly
+
+**Where findings land:**
+- `engineering-baseline-provenance.md` per-paper magnitude table (additive)
+- No new research file required — verification of existing citations
+- Severity calibration evidence for PE-3 rubric item (future Wave 2 issue)
 
 ---
 
