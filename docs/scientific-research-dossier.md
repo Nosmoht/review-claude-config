@@ -55,6 +55,8 @@ Evidence-first research baseline for the repository itself. `review-claude-confi
 | Agent definition quality benchmarks | The repo reviews agent definitions but no academic benchmark exists for this task | KDD 2025 survey (arXiv:2507.21504); ICLR 2026 Workshop (arXiv:2604.00594); arXiv:2602.16666 | No design-time benchmark exists. IRT decomposition, prompt robustness, and instruction density provide proxy evaluation dimensions. Requirements engineering quality frameworks exist as adjacent untested prior art. | Medium | Engineering guidance | New checklist items (TC-3, DA-5, AP-4) fill the gap with research-backed proxies. Composite system is Low-evidence area until validated. |
 | Web scraping / WebFetch augmentation | Some research steps rely on fetching full articles beyond search snippets | Tooling docs and retrieval literature | Full-content retrieval is often needed because snippets are insufficient for evaluation-quality synthesis. | Medium | Engineering guidance | Retain WebFetch/WebSearch separation with strict filtering and attribution. |
 | Hooks as quality gates | The plugin injects quality guidance and freshness warnings automatically | Claude Code hooks docs | Hooks are a supported mechanism for project and plugin lifecycle checks. | High | Engineering guidance | Keep hook guidance high-signal and lightweight. |
+| Autonomous-agent reliability | The plugin runs agentic review/audit workflows whose failures are otherwise silent | MAST taxonomy (arXiv:2503.13657, kappa=0.88 inter-annotator, 94 % LLM-judge accuracy); arXiv:2602.16666 "Science of AI Agent Reliability" (12-metric decomposition); AgentIF (arXiv:2505.16944) showing <30 % perfect adherence | 14 named MAST failure modes, four architectural patterns (circuit-breaker / idempotency / progressive fallback / bounded execution), and a 10-criterion R1–R10 rubric section codified in `research/autonomous-agent-reliability/autonomous-agent-reliability.md`. Reliability is independent of raw accuracy. | High | Proven result | Safety and Context-Engineering rubric items reference MAST IDs (FM-1.2 / FM-2.3 / FM-2.6 / FM-3.1 / FM-3.2). New R10 (observability hooks) is filed against PostToolUse/SubagentStart trace surfaces. |
+| Change discipline / multi-perspective review | The plugin enforces plan → review → implement → commit and dispatches 2–3 perspective agents per plan | Augment Code review-scale study (PRs <400 LOC capture 66–75 % defects); Kim/Yegge *Three Developer Loops* (IT Revolution); arXiv:2502.17086 *Mind the Blind Spots* (F1=0.126 LLM self-review weakness on novelty); Salesforce Prizm engineering blog | LLMs underweight non-technical dimensions during self-review; cross-model + cross-perspective dispatch materially mitigates. Six named agentic failure modes each map to a specific constraint mechanism (shortcuts, premature completion, review fatigue, decision delegation, knowledge loss, quality residue). | Medium-High | Engineering guidance | Justifies the "No plan without multi-perspective review" hard rule, the `reviewer.md` + `team-red.md` dispatch chain on auth/migration paths, and the SIMPLE/COMPLEX ceremony scaling in `docs/change-discipline-rule.md`. |
 
 ## Cross-Theme Findings
 
@@ -111,6 +113,12 @@ Evidence-first research baseline for the repository itself. `review-claude-confi
   https://arxiv.org/abs/2507.13334
 - Qi et al., "AGENTIF: Benchmarking Instruction Following of Large Language Models in Agentic Scenarios" (arXiv:2505.16944)  
   https://arxiv.org/abs/2505.16944
+- Wu et al., "Multi-Agent System Failure Taxonomy (MAST)" (arXiv:2503.13657) — 14 failure modes, kappa=0.88 inter-annotator agreement, 94 % LLM-judge accuracy  
+  https://arxiv.org/abs/2503.13657
+- "Towards a Science of AI Agent Reliability" (arXiv:2602.16666) — 12-metric decomposition across consistency / robustness / predictability / safety  
+  https://arxiv.org/abs/2602.16666
+- "Mind the Blind Spots: A Focus-Level Evaluation Framework for LLM Reviews" (arXiv:2502.17086) — F1=0.126 LLM self-review weakness on non-technical dimensions  
+  https://arxiv.org/abs/2502.17086
 - "How to Build AI Agents by Augmenting LLMs with Codified Human Expert Domain Knowledge?" (arXiv:2601.15153)  
   https://arxiv.org/html/2601.15153
 - "Procedural Knowledge Improves Agentic LLM Workflows" (arXiv:2511.07568)  
@@ -131,6 +139,8 @@ Evidence-first research baseline for the repository itself. `review-claude-confi
 - [`research/agent-skills/anthropic-equipping-agents-with-skills.md`](/home/nos-ai/workspace/review-claude-config/research/agent-skills/anthropic-equipping-agents-with-skills.md)
 - [`research/domain-knowledge/domain-knowledge-impact-on-quality.md`](/home/nos-ai/workspace/review-claude-config/research/domain-knowledge/domain-knowledge-impact-on-quality.md)
 - [`research/source-quality/web-research-quality-evaluation.md`](/home/nos-ai/workspace/review-claude-config/research/source-quality/web-research-quality-evaluation.md)
+- [`research/autonomous-agent-reliability/autonomous-agent-reliability.md`](/home/nos-ai/workspace/review-claude-config/research/autonomous-agent-reliability/autonomous-agent-reliability.md) — added 2026-05-18 (issue #28); MAST taxonomy + R1–R10 rubric
+- [`research/change-discipline/change-discipline-workflow-research.md`](/home/nos-ai/workspace/review-claude-config/research/change-discipline/change-discipline-workflow-research.md) — added 2026-05-18 (issue #28); multi-perspective review canon
 
 ## Open Questions
 
