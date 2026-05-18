@@ -78,6 +78,23 @@ Two transport variants: `stdio` (local subprocess, common) and `remote`
   if not provided).
 - `env` and `headers` always use `${VAR}` for credential-shaped names.
 
+## Quality-Gate Mapping
+
+Each template field exists to satisfy specific item IDs from
+`skills/review-claude-config/references/mcp-evaluation-guide.md`. A scaffolded
+entry that follows this template literally targets ≥4 distinct IDs and
+should pass `/review-mcp-server` with zero High findings:
+
+| Field / convention | Item IDs | Failure if omitted |
+|---|---|---|
+| File at `.mcp.json` root | MC-1, SP-2 | Nested in `settings.json` → silently ignored (bug #24477) |
+| `command` + `args` (stdio) or `type` + `url` (remote) | MC-2, MC-3 | Missing required fields → server fails to start |
+| `${VAR}` in `env`/`headers` (never literal) | MC-4, MC-5 | Hardcoded token → High severity, public-leak risk |
+| `metadata.description` + `metadata.homepage` | MC-8, MC-9 | Audit reports can't trace server intent |
+| `defer_loading: true` when tools >50 | TD-1 | Auto-injects ~10% context budget at session start |
+| `.mcp.json` in `.gitignore` IF env contains credentials | SP-3 | Credential commit on next push |
+| Single tool relevance, no duplicate servers | MG-1, MG-2 | Tool cap 128 hard, 50 soft — duplicates burn budget |
+
 ## Out of scope
 
 - Writing the MCP server's executable code (transport handler, tool
