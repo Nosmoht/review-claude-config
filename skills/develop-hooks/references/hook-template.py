@@ -15,6 +15,26 @@ Hook type: <PreToolUse | PostToolUse | PostToolUseFailure | SessionStart |
 Trigger: <matcher regex for PreToolUse, e.g. "Edit|Write" — omit for others>
 Output: <systemMessage | permissionDecision | additionalContext | {}>
 
+Quality-gate baseline (skills/review-hook/references/hook-evaluation-guide.md)
+-------------------------------------------------------------------------------
+This template already satisfies the following checklist items by construction.
+Edits should preserve them:
+
+- PY-1: input from sys.stdin (line 60), not argv.
+- PY-2: every code path prints valid JSON to stdout (success: line 73/77/82/91; error: try/except writes "{}" at line 99).
+- PY-3: exit code 0 in finally (line 101); use sys.exit(2) only for blocking PreToolUse deny.
+- PY-6: CLAUDE_PLUGIN_ROOT checked before use (line 54-57); graceful exit if absent.
+- PY-7: os.path.join for file paths (line 21, 70); no string concatenation.
+- PY-8: top-level try/except + finally sys.exit (line 95-101) — required for HC-3 Safety.
+- HC-3: on_error behaviour defined (non-blocking via print("{}")).
+- SR-1: no credential/token access in template defaults — keep that way.
+
+Set when registering in hooks.json:
+- HC-2: matcher targets a single tool name or explicit glob (no catch-all).
+- HC-4: timeout reasonable for the runtime type (command ≤600s; PreToolUse blocking ≤10s).
+- HC-5: description field present explaining the hook's purpose.
+- HC-7: PreToolUse / Stop / SubagentStop / TaskCreated / ConfigChange — exit-code semantics handled (exit 2 blocks).
+
 Key environment variable
 ------------------------
 CLAUDE_PLUGIN_ROOT — absolute path to the installed plugin directory.

@@ -123,7 +123,7 @@ Confirm via AskUserQuestion (header: "hooks.json preview"):
 
 On "Adjust": ask what to change, regenerate, and show again. On "Cancel": stop without writing anything.
 
-### 6. Test the hook
+### 6. Test the hook and run quality preflight
 
 Run a syntax check before writing any files:
 
@@ -131,7 +131,20 @@ Run a syntax check before writing any files:
 Bash: echo '{}' | python3 hooks/<hook-name>.py
 ```
 
-Report the result. If the test fails, show the error output and stop — do not proceed to Step 7.
+Then run preflight against `/review-hook` checklist IDs (see
+`skills/review-hook/references/hook-evaluation-guide.md`):
+
+- **HC-1 (event)** — confirm the chosen event is in the 26-event catalog; reject `unknown_event`.
+- **HC-2 (matcher)** — for `PreToolUse`, the matcher targets a single tool name or explicit glob; reject catch-all `.*`.
+- **HC-4 (timeout)** — `command` runtime cap 600 s; `prompt`/`http` 30 s; `agent` 60 s; PreToolUse blocking ≤10 s. Set explicitly when shorter than default.
+- **HC-5 (description)** — `description` field in hooks.json explains the hook's purpose in one sentence.
+- **HC-7 (blocking exit code)** — for events with `Blocking: Yes` (PreToolUse, Stop, SubagentStop, TaskCreated, ConfigChange), confirm exit-code semantics are handled (exit 2 blocks; non-blocking events ignore exit 2).
+- **HC-8 (CLI version)** — Q1-2026 events (`PostToolUseFailure` v2.1.76; `CwdChanged`/`FileChanged` v2.1.83; `TaskCreated` v2.1.84; `PermissionDenied` v2.1.89) require CLI ≥ that release.
+- **PY-2 (stdout JSON)** — verify the test from above emits valid JSON; no extraneous stderr that #34713 could mislabel as a Hook Error (BUG-1).
+- **PY-8 (safety wrapper)** — confirm the generated script has the `try: main() except Exception: print("{}") finally: sys.exit(0)` block.
+- **SR-1, SR-5 (Safety)** — no credentials/tokens accessed or logged; hook does not modify the files it is triggered on.
+
+Report the result of each. If the syntax check fails or any FAIL preflight check is unresolved, show the error output and stop — do not proceed to Step 7.
 
 ### 7. Write files (confirmation gate)
 
