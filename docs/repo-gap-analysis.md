@@ -1,6 +1,6 @@
 # Evidence-Backed Gap Analysis for `review-claude-config`
 
-This document evaluates the current repository against [`scientific-research-dossier.md`](/home/nos-ai/workspace/review-claude-config/docs/scientific-research-dossier.md) after the completed evidence-layer, review-contract, and baseline-guidance cleanup work.
+This document evaluates the current repository against [`scientific-research-dossier.md`](scientific-research-dossier.md) after the completed evidence-layer, review-contract, and baseline-guidance cleanup work.
 
 ## Summary
 
@@ -10,12 +10,12 @@ The repository is now structurally much stronger than the earlier transitional s
 
 ### 1. The canonical evidence layer now exists
 
-- [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md) defines the only canonical repo-wide claim classes.
-- [`engineering-baseline.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/engineering-baseline.md) and the baseline refresh path now use that vocabulary explicitly.
+- [`evidence-contract.md`](../skills/review-claude-config/references/evidence-contract.md) defines the only canonical repo-wide claim classes.
+- [`engineering-baseline.md`](../skills/review-claude-config/references/engineering-baseline.md) and the baseline refresh path now use that vocabulary explicitly.
 
 ### 2. The review/report contract is centralized
 
-- [`review-report-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/review-report-contract.md) is now the canonical report structure for new review outputs.
+- [`review-report-contract.md`](../skills/review-claude-config/references/review-report-contract.md) is now the canonical report structure for new review outputs.
 - Review, apply, analytics, and health-check surfaces have already been aligned to that authority.
 
 ### 3. Prompt/context-first architecture remains evidence-backed
@@ -88,8 +88,8 @@ Required change:
 
 ## Maintenance Actions
 
-- Follow the evidence-layer maintenance process in [`evidence-maintenance.md`](/home/nos-ai/workspace/review-claude-config/docs/evidence-maintenance.md) for cadence, triggers, and precedence.
-- Keep contradictions canonical in [`scientific-research-dossier.md`](/home/nos-ai/workspace/review-claude-config/docs/scientific-research-dossier.md) while keeping local `research/*` files metadata-only.
+- Follow the evidence-layer maintenance process in [`evidence-maintenance.md`](evidence-maintenance.md) for cadence, triggers, and precedence.
+- Keep contradictions canonical in [`scientific-research-dossier.md`](scientific-research-dossier.md) while keeping local `research/*` files metadata-only.
 - Expand provenance annotations to additional local research summaries only when they are promoted into the dossier citation set.
 - Reduce duplicated prose in `README.md`, `CLAUDE.md`, and `docs/skills/*`.
 - Keep canonical contracts authoritative and make the docs point to them rather than restating them.

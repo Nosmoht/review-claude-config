@@ -38,7 +38,7 @@ The foundational scientific-hardening work has been implemented. This roadmap re
 
 ### 2. Operate the evidence-layer maintenance process
 
-- Keep dossier-style evidence artifacts maintained under the process defined in [`evidence-maintenance.md`](/home/nos-ai/workspace/review-claude-config/docs/evidence-maintenance.md).
+- Keep dossier-style evidence artifacts maintained under the process defined in [`evidence-maintenance.md`](evidence-maintenance.md).
 - Keep cited local `research/*` summaries annotated with provenance metadata only, while leaving repo-level interpretation in the dossier.
 
 ### 3. Trim documentation drift further

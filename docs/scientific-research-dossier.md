@@ -4,19 +4,19 @@ Evidence-first research baseline for the repository itself. `review-claude-confi
 
 ## Method
 
-- Scope: research themes already present in [`research/`](/home/nos-ai/workspace/review-claude-config/research), plus the runtime and guidance surfaces that operationalize those themes in `skills/`, `hooks/`, `README.md`, `CLAUDE.md`, `docs/skills/`, and `docs/evidence-maintenance.md`.
+- Scope: research themes already present in [`research/`](../research), plus the runtime and guidance surfaces that operationalize those themes in `skills/`, `hooks/`, `README.md`, `CLAUDE.md`, `docs/skills/`, and `docs/evidence-maintenance.md`.
 - Source policy:
   - Tier 1: official Anthropic / Claude Code docs, official vendor docs, RFCs / specs, peer-reviewed papers, benchmark papers, and primary arXiv papers when no reviewed version is available.
   - Tier 2: engineering blogs or case studies with concrete technical detail and methodology.
   - Tier 3: supplementary community material only when needed for terminology or examples.
-- Classification: use only the canonical classes defined in [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md).
+- Classification: use only the canonical classes defined in [`evidence-contract.md`](../skills/review-claude-config/references/evidence-contract.md).
 - Contradiction handling: when local summaries and fresher primary sources diverge, the stronger source wins and the contradiction must be recorded explicitly.
 
 ## Freshness and Maintenance
 
 - This dossier is a supporting interpretation artifact, not a canonical contract file.
-- Follow the evidence-layer maintenance process defined in [`evidence-maintenance.md`](/home/nos-ai/workspace/review-claude-config/docs/evidence-maintenance.md).
-- Local `research/*` notes provide provenance metadata only. Repo-level claim interpretation remains in this dossier and in [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md).
+- Follow the evidence-layer maintenance process defined in [`evidence-maintenance.md`](evidence-maintenance.md).
+- Local `research/*` notes provide provenance metadata only. Repo-level claim interpretation remains in this dossier and in [`evidence-contract.md`](../skills/review-claude-config/references/evidence-contract.md).
 
 ## Contradiction Status
 
@@ -132,15 +132,17 @@ Evidence-first research baseline for the repository itself. `review-claude-confi
   https://research.trychroma.com/context-rot
 - Repository and documentation literature already summarized in local `research/*` files where no stronger primary source was found for the repo-specific design question
 
-### Local Research Summaries Used as Repo Evidence
+### Tier 1 Sources Backing Local Research Summaries
 
-- [`research/context-engineering/anthropic-effective-context-engineering.md`](/home/nos-ai/workspace/review-claude-config/research/context-engineering/anthropic-effective-context-engineering.md)
-- [`research/tool-design/anthropic-writing-tools-for-agents.md`](/home/nos-ai/workspace/review-claude-config/research/tool-design/anthropic-writing-tools-for-agents.md)
-- [`research/agent-skills/anthropic-equipping-agents-with-skills.md`](/home/nos-ai/workspace/review-claude-config/research/agent-skills/anthropic-equipping-agents-with-skills.md)
-- [`research/domain-knowledge/domain-knowledge-impact-on-quality.md`](/home/nos-ai/workspace/review-claude-config/research/domain-knowledge/domain-knowledge-impact-on-quality.md)
-- [`research/source-quality/web-research-quality-evaluation.md`](/home/nos-ai/workspace/review-claude-config/research/source-quality/web-research-quality-evaluation.md)
-- [`research/autonomous-agent-reliability/autonomous-agent-reliability.md`](/home/nos-ai/workspace/review-claude-config/research/autonomous-agent-reliability/autonomous-agent-reliability.md) — added 2026-05-18 (issue #28); MAST taxonomy + R1–R10 rubric
-- [`research/change-discipline/change-discipline-workflow-research.md`](/home/nos-ai/workspace/review-claude-config/research/change-discipline/change-discipline-workflow-research.md) — added 2026-05-18 (issue #28); multi-perspective review canon
+Each local `research/*` mirror file in this repo summarizes one or more canonical Tier 1 papers. The links below point to the canonical source; the parenthetical names the local mirror that distills it.
+
+- Anthropic, "Effective context engineering for AI agents" — https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents (local mirror: `research/context-engineering/anthropic-effective-context-engineering.md`)
+- Anthropic, "Writing tools for agents" — https://www.anthropic.com/engineering/writing-tools-for-agents (local mirror: `research/tool-design/anthropic-writing-tools-for-agents.md`)
+- Claude blog, "Equipping agents for the real world with agent skills" — https://claude.com/blog/equipping-agents-for-the-real-world-with-agent-skills (local mirror: `research/agent-skills/anthropic-equipping-agents-with-skills.md`)
+- "How to Build AI Agents by Augmenting LLMs with Codified Human Expert Domain Knowledge?" arXiv:2601.15153 — https://arxiv.org/abs/2601.15153; "Procedural Knowledge Improves Agentic LLM Workflows" arXiv:2511.07568 — https://arxiv.org/abs/2511.07568 (local mirror: `research/domain-knowledge/domain-knowledge-impact-on-quality.md`)
+- "Automatic Credibility Assessment Survey" arXiv:2410.21360 — https://arxiv.org/abs/2410.21360; CRAAP Test (Meriam Library, CSU Chico); Google E-E-A-T Quality Rater Guidelines (local mirror: `research/source-quality/web-research-quality-evaluation.md`)
+- Wu et al., "Multi-Agent System Failure Taxonomy (MAST)" arXiv:2503.13657 — https://arxiv.org/abs/2503.13657; "Towards a Science of AI Agent Reliability" arXiv:2602.16666 — https://arxiv.org/abs/2602.16666; AGENTIF (arXiv:2505.16944) — https://arxiv.org/abs/2505.16944 (local mirror: `research/autonomous-agent-reliability/autonomous-agent-reliability.md`, added 2026-05-18 issue #28; MAST taxonomy + R1–R10 rubric)
+- "Mind the Blind Spots: A Focus-Level Evaluation Framework for LLM Reviews" arXiv:2502.17086 — https://arxiv.org/abs/2502.17086; Augment Code, "Code Review Best Practices That Actually Scale"; Kim/Yegge, "The Three Developer Loops" (IT Revolution) (local mirror: `research/change-discipline/change-discipline-workflow-research.md`, added 2026-05-18 issue #28; multi-perspective review canon)
 
 ## Open Questions
 
