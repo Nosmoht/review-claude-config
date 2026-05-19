@@ -4,7 +4,7 @@ This guide tells maintainers how to classify claims in `review-claude-config` wi
 
 ## Use the Canonical Contract
 
-Repository-level evidence classification is defined in [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md).
+Repository-level evidence classification is defined in [`evidence-contract.md`](../skills/review-claude-config/references/evidence-contract.md).
 
 Use only these classes:
 
@@ -91,13 +91,13 @@ Run an evidence-layer maintenance pass when any of these happen:
 - Evidence-layer upkeep is manual maintainer work, not skill ownership.
 - `refresh-engineering-baseline` remains limited to `engineering-baseline.md`.
 - Local `research/*` provenance annotations are source metadata only.
-- Repo-level interpretation lives in [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md) and [`scientific-research-dossier.md`](/home/nos-ai/workspace/review-claude-config/docs/scientific-research-dossier.md).
+- Repo-level interpretation lives in [`evidence-contract.md`](../skills/review-claude-config/references/evidence-contract.md) and [`scientific-research-dossier.md`](scientific-research-dossier.md).
 - Record contradictions canonically in `docs/scientific-research-dossier.md`, not in local research summaries.
 
 ### Normalization Checks
 
 - Use only the canonical class names from `evidence-contract.md` for repo-level claims.
-- Treat [`evidence-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/evidence-contract.md) and [`review-report-contract.md`](/home/nos-ai/workspace/review-claude-config/skills/review-claude-config/references/review-report-contract.md) as the only relevant contract authorities in this area.
+- Treat [`evidence-contract.md`](../skills/review-claude-config/references/evidence-contract.md) and [`review-report-contract.md`](../skills/review-claude-config/references/review-report-contract.md) as the only relevant contract authorities in this area.
 - Before finalizing edits, search for non-canonical class names in `docs/` and `research/`.
 
 ## Ongoing Maintenance
