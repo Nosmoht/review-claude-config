@@ -284,6 +284,309 @@ Identify patterns across items:
 
 Aggregate any "Domain Cache Update" sections from researcher agents into a `### Domain Cache Drift` block in the review report (Phase 4) — list affected universal-entry keys + 1-line summary per key. Do **not** write to `references/domain-cache/` at runtime; entries are maintainer-driven on a 90-day cadence (direct edit + commit in source repo). Skip this block entirely if `websearch_available = false` and `webfetch_available = false`.
 
+## Quality measurement (mandatory before Phase 4)
+
+Without verification, this skill — the BATCH orchestrator over the 10 single-target `/review-*` skills — fails at SCOPE-DRIFT (a discoverable primitive in `<folder>/.claude/` is silently absent from `summary[]` because the Discovery Agent's Glob output was truncated or one type-bucket's parallel batch returned an `## ERROR` block that was logged but not retried, so the aggregate report certifies a portfolio it did not actually audit), TYPE-MISMATCH (a `summary[i].type` says `Skill` but the per-item Recommendations block emits only the 3-dim rule-subset because the dispatcher routed the item to the wrong specialized reviewer), CONVERGENCE-DRIFT (the aggregate union of per-item `finding_id`s at High+Medium on the deterministic subset varies across consecutive runs on the same target folder because per-item perspective dispatch is non-deterministic and merge does not deduplicate across items), and ADVISORY-LEAKAGE (a per-item slot embeds an advisory checklist item like `WS-1` / `OF-3` / `PD-1` at High or Medium because the dispatched specialized reviewer failed to apply the merge-time Low cap per `references/merge-rules.md` §"Perspective Finding Handling"). The three-layer pipeline below catches all four; D6 is load-bearing for SCOPE-DRIFT.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (Jiang et al. ACL 2024), Beyond Consensus (NUS 2025), `references/review-report-contract.md`, `references/merge-rules.md`, `references/scoring-rubric.md`.
+
+Run the pipeline against the assembled Phase 4 Step 1 report body BEFORE writing the file in Phase 4 Step 2. Compute `REPORT_PATH` as the path the Phase 4 Step 2 Write will use; if not yet finalized, serialize the assembled body to a tempfile for the duration of this section. Compute `SCOPE_INVENTORY` by re-running the same Glob patterns used by the Discovery Agent in Phase 1 (Step 2) and capturing the file-path set; pass it to Layer A as the second positional argument.
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run on the assembled aggregate report. STRICT failures block Phase 4 Step 2; SOFT warnings surface in the Output report.
+
+```bash
+python3 - "$REPORT_PATH" "$SCOPE_INVENTORY_FILE" "${PRIOR_MERGED_JSON:-}" <<'PY'
+import sys, re, json, os
+from pathlib import Path
+
+REPORT = Path(sys.argv[1])
+SCOPE  = sys.argv[2]   # path to a newline-separated re-glob of primitives
+PRIOR  = sys.argv[3]
+
+SEVERITY_VOCAB = {"High","Medium","Low"}
+GRADE_VOCAB    = {"A","B","C","D","F"}
+DIM_BY_TYPE = {
+    "Skill":    {"clarity","completeness","prompt_engineering","context_engineering","goal_alignment","safety","metadata"},
+    "Agent":    {"clarity","completeness","prompt_engineering","context_engineering","goal_alignment","safety","metadata"},
+    "Hook":     {"clarity","completeness","goal_alignment","safety","metadata"},
+    "Rule":     {"clarity","completeness","goal_alignment"},
+    "MCP":      {"completeness","goal_alignment","safety","metadata"},
+    "Settings": {"completeness","goal_alignment","safety","metadata"},
+    "ClaudeMD": {"clarity","completeness","context_engineering","goal_alignment"},
+    "Plugin":   {"completeness","goal_alignment","safety","metadata"},
+}
+URL_RE   = r"https?://[^\s)`\"<>]+"
+CITE_RE  = r"\b(arXiv:[0-9.]+|RFC\s*[0-9]+|DOI:[^\s)]+)"
+FIND_RE  = r"^####\s+\d+\.\s+.+\(Impact:\s*(High|Medium|Low)"
+FM_RE    = r"\A---\n(.*?)\n---\n"
+ID_RE    = r"ID:\s*([A-Z][A-Z0-9-]+:[^,\s)]+/v1)"
+HOME_RE  = re.compile(r"^target\s*:\s*/(?:Users|home)/[^/\s]+/", re.M)
+
+errors, warns = [], []
+text = REPORT.read_text()
+m = re.match(FM_RE, text, re.S)
+if not m:
+    errors.append("STRICT: report missing YAML frontmatter"); print("\n".join(errors)); sys.exit(1)
+fm = m.group(1)
+
+for k in ["generated_by","schema_version","date","repo","target","items_reviewed"]:
+    if not re.search(rf"^{k}\s*:", fm, re.M):
+        errors.append(f"STRICT: frontmatter missing required field '{k}'")
+gb = re.search(r"^generated_by\s*:\s*(\S+)", fm, re.M)
+if gb and gb.group(1) != "review-claude-config":
+    errors.append(f"STRICT: generated_by must be 'review-claude-config', got '{gb.group(1)}'")
+if HOME_RE.search(fm):
+    errors.append("STRICT: frontmatter 'target' uses expanded home prefix; must use literal $HOME/")
+
+# --- Section order at aggregate level (STRICT) ---
+sections = [s.group(1).strip() for s in re.finditer(r"^##\s+(.+)$", text, re.M)]
+required = ["Summary","Cross-Cutting Observations"]
+pos = {k: next((i for i,s in enumerate(sections) if s.startswith(k)), -1) for k in required}
+for k,v in pos.items():
+    if v == -1:
+        errors.append(f"STRICT: aggregate report missing required section '{k}'; found={sections}")
+
+# --- summary[] rows: type ↔ dimension-set consistency (STRICT) ---
+# Parse YAML-ish per-row block by name.
+row_blocks = re.findall(r"-\s+name:\s*(\S+)(.*?)(?=^-\s+name:|\Z)", fm, re.S | re.M)
+items_summary = re.search(r"^items_reviewed\s*:\s*(\d+)", fm, re.M)
+if items_summary and len(row_blocks) != int(items_summary.group(1)):
+    errors.append(f"STRICT: len(summary[])={len(row_blocks)} != items_reviewed={items_summary.group(1)}")
+
+summary_paths = []
+for name, body in row_blocks:
+    tm = re.search(r"^\s*type\s*:\s*(\w+)", body, re.M)
+    pm = re.search(r"^\s*path\s*:\s*(\S+)", body, re.M)
+    om = re.search(r"^\s*overall\s*:\s*(\w+)", body, re.M)
+    if not tm or not pm:
+        errors.append(f"STRICT: row name={name} missing type or path")
+        continue
+    typ, path = tm.group(1), pm.group(1)
+    summary_paths.append(path)
+    if om and om.group(1) not in GRADE_VOCAB:
+        errors.append(f"STRICT: row name={name} overall '{om.group(1)}' not in {GRADE_VOCAB}")
+    expected_dims = DIM_BY_TYPE.get(typ)
+    if expected_dims is None:
+        errors.append(f"STRICT: row name={name} unknown type '{typ}'")
+        continue
+    for dim in expected_dims:
+        dm = re.search(rf"^\s*{dim}\s*:\s*(\S+)", body, re.M)
+        if not dm:
+            errors.append(f"STRICT: row name={name} (type={typ}) missing dim '{dim}'")
+            continue
+        v = dm.group(1).rstrip(",")
+        if v not in GRADE_VOCAB and v != "null":
+            errors.append(f"STRICT: row name={name} dim {dim}='{v}' not in {{A,B,C,D,F,null}}")
+
+# --- D6 SCOPE_DISCIPLINE: every Glob-discovered primitive appears in summary[] (STRICT for primary set; SOFT for skipped) ---
+if SCOPE and os.path.exists(SCOPE):
+    inv = {ln.strip() for ln in Path(SCOPE).read_text().splitlines() if ln.strip()}
+    rep = set(summary_paths)
+    missing = inv - rep
+    extra   = rep - inv
+    if missing:
+        errors.append(f"STRICT: SCOPE_DISCIPLINE — primitives discovered but absent from summary[]: {sorted(missing)}")
+    if extra:
+        warns.append(f"SOFT: summary[] paths not in re-glob inventory (symlinks / dotfiles / .gitignore-d per Residual #5): {sorted(extra)}")
+else:
+    warns.append("SOFT: SCOPE_INVENTORY_FILE not provided — D6 cannot verify scope completeness")
+
+# --- Finding headings + severity vocab (STRICT) ---
+findings = re.findall(FIND_RE, text, re.M)
+for sev in findings:
+    if sev not in SEVERITY_VOCAB:
+        errors.append(f"STRICT: finding severity '{sev}' not in {SEVERITY_VOCAB}")
+blocks = re.split(r"^####\s+\d+\.", text, flags=re.M)[1:]
+for i, b in enumerate(blocks, 1):
+    for sub in ["Evidence","Why it matters","Validation"]:
+        if not re.search(rf"\b{sub}\b", b):
+            errors.append(f"STRICT: finding #{i} missing required sub-block '{sub}'")
+
+# --- Advisory leakage at aggregate level (STRICT) ---
+advisory_ids = {"WS-1","OF-3","OF-4","PE-4","CE-3","PD-1","RF-1"}
+leaked = []
+for h in re.finditer(r"####\s+\d+\.\s+.+\(Impact:\s*(High|Medium|Low)[^)]*ID:\s*([A-Z0-9-]+):", text):
+    sev, item = h.group(1), h.group(2)
+    if item in advisory_ids and sev in {"High","Medium"}:
+        leaked.append(f"{item}@{sev}")
+if leaked:
+    errors.append(f"STRICT: advisory items leaked at High/Medium severity: {leaked}")
+
+# --- URL / citation set (SOFT — Layer B verifies resolution) ---
+urls  = set(re.findall(URL_RE,  text))
+cites = set(c if isinstance(c,str) else c[0] for c in re.findall(CITE_RE, text))
+warns.append(f"INFO: urls={len(urls)} cites={len(cites)} (Layer B verifies resolution)")
+
+# --- Convergence vs prior merged.json (STRICT only when provided) ---
+if PRIOR and os.path.exists(PRIOR):
+    prior = json.loads(Path(PRIOR).read_text())
+    cur = set(re.findall(ID_RE, text))
+    prev = {f["finding_id"] for f in prior.get("findings",[])
+            if f.get("severity") in {"High","Medium"}
+            and f.get("checklist_item") not in advisory_ids}
+    drift = cur ^ prev
+    if drift:
+        errors.append(f"STRICT: convergence drift on H+M deterministic-subset (aggregate union): lost={sorted(prev-cur)} gained={sorted(cur-prev)}")
+
+print(f"=== Layer A — {REPORT.name} ===")
+for w in warns:  print(f"warn  {w}")
+for e in errors: print(f"FAIL  {e}")
+print(f"--- {len(errors)} STRICT, {len(warns)} SOFT ---")
+sys.exit(1 if errors else 0)
+PY
+```
+
+What each metric catches: frontmatter required-fields + `$HOME/` literal → DIMENSION-GRADE-ABSENCE and the `block-sensitive-content.sh` PreToolUse contract; aggregate section order → structural validity; `len(summary[]) == items_reviewed` → SCOPE-DRIFT lower bound; type ↔ dimension-set table → TYPE-MISMATCH; re-glob inventory vs `summary[].path` → SCOPE-DRIFT (STRICT-missing / SOFT-extra per Residual #5); severity vocabulary + finding sub-blocks → SEVERITY-MISCALIBRATION (form-level); advisory-leakage scan → ADVISORY-LEAKAGE; convergence diff against prior `merged.json` → CONVERGENCE-DRIFT on the aggregate union.
+
+### Layer B — adversarial critic dispatch (blind, recall-framed)
+
+Dispatch a fresh subagent per per-item slot in `summary[]` AND once at the aggregate level. Per-item critic compares the original primitive file (Skill SKILL.md / Agent .md / Rule .md / hooks.json / .mcp.json / settings.json / plugin.json / CLAUDE.md) against the per-item Recommendations block emitted by the orchestrator. Aggregate critic compares the re-glob inventory against `summary[]`. Adversarial framing is load-bearing — non-adversarial dispatch loses CITATION-ROT, FALSE-RESOLUTION, and SCOPE-MISSING recall.
+
+```
+Agent({
+  description: "Adversarial review-claude-config per-item critic",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer. Two files are attached: ARTIFACT and " +
+    "REPORT_SLOT. Neither label tells you which is which until you read " +
+    "them. ARTIFACT is one primitive file from the audited folder (a " +
+    "SKILL.md, agent .md, rule .md, hooks.json, .mcp.json, settings.json, " +
+    "plugin.json, or CLAUDE.md). REPORT_SLOT is the per-item Goal + " +
+    "Certificate + Strengths + Recommendations block emitted by " +
+    "/review-claude-config for that primitive.\n\n" +
+    "Your only task is to find what the REPORT_SLOT got wrong. List " +
+    "every item that meets one of:\n" +
+    "- MISSING — a defect actually present in ARTIFACT that REPORT_SLOT " +
+    "  does not flag (cite the line, name the rubric dimension it " +
+    "  violates).\n" +
+    "- FABRICATED — a finding in REPORT_SLOT whose claimed Evidence " +
+    "  quote does not appear verbatim in ARTIFACT (cite finding heading " +
+    "  + absent quote).\n" +
+    "- MIS-SEVERITY — a finding whose severity (High|Medium|Low) is " +
+    "  inconsistent with its evidence per the rubric grade caps.\n" +
+    "- MIS-CITED — a URL, arXiv ID, RFC, or references/*.md citation " +
+    "  in REPORT_SLOT that reads as reconstructed-from-memory rather " +
+    "  than resolved-in-session (broken link, wrong file, no tool-" +
+    "  response).\n" +
+    "- UNCITED — a quantitative or evidence-based claim in REPORT_SLOT " +
+    "  with no citation at all.\n" +
+    "- FALSE-RESOLUTION — a finding REPORT_SLOT claims resolved (delta " +
+    "  section) whose underlying defect still appears in ARTIFACT.\n" +
+    "- TYPE-MISROUTE — REPORT_SLOT's emitted dimension set does not " +
+    "  match ARTIFACT's primitive kind (e.g. ARTIFACT is a SKILL.md but " +
+    "  REPORT_SLOT emitted only the rule 3-dim subset).\n" +
+    "- ADVISORY-AT-HIGH — a finding whose checklist_item is in the " +
+    "  advisory set {WS-1, OF-3, OF-4, PE-4, CE-3, PD-1, RF-1} shipped " +
+    "  at severity High or Medium (must be Low per merge-rules).\n\n" +
+    "Do not rate quality. Do not praise. Do not propose fixes. List " +
+    "items only. Quote the literal sentence and name which file. " +
+    "Report under 500 words.\n\n" +
+    "ARTIFACT:\n<paste primitive file contents>\n\n" +
+    "REPORT_SLOT:\n<paste per-item block contents>"
+})
+```
+
+**Dispatch each per-item pair twice with order swapped** (ARTIFACT↔REPORT_SLOT label position) — position bias is the dominant pairwise-judge artifact (Shi et al. 2024 arXiv:2406.07791). Take the union of items flagged across both runs per slot.
+
+Then dispatch the aggregate-level critic once:
+
+```
+Agent({
+  description: "Adversarial review-claude-config scope critic",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer. Two text blocks are attached: INVENTORY " +
+    "and AGGREGATE. INVENTORY is a newline-separated list of primitive " +
+    "file paths discovered under the audited folder's .claude/ tree. " +
+    "AGGREGATE is the orchestrator-level Summary Table + Cross-Cutting " +
+    "Observations sections of a /review-claude-config report.\n\n" +
+    "Your only task is to find what AGGREGATE got wrong about scope. " +
+    "List items meeting one of:\n" +
+    "- SCOPE-MISSING — an INVENTORY path that AGGREGATE's Summary Table " +
+    "  does not list.\n" +
+    "- SCOPE-EXTRA — an AGGREGATE Summary Table path absent from " +
+    "  INVENTORY (may be legitimate per Residual #5 — symlinks, " +
+    "  dotfiles, .gitignore-d; flag for human triage).\n" +
+    "- PATTERN-OVERREACH — a Cross-Cutting Observation claiming a " +
+    "  pattern 'across all items' that has no cited example, or whose " +
+    "  cited example path is not in AGGREGATE's Summary Table.\n\n" +
+    "Do not rate quality. Do not praise. Report under 300 words.\n\n" +
+    "INVENTORY:\n<paste re-glob output>\n\n" +
+    "AGGREGATE:\n<paste Summary Table + Cross-Cutting Observations>"
+})
+```
+
+### Layer C — binary rubric reconciliation
+
+Six binary dimensions, each yes/no, each tied to ≥1 failure class. Any `NO` blocks Phase 4 Step 2 (report write) until resolved.
+
+```
+D1 CONVERGENCE_STABILITY  When a prior report exists in the report archive, the
+                          set of finding_id values at severity in {High, Medium}
+                          on the deterministic subset (per merge-rules.md
+                          §"Perspective Finding Handling"), taken as the UNION
+                          across all summary[i] rows, is byte-identical between
+                          consecutive runs on the same target folder.
+                          (Catches: CONVERGENCE-DRIFT)
+
+D2 SEVERITY_JUSTIFIED     Every finding (in every per-item Recommendations
+                          block) has severity matching its evidence per the
+                          rubric §"Grade Caps" + §"Item Inventory"; no Layer-B
+                          MIS-SEVERITY or ADVISORY-AT-HIGH item open.
+                          (Catches: SEVERITY-MISCALIBRATION, ADVISORY-LEAKAGE)
+
+D3 DIMENSION_COVERAGE     For every summary[i] row, the dimension set emitted
+                          matches DIM_BY_TYPE[summary[i].type] with grade in
+                          {A,B,C,D,F,null}; no row is missing a required dim;
+                          no row emits a dim not in its type's set.
+                          (Catches: DIMENSION-GRADE-ABSENCE, TYPE-MISMATCH,
+                          TYPE-MISROUTE)
+
+D4 EVIDENCE_RESOLVED      Every URL, arXiv ID, RFC, and references/*.md path
+                          cited in ANY per-item block was either resolved in
+                          the producing session (verifiable from tool-use log)
+                          OR carries an explicit `[no web verification]` /
+                          `[unverified-url]` marker; no MIS-CITED or UNCITED
+                          Layer-B item open.
+                          (Catches: CITATION-ROT, UNCITED)
+
+D5 NO_FABRICATED_FINDINGS Every finding's Evidence block contains a literal
+                          quote from its primitive file; no FABRICATED or
+                          FALSE-RESOLUTION Layer-B item open across any
+                          per-item slot.
+                          (Catches: SEVERITY-MISCALIBRATION false-positive
+                          class, FALSE-FIX-PASS)
+
+D6 SCOPE_DISCIPLINE       Every primitive in the Phase-1 re-glob inventory of
+                          <folder>/.claude/ appears in summary[].path; zero
+                          Layer-B SCOPE-MISSING items open; SCOPE-EXTRA items
+                          documented as the Residual #5 case (symlink /
+                          dotfile / .gitignore-d) or removed; every Cross-
+                          Cutting Observation cites at least one Summary
+                          Table path.
+                          (Catches: SCOPE-DRIFT, PATTERN-OVERREACH)
+```
+
+Map Layer-A failures → D3/D6. Map Layer-B `MISSING` / `FABRICATED` → D5. Map `MIS-SEVERITY` / `ADVISORY-AT-HIGH` → D2. Map `MIS-CITED` / `UNCITED` → D4. Map `FALSE-RESOLUTION` → D5. Map `TYPE-MISROUTE` → D3. Map `SCOPE-MISSING` / `PATTERN-OVERREACH` → D6.
+
+### Reconciliation outcomes
+
+- **All Layer-A STRICT pass + zero Layer-B `MISSING`/`FABRICATED`/`FALSE-RESOLUTION`/`ADVISORY-AT-HIGH`/`SCOPE-MISSING`/`TYPE-MISROUTE`** → proceed to Phase 4 Step 2.
+- **Any Layer-A STRICT fail OR any of those Layer-B classes** → propose restorations inline (name each finding to add/remove with the primitive line + rubric citation; name each missing primitive path), re-dispatch the affected per-item slot or re-glob, re-run Layer A on the patched report. Max two iterations. If still failing at iteration 2, surface to user and do NOT auto-write the report.
+- **Only Layer-A SOFT warnings + Layer-B `MIS-SEVERITY` / `MIS-CITED` / `UNCITED` / `SCOPE-EXTRA`** → record in the Output report under `### Layer-B Findings (Advisory)` and proceed. These do not block ship; reviewer triages.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **Cross-report convergence beyond H+M deterministic subset** — D1 is bounded to High+Medium finding_ids on the deterministic subset per `merge-rules.md` §"Convergence Policy". Low-severity advisory drift across the aggregate union is by-design unbounded. If a per-item slot silently moves a deterministic finding into the advisory class (emitting it with an `ADHOC:` id instead of a `WS-2b:` id), Layer A's deterministic-subset filter misses it. Reviewer must spot-check `ADHOC:`-prefixed finding_ids across all per-item slots.
+2. **Calibration drift vs the baseline** — D2 verifies severity is internally consistent with cited rubric evidence; it does NOT verify that `engineering-baseline.md` itself is calibrated against current best practice. A stale baseline (>90 days, per CLAUDE.md) silently inflates High counts across every per-item slot without triggering any pipeline layer. `/refresh-engineering-baseline` is out-of-band.
+3. **Report-vs-tool-use-log audit** — D4's URL set is extracted from the report text; verifying each citation was actually resolved in the producing session requires reading the session JSONL under `$HOME/.claude/projects/<project>/<sessionId>.jsonl`. The pipeline does not auto-parse JSONL — Layer B asks the per-item critic to flag obvious reconstructed-from-memory URLs but cannot prove resolution.
+4. **Specialized reviewer soundness** — `merge-rules.md` §"Layer 1.5 — Binary Boundary Caps" pins per-item grade caps (e.g. CLAR-2 FAIL → Clarity ≤ C); the pipeline checks the cap was applied but does NOT verify that the dispatched specialized reviewer (`/review-skill`, `/review-agent`, etc.) ran its own Layer A/B/C correctly on the primitive. A poisoned per-item certificate propagates silently through the aggregate.
+5. **Glob discovery completeness** — D6 trusts the re-glob inventory passed in as `SCOPE_INVENTORY_FILE`, computed with the same patterns the Discovery Agent used in Phase 1. Symlinked, dot-prefixed, or git-untracked primitive directories are matched by neither pass and silently missed by both. SCOPE-EXTRA items in summary[] (paths the re-glob does not see but the discovery did, e.g. via a follow-symlinks variation) are downgraded to SOFT and surfaced under Residual #5 — reviewer must spot-check that `items_reviewed` matches expected directory inventory.
+
+The Output report MUST list which residual classes apply when the critic returns any `UNCERTAIN` flags, when no prior report exists (D1 N/A), or when SCOPE-EXTRA items are reported (Residual #5 applies).
+
 ## Phase 4 — Report Persistence
 
 If `validation_mode = true`, skip this entire phase.
