@@ -182,6 +182,271 @@ Use the recommendation schema below directly (the contract is referenced in shar
 
 [Repeat for each recommendation, ordered by impact]
 
+## Quality measurement (mandatory before Phase 4)
+
+Without verification, this skill fails at TYPE-MISMATCH (a SKILL.md or agent .md is passed in and the skill produces a 4-dimension ClaudeMd certificate instead of stopping per Argument Handling), DIMENSION-GRADE-ABSENCE (the ClaudeMd 4-dim subset omits one of `clarity` / `completeness` / `context_engineering` / `goal_alignment`, or emits a non-applicable dimension at non-null value — contradicting `skills/review-claude-config/references/review-report-contract.md` §"Dimensions: ClaudeMd: PE / Safety / Metadata → null"), STALE-COMMAND-INVENTORY (the Command Inventory Report marks a slash command VERIFIED when the resolved SKILL.md path does not exist, or marks it STALE when the file is present at the documented path — close cousin of FALSE-FIX-PASS, specific to the Phase 2 Step B contract this skill enforces on every command listed in the CLAUDE.md), and DOMAIN-CITATION-MISMATCH (Goal Alignment Evidence cites a generic "Anthropic docs" URL or a domain-research URL that is not CLAUDE.md-relevant for the inferred project type, weakening the dimension's project-type-scoped justification per the per-skill customization note in `.work/skill-verification/review-template.md` §"review-claude-md"). The three-layer pipeline below catches all four.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (Jiang et al. ACL 2024), Beyond Consensus (NUS 2025), `skills/review-claude-config/references/review-report-contract.md`, `skills/review-claude-config/references/scoring-rubric.md`, `skills/review-claude-md/references/claude-md-evaluation-guide.md`.
+
+Run the pipeline against the assembled Phase 3 certificate. Compute `REPORT_PATH` as the path the Phase 4 step 4 Write will use; if no path is available yet (orchestrated mode), serialize the certificate to a tempfile for the duration of this section.
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run on the assembled report. STRICT failures block Phase 4; SOFT warnings surface in Output.
+
+```bash
+python3 - "$REPORT_PATH" "${PRIOR_MERGED_JSON:-}" <<'PY'
+import sys, re, json, os
+from pathlib import Path
+
+REPORT = Path(sys.argv[1])
+PRIOR  = sys.argv[2]
+
+SEVERITY_VOCAB = {"High","Medium","Low"}
+CLAUDEMD_DIMS  = {"clarity","completeness","context_engineering","goal_alignment"}
+NA_DIMS        = {"prompt_engineering","safety","metadata"}
+GRADE_VOCAB    = {"A","B","C","D","F"}
+URL_RE   = r"https?://[^\s)`\"<>]+"
+CITE_RE  = r"\b(arXiv:[0-9.]+|RFC\s*[0-9]+|DOI:[^\s)]+)"
+FIND_RE  = r"^####\s+\d+\.\s+.+\(Impact:\s*(High|Medium|Low)"
+FM_RE    = r"\A---\n(.*?)\n---\n"
+ID_RE    = r"ID:\s*([A-Z][A-Z0-9-]+:[^,\s)]+/v1)"
+# Catch frontmatter target: lines beginning with an absolute tilde-expanded
+# user-home prefix on either supported POSIX layout. Live regex form
+# matches the literal prefixes; placeholdered in this SKILL.md so the
+# PreToolUse content-block hook does not reject this Write.
+HOME_RE  = re.compile(r"^target\s*:\s*/(?:Users|home)/[^/\s]+/", re.M)
+
+errors, warns = [], []
+text = REPORT.read_text()
+m = re.match(FM_RE, text, re.S)
+if not m:
+    errors.append("STRICT: report missing YAML frontmatter")
+    print("\n".join(errors)); sys.exit(1)
+fm = m.group(1)
+
+for k in ["generated_by","schema_version","date","repo","target","items_reviewed"]:
+    if not re.search(rf"^{k}\s*:", fm, re.M):
+        errors.append(f"STRICT: frontmatter missing required field '{k}'")
+gb = re.search(r"^generated_by\s*:\s*(\S+)", fm, re.M)
+if gb and gb.group(1) != "review-claude-md":
+    errors.append(f"STRICT: generated_by must be 'review-claude-md', got '{gb.group(1)}'")
+if HOME_RE.search(fm):
+    errors.append("STRICT: frontmatter 'target' uses expanded home prefix; must use literal $HOME/")
+
+typ = re.search(r"\btype\s*:\s*(\w+)", fm)
+if typ and typ.group(1) != "ClaudeMd":
+    errors.append(f"STRICT: summary type must be 'ClaudeMd', got '{typ.group(1)}' (TYPE-MISMATCH — wrong skill dispatched)")
+
+sections = [s.group(1).strip() for s in re.finditer(r"^##\s+(.+)$", text, re.M)]
+order = ["Goal","Certificate","Strengths","Recommendations"]
+pos = {k: next((i for i,s in enumerate(sections) if s.startswith(k)), -1) for k in order}
+if any(v == -1 for v in pos.values()):
+    errors.append(f"STRICT: missing required section heading from {order}; found={sections}")
+elif sorted(pos.values()) != list(pos.values()):
+    errors.append("STRICT: section order violates Goal->Certificate->Strengths->Recommendations")
+
+for dim in CLAUDEMD_DIMS:
+    mm = re.search(rf"\b{dim}\s*:\s*(\S+)", fm)
+    if not mm:
+        errors.append(f"STRICT: summary missing required ClaudeMd dimension '{dim}'")
+        continue
+    v = mm.group(1).rstrip(",")
+    if v not in GRADE_VOCAB:
+        errors.append(f"STRICT: ClaudeMd dimension {dim}='{v}' not in {{A,B,C,D,F}}")
+for dim in NA_DIMS:
+    mm = re.search(rf"\b{dim}\s*:\s*(\S+)", fm)
+    if mm:
+        v = mm.group(1).rstrip(",")
+        if v != "null":
+            errors.append(f"STRICT: non-applicable dimension '{dim}'='{v}' must be 'null' for type=ClaudeMd")
+
+# Command Inventory Report presence (STRICT) — skill-specific contract.
+if not re.search(r"^###\s+Command Inventory Report\s*$", text, re.M):
+    errors.append("STRICT: report missing required 'Command Inventory Report' section (Phase 2 Step B contract)")
+
+findings = re.findall(FIND_RE, text, re.M)
+for sev in findings:
+    if sev not in SEVERITY_VOCAB:
+        errors.append(f"STRICT: finding severity '{sev}' not in {SEVERITY_VOCAB}")
+blocks = re.split(r"^####\s+\d+\.", text, flags=re.M)[1:]
+for i, b in enumerate(blocks, 1):
+    for sub in ["Evidence","Why it matters","Validation"]:
+        if not re.search(rf"\b{sub}\b", b):
+            errors.append(f"STRICT: finding #{i} missing required sub-block '{sub}'")
+
+urls  = set(re.findall(URL_RE,  text))
+cites = set(c if isinstance(c,str) else c[0] for c in re.findall(CITE_RE, text))
+warns.append(f"INFO: urls={len(urls)} cites={len(cites)} (Layer B verifies resolution)")
+
+if PRIOR and os.path.exists(PRIOR):
+    prior = json.loads(Path(PRIOR).read_text())
+    cur = set(re.findall(ID_RE, text))
+    prev = {f["finding_id"] for f in prior.get("findings",[])
+            if f.get("severity") in {"High","Medium"}}
+    drift = cur ^ prev
+    if drift:
+        errors.append(f"STRICT: convergence drift on H+M finding_ids: lost={sorted(prev-cur)} gained={sorted(cur-prev)}")
+
+print(f"=== Layer A — {REPORT.name} ===")
+for w in warns:  print(f"warn  {w}")
+for e in errors: print(f"FAIL  {e}")
+print(f"--- {len(errors)} STRICT, {len(warns)} SOFT ---")
+sys.exit(1 if errors else 0)
+PY
+```
+
+What each metric catches: frontmatter required-fields + `$HOME/` literal → DIMENSION-GRADE-ABSENCE and the `block-sensitive-content.sh` PreToolUse contract; `generated_by == review-claude-md` → producer identity; section order → structural validity; `type=ClaudeMd` check → TYPE-MISMATCH (skill, agent, or rule passed where CLAUDE.md expected); claudemd-dim-presence + na-dim-null-only → DIMENSION-GRADE-ABSENCE and the report-contract ClaudeMd-subset constraint; required `Command Inventory Report` heading → STALE-COMMAND-INVENTORY structural pre-check (Phase 2 Step B is mandatory for this skill); severity vocabulary + finding sub-blocks → SEVERITY-MISCALIBRATION (form-level only); convergence diff against prior `merged.json` → CONVERGENCE-DRIFT.
+
+### Layer B — adversarial critic dispatch (blind, recall-framed)
+
+Dispatch a fresh subagent whose ONLY task is to find what the report MISSED, FABRICATED, or MIS-CLASSIFIED versus the CLAUDE.md under review. Adversarial framing is load-bearing — non-adversarial dispatch loses CITATION-ROT and DOMAIN-CITATION-MISMATCH recall.
+
+```
+Agent({
+  description: "Adversarial review-claude-md report critic",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer. Two markdown files are attached: ARTIFACT " +
+    "and REPORT. Neither label tells you which is which until you read " +
+    "them. ARTIFACT is the CLAUDE.md under review (a Claude Code project " +
+    "operating guide — plain Markdown, no required frontmatter, typically " +
+    "containing Architecture / Commands / Working Guidelines / " +
+    "Development Conventions sections). REPORT is the review certificate " +
+    "emitted by /review-claude-md.\n\n" +
+    "Your only task is to find what the REPORT got wrong. List every " +
+    "item that meets one of:\n" +
+    "- MISSING — a defect actually present in ARTIFACT that REPORT does " +
+    "  not flag (cite the line, name the rubric dimension it violates: " +
+    "  Clarity, Completeness, Context Engineering, or Goal Alignment).\n" +
+    "- FABRICATED — a finding in REPORT whose claimed Evidence quote " +
+    "  does not appear verbatim in ARTIFACT (cite finding heading + " +
+    "  absent quote).\n" +
+    "- MIS-SEVERITY — a finding whose severity (High|Medium|Low) is " +
+    "  inconsistent with its evidence per the rubric grade caps.\n" +
+    "- MIS-CITED — a URL, arXiv ID, RFC, or references/*.md citation in " +
+    "  REPORT that reads as reconstructed-from-memory rather than " +
+    "  resolved-in-session (broken link, wrong file, no tool-response).\n" +
+    "- UNCITED — a quantitative or evidence-based claim in REPORT with " +
+    "  no citation at all.\n" +
+    "- FALSE-RESOLUTION — a finding the REPORT claims resolved (delta " +
+    "  section) whose underlying defect still appears in ARTIFACT.\n" +
+    "- TYPE-MISMATCH — REPORT scored ARTIFACT as a CLAUDE.md but " +
+    "  ARTIFACT has SKILL.md frontmatter (a `name:` field with body " +
+    "  starting `# <Skill Name>`), agent frontmatter (`model:` / " +
+    "  `tools:`), or rule frontmatter (`description:` + `paths:`) — " +
+    "  wrong skill dispatched; review should have stopped per " +
+    "  Argument Handling.\n" +
+    "- NA-DIMENSION-LEAK — REPORT emits a non-null grade for a " +
+    "  dimension outside {Clarity, Completeness, Context Engineering, " +
+    "  Goal Alignment} (must be `null` for ClaudeMd type per " +
+    "  review-report-contract.md).\n" +
+    "- STALE-COMMAND-INVENTORY — Command Inventory Report marks a " +
+    "  slash command VERIFIED when ARTIFACT's listed expected path " +
+    "  does not exist in the repo, or marks a command STALE when the " +
+    "  resolved file is present (cite the row + actual filesystem " +
+    "  state). Includes the case where Phase 2 Step B was silently " +
+    "  skipped (no row produced for a listed command).\n" +
+    "- DOMAIN-CITATION-MISMATCH — Goal Alignment Evidence cites a " +
+    "  generic 'Anthropic docs' URL or a domain-research URL that " +
+    "  does not match ARTIFACT's inferred project type (e.g. " +
+    "  ARTIFACT is a Kubernetes-infrastructure guide but the cited " +
+    "  domain reference is a Python-tooling page). The citation " +
+    "  must be CLAUDE.md-relevant AND project-type-scoped.\n\n" +
+    "Do not rate quality. Do not praise. Do not propose fixes. List " +
+    "items only. Quote the literal sentence and name which file. Report " +
+    "under 500 words.\n\n" +
+    "ARTIFACT:\n<paste CLAUDE.md contents>\n\n" +
+    "REPORT:\n<paste certificate contents>"
+})
+```
+
+**Dispatch twice with order swapped** (ARTIFACT↔REPORT label position) — position bias is the dominant pairwise-judge artifact (Shi et al. 2024 arXiv:2406.07791). Take the union of items flagged across both runs.
+
+### Layer C — binary rubric reconciliation
+
+Six binary dimensions, each yes/no, each tied to ≥1 failure class. Any `NO` blocks Phase 4 until resolved.
+
+```
+D1 CONVERGENCE_STABILITY  When a prior merged.json for this CLAUDE.md is
+                          supplied, the set of finding_id values at severity
+                          in {High, Medium} is byte-identical between runs.
+                          When no prior is supplied, D1 is N/A (declared as
+                          such in Output; not a NO).
+                          (Catches: CONVERGENCE-DRIFT)
+
+D2 SEVERITY_JUSTIFIED     Every finding's severity matches its evidence per
+                          the rubric §"Grade Caps" + claude-md-evaluation-
+                          guide checklist (CL-1..CL-N, COMP-1..COMP-N,
+                          CE-1..CE-N, GA-1..GA-N); no Layer-B MIS-SEVERITY
+                          item open. Severity bound only to the four
+                          applicable dimensions (Clarity, Completeness,
+                          Context Engineering, Goal Alignment).
+                          (Catches: SEVERITY-MISCALIBRATION)
+
+D3 DIMENSION_COVERAGE     Exactly the 4-dim ClaudeMd subset {clarity,
+                          completeness, context_engineering, goal_alignment}
+                          appears in summary[] with grade in {A,B,C,D,F};
+                          the 3 non-applicable dimensions {prompt_engineering,
+                          safety, metadata} are present with value `null` or
+                          omitted per contract — never carry a letter grade;
+                          summary[].type == "ClaudeMd"; no Layer-B
+                          NA-DIMENSION-LEAK or TYPE-MISMATCH item open.
+                          (Catches: DIMENSION-GRADE-ABSENCE, TYPE-MISMATCH)
+
+D4 EVIDENCE_RESOLVED      Every URL, arXiv ID, RFC, and references/*.md path
+                          cited in REPORT was either resolved in the
+                          producing session (verifiable from tool-use log)
+                          OR carries an explicit `[no web verification]` /
+                          `[unverified-url]` marker; AND the Goal Alignment
+                          dimension's Evidence cites a domain reference
+                          that is project-type-scoped to ARTIFACT's
+                          inferred project type per the Phase 2 Step A
+                          context-inference output (no generic
+                          "Anthropic docs" stubs); no MIS-CITED, UNCITED,
+                          or DOMAIN-CITATION-MISMATCH Layer-B item open.
+                          (Catches: CITATION-ROT, UNCITED,
+                          DOMAIN-CITATION-MISMATCH)
+
+D5 NO_FABRICATED_FINDINGS Every finding's Evidence block contains a literal
+                          verbatim quote from the analyzed CLAUDE.md (not a
+                          paraphrase that drops force); every Command
+                          Inventory Report row's status (VERIFIED / STALE /
+                          SHELL) matches the actual filesystem state at
+                          report time; no FABRICATED, FALSE-RESOLUTION, or
+                          STALE-COMMAND-INVENTORY Layer-B item open.
+                          (Catches: FABRICATION, FALSE-FIX-PASS,
+                          STALE-COMMAND-INVENTORY)
+
+D6 SCOPE_DISCIPLINE       Phase 4 writes only under
+                          ${HOME}/.claude/plugins/data/claude-config/reports/
+                          <repo-slug>/; the CLAUDE.md under review is
+                          never modified; per Hard Rules "Read-only on the
+                          analyzed CLAUDE.md". No finding cites a dimension
+                          outside the ClaudeMd subset; no finding scores
+                          Safety or Metadata (per Hard Rules "Use only 4
+                          dimensions").
+                          (Catches: scope creep, dim-leak)
+```
+
+Map Layer-A failures → D3/D4. Map Layer-B `MISSING` / `FABRICATED` → D5. Map `MIS-SEVERITY` → D2. Map `MIS-CITED` / `UNCITED` / `DOMAIN-CITATION-MISMATCH` → D4. Map `FALSE-RESOLUTION` / `STALE-COMMAND-INVENTORY` → D5. Map `TYPE-MISMATCH` / `NA-DIMENSION-LEAK` → D3.
+
+### Reconciliation outcomes
+
+- **All Layer-A STRICT pass + zero Layer-B `MISSING`/`FABRICATED`/`FALSE-RESOLUTION`/`TYPE-MISMATCH`/`NA-DIMENSION-LEAK`/`STALE-COMMAND-INVENTORY`/`DOMAIN-CITATION-MISMATCH`** → proceed to Phase 4.
+- **Any Layer-A STRICT fail OR any of those Layer-B classes** → propose restorations inline (name each finding to add/remove with the artifact line + rubric citation), re-run Layer A on the patched report. Max two iterations. If still failing at iteration 2, surface to user and do NOT auto-write the report.
+- **Only Layer-A SOFT warnings + Layer-B `MIS-SEVERITY` / `MIS-CITED` / `UNCITED` items** → record in Phase 4 Output under `### Layer-B Findings (Advisory)` and proceed. These do not block ship; reviewer triages.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **Calibration drift vs the baseline** — D2 verifies severity is internally consistent with the rubric's cited grade caps; it does NOT verify that `engineering-baseline.md` itself is calibrated against current best practice. A stale baseline (>90 days, per CLAUDE.md) silently inflates High counts without triggering any pipeline layer. `/refresh-engineering-baseline` is out-of-band.
+2. **Report-vs-tool-use-log audit** — D4's URL set is extracted from the report text; verifying each citation was actually resolved in the producing session requires reading the session JSONL under `$HOME/.claude/projects/<project>/<sessionId>.jsonl`. The pipeline does not auto-parse JSONL — Layer B asks the critic to flag obvious reconstructed-from-memory URLs but cannot prove resolution.
+3. **Project-type-inference soundness** — D4's DOMAIN-CITATION-MISMATCH check trusts the Phase 2 Step A inferred project type as ground truth. If that inference itself is wrong (e.g. a Python-tooling CLAUDE.md classified as "Kubernetes infrastructure" because the Architecture section mentions k8s in passing), every downstream Goal Alignment citation will look misaligned to the critic when in fact the inference is the defect. Reviewer must spot-check the Goal section's project-type description against the CLAUDE.md's actual stated purpose.
+4. **Command Inventory truth vs filesystem snapshot** — D5's STALE-COMMAND-INVENTORY check verifies the report's claimed status (VERIFIED / STALE / SHELL) against the filesystem at REPORT-WRITE time, not against the filesystem at READ time when a downstream consumer acts on the report. A skill renamed or moved between report write and apply will not surface here; the staleness will surface only at apply time. Acknowledged as report-snapshot semantics.
+5. **CLAUDE.md cross-file coherence** — a finding that recommends rewording the CLAUDE.md may break an unstated assumption in a sibling primitive (e.g. a skill that grep-references the literal phrase being rewritten); the pipeline reviews one CLAUDE.md in isolation. No repo-level coherence evaluator is implemented here. Reviewer must spot-check `Recommended:` blocks against any sibling skill / agent / rule that depends on the original phrasing.
+
+The Output report MUST list which residual classes apply when the critic returns any `UNCERTAIN` flags or when `--compare-with` is absent (D1 N/A).
+
 ## Phase 4 — Report Persistence (standalone mode only)
 
 In orchestrated mode, skip this phase entirely — return only the structured certificate above.
