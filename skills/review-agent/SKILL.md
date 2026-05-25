@@ -160,6 +160,245 @@ Locate the canonical review contract via Glob: `**/review-claude-config/referenc
 #### Reference File Recommendation
 [Note: Agents are single-file and cannot have reference files. If the agent would benefit from extracted reference content, recommend converting to a skill instead, explaining the tradeoff.]
 
+## Quality measurement (mandatory before Phase 4)
+
+Without verification, this skill fails at CONVERGENCE-DRIFT (the same agent .md produces non-identical High+Medium `finding_id` sets across consecutive runs because the rubric's `DA-2`/`DA-2b` activation-precision items are LLM-judged and the merge step inconsistently retains advisory perspective findings), CITATION-ROT (the Goal-Alignment dimension cites URLs/arXiv IDs that were not actually resolved in the producing session — reconstructed from training data instead of WebSearch tool-use), and ADVISORY-LEAKAGE (an advisory item like `WS-1` / `OF-3` / `PD-1` escapes the merge-time Low demotion per `references/merge-rules.md` §"Perspective Finding Handling" and ships at High or Medium). The three-layer pipeline below catches all three plus agent-specific TYPE-MISMATCH (Hook/Rule dimensions appearing in an Agent report) and activation-collision recall gaps (RD-3 territory where the agent's trigger phrases overlap with sibling agents' triggers).
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (Jiang et al. ACL 2024), Beyond Consensus (NUS 2025), `references/review-report-contract.md`, `references/merge-rules.md`, `references/scoring-rubric.md`, `references/agent-evaluation-guide.md`.
+
+Run the pipeline against the assembled Phase 3 certificate. Compute `REPORT_PATH` as the path the Phase 4 step 4 Write will use; if no path is available yet (orchestrated mode), serialize the certificate to a tempfile for the duration of this section.
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run on the assembled report. STRICT failures block Phase 4; SOFT warnings surface in Output.
+
+```bash
+python3 - "$REPORT_PATH" "${PRIOR_MERGED_JSON:-}" <<'PY'
+import sys, re, json, os
+from pathlib import Path
+
+REPORT = Path(sys.argv[1])
+PRIOR  = sys.argv[2]
+
+SEVERITY_VOCAB = {"High","Medium","Low"}
+DIM_SET = {"clarity","completeness","prompt_engineering","context_engineering",
+           "goal_alignment","safety","metadata"}
+GRADE_VOCAB = {"A","B","C","D","F"}
+URL_RE   = r"https?://[^\s)`\"<>]+"
+CITE_RE  = r"\b(arXiv:[0-9.]+|RFC\s*[0-9]+|DOI:[^\s)]+)"
+FIND_RE  = r"^####\s+\d+\.\s+.+\(Impact:\s*(High|Medium|Low)"
+FM_RE    = r"\A---\n(.*?)\n---\n"
+ID_RE    = r"ID:\s*([A-Z][A-Z0-9-]+:[^,\s)]+/v1)"
+HOME_RE  = re.compile(r"^target\s*:\s*/(?:Users|home)/[^/\s]+/", re.M)
+
+errors, warns = [], []
+text = REPORT.read_text()
+m = re.match(FM_RE, text, re.S)
+if not m:
+    errors.append("STRICT: report missing YAML frontmatter"); print("\n".join(errors)); sys.exit(1)
+fm = m.group(1)
+
+for k in ["generated_by","schema_version","date","repo","target","items_reviewed"]:
+    if not re.search(rf"^{k}\s*:", fm, re.M):
+        errors.append(f"STRICT: frontmatter missing required field '{k}'")
+gb = re.search(r"^generated_by\s*:\s*(\S+)", fm, re.M)
+if gb and gb.group(1) != "review-agent":
+    errors.append(f"STRICT: generated_by must be 'review-agent', got '{gb.group(1)}'")
+if HOME_RE.search(fm):
+    errors.append("STRICT: frontmatter 'target' uses expanded home prefix; must use literal $HOME/")
+
+# Type discipline — single summary row of type Agent (TYPE-MISMATCH)
+typ_rows = re.findall(r"^\s*type\s*:\s*(\S+)", fm, re.M)
+if not typ_rows:
+    errors.append("STRICT: summary[] missing type field")
+elif any(t.rstrip(",") != "Agent" for t in typ_rows):
+    errors.append(f"STRICT: review-agent must emit type=Agent rows only, got {typ_rows}")
+
+sections = [s.group(1).strip() for s in re.finditer(r"^##\s+(.+)$", text, re.M)]
+order = ["Goal","Certificate","Strengths","Recommendations"]
+pos = {k: next((i for i,s in enumerate(sections) if s.startswith(k)), -1) for k in order}
+if any(v == -1 for v in pos.values()):
+    errors.append(f"STRICT: missing required section heading from {order}; found={sections}")
+elif sorted(pos.values()) != list(pos.values()):
+    errors.append("STRICT: section order violates Goal->Certificate->Strengths->Recommendations")
+
+# Dimension presence — full 7 dims for Agent type
+for dim in DIM_SET:
+    mm = re.search(rf"\b{dim}\s*:\s*(\S+)", fm)
+    if not mm:
+        errors.append(f"STRICT: summary missing dimension '{dim}'")
+        continue
+    v = mm.group(1).rstrip(",")
+    if v not in GRADE_VOCAB and v != "null":
+        errors.append(f"STRICT: dimension {dim}='{v}' not in {{A,B,C,D,F,null}}")
+
+findings = re.findall(FIND_RE, text, re.M)
+for sev in findings:
+    if sev not in SEVERITY_VOCAB:
+        errors.append(f"STRICT: finding severity '{sev}' not in {SEVERITY_VOCAB}")
+blocks = re.split(r"^####\s+\d+\.", text, flags=re.M)[1:]
+for i, b in enumerate(blocks, 1):
+    for sub in ["Evidence","Why it matters","Validation"]:
+        if not re.search(rf"\b{sub}\b", b):
+            errors.append(f"STRICT: finding #{i} missing required sub-block '{sub}'")
+
+# Activation-precision evidence anchor — at least one DA-* / TC-* checklist
+# citation in Evidence blocks when High/Medium findings exist on Clarity or
+# Metadata dims (rubric §"Item Inventory" requires checklist-ID justification).
+hm_findings = [b for b in blocks if re.search(r"Impact:\s*(High|Medium)", b)]
+if hm_findings:
+    anchored = sum(1 for b in hm_findings if re.search(r"\b(DA-\d|TC-\d|AH-\d|RL-\d|AF-\d)\b", b))
+    if anchored == 0:
+        warns.append("SOFT: no High/Medium finding cites an agent-evaluation-guide checklist ID (DA-*/TC-*/AH-*/RL-*/AF-*)")
+
+advisory_ids = {"WS-1","OF-3","OF-4","PE-4","CE-3","PD-1","RF-1"}
+leaked = []
+for h in re.finditer(r"####\s+\d+\.\s+.+\(Impact:\s*(High|Medium|Low)[^)]*ID:\s*([A-Z0-9-]+):", text):
+    sev, item = h.group(1), h.group(2)
+    if item in advisory_ids and sev in {"High","Medium"}:
+        leaked.append(f"{item}@{sev}")
+if leaked:
+    errors.append(f"STRICT: advisory items leaked at High/Medium severity: {leaked}")
+
+urls  = set(re.findall(URL_RE,  text))
+cites = set(c if isinstance(c,str) else c[0] for c in re.findall(CITE_RE, text))
+warns.append(f"INFO: urls={len(urls)} cites={len(cites)} (Layer B verifies resolution)")
+
+if PRIOR and os.path.exists(PRIOR):
+    prior = json.loads(Path(PRIOR).read_text())
+    cur = set(re.findall(ID_RE, text))
+    prev = {f["finding_id"] for f in prior.get("findings",[])
+            if f.get("severity") in {"High","Medium"}
+            and f.get("checklist_item") not in advisory_ids}
+    drift = cur ^ prev
+    if drift:
+        errors.append(f"STRICT: convergence drift on H+M deterministic-subset: lost={sorted(prev-cur)} gained={sorted(cur-prev)}")
+
+print(f"=== Layer A — {REPORT.name} ===")
+for w in warns:  print(f"warn  {w}")
+for e in errors: print(f"FAIL  {e}")
+print(f"--- {len(errors)} STRICT, {len(warns)} SOFT ---")
+sys.exit(1 if errors else 0)
+PY
+```
+
+What each metric catches: frontmatter required-fields + `$HOME/` literal → DIMENSION-GRADE-ABSENCE and the `block-sensitive-content.sh` PreToolUse contract; `type=Agent` row check → TYPE-MISMATCH (a misrouted `/review-rule` or `/review-skill` body would emit a different type); section order → structural validity; dimension-presence (7 dims for Agent type) → DIMENSION-GRADE-ABSENCE; severity vocabulary + finding sub-blocks → SEVERITY-MISCALIBRATION (form-level only); activation-precision SOFT anchor → recall gap on agent-specific checklist citation (DA-*/TC-*/AH-*/RL-*/AF-*); advisory-leakage scan → ADVISORY-LEAKAGE; convergence diff against prior `merged.json` → CONVERGENCE-DRIFT.
+
+### Layer B — adversarial critic dispatch (blind, recall-framed)
+
+Dispatch a fresh subagent whose ONLY task is to find what the report MISSED, FABRICATED, or MIS-CLASSIFIED versus the agent .md under review. Adversarial framing is load-bearing — non-adversarial dispatch loses CITATION-ROT and activation-collision recall.
+
+```
+Agent({
+  description: "Adversarial review-agent report critic",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer. Two markdown files are attached: ARTIFACT " +
+    "and REPORT. Neither label tells you which is which until you read " +
+    "them. ARTIFACT is a Claude Code subagent .md under review (YAML " +
+    "frontmatter with description/tools/model + prose body). REPORT is " +
+    "the review certificate emitted by /review-agent.\n\n" +
+    "Your only task is to find what the REPORT got wrong. List every " +
+    "item that meets one of:\n" +
+    "- MISSING — a defect actually present in ARTIFACT that REPORT does " +
+    "  not flag (cite the line, name the rubric dimension it violates). " +
+    "  Pay special attention to activation-collision findings (the " +
+    "  agent's description triggers overlap with another agent's " +
+    "  triggers — RD-3 territory) and missing-arg handling gaps (AH-2b).\n" +
+    "- FABRICATED — a finding in REPORT whose claimed Evidence quote " +
+    "  does not appear verbatim in ARTIFACT (cite finding heading + " +
+    "  absent quote).\n" +
+    "- MIS-SEVERITY — a finding whose severity (High|Medium|Low) is " +
+    "  inconsistent with its evidence per the rubric grade caps.\n" +
+    "- MIS-CITED — a URL, arXiv ID, RFC, or references/*.md citation in " +
+    "  REPORT that reads as reconstructed-from-memory rather than " +
+    "  resolved-in-session (broken link, wrong file, no tool-response).\n" +
+    "- UNCITED — a quantitative or evidence-based claim in REPORT with " +
+    "  no citation at all.\n" +
+    "- FALSE-RESOLUTION — a finding the REPORT claims resolved (delta " +
+    "  section) whose underlying defect still appears in ARTIFACT.\n" +
+    "- ADVISORY-AT-HIGH — a finding whose checklist_item is in the " +
+    "  advisory set {WS-1, OF-3, OF-4, PE-4, CE-3, PD-1, RF-1} shipped " +
+    "  at severity High or Medium (must be Low per merge-rules).\n" +
+    "- TYPE-MISMATCH — REPORT emits a dimension grade for a dimension " +
+    "  not in the Agent dimension set (must be the full 7), or omits " +
+    "  one of {clarity, completeness, prompt_engineering, " +
+    "  context_engineering, goal_alignment, safety, metadata}.\n\n" +
+    "Do not rate quality. Do not praise. Do not propose fixes. List " +
+    "items only. Quote the literal sentence and name which file. Report " +
+    "under 500 words.\n\n" +
+    "ARTIFACT:\n<paste agent .md contents>\n\n" +
+    "REPORT:\n<paste certificate contents>"
+})
+```
+
+**Dispatch twice with order swapped** (ARTIFACT↔REPORT label position) — position bias is the dominant pairwise-judge artifact (Shi et al. 2024 arXiv:2406.07791). Take the union of items flagged across both runs.
+
+### Layer C — binary rubric reconciliation
+
+Six binary dimensions, each yes/no, each tied to ≥1 failure class. Any `NO` blocks Phase 4 until resolved.
+
+```
+D1 CONVERGENCE_STABILITY  When --compare-with prior merged.json supplied, the set of
+                          finding_id values at severity in {High, Medium} on the
+                          deterministic subset (per merge-rules.md §"Perspective
+                          Finding Handling") is byte-identical between runs.
+                          (Catches: CONVERGENCE-DRIFT)
+
+D2 SEVERITY_JUSTIFIED     Every finding's severity matches its evidence per the
+                          rubric §"Grade Caps" + §"Item Inventory"; no Layer-B
+                          MIS-SEVERITY or ADVISORY-AT-HIGH item open.
+                          (Catches: SEVERITY-MISCALIBRATION, ADVISORY-LEAKAGE)
+
+D3 DIMENSION_COVERAGE     All 7 dimensions for Agent type appear in summary[]
+                          with grade in {A,B,C,D,F,null}; no row is missing a
+                          required dimension; type field equals "Agent" on every
+                          summary row (no Hook/Rule/Skill row in a review-agent
+                          report); no Layer-B TYPE-MISMATCH item open.
+                          (Catches: DIMENSION-GRADE-ABSENCE, TYPE-MISMATCH)
+
+D4 EVIDENCE_RESOLVED      Every URL, arXiv ID, RFC, and references/*.md path
+                          cited in REPORT was either resolved in the producing
+                          session (verifiable from tool-use log) OR carries an
+                          explicit `[no web verification]` / `[unverified-url]`
+                          marker; no MIS-CITED or UNCITED Layer-B item open.
+                          (Catches: CITATION-ROT, UNCITED)
+
+D5 NO_FABRICATED_FINDINGS Every finding's Evidence block contains a literal
+                          quote from the analyzed agent .md; every High/Medium
+                          finding cites at least one agent-evaluation-guide
+                          checklist ID (DA-*/TC-*/AH-*/RL-*/AF-*); no
+                          FABRICATED or FALSE-RESOLUTION Layer-B item open.
+                          (Catches: SEVERITY-MISCALIBRATION false-positive
+                          class, FALSE-FIX-PASS, activation-precision recall)
+
+D6 SCOPE_DISCIPLINE       No advisory checklist_item ships at non-Low severity;
+                          frontmatter `target:` uses the literal `$HOME/` token
+                          (not the expanded home prefix); the single summary[]
+                          row is keyed on `(repo, generated_by=review-agent,
+                          type=Agent, path)` — never on name alone.
+                          (Catches: ADVISORY-LEAKAGE, sensitive-content
+                          contract violation)
+```
+
+Map Layer-A failures → D3/D4. Map Layer-B `MISSING` / `FABRICATED` → D5. Map `MIS-SEVERITY` / `ADVISORY-AT-HIGH` → D2. Map `MIS-CITED` / `UNCITED` → D4. Map `FALSE-RESOLUTION` → D5. Map `TYPE-MISMATCH` → D3.
+
+### Reconciliation outcomes
+
+- **All Layer-A STRICT pass + zero Layer-B `MISSING`/`FABRICATED`/`FALSE-RESOLUTION`/`ADVISORY-AT-HIGH`/`TYPE-MISMATCH`** → proceed to Phase 4.
+- **Any Layer-A STRICT fail OR any of those Layer-B classes** → propose restorations inline (name each finding to add/remove with the artifact line + rubric citation), re-run Layer A on the patched report. Max two iterations. If still failing at iteration 2, surface to user and do NOT auto-write the report.
+- **Only Layer-A SOFT warnings + Layer-B `MIS-SEVERITY` / `MIS-CITED` / `UNCITED` items** → record in Phase 4 Output under `### Layer-B Findings (Advisory)` and proceed. These do not block ship; reviewer triages.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **Cross-report convergence beyond H+M deterministic subset** — D1 is bounded to High+Medium finding_ids on the deterministic subset per `merge-rules.md` §"Convergence Policy". Low-severity advisory drift is by-design unbounded. If a reviewer silently moves a deterministic finding into the advisory class (emitting it with an `ADHOC:` id instead of a `DA-2b:` id), Layer A's deterministic-subset filter misses it. Reviewer must spot-check `ADHOC:`-prefixed finding_ids.
+2. **Calibration drift vs the baseline** — D2 verifies severity is internally consistent with cited rubric evidence; it does NOT verify that `engineering-baseline.md` itself is calibrated against current best practice. A stale baseline (>90 days, per CLAUDE.md) silently inflates High counts without triggering any pipeline layer. `/refresh-engineering-baseline` is out-of-band.
+3. **Report-vs-tool-use-log audit** — D4's URL set is extracted from the report text; verifying each citation was actually resolved in the producing session requires reading the session JSONL under `$HOME/.claude/projects/<project>/<sessionId>.jsonl`. The pipeline does not auto-parse JSONL — Layer B asks the critic to flag obvious reconstructed-from-memory URLs but cannot prove resolution.
+4. **Cross-agent activation-collision detection** — D5's RD-3 / activation-collision check relies on the Layer-B critic spotting trigger-phrase overlap between the agent under review and siblings. The pipeline does NOT auto-enumerate sibling agents in the repo and diff trigger phrases. A collision with a sibling that the critic does not have visibility into is a residual gap; spot-check via `grep -h "^description:" agents/*.md .claude/agents/*.md` when reviewing high-risk routing.
+5. **Single-file constraint of agents** — agents cannot have reference files, so there is no sidecar-vs-report parity check analogous to review-skill's findings.json sidecar. The certificate is the sole authoritative artifact; if the certificate is corrupted post-Layer-A and pre-Write, no second artifact can reveal the corruption.
+
+The Output report MUST list which residual classes apply when the critic returns any `UNCERTAIN` flags or when `--compare-with` is absent (D1 N/A).
+
 ## Phase 4 — Report Persistence (standalone mode only)
 
 In orchestrated mode, skip this phase entirely — return only the structured certificate above.
