@@ -324,6 +324,232 @@ design_deviations:
 degraded_mode: [true|false]
 missing_perspectives: [list or empty]
 
+## Quality measurement (mandatory before Phase 4)
+
+Without verification, this skill fails at CONVERGENCE-DRIFT (same SKILL.md produces non-identical High+Medium `finding_id` sets across consecutive runs because perspective sub-agents are non-deterministic and the merge step inconsistently drops superseded perspective findings), CITATION-ROT (the Goal-Alignment dimension cites URLs/arXiv IDs that were not actually resolved in the producing session — reconstructed from training data, not WebSearch tool-use), and ADVISORY-LEAKAGE (an advisory item like `WS-1` / `OF-3` / `PD-1` escapes the merge-time Low demotion per `references/merge-rules.md` §"Perspective Finding Handling" and ships at High or Medium). The three-layer pipeline below catches all three.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (Jiang et al. ACL 2024), Beyond Consensus (NUS 2025), `references/review-report-contract.md`, `references/merge-rules.md`, `references/scoring-rubric.md`.
+
+Run the pipeline against the assembled Phase 3 certificate AND, when emitted, the multi-perspective `.findings.json` sidecar. Compute `REPORT_PATH` as the path the Phase 4 step 4 Write will use; if no path is available yet (orchestrated mode), serialize the certificate to a tempfile for the duration of this section.
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run on the assembled report. STRICT failures block Phase 4; SOFT warnings surface in Output.
+
+```bash
+python3 - "$REPORT_PATH" "${PRIOR_MERGED_JSON:-}" "${SIDECAR_PATH:-}" <<'PY'
+import sys, re, json, os
+from pathlib import Path
+
+REPORT = Path(sys.argv[1])
+PRIOR  = sys.argv[2]
+SIDE   = sys.argv[3]
+
+SEVERITY_VOCAB = {"High","Medium","Low"}
+DIM_SET = {"clarity","completeness","prompt_engineering","context_engineering",
+           "goal_alignment","safety","metadata"}
+GRADE_VOCAB = {"A","B","C","D","F"}
+URL_RE   = r"https?://[^\s)`\"<>]+"
+CITE_RE  = r"\b(arXiv:[0-9.]+|RFC\s*[0-9]+|DOI:[^\s)]+)"
+FIND_RE  = r"^####\s+\d+\.\s+.+\(Impact:\s*(High|Medium|Low)"
+FM_RE    = r"\A---\n(.*?)\n---\n"
+ID_RE    = r"ID:\s*([A-Z][A-Z0-9-]+:[^,\s)]+/v1)"
+HOME_RE  = re.compile(r"^target\s*:\s*/(?:Users|home)/[^/\s]+/", re.M)
+
+errors, warns = [], []
+text = REPORT.read_text()
+m = re.match(FM_RE, text, re.S)
+if not m:
+    errors.append("STRICT: report missing YAML frontmatter"); print("\n".join(errors)); sys.exit(1)
+fm = m.group(1)
+
+for k in ["generated_by","schema_version","date","repo","target","items_reviewed"]:
+    if not re.search(rf"^{k}\s*:", fm, re.M):
+        errors.append(f"STRICT: frontmatter missing required field '{k}'")
+gb = re.search(r"^generated_by\s*:\s*(\S+)", fm, re.M)
+if gb and gb.group(1) != "review-skill":
+    errors.append(f"STRICT: generated_by must be 'review-skill', got '{gb.group(1)}'")
+if HOME_RE.search(fm):
+    errors.append("STRICT: frontmatter 'target' uses expanded home prefix; must use literal $HOME/")
+
+sections = [s.group(1).strip() for s in re.finditer(r"^##\s+(.+)$", text, re.M)]
+order = ["Goal","Certificate","Strengths","Recommendations"]
+pos = {k: next((i for i,s in enumerate(sections) if s.startswith(k)), -1) for k in order}
+if any(v == -1 for v in pos.values()):
+    errors.append(f"STRICT: missing required section heading from {order}; found={sections}")
+elif sorted(pos.values()) != list(pos.values()):
+    errors.append(f"STRICT: section order violates Goal->Certificate->Strengths->Recommendations")
+
+for dim in DIM_SET:
+    mm = re.search(rf"\b{dim}\s*:\s*(\S+)", fm)
+    if not mm:
+        errors.append(f"STRICT: summary missing dimension '{dim}'")
+        continue
+    v = mm.group(1).rstrip(",")
+    if v not in GRADE_VOCAB and v != "null":
+        errors.append(f"STRICT: dimension {dim}='{v}' not in {{A,B,C,D,F,null}}")
+
+findings = re.findall(FIND_RE, text, re.M)
+for sev in findings:
+    if sev not in SEVERITY_VOCAB:
+        errors.append(f"STRICT: finding severity '{sev}' not in {SEVERITY_VOCAB}")
+blocks = re.split(r"^####\s+\d+\.", text, flags=re.M)[1:]
+for i, b in enumerate(blocks, 1):
+    for sub in ["Evidence","Why it matters","Validation"]:
+        if not re.search(rf"\b{sub}\b", b):
+            errors.append(f"STRICT: finding #{i} missing required sub-block '{sub}'")
+
+advisory_ids = {"WS-1","OF-3","OF-4","PE-4","CE-3","PD-1","RF-1"}
+leaked = []
+for h in re.finditer(r"####\s+\d+\.\s+.+\(Impact:\s*(High|Medium|Low)[^)]*ID:\s*([A-Z0-9-]+):", text):
+    sev, item = h.group(1), h.group(2)
+    if item in advisory_ids and sev in {"High","Medium"}:
+        leaked.append(f"{item}@{sev}")
+if leaked:
+    errors.append(f"STRICT: advisory items leaked at High/Medium severity: {leaked}")
+
+if SIDE and os.path.exists(SIDE):
+    sc = json.loads(Path(SIDE).read_text())
+    side_ids = {f.get("finding_id") for f in sc.get("findings",[])}
+    rep_ids = set(re.findall(ID_RE, text))
+    drift = (side_ids - {None}) ^ rep_ids
+    if drift:
+        errors.append(f"STRICT: sidecar/report finding_id disagree: only-sidecar={sorted((side_ids-rep_ids)-{None})} only-report={sorted(rep_ids-side_ids)}")
+    if "boundary_caps_applied" not in sc:
+        warns.append("SOFT: sidecar missing 'boundary_caps_applied[]' (merge-rules Layer 1.5)")
+
+urls  = set(re.findall(URL_RE,  text))
+cites = set(c if isinstance(c,str) else c[0] for c in re.findall(CITE_RE, text))
+warns.append(f"INFO: urls={len(urls)} cites={len(cites)} (Layer B verifies resolution)")
+
+if PRIOR and os.path.exists(PRIOR):
+    prior = json.loads(Path(PRIOR).read_text())
+    cur = set(re.findall(ID_RE, text))
+    prev = {f["finding_id"] for f in prior.get("findings",[])
+            if f.get("severity") in {"High","Medium"}
+            and f.get("checklist_item") not in advisory_ids}
+    drift = cur ^ prev
+    if drift:
+        errors.append(f"STRICT: convergence drift on H+M deterministic-subset: lost={sorted(prev-cur)} gained={sorted(cur-prev)}")
+
+print(f"=== Layer A — {REPORT.name} ===")
+for w in warns:  print(f"warn  {w}")
+for e in errors: print(f"FAIL  {e}")
+print(f"--- {len(errors)} STRICT, {len(warns)} SOFT ---")
+sys.exit(1 if errors else 0)
+PY
+```
+
+What each metric catches: frontmatter required-fields + `$HOME/` literal → DIMENSION-GRADE-ABSENCE and the `block-sensitive-content.sh` PreToolUse contract; section order → structural validity; dimension-presence (7 dims for Skill type) → DIMENSION-GRADE-ABSENCE / TYPE-MISMATCH; severity vocabulary + finding sub-blocks → SEVERITY-MISCALIBRATION (form-level only); advisory-leakage scan → ADVISORY-LEAKAGE; sidecar↔report finding_id parity → multi-perspective merge integrity; convergence diff against prior `merged.json` → CONVERGENCE-DRIFT.
+
+### Layer B — adversarial critic dispatch (blind, recall-framed)
+
+Dispatch a fresh subagent whose ONLY task is to find what the report MISSED, FABRICATED, or MIS-CLASSIFIED versus the SKILL.md under review. Adversarial framing is load-bearing — non-adversarial dispatch loses CITATION-ROT and FALSE-RESOLUTION recall.
+
+```
+Agent({
+  description: "Adversarial review-skill report critic",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer. Two markdown files are attached: ARTIFACT " +
+    "and REPORT. Neither label tells you which is which until you read " +
+    "them. ARTIFACT is the SKILL.md under review. REPORT is the review " +
+    "certificate emitted by /review-skill.\n\n" +
+    "Your only task is to find what the REPORT got wrong. List every " +
+    "item that meets one of:\n" +
+    "- MISSING — a defect actually present in ARTIFACT that REPORT does " +
+    "  not flag (cite the line, name the rubric dimension it violates).\n" +
+    "- FABRICATED — a finding in REPORT whose claimed Evidence quote " +
+    "  does not appear verbatim in ARTIFACT (cite finding heading + " +
+    "  absent quote).\n" +
+    "- MIS-SEVERITY — a finding whose severity (High|Medium|Low) is " +
+    "  inconsistent with its evidence per the rubric grade caps.\n" +
+    "- MIS-CITED — a URL, arXiv ID, RFC, or references/*.md citation in " +
+    "  REPORT that reads as reconstructed-from-memory rather than " +
+    "  resolved-in-session (broken link, wrong file, no tool-response).\n" +
+    "- UNCITED — a quantitative or evidence-based claim in REPORT with " +
+    "  no citation at all.\n" +
+    "- FALSE-RESOLUTION — a finding the REPORT claims resolved (delta " +
+    "  section) whose underlying defect still appears in ARTIFACT.\n" +
+    "- ADVISORY-AT-HIGH — a finding whose checklist_item is in the " +
+    "  advisory set {WS-1, OF-3, OF-4, PE-4, CE-3, PD-1, RF-1} shipped " +
+    "  at severity High or Medium (must be Low per merge-rules).\n\n" +
+    "Do not rate quality. Do not praise. Do not propose fixes. List " +
+    "items only. Quote the literal sentence and name which file. Report " +
+    "under 500 words.\n\n" +
+    "ARTIFACT:\n<paste SKILL.md contents>\n\n" +
+    "REPORT:\n<paste certificate contents>"
+})
+```
+
+**Dispatch twice with order swapped** (ARTIFACT↔REPORT label position) — position bias is the dominant pairwise-judge artifact (Shi et al. 2024 arXiv:2406.07791). Take the union of items flagged across both runs.
+
+In multi-perspective mode, the union must also confirm that each perspective slot (`clarity`, `correctness`, `integration`) contributed findings; an empty perspective slot without `degraded_mode: true` in frontmatter is a MISSING-PERSPECTIVE item.
+
+### Layer C — binary rubric reconciliation
+
+Six binary dimensions, each yes/no, each tied to ≥1 failure class. Any `NO` blocks Phase 4 until resolved.
+
+```
+D1 CONVERGENCE_STABILITY  When --compare-with prior merged.json supplied, the set of
+                          finding_id values at severity in {High, Medium} on the
+                          deterministic subset (per merge-rules.md §"Perspective
+                          Finding Handling") is byte-identical between runs.
+                          (Catches: CONVERGENCE-DRIFT)
+
+D2 SEVERITY_JUSTIFIED     Every finding's severity matches its evidence per the
+                          rubric §"Grade Caps" + §"Item Inventory"; no Layer-B
+                          MIS-SEVERITY or ADVISORY-AT-HIGH item open.
+                          (Catches: SEVERITY-MISCALIBRATION, ADVISORY-LEAKAGE)
+
+D3 DIMENSION_COVERAGE     All 7 dimensions for Skill type appear in summary[]
+                          with grade in {A,B,C,D,F,null}; no row is missing a
+                          required dimension; sidecar finding_id set matches the
+                          report's finding_id set when sidecar is emitted.
+                          (Catches: DIMENSION-GRADE-ABSENCE, TYPE-MISMATCH,
+                          sidecar/report drift)
+
+D4 EVIDENCE_RESOLVED      Every URL, arXiv ID, RFC, and references/*.md path
+                          cited in REPORT was either resolved in the producing
+                          session (verifiable from tool-use log) OR carries an
+                          explicit `[no web verification]` / `[unverified-url]`
+                          marker; no MIS-CITED or UNCITED Layer-B item open.
+                          (Catches: CITATION-ROT, UNCITED)
+
+D5 NO_FABRICATED_FINDINGS Every finding's Evidence block contains a literal
+                          quote from the analyzed SKILL.md; no FABRICATED or
+                          FALSE-RESOLUTION Layer-B item open; in multi-
+                          perspective mode this holds across ALL THREE
+                          perspectives' findings, not just the merged set.
+                          (Catches: SEVERITY-MISCALIBRATION false-positive
+                          class, FALSE-FIX-PASS)
+
+D6 SCOPE_DISCIPLINE       boundary_caps_applied[] in sidecar honors merge-
+                          rules.md §"Layer 1.5 — Binary Boundary Caps";
+                          no advisory checklist_item ships at non-Low severity;
+                          when --single-perspective is used, frontmatter
+                          declares it (no silent perspective collapse).
+                          (Catches: ADVISORY-LEAKAGE, cap-bypass)
+```
+
+Map Layer-A failures → D3/D4. Map Layer-B `MISSING` / `FABRICATED` → D5. Map `MIS-SEVERITY` / `ADVISORY-AT-HIGH` → D2. Map `MIS-CITED` / `UNCITED` → D4. Map `FALSE-RESOLUTION` → D5.
+
+### Reconciliation outcomes
+
+- **All Layer-A STRICT pass + zero Layer-B `MISSING`/`FABRICATED`/`FALSE-RESOLUTION`/`ADVISORY-AT-HIGH`** → proceed to Phase 4.
+- **Any Layer-A STRICT fail OR any of those Layer-B classes** → propose restorations inline (name each finding to add/remove with the artifact line + rubric citation), re-run Layer A on the patched report. Max two iterations. If still failing at iteration 2, surface to user and do NOT auto-write the report.
+- **Only Layer-A SOFT warnings + Layer-B `MIS-SEVERITY` / `MIS-CITED` / `UNCITED` items** → record in Phase 4 Output under `### Layer-B Findings (Advisory)` and proceed. These do not block ship; reviewer triages.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **Cross-report convergence beyond H+M deterministic subset** — D1 is bounded to High+Medium finding_ids on the deterministic subset per `merge-rules.md` §"Convergence Policy". Low-severity advisory drift is by-design unbounded. If a perspective silently moves a deterministic finding into the advisory class (emitting it with an `ADHOC:` id instead of a `WS-2b:` id), Layer A's deterministic-subset filter misses it. Reviewer must spot-check `ADHOC:`-prefixed finding_ids.
+2. **Calibration drift vs the baseline** — D2 verifies severity is internally consistent with cited rubric evidence; it does NOT verify that `engineering-baseline.md` itself is calibrated against current best practice. A stale baseline (>90 days, per CLAUDE.md) silently inflates High counts without triggering any pipeline layer. `/refresh-engineering-baseline` is out-of-band.
+3. **Report-vs-tool-use-log audit** — D4's URL set is extracted from the report text; verifying each citation was actually resolved in the producing session requires reading the session JSONL under `$HOME/.claude/projects/<project>/<sessionId>.jsonl`. The pipeline does not auto-parse JSONL — Layer B asks the critic to flag obvious reconstructed-from-memory URLs but cannot prove resolution.
+4. **Binary evaluator soundness** — `merge-rules.md` §"Layer 1.5 — Binary Boundary Caps" pins per-item grade caps (e.g. CLAR-2 FAIL → Clarity ≤ C); the pipeline checks the cap was applied but does NOT verify that `rubric_binary_evaluator.py`'s PASS/FAIL itself was correct on the artifact. A poisoned `binary_verdicts.json` propagates silently through Layer A.
+5. **Perspective-collapse via degraded_mode** — when ≥2 perspectives time out and `degraded_mode: true` is set, the merge falls back to a single-perspective certificate. The pipeline accepts this as a valid path (per Phase 1 Step 0 tool-availability fallbacks) and cannot distinguish it from a deliberate `--single-perspective` invocation. D6 catches the silent-collapse subcase only.
+
+The Output report MUST list which residual classes apply when the critic returns any `UNCERTAIN` flags or when `--compare-with` is absent (D1 N/A).
+
 ## Phase 4 — Report Persistence (standalone mode only)
 
 In orchestrated mode, skip this phase entirely — return only the structured certificate above.
