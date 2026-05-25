@@ -445,6 +445,263 @@ Present next steps via AskUserQuestion (header: "What's next?"):
 
 On "Apply audit findings": invoke `/apply-audit-findings` with the report path. On "Scaffold recommended skill": invoke `/scaffold-skill plugin <top-skill-name>` directly. On "Explore skill opportunities": invoke `/suggest-skills` with the target folder. On "Done": acknowledge and stop.
 
+## Quality measurement (mandatory between Phase 5 Step 3 and Step 4)
+
+Without verification, this skill fails at **F1 — Predicate incompleteness** (the intervention matrix misses a high-token-cost component, e.g. a 10K-line reference file omitted from the Component Breakdown) and at **F7 — Discovery noise** (a recommended primitive emits with no concrete gap in the target repo, polluting the action plan). `audit-repo` is partially DISCOVER-shaped — its output mixes (a) predicate-based audit findings (missing CLAUDE.md, missing settings.json, deterministic token thresholds) and (b) heuristic discovery suggestions (intervention-matrix candidates derived from signal patterns). Layer A STRICT-checks the predicate subset, SOFT-warns on the discovery subset; Layer B distinguishes FINDING (verifiable against the target repo) from SUGGESTION (heuristic, low-precision tolerable per D6); Layer C reports D6 but does not block on it (per Acknowledged residual #1 — discovery feedback latency).
+
+Run the three layers BEFORE Phase 5 Step 4 (Present and Persist). Treat the unsigned report at the path computed in Step 3 as `$REPORT`; treat the analyzed target folder as `$TARGET`. Sensitive-content sweeps (hardcoded user-home prefixes, RFC1918 IPs) are NOT in Layer A — those are enforced at Write time by the `block-sensitive-content.sh` PreToolUse hook, which is the canonical defense; duplicating the regex here would itself violate the doc-content constraint.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024), Beyond Consensus (NUS 2025), `skills/review-claude-config/references/evidence-contract.md` (canonical evidence-class vocabulary used in D6), `skills/review-claude-config/references/signal-catalog.md` (catalog-completeness reasoning for D5).
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run on the produced report file. Any non-zero `STRICT` row → abort and report to user; any `SOFT` row delta → log warning, surface in output footnote, do not auto-persist.
+
+```bash
+python3 - "$REPORT" "$TARGET" <<'PY'
+import re, sys, os
+report_path = sys.argv[1]
+target_path = sys.argv[2] if len(sys.argv) > 2 else None
+
+with open(report_path) as f: t = f.read()
+
+# parse frontmatter
+fm_match = re.match(r"^---\n(.*?)\n---\n", t, re.S)
+if not fm_match:
+    print("FAIL STRICT frontmatter_present: no YAML frontmatter detected")
+    sys.exit(1)
+fm = fm_match.group(1)
+body = t[fm_match.end():]
+
+REQUIRED_FM = ["generated_by", "schema_version", "date", "target",
+               "existing_claude_config", "repo_type", "intervention_count",
+               "summary"]
+missing_fm = [k for k in REQUIRED_FM if not re.search(rf"^{k}:", fm, re.M)]
+
+schema_v_m = re.search(r"^schema_version:\s*(\d+)", fm, re.M)
+schema_v = int(schema_v_m.group(1)) if schema_v_m else None
+
+EVIDENCE_CLASSES = {"repo-policy", "deterministic", "validated",
+                    "literature", "advisory", "observation"}
+PRIORITIES = {"P0", "P1", "P2"}
+CONFIDENCES = {"High", "Medium", "Low"}
+
+matrix_rows = re.findall(r"^\|\s*(P[012])\s*\|([^\n]+)\|\s*$", body, re.M)
+bad_priority = [r for r in matrix_rows if r[0] not in PRIORITIES]
+
+rows_full = re.findall(r"^\|(?:[^\n]+)\|\s*$", body, re.M)
+rows_missing_ec, rows_missing_conf = [], []
+for row in rows_full:
+    if re.match(r"^\|[\s\-:|]+\|$", row): continue
+    if "P0" not in row and "P1" not in row and "P2" not in row: continue
+    if not any(ec in row for ec in EVIDENCE_CLASSES): rows_missing_ec.append(row[:80])
+    if not any(c in row for c in CONFIDENCES):       rows_missing_conf.append(row[:80])
+
+ic_m = re.search(r"^intervention_count:\s*(\d+)", fm, re.M)
+ic = int(ic_m.group(1)) if ic_m else None
+action_boxes = len(re.findall(r"^- \[ \] \*\*#\d+\*\*", body, re.M))
+
+# Determinism (SOFT): if env var set, diff intervention row set
+det_path = os.environ.get("DETERMINISM_RUN_2_REPORT")
+det_diff = None
+if det_path and os.path.exists(det_path):
+    with open(det_path) as f2: t2 = f2.read()
+    rows2 = set(re.findall(r"^\|\s*P[012]\s*\|[^\n]+\|\s*$", t2, re.M))
+    rows1 = set(re.findall(r"^\|\s*P[012]\s*\|[^\n]+\|\s*$", body, re.M))
+    det_diff = sorted(rows1 ^ rows2)
+
+rows = []
+def add(sev, name, val, ok, note=""):
+    flag = "" if ok else (" FAIL" if sev == "STRICT" else " warn")
+    rows.append((sev, name, val, flag, note))
+
+add("STRICT", "frontmatter_present",       "yes", bool(fm_match))
+add("STRICT", "required_frontmatter_keys", f"missing={missing_fm}", len(missing_fm) == 0)
+add("STRICT", "schema_version_pinned",     f"v{schema_v}", schema_v == 1,
+    note="bump invalidates analytics consumers")
+add("STRICT", "intervention_priority_valid", f"bad={bad_priority}", len(bad_priority) == 0)
+add("STRICT", "intervention_matrix_complete_ec",   f"missing={len(rows_missing_ec)}",
+    len(rows_missing_ec) == 0,   note="every matrix row needs an evidence_class")
+add("STRICT", "intervention_matrix_complete_conf", f"missing={len(rows_missing_conf)}",
+    len(rows_missing_conf) == 0, note="every matrix row needs a confidence")
+add("STRICT", "action_plan_matches_count", f"boxes={action_boxes} ic={ic}",
+    ic is None or action_boxes >= ic, note="checkbox count >= intervention_count")
+status_present = bool(re.search(r"^#+\s+Status\b", body, re.M))
+add("SOFT",   "status_heading_present", str(status_present), True,
+    note="audit-repo uses intervention-matrix instead of a Status enum")
+if det_diff is not None:
+    add("SOFT", "determinism_matrix_set", f"symmetric_diff={len(det_diff)}",
+        len(det_diff) == 0, note="LLM-judged candidates may shift across runs")
+
+fail = 0
+print(f"{'severity':8} {'metric':36} {'value':28} {'flag':>6}  note")
+for sev, name, val, flag, note in rows:
+    if "FAIL" in flag: fail += 1
+    print(f"{sev:8} {name:36} {str(val)[:28]:28} {flag:>6}  {note}")
+sys.exit(1 if fail else 0)
+PY
+```
+
+Metric coverage matrix (which failure class each STRICT row catches):
+
+| Layer-A row                              | Catches                |
+|------------------------------------------|------------------------|
+| `frontmatter_present`                    | F5 (report shape)      |
+| `required_frontmatter_keys`              | F5                     |
+| `schema_version_pinned`                  | F10                    |
+| `intervention_priority_valid`            | F5 (enum drift)        |
+| `intervention_matrix_complete_ec`        | F7 (D6 emission gate)  |
+| `intervention_matrix_complete_conf`      | F7 (D6 emission gate)  |
+| `action_plan_matches_count`              | F5 (count drift)       |
+| `status_heading_present` (SOFT)          | per template residual  |
+| `determinism_matrix_set` (SOFT)          | F6 (LLM judgment)      |
+
+### Layer B — adversarial critic dispatch (FINDING vs SUGGESTION split)
+
+Dispatch a fresh subagent. The critic must distinguish FINDING (verifiable against the target repo's deterministic state — e.g. a missing CLAUDE.md, a file >2000 LOC, a sprawl score >100) from SUGGESTION (heuristic — e.g. "a deploy-validator skill would be useful because CI has deploy steps"). FINDING rows are checked for grounding; SUGGESTION rows are checked for emission-gate completeness only (evidence_class + confidence + non-empty evidence cell).
+
+```
+Agent({
+  description: "Blind audit-repo critic (FINDING vs SUGGESTION recall)",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind audit-critic. Two artifacts are attached:\n" +
+    "\n" +
+    "A: a repo-scan summary (file tree + CLAUDE.md excerpt + toolchain " +
+    "list + top-20 largest source files + existing-primitive inventory) " +
+    "from the target repository.\n" +
+    "B: an audit report containing an Intervention Matrix (rows: priority " +
+    "| primitive | error_class | token_impact | evidence_class | " +
+    "confidence | evidence).\n" +
+    "\n" +
+    "For EACH row in B, first classify the row as:\n" +
+    "  FINDING — predicate-based (missing CLAUDE.md, sprawl >100, " +
+    "files >2000 LOC, missing toolchain section) — verifiable against A.\n" +
+    "  SUGGESTION — heuristic (recommended new skill/agent/hook) — " +
+    "judgment-call against A.\n" +
+    "\n" +
+    "Then judge each row:\n" +
+    "  GROUNDED — evidence in A matches the row's claim AND severity/" +
+    "priority is calibrated (FINDING rows only — SUGGESTION rows pass on " +
+    "emission-gate completeness alone).\n" +
+    "  WEAKENED — FINDING with priority/token_impact stronger than " +
+    "evidence in A supports.\n" +
+    "  ADDED — row cites no evidence resolvable in A (FINDING only — " +
+    "SUGGESTION may legitimately cite repo-pattern absence).\n" +
+    "\n" +
+    "Separately, scan A for signals B did NOT flag. Use the audit's own " +
+    "error-class taxonomy (Toolchain, Navigation, Convention, " +
+    "Architecture, Repetition, Domain, Security) to recognize misses. " +
+    "If you find a passage in A that an alert reader would expect to " +
+    "trigger a FINDING row in B but none cites it, classify as:\n" +
+    "  DROPPED — predicate that should have fired but did not " +
+    "(FINDING-class only; DROPPED-SUGGESTION is out of scope per D6 " +
+    "discovery-feedback latency).\n" +
+    "\n" +
+    "Report ONE block per item. Format:\n" +
+    "  [GROUNDED|WEAKENED|ADDED|DROPPED]: row-# (or 'no-row' for " +
+    "DROPPED) | class=[FINDING|SUGGESTION]\n" +
+    "  evidence_in_A: '<short quote or path>'\n" +
+    "  evidence_in_B: '<short quote or row-#>'\n" +
+    "  reason: <≤2 sentences>\n" +
+    "\n" +
+    "Do not rate report quality. Do not summarize. Report under 600 words.\n" +
+    "\n" +
+    "A:\n<paste repo-scan summary; for large repos paste top-level + " +
+    "first-level dirs + top-20 files by size + CLAUDE.md first 80 lines>\n" +
+    "\n" +
+    "B:\n<paste $REPORT contents>"
+})
+```
+
+**Order-swap mandate**: dispatch a second time with artifact labels reversed (A=report, B=repo-scan-summary). Take the union of items flagged across both runs (de-dup by `row-# × evidence_in_A`). Position bias is the dominant pairwise-judge artifact (Shi et al. 2024 arXiv:2406.07791).
+
+Output vocabulary maps to Layer C as: `GROUNDED` → no impact; `ADDED` → D2 NO; `WEAKENED` → D4 NO; `DROPPED` (FINDING-class) → D5 NO; `DROPPED` (SUGGESTION-class) → D6 reported (non-blocking).
+
+### Layer C — binary rubric (6 yes/no dimensions)
+
+```
+D1 FRONTMATTER_CONFORMANT     Frontmatter declares every required key
+                              (generated_by, schema_version, date, target,
+                              existing_claude_config, repo_type,
+                              intervention_count, summary[]) AND
+                              schema_version is the pinned value. The
+                              skill emits no `### Status` heading by
+                              design; D1 covers frontmatter shape only.
+                              Catches F5, F10.
+
+D2 EVIDENCE_GROUNDED (FINDING) Every FINDING row's evidence cell cites a
+                              resolvable path/metric/excerpt in $TARGET
+                              (Layer A excerpt-presence check passed AND
+                              no Layer-B ADDED items on FINDING rows).
+                              SUGGESTION rows exempt — judged in D6.
+                              Catches F2, F9.
+
+D3 TAXONOMY_DISJOINT          No two rows assign distinct error_class or
+                              primitive type to the same evidence span.
+                              error_class is drawn from the documented
+                              closed set {Toolchain, Navigation,
+                              Convention, Architecture, Repetition,
+                              Domain, Security}. Catches F4.
+
+D4 PRIORITY_CALIBRATED        Each row's priority (P0/P1/P2) matches the
+                              priority bands declared in Phase 5 Step 1
+                              ("P0 = CLAUDE.md basics + critical
+                              navigation; P1 = hooks + skills + security;
+                              P2 = agents + domain"). No Layer-B
+                              WEAKENED items survive. Catches F8.
+
+D5 RULE_CATALOG_COMPLETENESS  Layer-B critic surfaced ZERO `DROPPED`
+                              items at FINDING class. FINDING-class
+                              predicates are the audit's load-bearing
+                              promise; SUGGESTION-class DROPPED maps to
+                              D6 (reported, not blocking). Catches F1,
+                              F3.
+
+D6 DISCOVERY_PRECISION        Every Intervention Matrix row (FINDING
+                              and SUGGESTION alike) cites an
+                              `evidence_class` from the canonical six-
+                              token set (repo-policy, deterministic,
+                              validated, literature, advisory,
+                              observation) AND a `confidence` from
+                              {High, Medium, Low} AND a non-empty
+                              evidence cell. SUGGESTION-class DROPPED
+                              items from Layer-B are appended to the
+                              report as a footnote ("Layer-B suggested
+                              N additional candidates not in this
+                              matrix") but D6 stays YES — discovery
+                              precision is reported, NOT blocking.
+                              Catches F7 (emission-time only).
+```
+
+Layer-A row → Dimension mapping:
+- `frontmatter_present`, `required_frontmatter_keys`, `schema_version_pinned` → D1
+- `intervention_matrix_complete_ec`, `intervention_matrix_complete_conf` → D6
+- `intervention_priority_valid` → D4
+- `action_plan_matches_count` → D1
+
+Layer-B item → Dimension mapping:
+- `ADDED` (FINDING) → D2 NO
+- `WEAKENED` (FINDING) → D4 NO
+- `DROPPED` (FINDING) → D5 NO
+- `DROPPED` (SUGGESTION) → D6 footnote (no block)
+- `GROUNDED` → no impact
+
+### Reconciliation outcomes
+
+- **All STRICT pass + zero ADDED/WEAKENED/DROPPED(FINDING)** → proceed to Phase 5 Step 4 (Present and Persist).
+- **Any STRICT fail OR any ADDED/WEAKENED/DROPPED(FINDING)** → patch inline: drop fabricated rows, recalibrate priorities, add dropped predicate firings. Re-run Layer A on the patched report. Max 2 iterations. If still failing after iteration 2, surface to user with the full ledger and DO NOT persist the report.
+- **Only SOFT warnings** (e.g. determinism symmetric-diff non-empty, `DROPPED` items at SUGGESTION class) → append a footnote ("Discovery precision: Layer-B suggested N candidates not in this matrix; matrix may vary across runs") and proceed.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **Discovery-class precision feedback latency** — D6 only checks emission-time fields (evidence_class, confidence, non-empty evidence). The user-rejection rate that defines F7 requires post-acceptance feedback (the maintainer accepts/declines per row via `/apply-audit-findings`); the pipeline cannot close the loop in-session.
+2. **Cross-repo pattern correlation** — the pipeline judges one report against one target repo. A pattern visible only across multiple audited repos (e.g., a slowly-emerging skill candidate detectable only when 10 audits are co-analyzed) escapes both Layers A and B. Mitigation: cross-repo analysis is `/review-analytics`'s remit, not this skill's.
+3. **Heuristic-extraction-gate calibration** — Phase 4B's 3/4 extraction-criteria gate (Recurrence, Verification, Non-obviousness, Generalizability) is a repo-policy heuristic, not a benchmark-settled filter. D6 checks that each SUGGESTION row exposes its gate-pass evidence; it does not validate that the gate itself maps to long-run user-acceptance rate.
+4. **Repo-scan completeness** — Layer B's critic sees a summarized scan of the target repo (file tree + sampled top files + CLAUDE.md excerpt), not the full repo content. A DROPPED predicate hidden in a file the scan summary did not include cannot be surfaced. Mitigation: Phase 2's scan agent enforces completion criteria per Category; gaps surface as "no instances found" rows visible to the critic.
+
+The Output report MUST list which residual classes apply when the critic surfaces SUGGESTION-class DROPPED items or when SOFT determinism warnings fire, so the user has one last human-glance opportunity.
+
 ## Hard Rules
 
 - **Read-only on target repository.** Never modify any existing file. The only file this skill writes is the audit report at `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-audit-repo.md`.
