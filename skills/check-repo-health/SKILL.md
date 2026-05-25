@@ -207,6 +207,216 @@ On "Refresh stale baseline": invoke `/refresh-engineering-baseline`. On "Run a f
 
 If all checks passed (no FAIL or WARN), skip the menu — just present the dashboard.
 
+## Quality measurement (mandatory before Output)
+
+Without verification, this skill fails at **NULL_VERDICT_REGRESSION** — a previously-emitted FAIL row (e.g. a broken Markdown link in CLAUDE.md) silently disappears from the dashboard after a regex tweak narrows the integrity-scan scope, even though the underlying defect was never fixed on disk. The dashboard now reads "no problem" where the prior run reported one, and downstream consumers (analytics, apply skills) treat the absence as a fix. A second failure class is **FRESHNESS_RESPECT** drift: `last_refreshed` 95 days old silently classified PASS because the date parser coerced an invalid format to today. A three-layer pipeline (mechanical invariants / adversarial critic / binary rubric) is required because no single layer catches both classes.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024), Beyond Consensus (NUS 2025). Per-skill design: `.work/skill-verification/maintain-template.md §Per-skill customization notes`.
+
+Per the MAINTAIN template's per-skill note: this skill produces a verdict dashboard (no file write) with a mode selector. Layer A idempotency MUST be checked **per-mode** — an `all` run and a `freshness` run are different observables. Layer A STRICT-3 (frontmatter-schema) does NOT apply (read-only on analyzed files). Layer C D6 (depgraph) and D3 (sync integrity) auto-PASS. D2 (freshness) and D5 (verdict honesty) carry the highest weight.
+
+Capture the dashboard output (and, if available, the prior-run snapshot) to a tempdir so subsequent steps can read both deterministically:
+
+```bash
+TMPDIR=$(mktemp -d -t crh-XXXX)
+CURRENT="$TMPDIR/current-dashboard.md"
+# Write the dashboard the skill just produced to "$CURRENT".
+# If a prior dashboard snapshot is available, export PRE_VERDICT=<path>;
+# otherwise leave unset and SOFT-2 row is skipped.
+MODE="$1"   # one of: all | freshness | tokens | integrity
+```
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run against the produced dashboard, the prior snapshot (if any), and a second invocation in the same mode on unchanged input. `STRICT` rows abort; `SOFT` rows warn and continue.
+
+```bash
+python3 - "$CURRENT" "${PRE_VERDICT:-/dev/null}" "$MODE" <<'PY'
+import sys, re, os
+from pathlib import Path
+
+CURRENT, PRE_VERDICT, MODE = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+
+VERDICT_STATUSES = {"PASS", "WARN", "FAIL", "BLOCKED", "SKIPPED", "up-to-date", "UNREGISTERED"}
+# Modes that are expected to emit each table.
+TABLE_FOR_MODE = {
+    "all":        {"Freshness", "Token Budgets", "Reference Integrity"},
+    "freshness":  {"Freshness"},
+    "tokens":     {"Token Budgets"},
+    "integrity":  {"Reference Integrity"},
+}
+
+text = CURRENT.read_text(errors="ignore")
+rows = []  # (sev, metric, before, after, delta, flag)
+
+# STRICT-1 VERDICT_STATUS_VOCAB — every status token must be in the closed set
+status_cells = re.findall(r"\|\s*(PASS|WARN|FAIL|BLOCKED|SKIPPED|up-to-date|UNREGISTERED|[A-Z][A-Z_-]+)\s*\|", text)
+bad = [s for s in status_cells if s not in VERDICT_STATUSES]
+rows.append(("STRICT", "verdict_status_vocab_violations",
+             0, len(bad), f"+{len(bad)}" if bad else "0",
+             f" FAIL unknown={sorted(set(bad))[:5]}" if bad else ""))
+
+# STRICT-2 MODE_TABLE_PRESENCE — required tables for the selected mode are present
+expected = TABLE_FOR_MODE.get(MODE, set())
+present = {h for h in ("Freshness", "Token Budgets", "Reference Integrity")
+           if re.search(rf"^###\s+{re.escape(h)}\s*$", text, re.M)}
+missing = expected - present
+rows.append(("STRICT", "mode_table_presence",
+             len(expected), len(present),
+             f"-{len(missing)}" if missing else "0",
+             f" FAIL missing={sorted(missing)}" if missing else ""))
+
+# STRICT-3 VERDICT_ROW_EVIDENCE — every dashboard row cites a Source/File
+# column with a non-empty path. Catches D5 VERDICT_HONESTY violations
+# (rows with empty evidence pointers).
+empty_evidence = 0
+for line in text.splitlines():
+    if not line.startswith("|") or line.startswith("|--") or line.startswith("|---"): continue
+    cells = [c.strip() for c in line.split("|")[1:-1]]
+    if len(cells) < 2: continue
+    if cells[0] in ("File", "Source", "Consumer") or set(cells[0]) <= {"-"}: continue
+    if not cells[0]:
+        empty_evidence += 1
+rows.append(("STRICT", "rows_without_evidence_pointer",
+             0, empty_evidence, f"+{empty_evidence}" if empty_evidence else "0",
+             f" FAIL empty_evidence_rows={empty_evidence}" if empty_evidence else ""))
+
+# SOFT-1 VERDICT_ROW_COUNT_DELTA — vs prior snapshot (NULL_VERDICT_REGRESSION smell)
+if PRE_VERDICT.exists() and str(PRE_VERDICT) != "/dev/null":
+    prev = PRE_VERDICT.read_text(errors="ignore")
+    prev_rows = len(re.findall(r"^\|", prev, re.M))
+    curr_rows = len(re.findall(r"^\|", text, re.M))
+    delta = curr_rows - prev_rows
+    flag = ""
+    if prev_rows and abs(delta) >= max(5, prev_rows // 4):
+        flag = f" warn prev={prev_rows} curr={curr_rows}"
+    rows.append(("SOFT", "verdict_row_count_delta",
+                 prev_rows, curr_rows, f"{delta:+d}", flag))
+
+# SOFT-2 NON_PASS_TOTAL — count of WARN+FAIL+UNREGISTERED rows (operator glance)
+non_pass = sum(1 for s in status_cells if s in {"WARN", "FAIL", "UNREGISTERED"})
+rows.append(("SOFT", "non_pass_rows", 0, non_pass, f"+{non_pass}", ""))
+
+fail = 0
+print(f"{'severity':9} {'metric':40} {'before':>8} {'after':>8} {'delta':>8}")
+for sev, metric, before, after, delta, flag in rows:
+    if "FAIL" in flag: fail += 1
+    print(f"{sev:9} {metric:40} {str(before):>8} {str(after):>8} {delta:>8}{flag}")
+sys.exit(1 if fail else 0)
+PY
+```
+
+Then run the same mode a **second time on the unchanged repo** and diff the two dashboard outputs (modulo the `**Date:**` and any explicit `generated_at`-class lines). Any non-whitespace delta → STRICT-IDEMPOTENT fail.
+
+If exit non-zero → STOP, do not present the dashboard. Report failures and propose specific restorations (re-include dropped row class, fix status-vocab cell), then re-run Layer A.
+
+### Layer B — adversarial critic dispatch (blind, recall-framed)
+
+Dispatch a fresh subagent. The critic must be **seeded with `references/health-thresholds.md`** so STALE_MISS / FALSE_STALE judgments are evaluated against documented windows rather than the critic's prior.
+
+```
+Agent({
+  description: "Adversarial check-repo-health critic",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer auditing a check-repo-health dashboard against the repository state it claims to describe. " +
+    "You are given:\n" +
+    "  A: <the dashboard the skill produced>\n" +
+    "  B: <the prior-run dashboard snapshot, or null>\n" +
+    "  T: <the thresholds file: references/health-thresholds.md>\n" +
+    "  C: <CLAUDE.md §Development Conventions section on last_refreshed, freshness windows, token budgets>\n" +
+    "Neither label tells you which is the current vs prior.\n\n" +
+    "Find:\n" +
+    "1. STALE_MISS — file rows where days-since-refresh in A meets T's WARN/FAIL threshold but the row is classified PASS.\n" +
+    "2. FALSE_STALE — file rows classified WARN/FAIL where the timestamp source is body-marker or non-canonical (per C: last_refreshed lives in frontmatter only).\n" +
+    "3. DROPPED — rows present in B that are absent from A without a citable fix in the underlying repo state.\n" +
+    "4. WEAKENED — rows in A whose status was tightened/loosened vs B without a corresponding repo change.\n" +
+    "5. ADDED — rows in A with no traceable evidence (no file path, no threshold reference, no CLAUDE.md citation).\n" +
+    "6. THRESHOLD_DRIFT — Token Budgets table rows whose Budget column diverges from T.\n" +
+    "7. MODE_LEAKAGE — when MODE is freshness/tokens/integrity, rows from a non-selected check class appearing in A.\n\n" +
+    "For each item: quote the literal row, name the table and file path, classify with one of the seven tokens above. " +
+    "Report under 500 words. Do not rate quality. Do not praise the skill's design.\n\n" +
+    "A:\n<paste $CURRENT contents>\n\n" +
+    "B:\n<paste PRE_VERDICT contents or 'null'>\n\n" +
+    "T:\n<paste references/health-thresholds.md>\n\n" +
+    "C:\n<paste CLAUDE.md §Development Conventions excerpt>"
+})
+```
+
+Then **dispatch a second time with A and B swapped** — position bias is the dominant LLM-judge artifact in pairwise settings (Shi et al. 2024, arXiv:2406.07791). Take the union of items flagged across both runs.
+
+### Layer C — rubric reconciliation (binary CheckEval-style)
+
+Six yes/no dimensions specialized to the dashboard output. Any `NO` blocks the dashboard until resolved.
+
+```
+D1 IDEMPOTENT              Second run of the skill in the same MODE on unchanged
+                           repo state produces a byte-identical dashboard
+                           (modulo Date: and explicit timestamp lines).
+                           Layer A idempotency rerun passes.
+                           Ties to F1 IDEMPOTENCY_BREAK.
+
+D2 FRESHNESS_RESPECT       Every freshness threshold in references/health-thresholds.md
+                           and every last_refreshed-in-frontmatter convention from
+                           CLAUDE.md §Development Conventions is honored:
+                           stale rows are flagged at the documented day-count;
+                           fresh rows are never falsely flagged.
+                           Layer B finds zero STALE_MISS / FALSE_STALE.
+                           Ties to F2 STALE_MISS, F3 FALSE_STALE. HIGHEST WEIGHT.
+
+D3 SYNC_INTEGRITY          N/A — this skill does not maintain a sync invariant
+                           across paired files. Auto-PASS with note.
+
+D4 SCHEMA_AND_CONTRACT     Every status cell uses a token in the closed set
+                           {PASS, WARN, FAIL, BLOCKED, SKIPPED, up-to-date,
+                           UNREGISTERED}. Every Token Budgets row's Budget value
+                           matches references/health-thresholds.md.
+                           Layer A STRICT-1 passes; Layer B finds zero THRESHOLD_DRIFT.
+                           Ties to F5 STATE_FORMAT_DRIFT.
+
+D5 VERDICT_HONESTY         Every dashboard row cites a Source/File/Consumer path.
+                           No row from the prior dashboard silently disappeared
+                           without a corresponding repo fix. No row was emitted
+                           with looser criteria than the prior run. The selected
+                           MODE leaks no out-of-mode rows.
+                           Layer A STRICT-3 passes; Layer B finds zero
+                           DROPPED / WEAKENED / ADDED / MODE_LEAKAGE.
+                           Ties to F7 EVAL_FALSE_PASS, F10 NULL_VERDICT_REGRESSION.
+                           HIGHEST WEIGHT.
+
+D6 DEPGRAPH_COMPLETENESS   N/A — this skill is not a dependency-graph emitter.
+                           Auto-PASS with note.
+```
+
+Mapping Layer-A failures → rubric:
+
+- STRICT-1 (status vocab) fail → D4 NO
+- STRICT-2 (mode table presence) fail → D5 NO (MODE_LEAKAGE class)
+- STRICT-3 (rows without evidence) fail → D5 NO
+- Idempotency rerun delta → D1 NO
+
+Mapping Layer-B critic tokens → rubric:
+
+- `STALE_MISS` / `FALSE_STALE` → D2 NO
+- `THRESHOLD_DRIFT` → D4 NO
+- `DROPPED` / `WEAKENED` / `ADDED` / `MODE_LEAKAGE` → D5 NO
+
+### Reconciliation outcomes
+
+- **All STRICT pass + Layer B yields zero DROPPED / WEAKENED / ADDED / STALE_MISS / FALSE_STALE / THRESHOLD_DRIFT / MODE_LEAKAGE** → present the dashboard.
+- **Any STRICT fail OR any blocking critic token** → propose targeted restorations (restore the dropped row, fix the bad status cell, expand the mode table to include the missing class) and re-run Layers A + B on the patched dashboard. **Hard cap: 2 iterations** (per `rules/contract-authoring.md §Small-bound carve-out`; bound = 2 → hard rule, no graceful +1). If still failing after iteration 2, surface to the user; do not auto-publish the dashboard.
+- **Only SOFT warnings** (`verdict_row_count_delta` jump, large `non_pass_rows` total) → present the dashboard but include the warnings in the Summary line so the operator has a final-glance opportunity.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **External-dependency drift.** `references/health-thresholds.md` itself may diverge from upstream sources (Anthropic docs, evidence-contract). Layer A and B both treat the thresholds file as authoritative; if it is stale, every downstream verdict is stale-by-reference. Mitigation lives in the 90-day cadence on the thresholds file itself, not in this pipeline.
+2. **Semantic correctness of integrity check 5d.** The review-contract consistency table is a long enumeration of consumer files. Layer B compares emitted FAIL/PASS against the rubric file, but cannot detect the case where a consumer doc was renamed and the consistency table itself is stale — both columns then trivially agree.
+3. **Heuristic-scan UNREGISTERED noise.** Integrity sub-check 5c-ii in non-validation mode can produce a large UNREGISTERED column. SOFT-2 surfaces the count; neither layer judges whether each individual finding is a true unregistered edge or a regex false-positive. The validation-mode gate is the operational fix; this pipeline does not re-derive it.
+4. **Timestamp parser silent coercion.** If the date parser silently coerces a malformed `last_refreshed:` value to today's date (the F2 STALE_MISS root cause), Layer B sees `0 days since refresh` and judges PASS legitimate. The fix is parser hardening at the skill body, not at the verification layer.
+5. **Dashboard-to-actual-repo divergence.** Both layers compare the dashboard against the thresholds file and the prior dashboard. Neither re-walks the filesystem to confirm a `PASS` row's `last_refreshed:` value actually matches what's in the file today; a stale read inside the skill body is invisible to the pipeline.
+
+The dashboard MUST surface which residual classes apply to non-PASS rows the operator should still review by hand.
+
 ## Hard Rules
 
 - **Read-only.** Never modify any file. This is a diagnostic skill only.
