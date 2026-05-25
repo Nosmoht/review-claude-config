@@ -283,6 +283,263 @@ plan-tier limits, or transient network failure. Verify WebSearch is enabled
 for this session and retry.
 ```
 
+## Quality measurement (mandatory before Output)
+
+Without verification, this skill fails at **ADVISORY-LEAKAGE** — an
+orphan-by-design skill that bypasses `scripts/merge_findings.py` can silently
+emit a Medium- or High-severity finding (e.g., the researcher returns
+`"severity": "High"` and the report writer trusts the JSON verbatim), and no
+downstream merge-layer demote will clip it. The CLAUDE.md §"Advisory-only
+skills" precedent (issue #72) requires the cap be applied **programmatically
+before report write**. Secondary failure classes for this skill:
+**RESEARCHER-FABRICATED** (researcher cites a URL that didn't appear in any
+WebSearch result), **OVERSPEC** (finding flags a name not present in the
+audited body), and **CITATION-ROT** (cited references not resolved this
+session).
+
+The literature converges on a three-layer pipeline; any one layer alone is
+insufficient.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position
+bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), Beyond
+Consensus (NUS 2025), `merge-rules.md` issue #72 (advisory-only precedent),
+CLAUDE.md §"Architecture → Advisory-only skills (orphan-by-design)".
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run on the produced report file after Write. Any `STRICT` row → abort and
+report; `SOFT` row → log warning, proceed. The advisory-leakage check (S1)
+is the load-bearing dimension for this skill.
+
+```bash
+python3 - "$REPORT_PATH" <<'PY'
+import sys, re, yaml
+from pathlib import Path
+
+REPORT = Path(sys.argv[1])
+content = REPORT.read_text()
+errors, warnings = [], []
+
+# Frontmatter parse
+m = re.match(r"\A---\n(.*?)\n---\n", content, re.S)
+if not m:
+    print("STRICT FAIL: report missing YAML frontmatter")
+    sys.exit(1)
+fm = yaml.safe_load(m.group(1)) or {}
+
+# S1 STRICT — advisory-leakage cap (load-bearing for orphan-by-design)
+findings = fm.get("findings", []) or []
+leaked = [f for f in findings if f.get("severity") != "Low"]
+if leaked:
+    errors.append(f"STRICT S1 ADVISORY-LEAKAGE: non-Low severities found: "
+                  f"{[f.get('severity') for f in leaked]}")
+
+# S2 STRICT — required frontmatter keys
+for k in ("skill", "target", "generated_at", "status"):
+    if k not in fm:
+        errors.append(f"STRICT S2: frontmatter missing required key '{k}'")
+
+# S3 STRICT — generated_by/skill is review-domain-currency
+if fm.get("skill") not in ("review-domain-currency", None):
+    errors.append(f"STRICT S3: skill key '{fm.get('skill')}' not review-domain-currency")
+
+# S4 STRICT — status in closed set
+STATUS_VOCAB = {"complete", "skipped-no-websearch", "target-not-found",
+                "researcher-malformed", "target-not-in-repo"}
+if fm.get("status") not in STATUS_VOCAB:
+    errors.append(f"STRICT S4: status '{fm.get('status')}' not in {STATUS_VOCAB}")
+
+# S5 STRICT — stub-only invariant: skipped/error statuses MUST have no findings
+if fm.get("status") in ("skipped-no-websearch", "target-not-found",
+                        "researcher-malformed", "target-not-in-repo"):
+    if findings:
+        errors.append(f"STRICT S5: status={fm.get('status')} but {len(findings)} findings present (stub-only required)")
+
+# S6 STRICT — target uses literal $HOME/ token, not expanded home prefix
+# (Mirror review-template §Layer A's $HOME contract; check via placeholder pattern
+# to avoid embedding the literal home-prefix that block-sensitive-content.sh rejects.)
+target = str(fm.get("target", ""))
+masked = target.replace("/Users/", "<USER-HOME>/").replace("/home/", "<USER-HOME>/")
+if masked.startswith("<USER-HOME>/"):
+    errors.append("STRICT S6: 'target' uses expanded home prefix; must use $HOME/ literal or relative path")
+
+# S7 STRICT — salt MUST NOT persist in report (per skill step 2)
+if re.search(r"\bsalt\s*:", m.group(1)):
+    errors.append("STRICT S7: per-invocation salt leaked into report frontmatter")
+
+# S8 SOFT — calls_used budget (researcher cap: ≤9 calls / ≤3 per claim)
+calls = fm.get("calls_used")
+if isinstance(calls, int) and calls > 9:
+    warnings.append(f"SOFT S8: calls_used={calls} exceeds documented ≤9 budget")
+
+# S9 SOFT — researcher fields code-fence-quoted per step 4 sanitization
+for i, f in enumerate(findings):
+    for fld in ("claim", "text"):
+        val = f.get(fld, "")
+        if val and "```" not in val:
+            warnings.append(f"SOFT S9: finding[{i}].{fld} not code-fence-quoted")
+
+# Output
+print(f"=== Layer A — {REPORT.name} ===")
+for w in warnings: print(f"warn  {w}")
+for e in errors:   print(f"FAIL  {e}")
+print(f"--- {len(errors)} STRICT failures, {len(warnings)} SOFT warnings ---")
+sys.exit(1 if errors else 0)
+PY
+```
+
+What each check catches:
+
+- **S1 (advisory-leakage cap)** → ADVISORY-LEAKAGE — the orphan-by-design
+  load-bearing invariant. Map → D5.
+- **S2/S3/S4/S5 (frontmatter shape + status vocab + stub invariant)** →
+  malformed-report / status-confusion. Map → D3.
+- **S6 ($HOME literal)** → `block-sensitive-content.sh` contract.
+  Map → D2.
+- **S7 (salt non-persistence)** → cross-run salt-reuse vulnerability
+  (skill step 2). Map → D2.
+- **S8/S9 (budget + fence-quoting)** → researcher-budget violation and
+  markdown-injection escape. SOFT (not fail).
+
+### Layer B — adversarial critic dispatch (blind, recall-framed)
+
+Dispatch a fresh subagent. Adversarial recall framing — the critic's only
+goal is to find what the report MISSED, FABRICATED, or MIS-CLASSIFIED versus
+the audited file body.
+
+```
+Agent({
+  description: "Adversarial domain-currency report critic",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer. Two files are attached: A and B. " +
+    "Neither label tells you which is the audited skill/agent body and " +
+    "which is the domain-currency report. Read both, then identify which " +
+    "is which by their structure (the report has YAML frontmatter with " +
+    "skill: review-domain-currency; the audited file is a SKILL.md or " +
+    "agent .md). " +
+    "\n\n" +
+    "Your only task is to find what the REPORT got wrong about the " +
+    "AUDITED file. List every item that meets one of: \n" +
+    "- OVERSPEC — a finding in REPORT cites a tool/version/name as " +
+    "  out-of-date but that name does NOT appear in AUDITED (cite the " +
+    "  finding heading + the absent name).\n" +
+    "- RESEARCHER-FABRICATED — a finding's text references a URL or " +
+    "  source that is implausible / generic / could not have been a real " +
+    "  WebSearch hit (e.g., 'see Anthropic docs' with no URL; a URL whose " +
+    "  shape looks reconstructed from memory).\n" +
+    "- MIS-SEVERITY — any finding emitted at severity above Low (this " +
+    "  skill is hard-capped at Low; any High/Medium is a contract " +
+    "  violation, not a judgement call).\n" +
+    "- UNCITED — a currency claim ('X is no longer recommended') with " +
+    "  no source_tier or with source_tier set but no concrete URL.\n" +
+    "- MARKER-LEAK — the salt/marker tokens (<<<, >>>, salted ids) " +
+    "  appear anywhere in the visible report body.\n" +
+    "\n" +
+    "Do not rate quality. Do not praise. Do not propose fixes. List items " +
+    "only. Quote the literal sentence and name which file. Report under " +
+    "400 words.\n\n" +
+    "A:\n<paste contents of file 1>\n\n" +
+    "B:\n<paste contents of file 2>"
+})
+```
+
+**Dispatch twice with order swapped** (A↔B label position): position bias is
+the dominant pairwise-judge artifact (Shi et al. 2024 arXiv:2406.07791).
+Take the union of items flagged across both runs.
+
+### Layer C — rubric reconciliation (binary CheckEval-style)
+
+Six binary dimensions, each yes/no, each tied to ≥1 failure class. Any `NO`
+blocks Output until resolved. CheckEval (arXiv:2403.18771) reports +0.45
+inter-evaluator agreement for binary vs. Likert.
+
+```
+D1 STATUS_CONSISTENCY     Frontmatter status ∈ {complete, skipped-no-websearch,
+                          target-not-found, researcher-malformed,
+                          target-not-in-repo}; non-complete statuses have
+                          zero findings (stub-only invariant).
+                          (Catches: malformed-report, status-confusion;
+                          Layer A S4/S5)
+
+D2 PATH_HYGIENE           target field uses $HOME/ literal or relative path,
+                          never expanded user-home prefix; salt never persisted
+                          to report; sensitive-content contract honored.
+                          (Catches: block-sensitive-content.sh violation,
+                          cross-run salt reuse; Layer A S6/S7)
+
+D3 FRONTMATTER_COMPLETE   Required keys present: skill, target, generated_at,
+                          status; for status=complete also findings[],
+                          truncated, calls_used.
+                          (Catches: malformed-report; Layer A S2/S3)
+
+D4 EVIDENCE_RESOLVED      Every finding's source_tier value is paired with a
+                          concrete URL or reference; no Layer-B UNCITED or
+                          RESEARCHER-FABRICATED open.
+                          (Catches: CITATION-ROT, RESEARCHER-FABRICATED)
+
+D5 ADVISORY_LEAKAGE_GUARD All findings have severity=Low. ZERO findings at
+                          High or Medium. STRICT FAIL otherwise. This is
+                          the load-bearing orphan-by-design invariant.
+                          (Catches: ADVISORY-LEAKAGE; Layer A S1, Layer B
+                          MIS-SEVERITY)
+
+D6 BODY_CORRESPONDENCE    Every finding cites a name/tool/version that
+                          literally appears in the audited file body; no
+                          Layer-B OVERSPEC items open; no marker tokens
+                          (<<<, >>>, salt) leaked into report body.
+                          (Catches: OVERSPEC, MARKER-LEAK)
+```
+
+Map Layer-A S1 → D5. Map S2/S3 → D3. Map S4/S5 → D1. Map S6/S7 → D2. Map
+Layer-B `MIS-SEVERITY` → D5 (hard-fail). Map `OVERSPEC` / `MARKER-LEAK` →
+D6. Map `RESEARCHER-FABRICATED` / `UNCITED` → D4.
+
+### Reconciliation outcomes
+
+- **All Layer-A STRICT pass + zero Layer-B `MIS-SEVERITY` / `OVERSPEC` /
+  `RESEARCHER-FABRICATED` / `MARKER-LEAK`** → proceed to Output.
+- **Any Layer-A STRICT fail OR any of those Layer-B classes** → DO NOT WRITE
+  the report at the intended path. The S1 advisory-leakage check is the
+  defense-of-last-resort for an orphan-by-design skill: if D5 fails,
+  rewriting `finding.severity = "Low"` is the deterministic recovery (per
+  skill step 5). For S4/S5/D1 failures, rewrite as the appropriate stub
+  status. Max two recovery iterations; if still failing, surface to user.
+- **Only Layer-A SOFT warnings (S8/S9) + Layer-B `UNCITED`** → record in the
+  report's body under "### Layer-B Findings (Advisory)" but proceed. These
+  do not block ship; reviewer triages.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **WebSearch result authenticity** — Layer B's `RESEARCHER-FABRICATED`
+   class flags URLs that *look* reconstructed-from-memory (generic shape, no
+   path), but cannot prove a URL was returned by a real WebSearch call
+   without parsing the session JSONL (`$HOME/.claude/projects/<project>/<sessionId>.jsonl`).
+   A determined attacker controlling the researcher subagent could emit
+   plausible-looking URLs that pass shape checks. Reviewer spot-check is
+   the only true mitigation.
+2. **Cross-invocation drift** — this skill emits no convergence guarantee
+   (Layer C D1 in the category template is N/A here: each invocation
+   queries WebSearch fresh, so findings vary by definition). Two consecutive
+   runs on the same audited file may produce different finding sets. This
+   is by-design for an advisory skill; consumers must NOT treat the report
+   as a deterministic gate.
+3. **Sanitization-bypass via NFKC-stable mimics** — step 4's NFKC normalize
+   collapses full-width / combining mimics of `<<<` and `>>>` markers, but
+   Unicode characters that remain visually distinct from the markers yet
+   semantically collide (e.g., custom font glyphs) are not caught. Marker
+   collision is bounded by the per-invocation 16-hex salt; collision rate
+   is `2^-64` per attacker attempt. Acceptable.
+4. **Calibration of "currency" itself** — the rubric judges whether a
+   finding is *present* and *capped at Low*, not whether the underlying
+   currency drift judgment is correct. Stale researcher heuristics
+   (researcher cites a 2023-era best-practice as current) silently pass.
+   `/refresh-engineering-baseline` and the maintainer's 90-day cadence are
+   the out-of-band controls.
+
+The Output report MUST list which residual classes apply when the critic
+returns any `UNCERTAIN` flag or when `status` is non-complete.
+
 ## Hard Rules
 
 - Severity is hard-capped at Low. Never emit Medium or High.
