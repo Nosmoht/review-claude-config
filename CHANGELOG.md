@@ -2,6 +2,55 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0](https://github.com/Nosmoht/review-claude-config/compare/v2.11.1...v2.12.0) (2026-05-26)
+
+
+### Changed
+
+* **skill/apply-agent-review-findings:** add 3-layer verification pipeline ([1a69f54](https://github.com/Nosmoht/review-claude-config/commit/1a69f5432e0825d7da78adefe7cc1addd3cbc61f))
+* **skill/apply-audit-findings:** add 3-layer verification pipeline ([61a6ced](https://github.com/Nosmoht/review-claude-config/commit/61a6cedb9333d6112c653c7155cd62d0656d26db))
+* **skill/apply-review-findings:** add 3-layer verification pipeline ([5e9f858](https://github.com/Nosmoht/review-claude-config/commit/5e9f858ff52621c0751633c35a2b1a6c7ccc09c3))
+* **skill/apply-rule-review-findings:** add 3-layer verification pipeline ([2f8e358](https://github.com/Nosmoht/review-claude-config/commit/2f8e358988a4bc5dd10f061dca91936644b543c5))
+* **skill/apply-skill-review-findings:** add 3-layer verification pipeline ([3df526f](https://github.com/Nosmoht/review-claude-config/commit/3df526ff3154c1e170330f4ea86738c39ee042f3))
+* **skill/audit-context-budget:** add 3-layer verification pipeline ([bd82a77](https://github.com/Nosmoht/review-claude-config/commit/bd82a7766655101cff75630564bac0f2ae968d34))
+* **skill/audit-mcp-auth:** add 3-layer verification pipeline ([8190e57](https://github.com/Nosmoht/review-claude-config/commit/8190e570c16986daa13edc88b7d5e725e50f1eae))
+* **skill/audit-memory-hygiene:** add 3-layer verification pipeline ([a3d7b9e](https://github.com/Nosmoht/review-claude-config/commit/a3d7b9e935a4a80c8121f97a22b52d23e15a4df7))
+* **skill/audit-policy-compliance:** add 3-layer verification pipeline ([a05d88d](https://github.com/Nosmoht/review-claude-config/commit/a05d88dd50443d3f0e630375ba7c7787528061e9))
+* **skill/audit-repo:** add 3-layer verification pipeline ([00dd89a](https://github.com/Nosmoht/review-claude-config/commit/00dd89a98cad76949bfb4172de07d9afc80d7e68))
+* **skill/audit-trust-chain:** add 3-layer verification pipeline ([edbf7f5](https://github.com/Nosmoht/review-claude-config/commit/edbf7f5b24f25a1bc5c26ca6aee7251e08e4bcae))
+* **skill/check-repo-health:** add 3-layer verification pipeline ([f43ca61](https://github.com/Nosmoht/review-claude-config/commit/f43ca61f9979128c5f94f316278e87d6f852cb63))
+* **skill/classify-trace-errors:** add 3-layer verification pipeline ([163ff14](https://github.com/Nosmoht/review-claude-config/commit/163ff14df7d4dedebf1ca44285a370af769ca602))
+* **skill/develop-hooks:** add 3-layer verification pipeline ([5563dad](https://github.com/Nosmoht/review-claude-config/commit/5563dad7a0e94ba22fac06c3c02e013892aaa047))
+* **skill/maintain-evidence-layer:** add 3-layer verification pipeline ([e2e3171](https://github.com/Nosmoht/review-claude-config/commit/e2e317136e11c8358d9967b3a2ed7127ec740902))
+* **skill/refresh-engineering-baseline:** add 3-layer verification pipeline ([0df4b85](https://github.com/Nosmoht/review-claude-config/commit/0df4b8501af7d713a432552e6d7f68f502a235e5))
+* **skill/refresh-evidence-coverage:** add 3-layer verification pipeline ([4844485](https://github.com/Nosmoht/review-claude-config/commit/484448542a8a1caf65e21687b3beab32d050cf1c))
+* **skill/review-agent:** add 3-layer verification pipeline ([508c62e](https://github.com/Nosmoht/review-claude-config/commit/508c62e83e65c58d46c8fba83401284075e58136))
+* **skill/review-analytics:** add 3-layer verification pipeline ([324d458](https://github.com/Nosmoht/review-claude-config/commit/324d4582915b9e4e3b9064771b580f0d5bff7257))
+* **skill/review-claude-config:** add 3-layer verification pipeline ([49e25e5](https://github.com/Nosmoht/review-claude-config/commit/49e25e55310303c77f93f021a702516e6efa0d9a))
+* **skill/review-claude-md:** add 3-layer verification pipeline ([fef707f](https://github.com/Nosmoht/review-claude-config/commit/fef707f379051a81f244d5a9d5f3e41a05c82672))
+* **skill/review-domain-currency:** add 3-layer verification pipeline ([b73d96a](https://github.com/Nosmoht/review-claude-config/commit/b73d96a951fbae1e00e34b09e37e038f445cece4))
+* **skill/review-mcp-server:** add 3-layer verification pipeline ([9bcd0b8](https://github.com/Nosmoht/review-claude-config/commit/9bcd0b8c101e1c75b5dd8d5b7d6f6029a831542a))
+* **skill/review-plugin:** add 3-layer verification pipeline ([ce45df5](https://github.com/Nosmoht/review-claude-config/commit/ce45df55b2617f53a1baf228e968ed79edf8eed1))
+* **skill/review-rule:** add 3-layer verification pipeline ([5a338b6](https://github.com/Nosmoht/review-claude-config/commit/5a338b6342e36e46e236a7a7981d8b30c2ed47b8))
+* **skill/review-session-trace:** add 3-layer verification pipeline ([36f5739](https://github.com/Nosmoht/review-claude-config/commit/36f5739a769c1acf9ebe0f9597ad564931aadc21))
+* **skill/review-settings:** add 3-layer verification pipeline ([963b997](https://github.com/Nosmoht/review-claude-config/commit/963b997a6322a02b873dd6d3ae8fe89abc571545))
+* **skill/review-skill:** add 3-layer verification pipeline ([e7ac57f](https://github.com/Nosmoht/review-claude-config/commit/e7ac57fb2290805f31a74dd54268e8646b852707))
+* **skill/run-eval-cases:** add 3-layer verification pipeline ([5ce1b3f](https://github.com/Nosmoht/review-claude-config/commit/5ce1b3fff0e4d08841215362d96b6225a768b368))
+* **skill/scaffold-agent:** add 3-layer verification pipeline ([1601085](https://github.com/Nosmoht/review-claude-config/commit/1601085c5617ffa1844ca3f27aa2ae6e0814608c))
+* **skill/scaffold-mcp-server:** add 3-layer verification pipeline ([8eb7278](https://github.com/Nosmoht/review-claude-config/commit/8eb727807058f9da1809297a4b9783b47cedf544))
+* **skill/scaffold-rule:** add 3-layer verification pipeline ([b5d8505](https://github.com/Nosmoht/review-claude-config/commit/b5d850578a954104e3fc25b277121aae7992a0ab))
+* **skill/scaffold-skill:** add 3-layer verification pipeline ([4e58690](https://github.com/Nosmoht/review-claude-config/commit/4e58690f24fbb0bb10e0ff3298302c77ddb5178e))
+* **skill/suggest-skills:** add 3-layer verification pipeline ([04d2db7](https://github.com/Nosmoht/review-claude-config/commit/04d2db71248be6294c98d3bb2781ed1a1472d23a))
+* **skill/sync-research-index:** add 3-layer verification pipeline ([b5d65ff](https://github.com/Nosmoht/review-claude-config/commit/b5d65ffcb6493fbd2bd5253104a0a1415efae9ff))
+* **skill/validate-primitive-dependencies:** add 3-layer verification pipeline ([126c7fb](https://github.com/Nosmoht/review-claude-config/commit/126c7fb9aca577a54cc505154c658b7ece416620))
+
+
+### Fixed
+
+* **skill/apply-skill-review-findings:** downgrade allowed_tools_unused to SOFT ([b79a167](https://github.com/Nosmoht/review-claude-config/commit/b79a16779d7c00b30f5905e57a3fceeca07dad5a))
+* **skill/refresh-engineering-baseline:** decouple D1 from unverifiable predicate ([c0b4e00](https://github.com/Nosmoht/review-claude-config/commit/c0b4e009f12c946bade02923092263f95251462b))
+* **skill/review-domain-currency:** correct Layer A S1 timing ([df628ac](https://github.com/Nosmoht/review-claude-config/commit/df628ac02d889b6567b50aaba173e0865ceab199))
+
 ## [2.11.1](https://github.com/Nosmoht/review-claude-config/compare/v2.11.0...v2.11.1) (2026-05-13)
 
 
