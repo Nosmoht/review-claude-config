@@ -31,7 +31,7 @@ The 5-class assignment of the 37 local skills lives in `.work/skill-verification
 - **SCAFFOLD (5)**: scaffold-skill, scaffold-agent, scaffold-rule, scaffold-mcp-server, develop-hooks
 - **MAINTAIN (7)**: check-repo-health, refresh-evidence-coverage, run-eval-cases, validate-primitive-dependencies, `.claude/skills/maintain-evidence-layer`, `.claude/skills/refresh-engineering-baseline`, `.claude/skills/sync-research-index`
 
-The categorization is by **output shape** (judgment-shaped vs deterministic), NOT by CLAUDE.md command-organization grouping. Three skills classified non-intuitively: `review-analytics` is REVIEW (trend-analysis output is judgment-shaped); `classify-trace-errors`, `review-session-trace`, `suggest-skills` are AUDIT (predicate+classification output).
+The categorization is by **output shape** (judgment-shaped vs deterministic), NOT by CLAUDE.md command-organization grouping. Four skills classified non-intuitively: `review-analytics` is REVIEW (trend-analysis output is judgment-shaped); `classify-trace-errors`, `review-session-trace`, `suggest-skills` are AUDIT (predicate+classification output).
 
 ## Tier-1 evidence anchors
 
