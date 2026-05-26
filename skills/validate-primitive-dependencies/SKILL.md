@@ -345,6 +345,254 @@ On "Fix broken references": acknowledge and remind them to re-run this skill aft
 
 If the overall verdict is HEALTHY, skip the menu — just present the report.
 
+## Quality measurement (mandatory before Output)
+
+This skill IS a validator. Without verification of the validator itself, it fails at **DEPGRAPH_INCOMPLETENESS** — the scanner regex misses a whole reference-pattern class (e.g. Markdown link syntax in `[label](path.md)` form, conditional `if` references, or hook-config references that live in JSON not Markdown), and the affected targets are reported as orphans despite being reachable from a real path the scanner does not visit. A second failure class is **IDEMPOTENCY_BREAK** — re-running the skill on unchanged input emits a non-deterministically-ordered dependency map (set iteration), so two consecutive reports differ even though no edge changed. The verification is META (a validator for the validator); a three-layer pipeline is required because no single layer catches both classes, and Layer B is load-bearing here per template F8.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024), Beyond Consensus (NUS 2025). Per-skill design: `.work/skill-verification/maintain-template.md §Per-skill customization notes`.
+
+Per the MAINTAIN template's per-skill note: this skill produces a dependency-graph integrity report (Markdown). Layer A idempotency requires the dependency-graph itself to be deterministic — sort all edge lists before comparison. Layer B seeds the critic with **known-good edges** (e.g., `skills/review-claude-config/SKILL.md` → `skills/review-claude-config/references/scoring-rubric.md`) and verifies every seeded edge appears in the report. Layer C D6 (depgraph completeness) is the load-bearing dimension. D2 (freshness) is N/A — this skill is not freshness-sensitive. D4 covers the report's frontmatter shape and status-vocabulary.
+
+Capture the report and a deterministic re-run snapshot to a tempdir so subsequent steps can read both:
+
+```bash
+TMPDIR=$(mktemp -d -t vpd-XXXX)
+CURRENT="$TMPDIR/current-report.md"
+RERUN="$TMPDIR/rerun-report.md"
+# Write the report the skill just produced to "$CURRENT".
+# Re-run the same scan on the unchanged target folder and write to "$RERUN".
+# If a prior-run report snapshot is available, export PRE_VERDICT=<path>;
+# otherwise leave unset and SOFT-2 row is skipped.
+```
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run against the produced report, its deterministic re-run, and (if available) the prior-run snapshot. `STRICT` rows abort; `SOFT` rows warn and continue.
+
+```bash
+python3 - "$CURRENT" "$RERUN" "${PRE_VERDICT:-/dev/null}" <<'PY'
+import sys, re, os
+from pathlib import Path
+
+CURRENT, RERUN, PRE_VERDICT = (Path(p) for p in sys.argv[1:4])
+
+VERDICT_STATUSES = {"OK", "MISSING", "ORPHANED", "UNREGISTERED", "PARTIAL", "GHOST", "HEALTHY"}
+
+def canonicalize_rows(text):
+    """Return sorted set of pipe-table rows, dropping non-load-bearing
+    timestamp/date lines so idempotency check isn't poisoned by run-id."""
+    out = []
+    for line in text.splitlines():
+        if not line.startswith("|") or line.startswith("|--"): continue
+        if re.match(r"^\s*\|\s*(Source|File|Skill|Ref Type)\s*\|", line): continue
+        out.append(line.strip())
+    return sorted(set(out))
+
+cur_text = CURRENT.read_text(errors="ignore")
+re_text = RERUN.read_text(errors="ignore") if RERUN.exists() else ""
+
+rows = []  # (sev, metric, before, after, delta, flag)
+
+# STRICT-1 IDEMPOTENT_RERUN_DIFF — second run on unchanged target must produce
+# byte-identical row sets (after canonicalizing). Catches F1 IDEMPOTENCY_BREAK.
+cur_rows = canonicalize_rows(cur_text)
+re_rows = canonicalize_rows(re_text) if re_text else cur_rows
+idem_diff = set(cur_rows) ^ set(re_rows)
+rows.append(("STRICT", "idempotent_rerun_row_diff",
+             0, len(idem_diff), f"+{len(idem_diff)}" if idem_diff else "0",
+             f" FAIL diff_rows={sorted(idem_diff)[:3]}" if idem_diff else ""))
+
+# STRICT-2 VERDICT_STATUS_VOCAB — every status cell must be in the closed set
+status_cells = re.findall(r"\|\s*(OK|MISSING|ORPHANED|UNREGISTERED|PARTIAL|GHOST|HEALTHY|[A-Z][A-Z_-]+)\s*\|", cur_text)
+bad = [s for s in status_cells if s not in VERDICT_STATUSES]
+rows.append(("STRICT", "verdict_status_vocab_violations",
+             0, len(bad), f"+{len(bad)}" if bad else "0",
+             f" FAIL unknown={sorted(set(bad))[:5]}" if bad else ""))
+
+# STRICT-3 FORWARD_REF_EVIDENCE — every Forward References row must cite a
+# non-empty Source and Target. Catches D5 VERDICT_HONESTY violations.
+empty_target = 0
+in_fwd = False
+for line in cur_text.splitlines():
+    if line.startswith("## Forward References"): in_fwd = True; continue
+    if line.startswith("## ") and in_fwd: in_fwd = False; continue
+    if not in_fwd: continue
+    if not line.startswith("|") or line.startswith("|--"): continue
+    cells = [c.strip() for c in line.split("|")[1:-1]]
+    if len(cells) < 4: continue
+    if cells[0] in ("Source",) or set(cells[0]) <= {"-"}: continue
+    # cells[2] is Target; allow "NONE" but not empty
+    if not cells[2]:
+        empty_target += 1
+rows.append(("STRICT", "forward_refs_without_target",
+             0, empty_target, f"+{empty_target}" if empty_target else "0",
+             f" FAIL empty_target_rows={empty_target}" if empty_target else ""))
+
+# STRICT-4 REPORT_SECTION_PRESENCE — the four canonical sections must exist
+REQUIRED_SECTIONS = {"Forward References", "Orphaned References",
+                     "Circular Dependencies", "Registration Consistency"}
+present = {h for h in REQUIRED_SECTIONS
+           if re.search(rf"^##\s+{re.escape(h)}\s*$", cur_text, re.M)}
+missing = REQUIRED_SECTIONS - present
+rows.append(("STRICT", "required_sections_present",
+             len(REQUIRED_SECTIONS), len(present),
+             f"-{len(missing)}" if missing else "0",
+             f" FAIL missing={sorted(missing)}" if missing else ""))
+
+# SOFT-1 VERDICT_ROW_COUNT_DELTA — vs prior snapshot (NULL_VERDICT_REGRESSION smell)
+if PRE_VERDICT.exists() and str(PRE_VERDICT) != "/dev/null":
+    prev = PRE_VERDICT.read_text(errors="ignore")
+    prev_rows = len(re.findall(r"^\|", prev, re.M))
+    curr_rows = len(re.findall(r"^\|", cur_text, re.M))
+    delta = curr_rows - prev_rows
+    flag = ""
+    if prev_rows and abs(delta) >= max(5, prev_rows // 4):
+        flag = f" warn prev={prev_rows} curr={curr_rows}"
+    rows.append(("SOFT", "verdict_row_count_delta",
+                 prev_rows, curr_rows, f"{delta:+d}", flag))
+
+# SOFT-2 NON_OK_TOTAL — count of MISSING+ORPHANED+UNREGISTERED+PARTIAL+GHOST rows
+non_ok = sum(1 for s in status_cells
+             if s in {"MISSING", "ORPHANED", "UNREGISTERED", "PARTIAL", "GHOST"})
+rows.append(("SOFT", "non_ok_rows", 0, non_ok, f"+{non_ok}", ""))
+
+fail = 0
+print(f"{'severity':9} {'metric':40} {'before':>8} {'after':>8} {'delta':>8}")
+for sev, metric, before, after, delta, flag in rows:
+    if "FAIL" in flag: fail += 1
+    print(f"{sev:9} {metric:40} {str(before):>8} {str(after):>8} {delta:>8}{flag}")
+sys.exit(1 if fail else 0)
+PY
+```
+
+If exit non-zero → STOP, do not present the report. Report failures, propose specific restorations (sort the edge lists deterministically, fix the bad status cell, add the missing required section), then re-run Layer A.
+
+### Layer B — adversarial critic dispatch (blind, recall-framed)
+
+Dispatch a fresh subagent. The critic must be **seeded with known-good edges** sampled from the target repo so missing-edge claims are evaluated against ground truth rather than the critic's prior. Per template F8 DEPGRAPH_INCOMPLETENESS: this is the load-bearing layer for the validator-of-validator case.
+
+```
+Agent({
+  description: "Adversarial validate-primitive-dependencies critic",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer auditing a dependency-integrity report against the repository state it claims to describe. " +
+    "You are given:\n" +
+    "  A: <the dependency report the skill produced>\n" +
+    "  B: <the prior-run report snapshot, or null>\n" +
+    "  S: <seed edges — a sampled list of KNOWN-GOOD references in the target repo: " +
+         "SKILL.md → references/*.md Read mentions, agent → slash-command, " +
+         "hook command path, MCP server name, research-references entry>\n" +
+    "  C: <CLAUDE.md §Architecture excerpt + Hard Constraints>\n" +
+    "Neither label tells you which is the current vs prior.\n\n" +
+    "Find:\n" +
+    "1. MISSING_EDGE — every seed edge in S that does NOT appear as a row in A's Forward References table. " +
+       "This is the dominant failure class (F8 DEPGRAPH_INCOMPLETENESS).\n" +
+    "2. STALE_MISS — N/A for this skill (no freshness windows). Skip.\n" +
+    "3. PARTIAL_UPDATE — pairs of files declared 'must stay in sync' in C " +
+       "(engineering-baseline ↔ provenance; CLAUDE.md ↔ README.md commands list) " +
+       "where one is referenced in A and the other is reported orphan.\n" +
+    "4. EVIDENCE_LABEL_DRIFT — N/A for this skill (no label class). Skip.\n" +
+    "5. RECURSIVE_DISCIPLINE_BREACH — mutations in B that themselves violate " +
+       "a hard constraint in C (e.g. internal IPs in the report, home-dir prefixes).\n" +
+    "6. DROPPED — rows present in B that disappeared from A without a citable repo fix.\n" +
+    "7. WEAKENED — rows that survived but with looser status (e.g. MISSING → OK without the target appearing on disk).\n" +
+    "8. ADDED — verdict claims with no traceable evidence in the repo (e.g. an OK row whose target glob returns no file).\n" +
+    "9. CYCLE_FALSE_NEGATIVE — a slash-command cycle that exists in the source set " +
+       "(walk S's slash-command edges manually) but is absent from A's Circular Dependencies section.\n" +
+    "10. GHOST_REGISTRATION_MISS — a slash-command listed in CLAUDE.md §Commands that has no corresponding SKILL.md, but A does not flag it GHOST.\n\n" +
+    "For each item: quote the literal row, name the table and file path, classify with one of the ten tokens above. " +
+    "Report under 600 words. Do not rate quality. Do not praise the skill's design.\n\n" +
+    "A:\n<paste $CURRENT contents>\n\n" +
+    "B:\n<paste PRE_VERDICT contents or 'null'>\n\n" +
+    "S:\n<paste sampled seed-edge list, 10-20 known-good edges>\n\n" +
+    "C:\n<paste CLAUDE.md §Architecture + §Hard Constraints excerpt>"
+})
+```
+
+Then **dispatch a second time with A and B swapped** (and, where applicable, with S reordered) — position bias is the dominant LLM-judge artifact in pairwise settings (Shi et al. 2024, arXiv:2406.07791). Take the union of items flagged across both runs.
+
+### Layer C — rubric reconciliation (binary CheckEval-style)
+
+Six yes/no dimensions specialized to the dependency-integrity report. Any `NO` blocks the report until resolved.
+
+```
+D1 IDEMPOTENT              Second run of the skill on the same target folder
+                           produces an identical canonical row set (modulo Date:
+                           and explicit timestamp lines). Edge lists sorted before
+                           comparison. Layer A STRICT-1 passes.
+                           Ties to F1 IDEMPOTENCY_BREAK.
+
+D2 FRESHNESS_RESPECT       N/A — this skill is not freshness-sensitive (no
+                           last_refreshed / last_audited window checks).
+                           Auto-PASS with note.
+
+D3 SYNC_INTEGRITY          File pairs declared "must stay in sync" in CLAUDE.md
+                           (engineering-baseline.md ↔ engineering-baseline-
+                           provenance.md; CLAUDE.md §Commands ↔ README.md commands
+                           list) are not split-flagged (one OK, one ORPHANED)
+                           without a corresponding repo-state asymmetry.
+                           Layer B finds zero PARTIAL_UPDATE.
+                           Ties to F4 PARTIAL_UPDATE.
+
+D4 SCHEMA_AND_CONTRACT     Every status cell uses a token in the closed set
+                           {OK, MISSING, ORPHANED, UNREGISTERED, PARTIAL, GHOST,
+                           HEALTHY}. The four required report sections (Forward
+                           References, Orphaned References, Circular Dependencies,
+                           Registration Consistency) are all present.
+                           Layer A STRICT-2 + STRICT-4 pass.
+                           Ties to F5 STATE_FORMAT_DRIFT.
+
+D5 VERDICT_HONESTY         Every Forward References row cites a non-empty Source
+                           and Target. No row from the prior report silently
+                           disappeared without a corresponding repo fix. No row
+                           was emitted with looser criteria than the prior run.
+                           No OK row points at a target that does not exist on disk.
+                           Layer A STRICT-3 passes; Layer B finds zero
+                           DROPPED / WEAKENED / ADDED.
+                           Ties to F7 EVAL_FALSE_PASS, F10 NULL_VERDICT_REGRESSION.
+
+D6 DEPGRAPH_COMPLETENESS   Every known edge type is detected in the produced
+                           report: Markdown link syntax, reference-file Read
+                           patterns, slash-command invocations, hook-script
+                           commands, MCP-server mcpServers entries, and
+                           research-references entries. Layer B's seed-edge
+                           audit finds zero MISSING_EDGE; zero CYCLE_FALSE_NEGATIVE;
+                           zero GHOST_REGISTRATION_MISS.
+                           Ties to F8 DEPGRAPH_INCOMPLETENESS. LOAD-BEARING.
+```
+
+Mapping Layer-A failures → rubric:
+
+- STRICT-1 (idempotent rerun row diff) fail → D1 NO
+- STRICT-2 (status vocab) fail → D4 NO
+- STRICT-3 (forward refs without target) fail → D5 NO
+- STRICT-4 (missing required section) fail → D4 NO
+
+Mapping Layer-B critic tokens → rubric:
+
+- `MISSING_EDGE` / `CYCLE_FALSE_NEGATIVE` / `GHOST_REGISTRATION_MISS` → D6 NO
+- `PARTIAL_UPDATE` → D3 NO
+- `DROPPED` / `WEAKENED` / `ADDED` → D5 NO
+- `RECURSIVE_DISCIPLINE_BREACH` → D1 NO (re-classifies as idempotency-of-the-discipline)
+
+### Reconciliation outcomes
+
+- **All STRICT pass + Layer B yields zero MISSING_EDGE / CYCLE_FALSE_NEGATIVE / GHOST_REGISTRATION_MISS / PARTIAL_UPDATE / DROPPED / WEAKENED / ADDED / RECURSIVE_DISCIPLINE_BREACH** → present the report.
+- **Any STRICT fail OR any blocking critic token** → propose targeted restorations (add the missing edge by extending the scanner pattern, restore the dropped row, fix the bad status cell, add the missing required section) and re-run Layers A + B on the patched report. **Hard cap: 2 iterations** (per `rules/contract-authoring.md §Small-bound carve-out`; bound = 2 → hard rule, no graceful +1). If still failing after iteration 2, surface to the user; do not auto-publish the report.
+- **Only SOFT warnings** (`verdict_row_count_delta` jump, large `non_ok_rows` total) → present the report but include the warnings in the Summary line so the operator has a final-glance opportunity.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **Whole reference-pattern class omitted from the scanner.** D6's seed-edge audit verifies that every edge in the SEEDED list appears in the report. It does NOT verify that the scanner's edge-type taxonomy is complete — if an entire reference class (e.g. references that live in CI workflow YAML, `.gitignore`-tracked-but-still-loaded files, conditional `if`-pattern references) is absent from both the scanner regex AND the seed list, the pipeline sees no missing edges. External corpus reference (a manually-curated edge-class taxonomy refreshed quarterly) is required and is out of this pipeline's scope (residual #4 in the MAINTAIN template).
+2. **Cross-session dependency drift.** A dependency report passes idempotency on a single session's filesystem snapshot but the underlying repo state changed between the two runs (e.g., another agent's commit landed mid-run). Only Builder-agent session-state tracking surfaces this — not the diff.
+3. **Semantic correctness of slash-command resolution.** Layer A checks status-vocabulary validity; Layer B checks for missing edges. Neither catches the case where a slash-command name has two plausible disambiguations (`/review` could map to `review-skill` or `review-agent`) and the scanner picked the wrong one — both ends of the edge still exist, so D5 sees a clean OK row.
+4. **External-dependency drift.** This skill consults no `WebFetch`/`WebSearch` — residual not applicable, but listed for template parity.
+5. **Ghost registrations from non-Markdown sources.** Slash-commands invoked from CI workflows, shell scripts, or hooks/JSON commands are not in the Phase 2 scanner's scope. A ghost registration that lives only in `.github/workflows/*.yml` is invisible to both layers.
+6. **Quiet success-mode masking partial failure.** A report that emits an aggregate `HEALTHY` verdict despite a single MISSING row buried in a long Forward References table can hide individual defects behind the summary. Layer A SOFT-2 surfaces the `non_ok_rows` count but does not block; the operator must read the table.
+
+The report MUST surface which residual classes apply to non-OK rows the operator should still review by hand.
+
 ## Hard Rules
 
 - **Read-only on analyzed files.** Never modify any primitive. The only file
