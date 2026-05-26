@@ -2,6 +2,19 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.1](https://github.com/Nosmoht/review-claude-config/compare/v2.12.0...v2.12.1) (2026-05-26)
+
+
+### Changed
+
+* **skill/apply-*, docs:** fix recursive schema defect + arch-doc arithmetic ([2697bd9](https://github.com/Nosmoht/review-claude-config/commit/2697bd9fa650f809cfeb8de9ec1f242d24d5bf53))
+* **skill/apply-*:** fix stale template ref + document claimed.json schema ([9a5dafe](https://github.com/Nosmoht/review-claude-config/commit/9a5dafe2282087d95042c5329056be3499c0a376))
+* **skill/apply-*:** replace adversarial-critic Layer B with structural primitives ([36b92a9](https://github.com/Nosmoht/review-claude-config/commit/36b92a9c810e13b53385c573a0e7bfcf9575969e))
+* **skill/audit-*:** gate Layer B on predicate-density per right-altitude ([dec705c](https://github.com/Nosmoht/review-claude-config/commit/dec705c24f4c3c4100d065827781978c8c5db4a8))
+* **skill/audit-*:** replace 30% threshold with criteria-based Layer-B-Gate ([c14cb79](https://github.com/Nosmoht/review-claude-config/commit/c14cb79cd5f0dd7d87f08319f8ce26a15fd03625))
+* **skill/maintain-*:** drop redundant Layer B+C per right-altitude ([f7cff18](https://github.com/Nosmoht/review-claude-config/commit/f7cff186baa85851f9138613cab20f38215ccdb2))
+* **skill/scaffold-*:** drop redundant Layer B+C per right-altitude ([50e1844](https://github.com/Nosmoht/review-claude-config/commit/50e18444ebbb0fa3b8bf9816dec020860e3598d1))
+
 ## [2.12.0](https://github.com/Nosmoht/review-claude-config/compare/v2.11.1...v2.12.0) (2026-05-26)
 
 
