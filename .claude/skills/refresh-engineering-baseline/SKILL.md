@@ -166,11 +166,9 @@ Present the change report in this format:
 
 ## Quality measurement (mandatory before Output)
 
-Without verification, this skill fails at **RECURSIVE_DISCIPLINE_BREACH** — the skill is the **named gateway** for baseline mutation (CLAUDE.md §Hard Constraints #6 forbids mid-session edits to `engineering-baseline.md`; this skill IS the legitimate path, but each invocation must terminate at a session boundary). A successful run invoked **from inside an already-running review session** would itself violate the rule the skill is built to honor. A second dominant failure class is **SYNC_INTEGRITY breach** between `engineering-baseline.md` and `engineering-baseline-provenance.md` — the two files MUST be mutated together (every added/updated/removed technique requires a paired provenance row) or neither at all; an Edit-loop early-exit on the second file leaves the repo in inconsistent state. A third is **STATE_FORMAT_DRIFT** in `last_refreshed:`: a value written as `2026/05/26` instead of `2026-05-26` breaks downstream freshness parsers (`check-repo-health freshness`, `session_check.py`). A three-layer pipeline (mechanical invariants / adversarial critic / binary rubric) is required because no single layer catches all three classes.
+Per `docs/skill-verification-architecture.md` (2026-05-26 retrofit), MAINTAIN-class verification is deterministic: schema invariants (canonical `YYYY-MM-DD` `last_refreshed:`, three section headings preserved, 2K token budget), idempotency `f(f(x)) == f(x)` (re-run on unchanged input produces zero diff), sync-pair integrity (baseline ↔ provenance: every technique requires a paired provenance row), and freshness predicates (90-day cadence) fully cover this skill's mechanical failure surface. There is no judgment-shaped output to evaluate, so the historical Layer B (adversarial critic) and Layer C (binary rubric) were dropped — they added token cost and false-positive surface without raising assurance. Layer A below is the complete verification.
 
-References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024), Beyond Consensus (NUS 2025). Per-skill design: `.work/skill-verification/maintain-template.md §Per-skill customization notes`.
-
-Per the MAINTAIN template's per-skill note: this skill produces (a) mutations to `skills/review-claude-config/references/engineering-baseline.md` + (b) paired mutations to `skills/review-claude-config/references/engineering-baseline-provenance.md`, both written only after explicit `AskUserQuestion` confirmation. Layer A idempotency must be checked with `last_refreshed` rolled back to >90 days (otherwise the freshness gate early-returns in Step 2 and the test is trivial). External-dependency drift (residual #5) applies — D1 is relaxed to "no mutations beyond those traceable to a recorded fetch event in the change report". Layer B's dominant *blocking* risks are PARTIAL_UPDATE (sync break) and STATE_FORMAT_DRIFT (downstream parsers); RECURSIVE_DISCIPLINE_BREACH (the skill MUST be invoked between sessions, not inside an active review session) is tracked as Acknowledged Residual #1 — Layer A/B cannot fully verify session boundaries, so it surfaces as an operator-glance item, not a D-dimension failure. D1 IDEMPOTENT (purely mechanical) and D3 SYNC_INTEGRITY (baseline ↔ provenance) are load-bearing; D2 carries the freshness-gate check; D6 N/A.
+This skill produces paired mutations to `engineering-baseline.md` + `engineering-baseline-provenance.md`, both written only after explicit `AskUserQuestion` confirmation. Layer A idempotency must be checked with `last_refreshed` rolled back to >90 days (otherwise the freshness gate early-returns in Step 2 and the test is trivial). External-dependency drift applies — idempotency is relaxed to "no mutations beyond those traceable to a recorded fetch event in the change report". Session-boundary breach (recursive-discipline) is tracked as an Acknowledged Residual since Layer A cannot fully verify session boundaries — surfaced as operator glance, not a mechanical failure.
 
 Snapshot the pre-run and post-run state for both files plus a deterministic re-run so subsequent steps can compare:
 
@@ -303,172 +301,17 @@ PY
 
 If exit non-zero → STOP, do not finalize the refresh. Report failures and propose targeted restorations (re-write the bad `last_refreshed:` in canonical format, add the missing provenance row for the unpaired technique, restore the dropped section heading, trim lowest-evidence techniques to fit the 2K budget), then re-run Layer A on the patched state.
 
-### Layer B — adversarial critic dispatch (blind, recall-framed)
-
-Dispatch a fresh subagent with the **single task** of finding what was lost, falsely mutated, or breached the discipline. Seed the critic with `CLAUDE.md §Hard Constraints` (especially #6 mid-session freeze), `references/evidence-contract.md`, and the skill's own "must stay in sync" claim (Step 1: provenance map stays in sync with baseline) so judgments are evaluated against documented conventions, not the critic's prior.
-
-```
-Agent({
-  description: "Adversarial refresh-engineering-baseline critic",
-  subagent_type: "general-purpose",
-  prompt:
-    "You are a blind reviewer auditing a refresh-engineering-baseline skill run. " +
-    "You are given:\n" +
-    "  A: <pre-run snapshot of engineering-baseline.md>\n" +
-    "  B: <post-run snapshot of engineering-baseline.md>\n" +
-    "  AP: <pre-run snapshot of engineering-baseline-provenance.md>\n" +
-    "  BP: <post-run snapshot of engineering-baseline-provenance.md>\n" +
-    "  V: <the change report the skill rendered in Step 7>\n" +
-    "  C: <CLAUDE.md Hard Constraints + Development Conventions excerpt>\n" +
-    "  E: <references/evidence-contract.md>\n" +
-    "Neither label (A/B, AP/BP) tells you which is the original.\n\n" +
-    "Find:\n" +
-    "1. RECURSIVE_DISCIPLINE_BREACH — any claim or evidence in V indicating " +
-    "the refresh was invoked mid-session (not at a session boundary), " +
-    "or any mutation in B to scoring-rubric.md / other frozen files outside " +
-    "the two baseline files (forbidden by C §Hard Constraints #6).\n" +
-    "2. STALE_MISS — claims in V that last_refreshed is still <90 days when " +
-    "A's last_refreshed is in fact >90 days from today.\n" +
-    "3. FALSE_STALE — refresh proceeded even though A's last_refreshed was " +
-    "<90 days from today and V does NOT cite a 'force refresh' confirmation.\n" +
-    "4. PARTIAL_UPDATE — techniques present in B but missing from BP " +
-    "(or vice versa); section headings preserved in only one file when " +
-    "the report claimed both updated.\n" +
-    "5. STATE_FORMAT_DRIFT — last_refreshed: values in B or BP not matching " +
-    "YYYY-MM-DD; technique entries that conflate multiple evidence classes " +
-    "under one label (forbidden by E and by the skill's Step 4 rule).\n" +
-    "6. EVIDENCE_LABEL_DRIFT — labels in V (or in B's claim clusters) not " +
-    "appearing in E's canonical set " +
-    "(Proven result / Engineering guidance / Repo default / Low-evidence area).\n" +
-    "7. DROPPED — techniques in A removed from B without an underlying " +
-    "supersession-citation in V's 'Removed' section.\n" +
-    "8. ADDED — techniques in B's claim clusters with no traceable source " +
-    "in V (no URL, no arXiv/RFC/DOI ID, no documented production system).\n" +
-    "9. WEAKENED — existing techniques whose evidence-class label was " +
-    "downgraded (e.g. 'Proven result' -> 'Repo default') without V citing " +
-    "a contradicting source.\n\n" +
-    "For each item: quote the literal sentence, name file:line, classify with " +
-    "one of the nine tokens above. Report under 600 words. Do not rate " +
-    "quality. Do not praise the skill's design.\n\n" +
-    "A:\n<paste $PRE_BASELINE contents>\n\n" +
-    "B:\n<paste $POST_BASELINE contents>\n\n" +
-    "AP:\n<paste $PRE_PROVENANCE contents>\n\n" +
-    "BP:\n<paste $POST_PROVENANCE contents>\n\n" +
-    "V:\n<paste $REPORT contents>\n\n" +
-    "C:\n<paste CLAUDE.md Hard Constraints + Development Conventions excerpt>\n\n" +
-    "E:\n<paste references/evidence-contract.md>"
-})
-```
-
-Then **dispatch a second time with A/B and AP/BP swapped** (and C/E reordered) — position bias is the dominant LLM-judge artifact in pairwise settings (Shi et al. 2024, arXiv:2406.07791). Take the union of items flagged across both runs.
-
-### Layer C — rubric reconciliation (binary CheckEval-style)
-
-Six yes/no dimensions specialized to this skill. Any `NO` blocks finalization until resolved. CheckEval (arXiv:2403.18771) reports +0.45 inter-evaluator agreement for binary vs. Likert.
-
-```
-D1 IDEMPOTENT              Second run of the skill within 90 days of the
-                           bumped last_refreshed produces ZERO mutations to
-                           engineering-baseline.md AND engineering-baseline-
-                           provenance.md (modulo whitelisted timestamp
-                           fields). External-dependency drift (residual #5)
-                           is acknowledged but does not excuse same-day
-                           mutation. Layer A STRICT-1 (idempotent_rerun_diff)
-                           passes. Ties to F1 IDEMPOTENCY_BREAK.
-                           HIGHEST WEIGHT.
-                           Session-boundary / recursive-discipline breach is
-                           NOT part of this dimension — it is tracked solely
-                           as Acknowledged Residual #1 below (Builder-state-
-                           aware, not pipeline-verifiable). Keeping D1 purely
-                           mechanical avoids conflating a verifiable predicate
-                           with a known-unverifiable one.
-
-D2 FRESHNESS_RESPECT       last_refreshed <90 days in PRE leads to either
-                           early-return ("Cancel" path) or explicit Force-
-                           refresh confirmation cited in the change report.
-                           last_refreshed >=90 days proceeds to research +
-                           preview. The 90-day cadence from CLAUDE.md
-                           §Development Conventions is honored verbatim.
-                           Layer B finds zero STALE_MISS / FALSE_STALE.
-                           Ties to F2 STALE_MISS, F3 FALSE_STALE.
-
-D3 SYNC_INTEGRITY          Every technique present in POST baseline has a
-                           matching row in POST provenance, and every row
-                           in POST provenance has a matching technique in
-                           POST baseline. Edit-loop early-exit on either
-                           file is a hard FAIL.
-                           Layer A STRICT-4 (unpaired_techniques) passes;
-                           Layer B finds zero PARTIAL_UPDATE.
-                           Ties to F4 PARTIAL_UPDATE. LOAD-BEARING.
-
-D4 SCHEMA_AND_CONTRACT     Every last_refreshed: value in POST baseline and
-                           POST provenance matches the canonical YYYY-MM-DD
-                           format. Every evidence-class label cited in the
-                           change report and on each claim cluster appears
-                           in references/evidence-contract.md's canonical
-                           set (Proven result / Engineering guidance / Repo
-                           default / Low-evidence area). The three section
-                           headings (Prompt Engineering / Context
-                           Engineering / Tool Design) survive the rewrite.
-                           Token-budget invariant (2K) holds.
-                           Layer A STRICT-2 + STRICT-3 + STRICT-5 pass;
-                           Layer B finds zero STATE_FORMAT_DRIFT /
-                           EVIDENCE_LABEL_DRIFT.
-                           Ties to F5 STATE_FORMAT_DRIFT,
-                           F6 EVIDENCE_LABEL_INCONSISTENCY.
-
-D5 VERDICT_HONESTY         Every ADDED technique in the change report is
-                           paired with a cited source (URL or
-                           arXiv/RFC/DOI). Every REMOVED technique cites
-                           the superseding source or debunking evidence.
-                           Every UPDATED technique shows before/after.
-                           No baseline technique was silently dropped
-                           between PRE and POST without a corresponding
-                           "Removed" row in the report. No new claim
-                           appears in POST that lacks a Step-3.5 fetch
-                           event or Step-3 search result in the report.
-                           Layer B finds zero ADDED / DROPPED / WEAKENED.
-                           Ties to F7 EVAL_FALSE_PASS, F10 NULL_VERDICT_REGRESSION.
-
-D6 DEPGRAPH_COMPLETENESS   N/A — this skill is not a dependency-graph
-                           emitter. Auto-PASS with note.
-```
-
-Mapping Layer-A failures → rubric:
-
-- STRICT-1 (idempotent_rerun_diff) fail → D1 NO
-- STRICT-2 (date format) fail → D4 NO
-- STRICT-3 (section headings) fail → D4 NO
-- STRICT-4 (unpaired techniques) fail → D3 NO
-- STRICT-5 (token budget) fail → D4 NO
-
-Mapping Layer-B critic tokens → rubric:
-
-- `RECURSIVE_DISCIPLINE_BREACH` → NOT mapped to any D-dimension. Surfaces as
-  Acknowledged Residual #1 (session-boundary breach is Builder-state-aware;
-  Layer A/B cannot fully verify it). The critic still reports the token;
-  the operator handles it at preview (Step 5).
-- `STALE_MISS` / `FALSE_STALE` → D2 NO
-- `PARTIAL_UPDATE` → D3 NO
-- `STATE_FORMAT_DRIFT` → D4 NO
-- `EVIDENCE_LABEL_DRIFT` → D4 NO
-- `ADDED` / `DROPPED` / `WEAKENED` → D5 NO
-
 ### Reconciliation outcomes
 
-- **All STRICT pass + Layer B yields zero STALE_MISS / FALSE_STALE / PARTIAL_UPDATE / STATE_FORMAT_DRIFT / EVIDENCE_LABEL_DRIFT / ADDED / DROPPED / WEAKENED** → finalize the refresh. Write both files, render the change report, surface follow-up actions. `RECURSIVE_DISCIPLINE_BREACH` is tracked separately as Acknowledged Residual #1 — if the critic raises it, surface to the operator in the change report (do not auto-finalize without an explicit operator acknowledgement) but do not treat it as a blocking D-dimension failure.
-- **Any STRICT fail OR any blocking critic token** → propose targeted restorations (re-write the bad `last_refreshed:` in canonical format, add the missing provenance row for the unpaired technique, restore the dropped section heading, cite the orphan source, revert the weakened evidence-class label) and re-run Layers A + B on the patched state. **Hard cap: 2 iterations** (per `rules/contract-authoring.md §Small-bound carve-out`; bound = 2 → hard rule, no graceful +1). If still failing after iteration 2, surface to the user; do not auto-publish the refresh.
+- **All STRICT pass** → finalize the refresh. Write both files, render the change report, surface follow-up actions.
+- **Any STRICT fail** → propose targeted restorations (re-write the bad `last_refreshed:` in canonical format, add the missing provenance row for the unpaired technique, restore the dropped section heading, trim lowest-evidence techniques to fit the 2K budget) and re-run Layer A on the patched state. **Hard cap: 2 iterations** (per `rules/contract-authoring.md §Small-bound carve-out`; bound = 2 → hard rule, no graceful +1). If still failing after iteration 2, surface to the user; do not auto-publish the refresh.
 - **Only SOFT warnings** (`added_techniques_vs_cited_sources` skew, `last_refreshed_backward_motion`) → finalize but surface the warnings in the change-report Summary so the operator gets a final-glance opportunity.
 
 ### Acknowledged residuals (the pipeline does NOT catch these)
 
-1. **Cross-session state corruption / session-boundary breach.** This skill is the **named gateway** for baseline mutation (CLAUDE.md §Hard Constraints #6), but the rule says "no mid-session edits" — the legitimate path is invocation between sessions. A run that happens to mutate the baseline within an already-running review session passes STRICT-1 (idempotent within itself) and STRICT-4 (sync integrity holds) yet still violates the rule. Only Builder-agent session-state awareness surfaces this; the diff is silent on session boundaries. This residual is the recursive-discipline case explicitly named in the brief (Wave 8 brief + maintain-template per-skill note); full enforcement is upstream of Layer A.
-2. **External-dependency drift.** This skill consults `WebSearch` / `WebFetch` to discover current best-practice techniques; the same repo state on different days can legitimately yield different mutations because the external corpus moved. D1 is relaxed to "no mutations beyond those traceable to a recorded fetch event in the change report"; whether the fetched sources themselves are stable is out of scope.
-3. **Semantic correctness of evidence-class assignment.** Layer A and B both treat the four canonical labels (Proven result / Engineering guidance / Repo default / Low-evidence area) as a self-contained predicate. Neither catches the case where the skill labeled a technique "Proven result" when the cited source is actually a single benchmark with N=1. NLI on the source's body is required and not implemented here.
-4. **Claim-cluster boundary correctness.** Step 4 instructs "if a technique mixes multiple evidence classes, split it into smaller claim clusters" — the critic can detect a label conflict but cannot infer optimal cluster boundaries from prose. Operator review at the preview step (Step 5) is the load-bearing check.
-5. **Provenance-row body drift.** The provenance map's per-row source URLs may rot between refreshes (link-rot, paper retraction). Layer A and B read the local file, not the live source. Stale provenance rows are invisible to the pipeline and surface only via `check-repo-health integrity` mode.
-
-The change report MUST list which residual classes apply to passages the critic flagged as `UNCERTAIN`, so the operator has one last human-glance opportunity before the baseline + provenance mutations land.
+1. **Cross-session state corruption / session-boundary breach.** This skill is the named gateway for baseline mutation (CLAUDE.md §Hard Constraints #6), but the rule says "no mid-session edits" — legitimate path is invocation between sessions. A run that mutates the baseline within an already-running review session passes STRICT-1 (idempotent within itself) and STRICT-4 (sync integrity holds) yet still violates the rule. Only Builder-agent session-state awareness surfaces this; the diff is silent on session boundaries.
+2. **External-dependency drift.** This skill consults `WebSearch` / `WebFetch` to discover current best-practice techniques; the same repo state on different days can legitimately yield different mutations because the external corpus moved. Idempotency is relaxed to "no mutations beyond those traceable to a recorded fetch event in the change report".
+3. **Semantic correctness of evidence-class assignment.** Layer A treats the four canonical labels as a self-contained predicate. It does not catch the case where the skill labeled a technique "Proven result" when the cited source is actually a single benchmark with N=1. NLI on the source's body is required and not implemented here.
 
 ## Hard Rules
 

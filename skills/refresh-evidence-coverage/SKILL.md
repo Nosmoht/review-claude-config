@@ -87,11 +87,9 @@ If a Tier-1 source surfaces that *contradicts* an existing rubric item (e.g., li
 
 ## Quality measurement (mandatory before Output)
 
-Without verification, this skill fails at **RECURSIVE_DISCIPLINE_BREACH** — the skill is the named gateway to evidence-coverage refresh, and a successful run that silently edited `scoring-rubric.md` or `engineering-baseline.md` inline would violate `CLAUDE.md §Hard Constraints #6` (mid-session freeze) — the very rule the skill exists to honor. A second dominant failure class is **STATE_FORMAT_DRIFT** in `last_audited:` (a value written as `2026/05/25` instead of `2026-05-25` breaks the downstream regex parser in `check-repo-health freshness`). A third is **IDEMPOTENCY_BREAK**: a re-run within 90 days of `last_audited` must early-return with `up-to-date` status and zero mutations — otherwise every re-invocation gratuitously bumps the matrix. A three-layer pipeline (mechanical invariants / adversarial critic / binary rubric) is required because no single layer catches all three classes.
+Per `docs/skill-verification-architecture.md` (2026-05-26 retrofit), MAINTAIN-class verification is deterministic: schema invariants (canonical `YYYY-MM-DD` `last_audited:`, frozen-file guard), idempotency `f(f(x)) == f(x)` (re-run within 90 days is a no-op), and freshness predicates (90-day cadence) fully cover this skill's failure surface. There is no judgment-shaped output to evaluate, so the historical Layer B (adversarial critic) and Layer C (binary rubric) were dropped — they added token cost and false-positive surface without raising assurance. Layer A below is the complete verification.
 
-References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024), Beyond Consensus (NUS 2025). Per-skill design: `.work/skill-verification/maintain-template.md §Per-skill customization notes`.
-
-Per the MAINTAIN template's per-skill note: this skill produces (a) mutations to `docs/dimension-evidence-coverage.md` (per-dim `last_audited:` bumps + coverage scores), (b) tracking issues created via `gh`, and (c) a refresh-report at `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/refresh-evidence-coverage-<date>.md`. Layer A idempotency must be checked with `last_audited` rolled back to >90 days (otherwise the freshness gate early-returns and the test is trivial). External-dependency drift (residual #5) applies — D1 is relaxed to "no mutations beyond those traceable to a recorded fetch event". Layer B's dominant risk is RECURSIVE_DISCIPLINE_BREACH (the skill MUST NOT edit `scoring-rubric.md` or `engineering-baseline.md` inline). D1, D2, D4, D5 carry the highest weight; D3 covers matrix ↔ rubric consistency; D6 N/A.
+This skill produces (a) mutations to `docs/dimension-evidence-coverage.md`, (b) tracking issues created via `gh`, and (c) a refresh-report at `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/refresh-evidence-coverage-<date>.md`. Layer A idempotency must be checked with `last_audited` rolled back to >90 days (otherwise the freshness gate early-returns and the test is trivial). External-dependency drift is acknowledged — idempotency is relaxed to "no mutations beyond those traceable to a recorded fetch event".
 
 Snapshot the pre-run and post-run state for the matrix file, the refresh report, and the freshness window for each in-scope dimension so subsequent steps can compare deterministically:
 
@@ -221,141 +219,17 @@ PY
 
 If exit non-zero → STOP, do not finalize the refresh. Report failures and propose specific restorations (re-write the bad `last_audited:` value in canonical format, revert any mutation to the frozen files, re-include the dropped dimension row), then re-run Layer A on the patched matrix.
 
-### Layer B — adversarial critic dispatch (blind, recall-framed)
-
-Dispatch a fresh subagent with the **single task** of finding what was lost or wrongly mutated. Adversarial framing is the layer that catches RECURSIVE_DISCIPLINE_BREACH (mid-session inline edit) and STALE_MISS / FALSE_STALE classes. Seed the critic with `CLAUDE.md §Hard Constraints` and `references/evidence-contract.md` so judgments are evaluated against documented conventions, not the critic's prior.
-
-```
-Agent({
-  description: "Adversarial refresh-evidence-coverage critic",
-  subagent_type: "general-purpose",
-  prompt:
-    "You are a blind reviewer auditing a refresh-evidence-coverage skill run. " +
-    "You are given:\n" +
-    "  A: <pre-run snapshot of docs/dimension-evidence-coverage.md>\n" +
-    "  B: <post-run snapshot of the same file>\n" +
-    "  V: <the refresh-report markdown the skill produced>\n" +
-    "  C: <CLAUDE.md §Hard Constraints + §Mid-session rubric/baseline freeze>\n" +
-    "  E: <references/evidence-contract.md>\n" +
-    "Neither label tells you which is the original.\n\n" +
-    "Find:\n" +
-    "1. RECURSIVE_DISCIPLINE_BREACH — any claim or evidence in V or B that " +
-    "the skill edited scoring-rubric.md or engineering-baseline.md inline " +
-    "(forbidden by C). Quote the literal line.\n" +
-    "2. STALE_MISS — dimensions in A whose last_audited >90 days from today " +
-    "that B did NOT bump and V did NOT flag.\n" +
-    "3. FALSE_STALE — dimensions B re-audited even though A's last_audited " +
-    "was within 90 days of today and no --force flag was cited in V.\n" +
-    "4. STATE_FORMAT_DRIFT — last_audited: values in B not matching YYYY-MM-DD; " +
-    "or labels in V violating E's canonical set " +
-    "(Proven result / Engineering guidance / Repo default / Low-evidence area).\n" +
-    "5. ADDED — tracking issues cited in V (#NNN) with no corresponding " +
-    "search-trail in V (queries tried, sources surfaced). The hard rule " +
-    "'always cite the search-trail' must hold.\n" +
-    "6. DROPPED — rubric items in A's per-dimension detail tables that " +
-    "disappear from B without an underlying contradiction-citation in V.\n" +
-    "7. PARTIAL_UPDATE — dimensions where B bumped last_audited but did NOT " +
-    "update the Tier-1 source count / grounded-item count even though V " +
-    "claims new sources were found.\n\n" +
-    "For each item: quote the literal sentence, name file:line, classify with " +
-    "one of the seven tokens above. Report under 600 words. Do not rate " +
-    "quality. Do not praise the skill's design.\n\n" +
-    "A:\n<paste $PRE_MATRIX contents>\n\n" +
-    "B:\n<paste $POST_MATRIX contents>\n\n" +
-    "V:\n<paste $REPORT contents>\n\n" +
-    "C:\n<paste CLAUDE.md Hard Constraints excerpt>\n\n" +
-    "E:\n<paste references/evidence-contract.md>"
-})
-```
-
-Then **dispatch a second time with A and B swapped** (and C/E reordered) — position bias is the dominant LLM-judge artifact in pairwise settings (Shi et al. 2024, arXiv:2406.07791). Take the union of items flagged across both runs.
-
-### Layer C — rubric reconciliation (binary CheckEval-style)
-
-Six yes/no dimensions specialized to this skill. Any `NO` blocks finalization until resolved. CheckEval (arXiv:2403.18771) reports +0.45 inter-evaluator agreement for binary vs. Likert.
-
-```
-D1 IDEMPOTENT              Second run of the skill within 90 days of the
-                           bumped last_audited produces ZERO mutations to
-                           docs/dimension-evidence-coverage.md (modulo
-                           whitelisted timestamp fields). External-dependency
-                           drift (residual #5) is acknowledged but does not
-                           excuse same-day mutation.
-                           Layer A STRICT-1 (idempotent_rerun_diff) passes.
-                           Ties to F1 IDEMPOTENCY_BREAK, F9 RECURSIVE_DISCIPLINE_BREACH.
-                           HIGHEST WEIGHT.
-
-D2 FRESHNESS_RESPECT       Every dimension with last_audited <90 days in PRE
-                           is skipped (or report explicitly cites --force);
-                           every dimension >=90 days is audited. The 90-day
-                           cadence from CLAUDE.md §Development Conventions
-                           is honored verbatim.
-                           Layer B finds zero STALE_MISS / FALSE_STALE.
-                           Ties to F2 STALE_MISS, F3 FALSE_STALE.
-
-D3 SYNC_INTEGRITY          Dimensions where the refresh report claims new
-                           Tier-1 sources were found have a matching update
-                           to both the Tier-1 source count AND grounded-item
-                           count (or coverage score) in the matrix row —
-                           never one without the other.
-                           Layer B finds zero PARTIAL_UPDATE.
-                           Ties to F4 PARTIAL_UPDATE.
-
-D4 SCHEMA_AND_CONTRACT     Every last_audited: value in POST matches the
-                           canonical YYYY-MM-DD format. Every evidence label
-                           cited in the refresh report appears in
-                           references/evidence-contract.md's canonical set.
-                           Layer A STRICT-2 (date format) passes; Layer B
-                           finds zero STATE_FORMAT_DRIFT.
-                           Ties to F5 STATE_FORMAT_DRIFT, F6 EVIDENCE_LABEL_INCONSISTENCY.
-
-D5 VERDICT_HONESTY         Every tracking issue (#NNN) the report claims to
-                           have opened is paired with a cited search-trail
-                           (queries tried + sources surfaced). No dimension
-                           row from the prior matrix silently disappeared.
-                           The skill MUST NOT have edited scoring-rubric.md
-                           or engineering-baseline.md inline — the report's
-                           "Issues opened" section is the only legitimate
-                           operationalization channel.
-                           Layer A STRICT-3 (frozen_file_breach) passes;
-                           Layer B finds zero ADDED / DROPPED / RECURSIVE_DISCIPLINE_BREACH.
-                           Ties to F7 EVAL_FALSE_PASS, F9 RECURSIVE_DISCIPLINE_BREACH,
-                           F10 NULL_VERDICT_REGRESSION. HIGHEST WEIGHT.
-
-D6 DEPGRAPH_COMPLETENESS   N/A — this skill is not a dependency-graph emitter.
-                           Auto-PASS with note.
-```
-
-Mapping Layer-A failures → rubric:
-
-- STRICT-1 (idempotent_rerun_diff) fail → D1 NO
-- STRICT-2 (date format) fail → D4 NO
-- STRICT-3 (frozen file breach) fail → D5 NO (and D1 NO via recursive-discipline reclassification)
-- STRICT-4 (dimension set drift) fail → D5 NO
-
-Mapping Layer-B critic tokens → rubric:
-
-- `RECURSIVE_DISCIPLINE_BREACH` → D1 NO + D5 NO
-- `STALE_MISS` / `FALSE_STALE` → D2 NO
-- `PARTIAL_UPDATE` → D3 NO
-- `STATE_FORMAT_DRIFT` → D4 NO
-- `ADDED` / `DROPPED` → D5 NO
-
 ### Reconciliation outcomes
 
-- **All STRICT pass + Layer B yields zero RECURSIVE_DISCIPLINE_BREACH / STALE_MISS / FALSE_STALE / PARTIAL_UPDATE / STATE_FORMAT_DRIFT / ADDED / DROPPED** → finalize the refresh. Write the report, commit the matrix update, surface follow-up issues.
-- **Any STRICT fail OR any blocking critic token** → propose targeted restorations (re-write the bad `last_audited:` value in canonical format, revert any inline mutation of frozen files, restore the dropped dimension row, pair the orphan tracking issue with its search-trail) and re-run Layers A + B on the patched state. **Hard cap: 2 iterations** (per `rules/contract-authoring.md §Small-bound carve-out`; bound = 2 → hard rule, no graceful +1). If still failing after iteration 2, surface to the user; do not auto-publish the refresh.
+- **All STRICT pass** → finalize the refresh. Write the report, commit the matrix update, surface follow-up issues.
+- **Any STRICT fail** → propose targeted restorations (re-write the bad `last_audited:` value in canonical format, revert any inline mutation of frozen files, restore the dropped dimension row, pair the orphan tracking issue with its search-trail) and re-run Layer A on the patched state. **Hard cap: 2 iterations** (per `rules/contract-authoring.md §Small-bound carve-out`; bound = 2 → hard rule, no graceful +1). If still failing after iteration 2, surface to the user; do not auto-publish the refresh.
 - **Only SOFT warnings** (`issues_vs_cited_sources` skew, `last_audited_backward_motion`) → finalize but surface the warnings in the refresh-report Summary line so the operator has a final-glance opportunity.
 
 ### Acknowledged residuals (the pipeline does NOT catch these)
 
-1. **External-dependency drift.** This skill consults `WebSearch` / `WebFetch` to discover new Tier-1 sources; the same repo state on different days can legitimately yield different mutations because the external corpus moved. D1 is relaxed to "no mutations beyond those traceable to a recorded fetch event in the refresh report"; whether the fetched arXiv index itself is stable is out of scope.
-2. **Semantic correctness of "new Tier-1 source".** Layer A and B both treat the Tier-1 filter (peer-reviewed / arXiv / foundation-lab; ≥50 citations OR ≤18 months old) as a self-contained predicate. Neither catches the case where the skill misclassified a blog-post-with-arXiv-shaped-URL as Tier-1. The fix is operator review at the issue-triage step, not the verification layer.
-3. **Cross-session state corruption.** The mid-session-freeze rule (CLAUDE.md §Hard Constraints #6) is enforced here against the refresh report's claims and against the POST matrix diff. A skill that edited a frozen file via a sub-shell command and forgot to record it in the report would pass STRICT-3 (no claim) but the breach is still real. Only the Builder agent's session-state guard surfaces this — Layer A is the diff-level downstream confirmation.
-4. **Contradiction-citation completeness.** When a Tier-1 source contradicts an existing rubric item, the skill must open a `priority: P1` issue. Layer B can verify the issue is cited; it cannot verify the contradiction itself is real (the cited paper says what the skill claims). NLI on the paper abstract is required and not implemented here.
-5. **Refresh-report ↔ tracking-issue body drift.** The report cites `#NNN` opened via `gh`; the actual issue body may have been edited after creation. Layer A and B read the report, not the live GitHub state. Stale issue bodies are invisible to the pipeline.
-
-The refresh report MUST list which residual classes apply to dimensions where the critic surfaced findings flagged `UNCERTAIN`, so the operator has one last human-glance opportunity before the matrix update lands.
+1. **External-dependency drift.** This skill consults `WebSearch` / `WebFetch` to discover new Tier-1 sources; the same repo state on different days can legitimately yield different mutations because the external corpus moved. Idempotency is relaxed to "no mutations beyond those traceable to a recorded fetch event in the refresh report".
+2. **Semantic correctness of "new Tier-1 source".** Layer A treats the Tier-1 filter (peer-reviewed / arXiv / foundation-lab; ≥50 citations OR ≤18 months old) as a self-contained predicate; misclassification of a blog-post-with-arXiv-shaped-URL is operator review at the issue-triage step.
+3. **Cross-session state corruption.** The mid-session-freeze rule (CLAUDE.md §Hard Constraints #6) is enforced against the refresh report's claims and the POST matrix diff; a skill that edited a frozen file via sub-shell and forgot to record it would pass STRICT-3 (no claim) yet still violate the rule. Builder-agent session-state guard surfaces this.
 
 ## Hard Rules
 
