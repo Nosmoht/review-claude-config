@@ -580,14 +580,13 @@ Metric coverage matrix (which failure class each STRICT row catches):
 
 ### Layer B — adversarial critic dispatch (ADDED vs DROPPED recall)
 
-**Layer-B-Gate.** Per `docs/skill-verification-architecture.md`, AUDIT
-output is structured extraction when predicates are mechanical. Layer B
-fires ONLY when ≥30% of this skill's predicates require LLM judgment
-(closed-set classification, taxonomy ambiguity, behavioral-signal
-detection). For pure-mechanical audits (file exists / regex matches /
-exit code only), SKIP Layer B and rely on Layer A + Layer C alone.
-Document the gate decision in the report frontmatter as
-`layer_b_fired: true|false (rationale)`.
+**Layer-B-Gate.** Per `docs/skill-verification-architecture.md`, AUDIT output is structured extraction when predicates are mechanical. Layer B fires when ANY of the following criteria hold for this skill's run:
+
+- (a) The skill's predicate set includes LLM-classified items (closed-set classification, taxonomy mapping, MAST-class assignment, behavioral-signal detection, free-form severity assessment).
+- (b) The skill emits free-form prose findings beyond a closed-set predicate match.
+- (c) The operator observes judgment-shaped failure modes during a dry-run (false positives traceable to a heuristic, ambiguous classifications, inter-run disagreement).
+
+For purely-mechanical audits (file-exists / regex-match / exit-code only, with no LLM-judged predicates and no free-form prose), skip Layer B and rely on Layer A + Layer C alone. Surface the gate decision in the report under a body heading: `## Layer B (fired: <criterion-met>)` or `## Layer B (skipped: predicates are mechanical)` — do NOT introduce a frontmatter `layer_b_fired` field (no schema-parity treatment defined; surface in body where context is also reported).
 
 Dispatch a fresh subagent. The critic operates on the pair `(repo-scan summary, suggestions report)`. Because every row in B is a heuristic suggestion (no FINDING-vs-SUGGESTION split — this skill is pure DISCOVER), the critic's grounding pass asks only "does this suggestion cite at least one observable signal in A?", and the recall pass asks "does A contain a clearly-recurring workflow that B did NOT surface as a suggestion?". DROPPED items here are advisory (per D6, non-blocking), but the critic still surfaces them so the user can decide whether to extend the suggestion set before persistence.
 
