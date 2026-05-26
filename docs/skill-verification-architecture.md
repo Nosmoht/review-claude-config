@@ -21,6 +21,18 @@ This document records the corrected per-output-class verification form mapping a
 | **SCAFFOLD** | 5 | **Layer A only (`make validate` + idempotency hash)** | Output class is structurally-constrained generation. `make validate` exit-0 is sufficient as the verification primitive. Adversarial-critic asks "is this a good skill?" — but the scaffolder's contract is "did you produce a syntactically valid skill matching the template," not "is this a high-quality skill" (which is `/review-skill`'s job, run separately). Quality assessment belongs in REVIEW, not SCAFFOLD. |
 | **MAINTAIN** | 7 | **Layer A only (schema + idempotency hash + freshness predicate)** | Verification predicates are deterministic: `f(f(x)) == f(x)` for idempotency, timestamp-vs-policy-bound for freshness, closed-set transition table for state-machine validity. Snapshot testing (Verify framework, Jest pattern) is the textbook fit. No judgment surface = no Layer B. |
 
+## Per-skill mapping
+
+The 5-class assignment of the 37 local skills lives in `.work/skill-verification/categorization.md` (gitignored working artifact). For clarity:
+
+- **REVIEW (11)**: review-claude-config, review-skill, review-agent, review-rule, review-hook, review-mcp-server, review-plugin, review-settings, review-claude-md, review-domain-currency, review-analytics
+- **AUDIT (9)**: audit-context-budget, audit-mcp-auth, audit-memory-hygiene, audit-policy-compliance, audit-repo, audit-trust-chain, classify-trace-errors, review-session-trace, suggest-skills
+- **APPLY (5)**: apply-review-findings, apply-skill-review-findings, apply-agent-review-findings, apply-rule-review-findings, apply-audit-findings
+- **SCAFFOLD (5)**: scaffold-skill, scaffold-agent, scaffold-rule, scaffold-mcp-server, develop-hooks
+- **MAINTAIN (7)**: check-repo-health, refresh-evidence-coverage, run-eval-cases, validate-primitive-dependencies, `.claude/skills/maintain-evidence-layer`, `.claude/skills/refresh-engineering-baseline`, `.claude/skills/sync-research-index`
+
+The categorization is by **output shape** (judgment-shaped vs deterministic), NOT by CLAUDE.md command-organization grouping. Three skills classified non-intuitively: `review-analytics` is REVIEW (trend-analysis output is judgment-shaped); `classify-trace-errors`, `review-session-trace`, `suggest-skills` are AUDIT (predicate+classification output).
+
 ## Tier-1 evidence anchors
 
 Researcher dispatch (2026-05-26, deep mode) surfaced:
@@ -33,6 +45,14 @@ Researcher dispatch (2026-05-26, deep mode) surfaced:
 - **Meta Automated Compliance Hardening (ACH)** — production deployment using mutation testing to guide LLM-based code changes; mutation-survival as deployed verification primitive at industrial scale.
 
 CheckEval / G-Eval / IFEval / FollowBench citations carried over from the original `reword-skill` design remain valid for REVIEW class but were over-applied to non-judgment-shaped classes.
+
+### URL provenance
+
+Per `~/workspace/claude-config/rules/web-research.md §URL provenance`:
+
+- **Researcher-resolved (2026-05-26 dispatch, validated per `agents/researcher.md §4`):** RefDiff, Property-Based Mutation, LLM-as-Judge Survey, PGS / FSE 2025, Chrysalis ASE 2025, Meta ACH.
+- **Orchestrator-re-verified (2026-05-26 same session):** RefDiff (arXiv:1704.01544 — confirmed paper title, authors, 100%/88% precision/recall), Property-Based Mutation (arXiv:2301.13615 — confirmed Bartocci et al. 2023), LLM-as-Judge Survey (arXiv:2411.15594 — confirmed Gu et al. 2024).
+- **Paywall-gated, researcher-verified-only:** PGS / FSE 2025 (ACM DOI 10.1145/3696630.3728702 — orchestrator WebFetch returned HTTP 403; cite text only, not URL, in downstream skill bodies).
 
 ## Lessons learned
 
