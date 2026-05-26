@@ -170,7 +170,7 @@ Without verification, this skill fails at **RECURSIVE_DISCIPLINE_BREACH** — th
 
 References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024), Beyond Consensus (NUS 2025). Per-skill design: `.work/skill-verification/maintain-template.md §Per-skill customization notes`.
 
-Per the MAINTAIN template's per-skill note: this skill produces (a) mutations to `skills/review-claude-config/references/engineering-baseline.md` + (b) paired mutations to `skills/review-claude-config/references/engineering-baseline-provenance.md`, both written only after explicit `AskUserQuestion` confirmation. Layer A idempotency must be checked with `last_refreshed` rolled back to >90 days (otherwise the freshness gate early-returns in Step 2 and the test is trivial). External-dependency drift (residual #5) applies — D1 is relaxed to "no mutations beyond those traceable to a recorded fetch event in the change report". Layer B's dominant risk is RECURSIVE_DISCIPLINE_BREACH (the skill MUST be invoked between sessions, not inside an active review session). D1 IDEMPOTENT and D3 SYNC_INTEGRITY (baseline ↔ provenance) are load-bearing; D2 carries the freshness-gate check; D6 N/A.
+Per the MAINTAIN template's per-skill note: this skill produces (a) mutations to `skills/review-claude-config/references/engineering-baseline.md` + (b) paired mutations to `skills/review-claude-config/references/engineering-baseline-provenance.md`, both written only after explicit `AskUserQuestion` confirmation. Layer A idempotency must be checked with `last_refreshed` rolled back to >90 days (otherwise the freshness gate early-returns in Step 2 and the test is trivial). External-dependency drift (residual #5) applies — D1 is relaxed to "no mutations beyond those traceable to a recorded fetch event in the change report". Layer B's dominant *blocking* risks are PARTIAL_UPDATE (sync break) and STATE_FORMAT_DRIFT (downstream parsers); RECURSIVE_DISCIPLINE_BREACH (the skill MUST be invoked between sessions, not inside an active review session) is tracked as Acknowledged Residual #1 — Layer A/B cannot fully verify session boundaries, so it surfaces as an operator-glance item, not a D-dimension failure. D1 IDEMPOTENT (purely mechanical) and D3 SYNC_INTEGRITY (baseline ↔ provenance) are load-bearing; D2 carries the freshness-gate check; D6 N/A.
 
 Snapshot the pre-run and post-run state for both files plus a deterministic re-run so subsequent steps can compare:
 
@@ -373,14 +373,15 @@ D1 IDEMPOTENT              Second run of the skill within 90 days of the
                            provenance.md (modulo whitelisted timestamp
                            fields). External-dependency drift (residual #5)
                            is acknowledged but does not excuse same-day
-                           mutation. Recursive-discipline overlay: the skill
-                           MUST early-return when invoked from inside an
-                           already-running review session — session-boundary
-                           detection is Builder-state-aware (Acknowledged
-                           Residual #1) and Layer A cannot fully enforce it.
-                           Layer A STRICT-1 (idempotent_rerun_diff) passes.
-                           Ties to F1 IDEMPOTENCY_BREAK, F9 RECURSIVE_DISCIPLINE_BREACH.
+                           mutation. Layer A STRICT-1 (idempotent_rerun_diff)
+                           passes. Ties to F1 IDEMPOTENCY_BREAK.
                            HIGHEST WEIGHT.
+                           Session-boundary / recursive-discipline breach is
+                           NOT part of this dimension — it is tracked solely
+                           as Acknowledged Residual #1 below (Builder-state-
+                           aware, not pipeline-verifiable). Keeping D1 purely
+                           mechanical avoids conflating a verifiable predicate
+                           with a known-unverifiable one.
 
 D2 FRESHNESS_RESPECT       last_refreshed <90 days in PRE leads to either
                            early-return ("Cancel" path) or explicit Force-
@@ -443,7 +444,10 @@ Mapping Layer-A failures → rubric:
 
 Mapping Layer-B critic tokens → rubric:
 
-- `RECURSIVE_DISCIPLINE_BREACH` → D1 NO (re-classifies as idempotency-of-the-discipline)
+- `RECURSIVE_DISCIPLINE_BREACH` → NOT mapped to any D-dimension. Surfaces as
+  Acknowledged Residual #1 (session-boundary breach is Builder-state-aware;
+  Layer A/B cannot fully verify it). The critic still reports the token;
+  the operator handles it at preview (Step 5).
 - `STALE_MISS` / `FALSE_STALE` → D2 NO
 - `PARTIAL_UPDATE` → D3 NO
 - `STATE_FORMAT_DRIFT` → D4 NO
@@ -452,7 +456,7 @@ Mapping Layer-B critic tokens → rubric:
 
 ### Reconciliation outcomes
 
-- **All STRICT pass + Layer B yields zero RECURSIVE_DISCIPLINE_BREACH / STALE_MISS / FALSE_STALE / PARTIAL_UPDATE / STATE_FORMAT_DRIFT / EVIDENCE_LABEL_DRIFT / ADDED / DROPPED / WEAKENED** → finalize the refresh. Write both files, render the change report, surface follow-up actions.
+- **All STRICT pass + Layer B yields zero STALE_MISS / FALSE_STALE / PARTIAL_UPDATE / STATE_FORMAT_DRIFT / EVIDENCE_LABEL_DRIFT / ADDED / DROPPED / WEAKENED** → finalize the refresh. Write both files, render the change report, surface follow-up actions. `RECURSIVE_DISCIPLINE_BREACH` is tracked separately as Acknowledged Residual #1 — if the critic raises it, surface to the operator in the change report (do not auto-finalize without an explicit operator acknowledgement) but do not treat it as a blocking D-dimension failure.
 - **Any STRICT fail OR any blocking critic token** → propose targeted restorations (re-write the bad `last_refreshed:` in canonical format, add the missing provenance row for the unpaired technique, restore the dropped section heading, cite the orphan source, revert the weakened evidence-class label) and re-run Layers A + B on the patched state. **Hard cap: 2 iterations** (per `rules/contract-authoring.md §Small-bound carve-out`; bound = 2 → hard rule, no graceful +1). If still failing after iteration 2, surface to the user; do not auto-publish the refresh.
 - **Only SOFT warnings** (`added_techniques_vs_cited_sources` skew, `last_refreshed_backward_motion`) → finalize but surface the warnings in the change-report Summary so the operator gets a final-glance opportunity.
 
