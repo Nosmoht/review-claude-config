@@ -337,8 +337,12 @@ row("STRICT", "hm_coverage",
 out_of_scope = [f for f in diff_files if allowed_paths and f not in allowed_paths
                 and not f.endswith(".findings.json") and not f.endswith("-review-skill.md")]
 row("STRICT", "path_scope", not out_of_scope, f"out_of_scope={out_of_scope}")
-# SKILL.md-specific invariants (F3): frontmatter, line budget, allowed-tools subset
+# SKILL.md-specific invariants (F3): frontmatter, line budget
+# Note: allowed_tools_unused is checked as SOFT (warn-only) below — it can
+# false-fail for skills that declare a tool used implicitly via Bash
+# invocation (e.g., Glob referenced as a verb but not as a bare token).
 violations = []
+soft_tool_warnings = []
 TOOLS = {"Read","Edit","Write","Glob","Grep","Bash","WebSearch","WebFetch","Agent"}
 for f in diff_files:
     if not f.endswith("SKILL.md"): continue
@@ -351,8 +355,9 @@ for f in diff_files:
         declared = {t.strip() for t in m_at.group(1).split(",")} & TOOLS
         body_tools = {t for t in TOOLS if re.search(rf"\b{t}\b", text)}
         leftover = declared - body_tools
-        if leftover: violations.append(f"{f}=allowed_tools_unused={sorted(leftover)}")
+        if leftover: soft_tool_warnings.append(f"{f}=allowed_tools_unused={sorted(leftover)}")
 row("STRICT", "invariants", not violations, f"violations={violations}")
+row("SOFT", "allowed_tools_unused", not soft_tool_warnings, f"warnings={soft_tool_warnings}")
 unresolved_high = [f for f in findings if f.get("severity") == "High"
                    and f.get("id") not in applied and f.get("id") not in claimed["manual_only"]]
 applied_low = [f for f in findings if f.get("severity") == "Low" and f.get("id") in applied]
@@ -431,10 +436,13 @@ D2 SCOPE_FIDELITY         Every diff hunk maps to a `current` block in the repor
 
 D3 INVARIANT_PRESERVATION Each modified SKILL.md still passes: frontmatter has
                           `name` + `description`; body line count ≤ 500;
-                          `allowed-tools` (if declared) is a subset of tool names
-                          referenced in the body; existing Hard Rules intact;
-                          confirmation gates, stop conditions, and error-handling
-                          paths not weakened or removed. (F3, F7)
+                          existing Hard Rules intact; confirmation gates, stop
+                          conditions, and error-handling paths not weakened or
+                          removed. Note: `allowed-tools` subset coverage is
+                          checked as a SOFT warning in Layer A
+                          (`allowed_tools_unused`), not a STRICT D3 gate —
+                          tools can be referenced implicitly (e.g., via Bash
+                          invocation) without appearing as a bare token. (F3, F7)
 
 D4 IDEMPOTENCY            Re-running this apply skill in dry-run mode on the same
                           report against the now-mutated tree produces an empty
