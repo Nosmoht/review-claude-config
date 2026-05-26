@@ -425,6 +425,313 @@ Then present next steps via AskUserQuestion (header: "What's next?"):
 
 On "Scaffold a suggested skill": ask which skill from the suggestions, then invoke `/scaffold-skill`. On "Review existing skills": invoke `/review-claude-config` with the target folder. On "Done": acknowledge and stop.
 
+## Quality measurement (mandatory between Phase 4 Step 1 and Step 2)
+
+Without verification, this skill fails at **F7 — Discovery noise** (a candidate skill emits with no concrete recurring signal in the target repo, or duplicates an existing skill, polluting the action queue) and at **F1 — Predicate incompleteness** (a clearly-recurring workflow — e.g. `make deploy` appearing in 5+ CI configs — is missed by both Layer 1 table matching and Layer 2 open reasoning, leaving a gap). `suggest-skills` is pure DISCOVER-class: every emitted row is a heuristic candidate, not a predicate-based finding. Per category template Acknowledged residual #4, **D6 DISCOVERY_PRECISION is REPORTED, not blocking** — precision is feedback-loop-dependent (the user accepts/declines per suggestion downstream via `/scaffold-skill`), and the pipeline cannot close that loop in-session. Layer A STRICT-checks emission-gate completeness (`evidence_class`, `confidence`, extraction-criteria fields are present per row); Layer B distinguishes ADDED (suggestion duplicates an existing skill, or has no signal sources) from DROPPED (a clearly-recurring repo signal not surfaced); Layer C reports D6 with a footnote, never blocks on it.
+
+Run the three layers BEFORE Phase 4 Step 2 (Persist Report). Treat the unsigned report (as presented in Step 1) written to a tempfile as `$REPORT`; treat the analyzed target folder (the value of `$ARGUMENTS` resolved in Phase 1) as `$TARGET`. Sensitive-content sweeps (hardcoded user-home prefixes, RFC1918 IPs) are NOT in Layer A — those are enforced at Write time by the `block-sensitive-content.sh` PreToolUse hook, which is the canonical defense; duplicating the regex here would itself violate the doc-content constraint.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024), Beyond Consensus (NUS 2025), `skills/review-claude-config/references/evidence-contract.md` (canonical evidence-class vocabulary used in D6), `skills/review-claude-config/references/signal-catalog.md` (catalog-completeness reasoning for D5).
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run on the produced report file. Any non-zero `STRICT` row → abort and report to user; any `SOFT` row delta → log warning, surface in output footnote, do not auto-persist.
+
+```bash
+python3 - "$REPORT" "$TARGET" <<'PY'
+import re, sys, os
+report_path = sys.argv[1]
+target_path = sys.argv[2] if len(sys.argv) > 2 else None
+
+with open(report_path) as f: t = f.read()
+
+# parse frontmatter
+fm_match = re.match(r"^---\n(.*?)\n---\n", t, re.S)
+if not fm_match:
+    print("FAIL STRICT frontmatter_present: no YAML frontmatter detected")
+    sys.exit(1)
+fm = fm_match.group(1)
+body = t[fm_match.end():]
+
+REQUIRED_FM = ["generated_by", "schema_version", "date", "target",
+               "repo_type", "existing_skills", "suggestions"]
+missing_fm = [k for k in REQUIRED_FM if not re.search(rf"^{k}:", fm, re.M)]
+
+schema_v_m = re.search(r"^schema_version:\s*(\d+)", fm, re.M)
+schema_v = int(schema_v_m.group(1)) if schema_v_m else None
+
+EVIDENCE_CLASSES = {"Proven result", "Engineering guidance",
+                    "Repo default", "Low-evidence area"}
+CONFIDENCES = {"High", "Medium", "Low"}
+PRIORITIES = {"High", "Medium", "Low"}
+CRITERIA   = {"Recurrence", "Verification",
+              "Non-obviousness", "Generalizability"}
+REPO_TYPES = {"Application", "Skills-Config", "Mixed"}
+
+# Parse suggestion blocks. Each suggestion starts with `### N. <name> (Priority:`
+sugg_blocks = re.split(r"^###\s+\d+\.\s+", body, flags=re.M)[1:]
+
+bad_ec, bad_conf, bad_prio, bad_crit = [], [], [], []
+for i, blk in enumerate(sugg_blocks, 1):
+    head = blk.split("\n", 1)[0]
+    # Priority in heading
+    pm = re.search(r"Priority:\s*([A-Za-z]+)", head)
+    if not pm or pm.group(1) not in PRIORITIES:
+        bad_prio.append(f"sugg#{i}")
+    # Evidence Class field
+    ecm = re.search(r"\*\*Evidence Class:\*\*\s*([^\n]+)", blk)
+    if not ecm or not any(ec in ecm.group(1) for ec in EVIDENCE_CLASSES):
+        bad_ec.append(f"sugg#{i}")
+    # Confidence field
+    cm = re.search(r"\*\*Confidence:\*\*\s*([A-Za-z]+)", blk)
+    if not cm or cm.group(1) not in CONFIDENCES:
+        bad_conf.append(f"sugg#{i}")
+    # Extraction criteria gate (>=3 of 4)
+    passed_crit = sum(1 for c in CRITERIA
+                      if re.search(rf"{re.escape(c)}\b.*?PASS", blk))
+    if passed_crit < 3:
+        bad_crit.append(f"sugg#{i}:passed={passed_crit}")
+
+# repo_type membership (frontmatter)
+rt_m = re.search(r"^repo_type:\s*([A-Za-z\-]+)", fm, re.M)
+repo_type_ok = bool(rt_m) and rt_m.group(1) in REPO_TYPES
+
+# suggestions[] count parity vs body block count
+fm_sugg_names = re.findall(r"^\s*-\s+name:\s*([^\n]+)", fm, re.M)
+fm_n = len(fm_sugg_names)
+body_n = len(sugg_blocks)
+
+# Skeleton starting-point disclaimer presence
+skeleton_blocks = re.findall(r"```yaml[\s\S]*?```", body)
+missing_disclaimer = sum(
+    1 for s in skeleton_blocks
+    if "starting-point skeleton" not in s
+    and "starting point" not in s.lower()
+)
+
+# Determinism (SOFT): if env var set, diff suggestion-name set
+det_path = os.environ.get("DETERMINISM_RUN_2_REPORT")
+det_diff = None
+if det_path and os.path.exists(det_path):
+    with open(det_path) as f2: t2 = f2.read()
+    names1 = set(re.findall(r"^###\s+\d+\.\s+([\w\-]+)", body, re.M))
+    body2 = t2.split("---\n", 2)[-1] if t2.startswith("---") else t2
+    names2 = set(re.findall(r"^###\s+\d+\.\s+([\w\-]+)", body2, re.M))
+    det_diff = sorted(names1 ^ names2)
+
+rows = []
+def add(sev, name, val, ok, note=""):
+    flag = "" if ok else (" FAIL" if sev == "STRICT" else " warn")
+    rows.append((sev, name, val, flag, note))
+
+add("STRICT", "frontmatter_present",        "yes", bool(fm_match))
+add("STRICT", "required_frontmatter_keys",  f"missing={missing_fm}",
+    len(missing_fm) == 0)
+add("STRICT", "schema_version_pinned",      f"v{schema_v}", schema_v == 1,
+    note="bump invalidates analytics consumers")
+add("STRICT", "repo_type_in_vocab",         str(rt_m.group(1) if rt_m else None),
+    repo_type_ok, note="closed set: Application/Skills-Config/Mixed")
+add("STRICT", "suggestion_evidence_class",  f"missing={bad_ec}",
+    len(bad_ec) == 0, note="every row needs an evidence_class")
+add("STRICT", "suggestion_confidence",      f"missing={bad_conf}",
+    len(bad_conf) == 0, note="every row needs a confidence")
+add("STRICT", "suggestion_priority_valid",  f"bad={bad_prio}",
+    len(bad_prio) == 0)
+add("STRICT", "extraction_criteria_gate",   f"under_3={bad_crit}",
+    len(bad_crit) == 0, note=">=3 of 4 PASS required per Hard Rules")
+add("STRICT", "skeleton_disclaimer",        f"missing_in={missing_disclaimer}",
+    missing_disclaimer == 0,
+    note="starting-point disclaimer required per Hard Rules")
+add("SOFT",   "suggestion_count_parity",    f"fm={fm_n} body={body_n}",
+    fm_n == body_n, note="frontmatter suggestions[] count vs body block count")
+status_present = bool(re.search(r"^#+\s+Status\b", body, re.M))
+add("SOFT",   "status_heading_present",     str(status_present), True,
+    note="suggest-skills uses priority tiers, no Status enum")
+if det_diff is not None:
+    add("SOFT", "determinism_suggestion_set", f"symmetric_diff={len(det_diff)}",
+        len(det_diff) == 0,
+        note="LLM-judged candidates may shift across runs")
+
+fail = 0
+print(f"{'severity':8} {'metric':32} {'value':30} {'flag':>6}  note")
+for sev, name, val, flag, note in rows:
+    if "FAIL" in flag: fail += 1
+    print(f"{sev:8} {name:32} {str(val)[:30]:30} {flag:>6}  {note}")
+sys.exit(1 if fail else 0)
+PY
+```
+
+Metric coverage matrix (which failure class each STRICT row catches):
+
+| Layer-A row                       | Catches                       |
+|-----------------------------------|-------------------------------|
+| `frontmatter_present`             | F5 (report-shape break)       |
+| `required_frontmatter_keys`       | F5                            |
+| `schema_version_pinned`           | F10                           |
+| `repo_type_in_vocab`              | F5 (enum drift)               |
+| `suggestion_evidence_class`       | F7 (D6 emission gate)         |
+| `suggestion_confidence`           | F7 (D6 emission gate)         |
+| `suggestion_priority_valid`       | F5 (priority-tier drift)      |
+| `extraction_criteria_gate`        | F7 (gate enforcement)         |
+| `skeleton_disclaimer`             | F5 (hard-rule conformance)    |
+| `suggestion_count_parity` (SOFT)  | F5 (frontmatter↔body drift)   |
+| `status_heading_present` (SOFT)   | per template residual         |
+| `determinism_suggestion_set` SOFT | F6 (LLM judgment variance)    |
+
+### Layer B — adversarial critic dispatch (ADDED vs DROPPED recall)
+
+Dispatch a fresh subagent. The critic operates on the pair `(repo-scan summary, suggestions report)`. Because every row in B is a heuristic suggestion (no FINDING-vs-SUGGESTION split — this skill is pure DISCOVER), the critic's grounding pass asks only "does this suggestion cite at least one observable signal in A?", and the recall pass asks "does A contain a clearly-recurring workflow that B did NOT surface as a suggestion?". DROPPED items here are advisory (per D6, non-blocking), but the critic still surfaces them so the user can decide whether to extend the suggestion set before persistence.
+
+```
+Agent({
+  description: "Blind suggest-skills critic (ADDED/DROPPED recall)",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind discovery-critic. Two artifacts are attached:\n" +
+    "\n" +
+    "A: a repo-scan summary from the target repository (file tree + " +
+    "CLAUDE.md excerpt + toolchain list + .github/workflows + Makefile " +
+    "targets + existing-skill inventory under .claude/skills/ and " +
+    ".claude/agents/).\n" +
+    "B: a skill-suggestions report containing N suggestion blocks, each " +
+    "with: name, priority (High/Medium/Low), score, evidence_class, " +
+    "confidence, signal_sources, extraction-criteria pass/fail, " +
+    "rationale, skeleton SKILL.md.\n" +
+    "\n" +
+    "For EACH suggestion block in B:\n" +
+    "  GROUNDED — the signal_sources cite a passage or file in A that " +
+    "an alert reader would recognize as a recurring workflow signal, AND " +
+    "no existing skill in A's .claude/skills/ inventory already covers " +
+    "the same workflow.\n" +
+    "  ADDED — the suggestion either (i) cites a signal not present in A, " +
+    "or (ii) duplicates an existing skill in A's inventory (>60% " +
+    "workflow overlap per the skill's documented coverage), or (iii) " +
+    "describes a single-command operation that fails the Non-obviousness " +
+    "gate.\n" +
+    "\n" +
+    "Separately, scan A for clearly-recurring workflow signals B did " +
+    "NOT surface as a suggestion. Use the signal-catalog categories " +
+    "(documentation workflow / tech-stack lifecycle / CI-CD / git " +
+    "conventions / quality-config) to recognize candidates. If you find " +
+    "a passage in A that meets >=3 of 4 extraction criteria " +
+    "(Recurrence, Verification, Non-obviousness, Generalizability) and " +
+    "B does not propose a corresponding suggestion, classify as:\n" +
+    "  DROPPED — recurring workflow that should have been suggested " +
+    "(advisory only — D6 reports, does not block).\n" +
+    "\n" +
+    "Report ONE block per item. Format:\n" +
+    "  [GROUNDED|ADDED|DROPPED]: <suggestion-name or 'no-suggestion'>\n" +
+    "  evidence_in_A: '<short quote or path>'\n" +
+    "  evidence_in_B: '<short quote or suggestion-name>'\n" +
+    "  reason: <=2 sentences\n" +
+    "\n" +
+    "Do not rate report quality. Do not praise coverage. Report under " +
+    "600 words.\n" +
+    "\n" +
+    "A:\n<paste repo-scan summary; for large repos paste top-level + " +
+    "first-level dirs + .github/workflows + Makefile + CLAUDE.md first " +
+    "80 lines + existing-skill inventory>\n" +
+    "\n" +
+    "B:\n<paste $REPORT contents>"
+})
+```
+
+**Order-swap mandate**: dispatch a second time with artifact labels reversed (A=report, B=repo-scan-summary). Take the union of items flagged across both runs (de-dup by `suggestion-name × evidence_in_A`). Position bias is the dominant pairwise-judge artifact (Shi et al. 2024 arXiv:2406.07791).
+
+Output vocabulary maps to Layer C as: `GROUNDED` → no impact; `ADDED` → D2 NO; `DROPPED` → D5 reported (non-blocking per D6 carve-out). `WEAKENED` is not used for this skill — priority/score recalibration is a Layer A gate, not a critic judgment.
+
+### Layer C — binary rubric (6 yes/no dimensions)
+
+```
+D1 FRONTMATTER_CONFORMANT     Frontmatter declares every required key
+                              (generated_by, schema_version, date,
+                              target, repo_type, existing_skills,
+                              suggestions[]) AND schema_version is the
+                              pinned value AND repo_type belongs to the
+                              closed set {Application, Skills-Config,
+                              Mixed}. The skill emits no `### Status`
+                              heading by design (priority tiers
+                              substitute); D1 covers frontmatter shape
+                              only. Catches F5, F10.
+
+D2 EVIDENCE_GROUNDED          Every suggestion's signal_sources cite at
+                              least one observable passage or file in
+                              $TARGET (no Layer-B ADDED items survive),
+                              AND no suggestion duplicates an existing
+                              skill from Category B inventory at >60%
+                              overlap. Catches F2, F9, plus the
+                              duplicate-skill case from Phase 2 Step 0.
+
+D3 TAXONOMY_DISJOINT          No two suggestions cite identical
+                              signal_sources AND name an overlapping
+                              workflow span; suggestion names are
+                              unique across the report. Trivially YES
+                              when only one suggestion fires per
+                              workflow signal. Catches F4 (per-skill
+                              variant: same evidence span surfacing as
+                              two candidates).
+
+D4 PRIORITY_CALIBRATED        Each suggestion's priority (High/Medium/
+                              Low) matches the score band declared in
+                              Phase 3 Step 2 (7-9 = High, 4-6 = Medium,
+                              1-3 = Low) AND the score value is the
+                              arithmetic sum of Signal+Impact+
+                              Feasibility (1-3 each, max 9). Catches
+                              F8.
+
+D5 RULE_CATALOG_COMPLETENESS  Layer-B critic surfaced ZERO ADDED
+                              items (every suggestion cites a real
+                              signal AND does not duplicate existing
+                              coverage). DROPPED items are surfaced
+                              but routed to D6 per the discovery-class
+                              carve-out — D5 itself does not block on
+                              DROPPED for this skill. Catches F1, F3 at
+                              the emission gate only.
+
+D6 DISCOVERY_PRECISION        Every suggestion row cites an
+                              `evidence_class` from the canonical four-
+                              token set (Proven result, Engineering
+                              guidance, Repo default, Low-evidence
+                              area) AND a `confidence` from {High,
+                              Medium, Low} AND passes >=3 of 4
+                              extraction criteria (Recurrence,
+                              Verification, Non-obviousness,
+                              Generalizability). Any DROPPED items
+                              from Layer-B are appended to the report
+                              as a footnote ("Layer-B suggested N
+                              additional candidates not in this
+                              report") but D6 stays YES — discovery
+                              precision is REPORTED, NOT blocking, per
+                              category template Acknowledged residual
+                              #4. Catches F7 (emission-time only).
+```
+
+Layer-A row → Dimension mapping:
+- `frontmatter_present`, `required_frontmatter_keys`, `schema_version_pinned`, `repo_type_in_vocab` → D1
+- `suggestion_evidence_class`, `suggestion_confidence`, `extraction_criteria_gate` → D6
+- `suggestion_priority_valid` → D4
+- `skeleton_disclaimer` → D1 (hard-rule conformance)
+
+Layer-B item → Dimension mapping:
+- `ADDED` → D2 NO (signal absent or duplicates existing skill)
+- `DROPPED` → D6 footnote (advisory only, non-blocking)
+- `GROUNDED` → no impact
+
+### Reconciliation outcomes
+
+- **All STRICT pass + zero ADDED** → proceed to Phase 4 Step 2 (Persist Report). If DROPPED items exist, append them as a footnote ("Layer-B suggested N additional candidates not in this report") before persistence.
+- **Any STRICT fail OR any ADDED** → patch inline: drop suggestions that duplicate existing skills, drop suggestions with no observable signal in $TARGET, restore missing fields. Re-run Layer A on the patched report. Max 2 iterations. If still failing after iteration 2, surface to user with the full ledger and DO NOT persist the report.
+- **Only SOFT warnings** (e.g. determinism symmetric-diff non-empty, suggestion-count parity drift, DROPPED items at D6) → append a footnote ("Discovery precision: Layer-B suggested N candidates not in this report; suggestion set may vary across runs") and proceed.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **Discovery-class precision feedback latency** — D6 only checks emission-time fields (evidence_class, confidence, extraction-criteria pass count). The user-rejection rate that defines F7 requires post-acceptance feedback (the maintainer accepts/declines per suggestion via `/scaffold-skill`); the pipeline cannot close the loop in-session. This is the load-bearing residual for `suggest-skills` per category template Acknowledged residual #4.
+2. **Cross-repo pattern correlation** — the pipeline judges one report against one target repo. A skill candidate visible only across multiple audited repos (e.g., a `deploy-validator` pattern detectable only when 10 repo audits are co-analyzed) escapes both Layers A and B. Mitigation: cross-repo analysis is `/review-analytics`'s remit.
+3. **Heuristic extraction-criteria calibration** — the 3/4 gate (Recurrence, Verification, Non-obviousness, Generalizability) is a repo-policy heuristic, not a benchmark-settled filter. D6 checks that each suggestion exposes its gate-pass evidence; it does not validate that the gate itself maps to long-run user-acceptance rate.
+4. **Repo-scan completeness** — Layer B's critic sees a summarized scan of the target repo (file tree + sampled top files + CLAUDE.md excerpt + existing-skill inventory), not the full repo content. A DROPPED workflow hidden in a file the scan summary did not include cannot be surfaced. Mitigation: Phase 1's scan agent enforces completion criteria per Category A-F; gaps surface as "No results" rows visible to the critic.
+
+The Output report MUST list which residual classes apply when the critic surfaces DROPPED items or when SOFT determinism warnings fire, so the user has one last human-glance opportunity.
+
 ## Hard Rules
 
 - **Read-only on target repository.** Never modify any existing file in the analyzed repository. The only file this skill writes is the suggestions report at `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-suggest-skills.md`.
