@@ -291,6 +291,15 @@ If exit non-zero → STOP, do not proceed to Phase 4 persistence. Report failure
 
 ### Layer B — adversarial critic dispatch (blind, recall-framed)
 
+**Layer-B-Gate.** Per `docs/skill-verification-architecture.md`, AUDIT
+output is structured extraction when predicates are mechanical. Layer B
+fires ONLY when ≥30% of this skill's predicates require LLM judgment
+(closed-set classification, taxonomy ambiguity, behavioral-signal
+detection). For pure-mechanical audits (file exists / regex matches /
+exit code only), SKIP Layer B and rely on Layer A + Layer C alone.
+Document the gate decision in the report frontmatter as
+`layer_b_fired: true|false (rationale)`.
+
 Dispatch a fresh subagent with the single task of finding tool calls the audit MISSED or rules that were ADDED without justification. **Seed a known-edge-case trace** (a `Bash("npx <wrapper> kubectl delete …")` entry, or `Bash("sudo …")`, or an unknown MCP tool defaulted to L4) and verify the critic surfaces the DROPPED rule firing on the inner action.
 
 ```

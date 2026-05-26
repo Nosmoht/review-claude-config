@@ -580,6 +580,15 @@ Metric coverage matrix (which failure class each STRICT row catches):
 
 ### Layer B — adversarial critic dispatch (ADDED vs DROPPED recall)
 
+**Layer-B-Gate.** Per `docs/skill-verification-architecture.md`, AUDIT
+output is structured extraction when predicates are mechanical. Layer B
+fires ONLY when ≥30% of this skill's predicates require LLM judgment
+(closed-set classification, taxonomy ambiguity, behavioral-signal
+detection). For pure-mechanical audits (file exists / regex matches /
+exit code only), SKIP Layer B and rely on Layer A + Layer C alone.
+Document the gate decision in the report frontmatter as
+`layer_b_fired: true|false (rationale)`.
+
 Dispatch a fresh subagent. The critic operates on the pair `(repo-scan summary, suggestions report)`. Because every row in B is a heuristic suggestion (no FINDING-vs-SUGGESTION split — this skill is pure DISCOVER), the critic's grounding pass asks only "does this suggestion cite at least one observable signal in A?", and the recall pass asks "does A contain a clearly-recurring workflow that B did NOT surface as a suggestion?". DROPPED items here are advisory (per D6, non-blocking), but the critic still surfaces them so the user can decide whether to extend the suggestion set before persistence.
 
 ```

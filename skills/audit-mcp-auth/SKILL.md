@@ -202,6 +202,15 @@ If exit non-zero → STOP, do not persist. Report failures, propose specific fix
 
 ### Layer B — adversarial critic dispatch (blind, recall-framed)
 
+**Layer-B-Gate.** Per `docs/skill-verification-architecture.md`, AUDIT
+output is structured extraction when predicates are mechanical. Layer B
+fires ONLY when ≥30% of this skill's predicates require LLM judgment
+(closed-set classification, taxonomy ambiguity, behavioral-signal
+detection). For pure-mechanical audits (file exists / regex matches /
+exit code only), SKIP Layer B and rely on Layer A + Layer C alone.
+Document the gate decision in the report frontmatter as
+`layer_b_fired: true|false (rationale)`.
+
 The critic compares the produced report against a multi-source target assemblage: `sw_vers -productVersion` output, the `security find-internet-password` / `find-generic-password` listing for the `Claude Code-credentials` service, and the active-session count from `ps -ax`. Its job is to find KCH-/SES- firings the audit MISSED or that it ADDED without grounded evidence. Adversarial framing — not "rate quality" — is the layer that catches false positives and false negatives (see template F2, F3).
 
 ```

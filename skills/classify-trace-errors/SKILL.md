@@ -288,6 +288,15 @@ Metric coverage matrix (which failure class each STRICT row catches):
 
 ### Layer B — adversarial critic dispatch (blind, recall-framed)
 
+**Layer-B-Gate.** Per `docs/skill-verification-architecture.md`, AUDIT
+output is structured extraction when predicates are mechanical. Layer B
+fires ONLY when ≥30% of this skill's predicates require LLM judgment
+(closed-set classification, taxonomy ambiguity, behavioral-signal
+detection). For pure-mechanical audits (file exists / regex matches /
+exit code only), SKIP Layer B and rely on Layer A + Layer C alone.
+Document the gate decision in the report frontmatter as
+`layer_b_fired: true|false (rationale)`.
+
 Dispatch a fresh subagent. The critic operates on the pair `(trace JSONL, classification report)`. The FM-1.1..FM-3.3 catalog is closed (per `references/failure-taxonomy.md`); the critic's job is to find rule firings the classifier MISSED or that it ADDED without justification, with explicit attention to the FM-1.4 (Context loss) vs FM-2.6 (Reasoning-Action mismatch) boundary case where the same evidence can plausibly map to either class.
 
 ```

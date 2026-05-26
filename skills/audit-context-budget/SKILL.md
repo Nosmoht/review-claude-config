@@ -381,6 +381,15 @@ PY
 
 ### Layer B — adversarial critic dispatch (blind, recall-framed)
 
+**Layer-B-Gate.** Per `docs/skill-verification-architecture.md`, AUDIT
+output is structured extraction when predicates are mechanical. Layer B
+fires ONLY when ≥30% of this skill's predicates require LLM judgment
+(closed-set classification, taxonomy ambiguity, behavioral-signal
+detection). For pure-mechanical audits (file exists / regex matches /
+exit code only), SKIP Layer B and rely on Layer A + Layer C alone.
+Document the gate decision in the report frontmatter as
+`layer_b_fired: true|false (rationale)`.
+
 Dispatch a fresh subagent whose single task is to find Component Breakdown rows the audit MISSED (`DROPPED`) and rows it ADDED without evidence in the target assemblage.
 
 ```

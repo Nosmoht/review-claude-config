@@ -571,6 +571,15 @@ Metric coverage matrix (which failure class each STRICT row catches):
 
 ### Layer B — adversarial critic dispatch (FINDING vs SUGGESTION split)
 
+**Layer-B-Gate.** Per `docs/skill-verification-architecture.md`, AUDIT
+output is structured extraction when predicates are mechanical. Layer B
+fires ONLY when ≥30% of this skill's predicates require LLM judgment
+(closed-set classification, taxonomy ambiguity, behavioral-signal
+detection). For pure-mechanical audits (file exists / regex matches /
+exit code only), SKIP Layer B and rely on Layer A + Layer C alone.
+Document the gate decision in the report frontmatter as
+`layer_b_fired: true|false (rationale)`.
+
 Dispatch a fresh subagent. The critic must distinguish FINDING (verifiable against the target repo's deterministic state — e.g. a missing CLAUDE.md, a file >2000 LOC, a sprawl score >100) from SUGGESTION (heuristic — e.g. "a deploy-validator skill would be useful because CI has deploy steps"). FINDING rows are checked for grounding; SUGGESTION rows are checked for emission-gate completeness only (evidence_class + confidence + non-empty evidence cell).
 
 ```
