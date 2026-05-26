@@ -284,6 +284,209 @@ Present next steps via AskUserQuestion (header: "What's next?"):
 
 On "Verify improvements": invoke `/review-agent` with the agent path. On "Apply findings from another report": ask for the report path, then invoke `/apply-agent-review-findings`. On "Done": acknowledge and stop.
 
+## Quality measurement (mandatory before commit)
+
+Without verification, this skill fails at **regression / invariant break / A1-violation** — concretely: a Medium finding silently dropped without a Skipped row; an edit that rewrites the `tools:`/`allowed-tools:` frontmatter while addressing an unrelated prose finding (tool-grant drift); or an edit that introduces a peer-agent name into the agent body, violating `rules/agent-antipatterns.md §A1` (F1 / F3 / F7 per `.work/skill-verification/apply-template.md`). The literature converges on a three-layer pipeline; any one layer alone is insufficient.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024), Beyond Consensus (NUS 2025), Invalidator (arXiv:2301.01113).
+
+Before any commit, the apply skill captures `PRE_SHA="$(git rev-parse HEAD)"` (recorded into `.work/<task-id>/pre-apply-sha`) and emits a result manifest `claimed.json` of the shape `{"applied":[...], "skipped":[...], "manual_only":[...], "policy_decisions":{<finding_id>: true|false}, "tool_grant_finding":bool}` so the layers below can read both deterministically. The `tool_grant_finding` flag is `true` iff at least one applied finding explicitly addresses the agent's tool-grant declaration (`tools:` or `allowed-tools:` frontmatter); otherwise `false` and Layer A asserts those frontmatter lines are byte-identical pre/post-edit.
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run on the post-apply working tree. Any `STRICT` row FAIL → abort and report; any `SOFT` row delta → log warning, surface to user, do not auto-commit.
+
+```bash
+PRE_SHA="$(cat .work/<task-id>/pre-apply-sha)"
+REPORT="$1"   # *-review-agent.md report
+CLAIMED="$2"  # claimed.json {applied, skipped, manual_only, policy_decisions, tool_grant_finding}
+
+python3 - "$REPORT" "$PRE_SHA" "$CLAIMED" <<'PY'
+import json, os, re, subprocess, sys
+report_path, pre_sha, claimed_path = sys.argv[1], sys.argv[2], sys.argv[3]
+sidecar = report_path.removesuffix(".md") + ".findings.json"
+findings = []
+if os.path.exists(sidecar):
+    findings = json.load(open(sidecar)).get("findings", [])
+else:
+    body = open(report_path).read()
+    for m in re.finditer(r"^#{3,4}\s+\d+\.\s+(.+?)\s+\(Impact:\s+(High|Medium|Low)", body, re.M):
+        findings.append({"id": m.group(1)[:60], "severity": m.group(2)})
+claimed = json.load(open(claimed_path))
+applied = set(claimed["applied"])
+body = open(report_path).read()
+fm = re.match(r"---\n(.*?)\n---", body, re.S)
+allowed_paths = set(re.findall(r"-\s+path:\s+([^\s]+)", fm.group(1))) if fm else set()
+diff_files = [f for f in subprocess.check_output(
+    ["git", "diff", "--name-only", pre_sha], text=True).strip().split("\n") if f]
+report_committed = subprocess.run(
+    ["git", "log", "--oneline", "--all", "--", report_path],
+    capture_output=True, text=True).stdout.strip()
+# Enumerate peer-agent basenames (A1): every <name>.md under agents/ and .claude/agents/ except self.
+peer_names = set()
+for root in ("agents", ".claude/agents"):
+    if os.path.isdir(root):
+        for n in os.listdir(root):
+            if n.endswith(".md"):
+                peer_names.add(n[:-3])
+rows = []
+def row(sev, name, ok, detail=""): rows.append((sev, name, ok, detail))
+hm = [f for f in findings if f.get("severity") in ("High", "Medium")]
+applied_hm = [f for f in hm if f.get("id") in applied]
+row("STRICT", "hm_coverage",
+    len(applied_hm) + len(claimed["manual_only"]) + len(claimed["skipped"]) == len(hm),
+    f"hm={len(hm)} applied={len(applied_hm)} manual={len(claimed['manual_only'])} skipped={len(claimed['skipped'])}")
+out_of_scope = [f for f in diff_files if allowed_paths and f not in allowed_paths
+                and not f.endswith(".findings.json") and not f.endswith("-review-agent.md")]
+row("STRICT", "path_scope", not out_of_scope, f"out_of_scope={out_of_scope}")
+# Agent-specific invariants (F3): frontmatter, A1 no-peer-naming, tool-grant byte-identity.
+violations = []
+tool_grant_finding = bool(claimed.get("tool_grant_finding", False))
+for f in diff_files:
+    if not (f.startswith("agents/") or f.startswith(".claude/agents/")) or not f.endswith(".md"):
+        continue
+    text = open(f).read()
+    if not re.search(r"^name:\s+\S+", text, re.M) or not re.search(r"^description:\s*[>|]?\s*\S", text, re.M):
+        violations.append(f"{f}=frontmatter-missing-name-or-description")
+    self_name = os.path.basename(f)[:-3]
+    # A1: scan agent body (post-frontmatter) for peer-agent names; any non-self match is a violation.
+    parts = re.split(r"^---\s*$", text, maxsplit=2, flags=re.M)
+    agent_body = parts[2] if len(parts) >= 3 else text
+    for peer in peer_names - {self_name}:
+        if re.search(rf"\b{re.escape(peer)}\b", agent_body):
+            violations.append(f"{f}=A1-peer-named:{peer}")
+    # Tool-grant byte-identity unless an applied finding explicitly addresses tool grants.
+    if not tool_grant_finding:
+        pre_text = subprocess.run(["git", "show", f"{pre_sha}:{f}"],
+                                  capture_output=True, text=True).stdout
+        for field in ("tools", "allowed-tools"):
+            pre_line = re.search(rf"^{field}:.*$", pre_text, re.M)
+            post_line = re.search(rf"^{field}:.*$", text, re.M)
+            if (pre_line.group(0) if pre_line else None) != (post_line.group(0) if post_line else None):
+                violations.append(f"{f}=tool-grant-drift:{field}")
+row("STRICT", "invariants", not violations, f"violations={violations}")
+unresolved_high = [f for f in findings if f.get("severity") == "High"
+                   and f.get("id") not in applied and f.get("id") not in claimed["manual_only"]]
+applied_low = [f for f in findings if f.get("severity") == "Low" and f.get("id") in applied]
+row("STRICT", "severity_order", not (unresolved_high and applied_low),
+    f"unresolved_high={len(unresolved_high)} applied_low={len(applied_low)}")
+row("STRICT", "report_committed", bool(report_committed), f"log='{report_committed[:60]}'")
+policy = claimed.get("policy_decisions", {})
+policy_viol = [fid for fid in applied if policy.get(fid) is False]
+row("STRICT", "policy_gate", not policy_viol, f"violations={policy_viol}")
+row("SOFT", "idempotency_marker", True, "second-run dispatched separately")
+row("SOFT", "files_touched", True, f"n={len(diff_files)}")
+row("SOFT", "applied_count", True, f"applied={len(applied)}")
+fail = 0
+print(f"{'severity':9} {'metric':22} {'ok':>4}  detail")
+for sev, name, ok, detail in rows:
+    flag = "PASS" if ok else ("FAIL" if sev == "STRICT" else "warn")
+    if not ok and sev == "STRICT": fail += 1
+    print(f"{sev:9} {name:22} {flag:>4}  {detail}")
+sys.exit(1 if fail else 0)
+PY
+```
+
+**Idempotency (F5) sub-test (separate dispatch).** After Layer A passes and before commit, re-run this apply skill in dry-run mode against the same report on the now-mutated working tree; the second run's `git diff` against the post-first-run state MUST be empty. Non-empty → STRICT fail D4.
+
+### Layer B — adversarial critic dispatch (blind, recall-framed)
+
+Dispatch a fresh subagent whose **single task** is to find drift between the report and the diff. Adversarial framing is the layer that catches DROPPED constraints, ADDED scope creep, and peer-agent name introductions (F1 / F2 / F7 / F8).
+
+```
+Agent({
+  description: "Adversarial APPLY critic — finds drift between report and diff",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer. Two artifacts are attached: ARTIFACT-A and " +
+    "ARTIFACT-B. One is a /review-agent report listing findings with " +
+    "Evidence / Why it matters / Validation / Current / Recommended fields. " +
+    "The other is a unified git diff showing edits to one or more agent .md " +
+    "files (under agents/ or .claude/agents/) that were supposed to address " +
+    "those findings. Neither label tells you which is which.\n\n" +
+    "List every constraint, recommendation, threshold, validation criterion, " +
+    "or behavioral assertion that appears in EXACTLY ONE artifact. For each " +
+    "item: quote the literal sentence or hunk, name which artifact (A or B), " +
+    "and classify as DROPPED (in report, not in diff) / WEAKENED (recommended " +
+    "fully, applied partially) / ADDED (in diff, not justified by any report " +
+    "finding) / NEW (semantically new content in the post-edit file that was " +
+    "neither in the pre-edit file nor in any report recommendation).\n\n" +
+    "If artifact B (diff) modifies an agent body, additionally verify it does " +
+    "NOT introduce text that names peer agents (per `rules/agent-antipatterns.md` " +
+    "A1 — agent bodies must not name other agents in prose). Any added peer-agent " +
+    "name is an ADDED-violation. Also verify the diff does not modify the `tools:` " +
+    "or `allowed-tools:` frontmatter unless a corresponding report finding explicitly " +
+    "addresses tool grants — silent tool-grant changes are ADDED.\n\n" +
+    "Then check VALIDATION COHERENCE: for each report finding the diff claims " +
+    "to resolve, quote the finding's `validation:` field and state whether the " +
+    "post-edit text (visible in the diff's `+` lines) satisfies it. If you " +
+    "cannot tell from the diff alone, classify as UNVERIFIABLE-FROM-DIFF.\n\n" +
+    "Do not rate quality. Do not praise the diff. Report under 500 words.\n\n" +
+    "ARTIFACT-A:\n<paste report contents>\n\n" +
+    "ARTIFACT-B:\n<paste `git diff <pre-sha>..HEAD`>"
+})
+```
+
+Then **dispatch a second time with the artifact bodies swapped** (A=diff, B=report). Position bias is the dominant LLM-judge artifact in pairwise settings (Shi et al. 2024 arXiv:2406.07791). Take the **union** of DROPPED / WEAKENED / ADDED / NEW / UNVERIFIABLE-FROM-DIFF items across both runs.
+
+### Layer C — rubric reconciliation (binary CheckEval-style)
+
+Six binary dimensions. Any `NO` blocks the commit. CheckEval (arXiv:2403.18771) reports +0.45 inter-evaluator agreement for binary vs. Likert.
+
+```
+D1 APPLY_COVERAGE         Every report H+M finding is accounted-for in claimed.json:
+                          count(applied ∪ manual_only ∪ skipped) == count(H+M findings).
+                          No silent drops. (F1, F4)
+
+D2 SCOPE_FIDELITY         Every diff hunk maps to a `current` block in the report.
+                          Files modified ⊆ report frontmatter `summary[*].path`
+                          whitelist. No `paths:` frontmatter field added to any
+                          agent (that field belongs on rules, not agents — routing
+                          surface is `description:` only per A3). (F2)
+
+D3 INVARIANT_PRESERVATION Each modified agent .md still passes: frontmatter has
+                          `name` + `description`; agent body names no peer agent
+                          (A1 — `rules/agent-antipatterns.md`); `tools:` /
+                          `allowed-tools:` frontmatter byte-identical to pre-edit
+                          UNLESS `claimed.tool_grant_finding == true`;
+                          single-file constraint (no new files created);
+                          confirmation gates, stop conditions, and error-handling
+                          paths not weakened or removed. (F3, F7)
+
+D4 IDEMPOTENCY            Re-running this apply skill in dry-run mode on the same
+                          report against the now-mutated tree produces an empty
+                          diff. (F5)
+
+D5 PREDICATE_REVERIFIED   For every applied finding, the report's `validation:`
+                          field is satisfied by the post-edit agent .md — verified
+                          textually via the Layer B critic response OR by
+                          re-invoking `/review-agent` on the modified file and
+                          confirming the originally-flagged finding is gone. (F8)
+
+D6 AUDIT_FIX_CHAIN        The upstream `*-review-agent.md` report is committed
+                          AND its commit precedes the fix commit AND the fix
+                          commit message carries the report timestamp per
+                          `commit-conventions.md`
+                          (`fix(<scope>): address findings from <timestamp> review`).
+                          (F9)
+```
+
+**Layer → rubric crosswalk.** Layer-A `hm_coverage`/`severity_order` FAIL → D1 NO. `path_scope`/`policy_gate` FAIL → D2 NO. `invariants` FAIL → D3 NO (A1-peer-named, frontmatter-missing, and tool-grant-drift all land here). `report_committed` FAIL → D6 NO. Second-run non-empty diff → D4 NO. Layer-B `DROPPED` → D1 NO and/or D5 NO. `WEAKENED` → D5 NO. `ADDED` (including peer-agent name introduction and silent tool-grant change) → D2 NO and/or D3 NO. `NEW` → D2 NO and/or D3 NO. `UNVERIFIABLE-FROM-DIFF` → surface as Residual R3.
+
+### Reconciliation outcomes
+
+- **All STRICT Layer-A pass + zero `DROPPED` / `WEAKENED` / `ADDED` / `NEW` + D1–D6 = YES** → commit (report first, then fix, per Phase 4 audit-fix chain).
+- **Any STRICT Layer-A fail OR any `DROPPED` / `WEAKENED` / `NEW`** → propose specific restorations inline (finding IDs with file:line for missed coverage; named diff hunks for ADDED / NEW), then re-run Layer A. Maximum **2 iterations**; if still failing, surface to user and do NOT commit.
+- **Layer-A STRICT pass + only SOFT warnings + Layer-B only `UNVERIFIABLE-FROM-DIFF` + D1–D6 = YES** → report warnings in Phase 4 change summary, then commit.
+- **D6 NO (audit-fix chain broken)** → halt. Surface the missing report commit per Phase 4 "Commit with audit-fix chain"; the reconciliation does not fix this silently.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **R1 Semantic equivalence under syntactic divergence.** Recommendation text and actual edit may be syntactically different but semantically equivalent (reordered YAML keys, paraphrased prose). Layer-B flags this as DROPPED on the recommended phrasing and ADDED on the actual; operator reconciles. Source: arXiv:2301.01113 (Invalidator).
+2. **R2 Cross-file semantic coupling.** An edit to one agent .md may break an assumption in a sibling skill (`skills/<name>/SKILL.md`) that dispatches it, or in a rule (`rules/*.md`) that conditions on its behavior. The pipeline reads each modified file's own invariants but does not cross-link. Mitigation: run `/review-claude-config` on the broader repo after apply.
+3. **R3 Validation criteria the diff alone cannot verify.** When `validation:` requires running a command (`make validate` passes) or observing behavior (dispatch the agent and inspect output), Layer-B classifies as UNVERIFIABLE-FROM-DIFF. Operator must run the command or invoke `/review-agent` on the modified file.
+4. **R4 Pragmatic / register drift in prose edits.** Curt "Use Read." vs softer "Read is recommended" — both directions entail under NLI; only register-aware human review catches.
+
 ## Hard Rules
 
 - **Edit-only operations.** Never delete files. Never create new files. Only edit existing files.
