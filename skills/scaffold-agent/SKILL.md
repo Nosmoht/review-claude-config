@@ -146,11 +146,9 @@ On "Review the new agent": invoke `/review-agent` with the new agent's path. On 
 
 ## Quality measurement (mandatory before Step 7 success report)
 
-Without verification, this skill fails at **frontmatter incompleteness or invalid keys** (F2) and **convention/idiomatic drift** (F3). One concrete example: a scaffolded agent that renders `agent_name:` (snake_case) instead of `name:`, or declares an undocumented top-level frontmatter key — schema-valid prose, lint-clean body, yet structurally invalid for the dispatch layer that reads only the YAML head. The repo's authoritative validators (`make validate`) catch schema/budget/lint defects (F1, F2 partial, F4) but cannot detect XML tags inside `description:`, mode-vs-path mismatch, or sibling-shape drift. The three-layer pipeline below binds `make validate` to a sibling-comparison critic and a 6-dimension binary rubric so a SCAFFOLD operation reports success only when every layer agrees.
+Per [`docs/skill-verification-architecture.md`](../../docs/skill-verification-architecture.md) (deep-research retrofit 2026-05-26), SCAFFOLD-class verification is deterministic — `make validate` exit-0 plus idempotency plus a sensitive-content sweep is the sufficient verification primitive for this output class. Adversarial-critic (Layer B) and binary-rubric (Layer C) layers were dropped because the scaffolder's contract is "did you produce a syntactically valid artifact matching the template," not "is this a high-quality artifact" — quality assessment belongs in `/review-agent`, not here. Only Layer A (mechanical invariants) remains; the section below is therefore single-layer.
 
-References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024).
-
-After Step 5 writes the file and before Step 7 reports success, record the artifact set for the verification layers:
+After Step 5 writes the file and before Step 7 reports success, record the artifact set for the verification layer:
 
 ```bash
 TMPDIR=$(mktemp -d -t scaffold-agent-XXXX)
@@ -162,7 +160,7 @@ PROMISED="$TMPDIR/promised.txt"   # one absolute path per line
 #   <repo-root>/docs/skills/README.md           (if Step 6 registration touched it)
 ```
 
-### Layer A — mechanical invariants (deterministic, fail-fast)
+### Pipeline — Layer A (mechanical invariants, deterministic, fail-fast)
 
 Run all five metrics. Any `STRICT` non-zero exit → abort and report; `SOFT` deltas → log and surface, do not auto-overwrite.
 
@@ -218,102 +216,18 @@ What each metric catches:
 | A.4 path regex | F5 |
 | A.5 registration-count | F6 (soft) |
 
-### Layer B — adversarial critic dispatch (sibling-comparison, blind)
-
-Pick a sibling: most-recently-edited `.claude/agents/*.md` (excluding the candidate and `references/agent-template.md`). Use `ls -t .claude/agents/*.md | grep -v "/<agent-name>.md$" | head -1`. If no sibling exists in the current repo, fall back to a recently-edited agent from `$HOME/workspace/claude-config/agents/`.
-
-Dispatch a fresh subagent with the candidate (A) and sibling (B). Then dispatch a second time with order swapped — position bias is the dominant LLM-judge artifact (Shi et al. 2024 arXiv:2406.07791). Take the **union** of items flagged across both runs.
-
-```
-Agent({
-  description: "Adversarial scaffold-agent critic",
-  subagent_type: "general-purpose",
-  prompt:
-    "You are a blind reviewer of two Claude Code agent .md files. " +
-    "Neither label tells you which is the freshly-scaffolded candidate. " +
-    "Compare A and B for structural and conventional fit. List every: " +
-    "(1) top-level structural element (frontmatter field, heading) present " +
-    "in EXACTLY ONE file; (2) convention divergence — naming style, " +
-    "enforcement-verb usage (MUST/NEVER vs always/never), role-statement " +
-    "form (functional 'You are a X that Y' vs persona/expert form), " +
-    "presence of <example> blocks inside the description field, section " +
-    "ordering, Hard Rules count (5-7 expected per quality-patterns.md); " +
-    "(3) required-element omission — name/description frontmatter, role " +
-    "statement, Workflow section, Hard Rules. " +
-    "For each item: quote the literal token/heading, name which file " +
-    "(A or B), and classify as MISSING / EXTRA / RENAMED / NOVEL_SHAPE. " +
-    "Do not rate quality. Do not praise clarity. Report under 500 words. " +
-    "A:\n<paste candidate agent .md>\n\nB:\n<paste sibling agent .md>"
-})
-```
-
-Vocabulary the critic produces:
-
-- `MISSING` — element in sibling but not candidate (maps to F2, F6).
-- `EXTRA` — element in candidate but not sibling (maps to F3 — may be legitimate).
-- `RENAMED` — semantic match under different identifier (maps to F3).
-- `NOVEL_SHAPE` — structurally unprecedented for the agent .md class (maps to F3 — strongest idiomaticity signal).
-
-Skill-specific binary checks the critic must report:
-
-- Role statement matches functional form `^You are a .* that .*` — flag persona/expert/credential form as NOVEL_SHAPE.
-- Frontmatter uses ONLY documented keys (`name`, `description`, `model`, `color`, `tools`, `allowed-tools`) — any extra top-level key is MISSING (from convention) → F2.
-- Hard Rules section contains 5-7 bullet entries (per `quality-patterns.md` Constraints) — count outside this band is flagged as EXTRA/MISSING.
-
-### Layer C — 6-dimension binary rubric (CheckEval-style)
-
-Bind Layer A failures and Layer B findings to a yes/no rubric. CheckEval (arXiv:2403.18771) reports +0.45 inter-evaluator agreement for binary vs. Likert. Any `NO` blocks the success report.
-
-```
-D1 VALIDATION_PASS    `make validate` exits 0 with the scaffolded agent on
-                      disk AND the name-length / kebab-case / forbidden-
-                      substring / description-length / XML-tag / frontmatter
-                      allowlist predicate greps all pass. STRICT-tied to
-                      Layer A.2. Catches F1, F2, F4. Load-bearing for
-                      SCAFFOLD.
-D2 FRONTMATTER_VALID  Agent .md frontmatter has non-empty kebab-case `name`
-                      (≤64 chars, no anthropic/claude substring) and non-
-                      empty `description` (≤1024 chars, no literal XML
-                      tags); ONLY documented top-level keys appear
-                      (allowlist: name, description, model, color, tools,
-                      allowed-tools). STRICT-fail if any undocumented key
-                      is present. Catches F2.
-D3 PATH_CORRECT       Candidate path matches `^\.claude/agents/[a-z][a-z0-9-]*\.md$`
-                      (Layer A.4). Path-mode-aware: agents live only at
-                      this class-fixed location, never at top-level
-                      `agents/` for repo-internal scaffolds. Catches F5.
-D4 IDIOMATIC_FIT      Zero NOVEL_SHAPE findings from Layer B union; ≤2
-                      RENAMED findings (RENAMED is judgment-call, hard
-                      cap 2); role statement uses functional form; Hard
-                      Rules count is 5-7. Catches F3. Load-bearing for
-                      SCAFFOLD.
-D5 COMPLETENESS       Every path in $PROMISED exists, non-empty. ≥1 doc-
-                      registration edit verified across README.md /
-                      CLAUDE.md / docs/skills/README.md when the target
-                      headings exist; SOFT-exempt when all target
-                      headings are absent. Catches F6.
-D6 NO_LEAKAGE         Zero matches for the hook-sourced home-path
-                      patterns, zero RFC1918 IPs, zero literal-secret
-                      patterns in any written file (Layer A.3). Catches F7.
-```
-
-Map Layer A failures → D1, D2, D3, D5, D6. Map Layer B `MISSING` → D2/D5. Map `EXTRA`/`RENAMED`/`NOVEL_SHAPE` → D4.
-
 ### Reconciliation outcomes
 
-- **All STRICT pass + zero `MISSING`/`NOVEL_SHAPE` from critic + all D1–D6 = yes** → SCAFFOLD reported successful; proceed to Step 7 commit-suggestion + next-step menu.
-- **Any STRICT fail OR any `MISSING`/`NOVEL_SHAPE` OR any D1–D6 = no** → restore inline. For frontmatter/path/leakage issues the fix is mechanical (regenerate with the missing field, strip the XML tag, move the file, redact). Max **2 iterations**, then surface to the user with the exact failing dimension + the candidate-vs-sibling diff. Do NOT silently overwrite or hide the failure. The 2-iteration cap mirrors `rules/agentic-workflow.md §"Loop-on-symptom — stop after three"` — by iteration 3 the frame is wrong, not the artifact.
-- **Only SOFT warnings (e.g. A.5 registration-skip when target headings are absent, ≤2 `RENAMED` from Layer B)** → report in the Step 7 success notice but proceed. The Step 4 AskUserQuestion preview gate is the final human-glance opportunity.
+- **All STRICT pass (Layer A: A.1 existence, A.2 `make validate` + name/description/XML/frontmatter-allowlist predicates, A.3 sensitive-content sweep, A.4 path regex)** → SCAFFOLD reported successful; proceed to Step 7 commit-suggestion + next-step menu.
+- **Any STRICT fail** → restore inline. For frontmatter/path/leakage issues the fix is mechanical (regenerate with the missing field, strip the XML tag, move the file, redact). Max **2 iterations**, then surface to the user with the exact failing predicate + the candidate diff. Do NOT silently overwrite or hide the failure. The 2-iteration cap mirrors `rules/agentic-workflow.md §"Loop-on-symptom — stop after three"` — by iteration 3 the frame is wrong, not the artifact.
+- **Only SOFT warnings (e.g. A.5 registration-skip when target headings are absent)** → report in the Step 7 success notice but proceed. The Step 4 AskUserQuestion preview gate is the final human-glance opportunity.
 
 ### Acknowledged residuals (the pipeline does NOT catch these)
 
-1. **Semantic-wrong description with valid form.** An agent whose `description:` is schema-valid, verb-first, and within length budget but describes the wrong agent (user asked for a PR reviewer; scaffolder emitted a description for a generic file reviewer). D1, D2, D4 all pass. Only the Step 4 human preview gate catches.
-2. **Tool-grant overreach.** The scaffolded agent declares `tools: [Read, Write, Edit, Bash, WebFetch]` when the workflow only needs `Read, Glob`. Schema-valid, idiomatic against siblings declaring similar sets, Layer B sees no novelty. Detected only by a least-privilege audit in `/review-agent` — out of scope for SCAFFOLD verification.
-3. **Description-routing ambiguity below threshold.** `make validate-descriptions` flags only past calibrated thresholds. A description that nudges a sibling agent's dispatch clarity downward by a small margin passes here and still degrades routing disambiguation (per `rules/agent-antipatterns.md §A3 — Description-field is the only routing surface`). Detected only by `/review-claude-config` running the full multi-perspective rubric.
-4. **Documentation-registration silent mismatch.** The Step 6 Edit succeeds and line count grows, but the new entry lands under the wrong heading or contradicts the agent .md description. A.5 counts edits, not semantic-fit.
-5. **Future-template drift.** This skill reads `references/agent-template.md` — if the template falls out of sync with `engineering-baseline.md` or the schema, the scaffolder faithfully emits drifted content. Detected only by the 90-day baseline-refresh cadence.
+The deterministic Layer A checks bound **structural correctness**, not **quality**. Semantic defects (wrong-description-with-valid-form, tool-grant overreach, description-routing ambiguity below the calibrated threshold) and template-drift detection live in `/review-agent` and the 90-day baseline-refresh cadence. See [`docs/skill-verification-architecture.md`](../../docs/skill-verification-architecture.md) for the full residual catalog and per-output-class form mapping rationale. Two representative residuals worth surfacing at the Step 7 notice:
 
-The Step 7 success notice MUST list which residual classes apply to passages the critic flagged as MISSING/EXTRA without resolution, so the operator has one last human-glance opportunity before the suggested commit lands.
+1. **Semantic-wrong description with valid form.** An agent whose `description:` is schema-valid, verb-first, and within length budget but describes the wrong agent. All Layer A checks pass; only the Step 4 human preview gate catches.
+2. **Tool-grant overreach.** The scaffolded agent declares broader `tools` than the workflow needs. Detected by `/review-agent`'s least-privilege audit, out of scope for SCAFFOLD verification.
 
 ## Hard Rules
 

@@ -282,11 +282,9 @@ On Option 1: invoke `/review-skill` with the absolute path to the new SKILL.md. 
 
 ## Quality measurement (mandatory before Step 7 success report)
 
-Without verification, this skill fails at **convention/idiomatic drift** (F3) and **path-placement errors** (F5). One concrete example: a scaffolder invoked with `maintenance` mode but writing to `skills/<name>/SKILL.md` (plugin path) — schema-valid, frontmatter-valid, lint-clean, yet structurally wrong. The repo's authoritative validators (`make validate`) catch schema/budget/lint defects (F1, F2, F4) but cannot detect mode-vs-path mismatch or sibling-shape drift. The three-layer pipeline below binds `make validate` to a sibling-comparison critic and a 6-dimension binary rubric so a SCAFFOLD operation reports success only when every layer agrees.
+Per [`docs/skill-verification-architecture.md`](../../docs/skill-verification-architecture.md) (deep-research retrofit 2026-05-26), SCAFFOLD-class verification is deterministic — `make validate` exit-0 plus an idempotency check plus a sensitive-content sweep is the sufficient verification primitive for this output class. Adversarial-critic (Layer B) and binary-rubric (Layer C) layers were dropped because the scaffolder's contract is "did you produce a syntactically valid artifact matching the template," not "is this a high-quality artifact" — quality assessment belongs in `/review-skill`, not here. Only Layer A (mechanical invariants) remains; the section below is therefore single-layer.
 
-References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024).
-
-After Step 5 writes files and before Step 7 reports success, record the artifact set and mode for the verification layers:
+After Step 5 writes files and before Step 7 reports success, record the artifact set and mode for the verification layer:
 
 ```bash
 TMPDIR=$(mktemp -d -t scaffold-skill-XXXX)
@@ -296,7 +294,7 @@ MODE_FILE="$TMPDIR/mode.txt"      # exactly one of: plugin | maintenance | exter
 # Write the parsed mode token from Step 1 to $MODE_FILE.
 ```
 
-### Layer A — mechanical invariants (deterministic, fail-fast)
+### Pipeline — Layer A (mechanical invariants, deterministic, fail-fast)
 
 Run all five metrics. Any `STRICT` non-zero exit → abort and report; `SOFT` deltas → log and surface, do not auto-overwrite.
 
@@ -352,91 +350,18 @@ What each metric catches:
 | A.4 mode-vs-path regex | F5 |
 | A.5 registration-count | F6 (soft) |
 
-### Layer B — adversarial critic dispatch (sibling-comparison, blind)
-
-Pick a sibling: most-recently-edited SKILL.md in the **same mode tree** as the candidate (plugin sibling for plugin candidate, maintenance sibling for maintenance candidate). Exclude `references/skill-template.md` and the candidate itself. For plugin mode use `ls -t skills/*/SKILL.md | head -2 | tail -1` (the second-most-recent — the candidate is the most recent).
-
-Dispatch a fresh subagent with the candidate (A) and sibling (B). Then dispatch a second time with order swapped — position bias is the dominant LLM-judge artifact (Shi et al. 2024 arXiv:2406.07791). Take the **union** of items flagged across both runs.
-
-```
-Agent({
-  description: "Adversarial scaffold-skill critic",
-  subagent_type: "general-purpose",
-  prompt:
-    "You are a blind reviewer of two Claude Code SKILL.md files. " +
-    "Neither label tells you which is the freshly-scaffolded candidate. " +
-    "Compare A and B for structural and conventional fit. List every: " +
-    "(1) top-level structural element (frontmatter field, heading) present " +
-    "in EXACTLY ONE file; (2) convention divergence — naming style, " +
-    "enforcement-verb usage (MUST/NEVER vs always/never), role-statement " +
-    "form (functional 'You are a X that Y' vs persona/expert form), " +
-    "section ordering; (3) required-element omission — name/description " +
-    "frontmatter, role statement, Workflow section, Hard Rules. " +
-    "For each item: quote the literal token/heading, name which file " +
-    "(A or B), and classify as MISSING / EXTRA / RENAMED / NOVEL_SHAPE. " +
-    "Do not rate quality. Do not praise clarity. Report under 500 words. " +
-    "A:\n<paste candidate SKILL.md>\n\nB:\n<paste sibling SKILL.md>"
-})
-```
-
-Vocabulary the critic produces:
-
-- `MISSING` — element in sibling but not candidate (maps to F2, F6).
-- `EXTRA` — element in candidate but not sibling (maps to F3 — may be legitimate).
-- `RENAMED` — semantic match under different identifier (maps to F3).
-- `NOVEL_SHAPE` — structurally unprecedented for the SKILL.md class (maps to F3 — strongest idiomaticity signal).
-
-Skill-specific binary checks the critic must report:
-
-- Role statement matches functional form `^You are a .* that .*` — flag persona/expert/credential form as NOVEL_SHAPE.
-- Frontmatter uses ONLY documented keys (`name`, `description`, `argument-hint`, `disable-model-invocation`, `user-invocable`, `allowed-tools`, `context`, `agent`) — any extra key is MISSING (from convention) → F2.
-
-### Layer C — 6-dimension binary rubric (CheckEval-style)
-
-Bind Layer A failures and Layer B findings to a yes/no rubric. CheckEval (arXiv:2403.18771) reports +0.45 inter-evaluator agreement for binary vs. Likert. Any `NO` blocks the success report.
-
-```
-D1 VALIDATION_PASS    `make validate` exits 0 with the scaffolded artifacts
-                      on disk AND the COMP-X / COMP-Y / token-budget-note
-                      predicate greps all pass. STRICT-tied to Layer A.2.
-                      Catches F1, F2, F4. Load-bearing for SCAFFOLD.
-D2 FRONTMATTER_VALID  SKILL.md frontmatter has non-empty kebab-case `name`
-                      and non-empty `description`; only documented keys
-                      appear (allowlist above). Catches F2.
-D3 PATH_CORRECT       Candidate path matches the regex set for the declared
-                      mode token in $MODE_FILE (Layer A.4). Mode-aware:
-                      plugin → skills/, maintenance → .claude/skills/,
-                      external → <target>/.claude/skills/. Catches F5.
-D4 IDIOMATIC_FIT      Zero NOVEL_SHAPE findings from Layer B union; ≤2
-                      RENAMED findings (RENAMED is judgment-call, hard
-                      cap 2); role statement uses functional form.
-                      Catches F3. Load-bearing for SCAFFOLD.
-D5 COMPLETENESS       Every path in $PROMISED exists, non-empty. For
-                      plugin/maintenance modes, ≥1 doc-registration edit
-                      verified; external mode exempts D5 from the
-                      registration count. Catches F6.
-D6 NO_LEAKAGE         Zero matches for the hook-sourced home-path
-                      patterns, zero RFC1918 IPs, zero literal-secret
-                      patterns in any written file (Layer A.3). Catches F7.
-```
-
-Map Layer A failures → D1, D2, D3, D5, D6. Map Layer B `MISSING` → D2/D5. Map `EXTRA`/`RENAMED`/`NOVEL_SHAPE` → D4.
-
 ### Reconciliation outcomes
 
-- **All STRICT pass + zero `MISSING`/`NOVEL_SHAPE` from critic + all D1–D6 = yes** → SCAFFOLD reported successful; proceed to Step 7 commit-suggestion + next-step menu.
-- **Any STRICT fail OR any `MISSING`/`NOVEL_SHAPE` OR any D1–D6 = no** → restore inline. For frontmatter/path/leakage issues the fix is mechanical (regenerate with the missing field, move the file, redact). Max **2 iterations**, then surface to the user with the exact failing dimension + the candidate-vs-sibling diff. Do NOT silently overwrite or hide the failure. The 2-iteration cap mirrors `rules/agentic-workflow.md §"Loop-on-symptom — stop after three"` — by iteration 3 the frame is wrong, not the artifact.
-- **Only SOFT warnings (e.g. A.5 registration-skip outside external mode, ≤2 `RENAMED` from Layer B)** → report in the Step 7 success notice but proceed. The Step 4 AskUserQuestion preview gate is the final human-glance opportunity.
+- **All STRICT pass (Layer A: A.1 existence, A.2 `make validate` + predicate greps, A.3 sensitive-content sweep, A.4 path-mode regex)** → SCAFFOLD reported successful; proceed to Step 7 commit-suggestion + next-step menu.
+- **Any STRICT fail** → restore inline. For frontmatter/path/leakage issues the fix is mechanical (regenerate with the missing field, move the file, redact). Max **2 iterations**, then surface to the user with the exact failing predicate + the candidate diff. Do NOT silently overwrite or hide the failure. The 2-iteration cap mirrors `rules/agentic-workflow.md §"Loop-on-symptom — stop after three"` — by iteration 3 the frame is wrong, not the artifact.
+- **Only SOFT warnings (e.g. A.5 registration-skip outside external mode)** → report in the Step 7 success notice but proceed. The Step 4 AskUserQuestion preview gate is the final human-glance opportunity.
 
 ### Acknowledged residuals (the pipeline does NOT catch these)
 
-1. **Semantic-wrong description with valid form.** A SKILL.md whose `description` is schema-valid and verb-first but describes the wrong skill (user asked for an MCP-server reviewer; scaffolder emitted a generic file-reviewer description). D1, D2, D4 all pass. Only the Step 4 human preview gate catches.
-2. **Tool-grant overreach.** The scaffolded SKILL.md declares `allowed-tools: Read, Write, Edit, Bash, WebFetch` when the workflow only needs `Read, Glob`. Schema-valid, idiomatic against siblings declaring similar sets, Layer B sees no novelty. Detected only by a least-privilege audit in `/review-skill` — out of scope for SCAFFOLD verification.
-3. **Description-graph reciprocal-asymmetry below threshold.** `make validate-descriptions` flags only past calibrated thresholds. A description that nudges a sibling skill's clarity score downward by a small margin passes here and still degrades corpus disambiguation. Detected only by `/review-claude-config` running the full multi-perspective rubric.
-4. **Documentation-registration silent mismatch.** The Step 6 Edit succeeds and line count grows, but the new entry lands under the wrong heading or contradicts the SKILL.md description. A.5 counts edits, not semantic-fit.
-5. **Future-template drift.** This skill reads `references/skill-template.md` — if the template falls out of sync with `engineering-baseline.md` or the schema, the scaffolder faithfully emits drifted content. Detected only by the 90-day baseline-refresh cadence.
+The deterministic Layer A checks bound **structural correctness**, not **quality**. Semantic defects (wrong-description-with-valid-form, tool-grant overreach, description-graph reciprocal-asymmetry below the calibrated threshold) and template-drift detection live in `/review-skill` and the 90-day baseline-refresh cadence. See [`docs/skill-verification-architecture.md`](../../docs/skill-verification-architecture.md) for the full residual catalog and the per-output-class form mapping rationale. Two representative residuals worth surfacing at the Step 7 notice:
 
-The Step 7 success notice MUST list which residual classes apply to passages the critic flagged as MISSING/EXTRA without resolution, so the operator has one last human-glance opportunity before the suggested commit lands.
+1. **Semantic-wrong description with valid form.** A SKILL.md whose `description` is schema-valid and verb-first but describes the wrong skill. All Layer A checks pass; only the Step 4 human preview gate catches.
+2. **Tool-grant overreach.** The scaffolded SKILL.md declares broader `allowed-tools` than the workflow needs. Detected by `/review-skill`'s least-privilege audit, out of scope for SCAFFOLD verification.
 
 ## Hard Rules
 

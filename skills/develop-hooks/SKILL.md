@@ -171,11 +171,9 @@ On "Test the hook": advise them to start a new session and observe hook output. 
 
 ## Quality measurement (mandatory before Step 9)
 
-Without verification, this skill fails at **missing companion artifact** (F6) and **safety-wrapper omission** (F2/F3). One concrete example: the scaffolder writes a valid `hooks/foo.py` but silently skips the `hooks/hooks.json` registration — the script exists on disk yet the runtime never loads it. Conversely, a generated script may register correctly in `hooks.json` but lack the `try/except/sys.exit(0)` safety wrapper required by the skill's Hard Rules; a single runtime exception then breaks every subsequent agent invocation. Both files must validate jointly. The three-layer pipeline below binds `make validate` to a sibling-comparison critic and a 6-dimension binary rubric so a SCAFFOLD operation reports success only when every layer agrees.
+Per [`docs/skill-verification-architecture.md`](../../docs/skill-verification-architecture.md) (deep-research retrofit 2026-05-26), SCAFFOLD-class verification is deterministic — `make validate` exit-0 plus idempotency plus the safety-wrapper + output-shape predicate sweep plus the sensitive-content sweep is the sufficient verification primitive for this output class. Adversarial-critic (Layer B) and binary-rubric (Layer C) layers were dropped because the scaffolder's contract is "did you produce a syntactically valid hook script with the safety wrapper, output shape matching the event type, and a matching `hooks.json` registration," not "is this a high-quality hook" — quality assessment belongs in `/review-hook`, not here. Only Layer A (mechanical invariants) remains; the companion-artifact predicate is load-bearing because F6 (script-without-registration) is this skill's dominant failure class.
 
-References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024).
-
-After Step 7 writes both artifacts and before Step 8 doc registration, record the artifact paths, the hook name, and the chosen hook type for the verification layers:
+After Step 7 writes both artifacts and before Step 8 doc registration, record the artifact paths, the hook name, and the chosen hook type for the verification layer:
 
 ```bash
 TMPDIR=$(mktemp -d -t develop-hooks-XXXX)
@@ -187,7 +185,7 @@ HOOKTYPE_FILE="$TMPDIR/hooktype.txt"   # exactly one of the valid hook events (P
 # Write the hook event token from Step 1 to $HOOKTYPE_FILE.
 ```
 
-### Layer A — mechanical invariants (deterministic, fail-fast)
+### Pipeline — Layer A (mechanical invariants, deterministic, fail-fast)
 
 Run all five metrics. Any `STRICT` non-zero exit → abort and report; `SOFT` deltas → log and surface to the user, do not auto-overwrite.
 
@@ -317,103 +315,18 @@ What each metric catches:
 | A.4 path-placement | F5 |
 | A.5 doc-registration count | F6 (soft) |
 
-### Layer B — adversarial critic dispatch (sibling-comparison, blind)
-
-Pick a sibling: an existing `hooks/*.py` of the **same hook event type** (PreToolUse, PostToolUse, SessionStart, etc.). Prefer the most recently-edited sibling (`ls -t hooks/*.py | head -1`) to track current conventions. Exclude the candidate itself and the template `references/hook-template.py`. Extract both the script and the corresponding `hooks.json` entry for the sibling.
-
-Dispatch a fresh subagent with the candidate (A) and sibling (B). Then dispatch a second time with order swapped — position bias is the dominant LLM-judge artifact (Shi et al. 2024 arXiv:2406.07791). Take the **union** of items flagged across both runs.
-
-```
-Agent({
-  description: "Adversarial develop-hooks critic",
-  subagent_type: "general-purpose",
-  prompt:
-    "You are a blind reviewer of two Python hook scripts (plus their " +
-    "matching hooks.json entries) for the Claude Code runtime. Neither " +
-    "label tells you which is the freshly-scaffolded candidate. " +
-    "Compare A and B for structural and conventional fit. List every: " +
-    "(1) top-level function or import present in EXACTLY ONE file " +
-    "(main, imports, helper functions); (2) safety-wrapper placement — " +
-    "every hook MUST have try/except Exception/sys.exit(0) around its " +
-    "side-effecting body; flag absence as NOVEL_SHAPE; (3) output-shape " +
-    "conformance — the JSON the script emits MUST match the hook event " +
-    "type (PreToolUse → systemMessage/permissionDecision/updatedInput; " +
-    "PostToolUse / UserPromptSubmit / Stop / SessionStart → " +
-    "hookSpecificOutput with matching hookEventName; or async/no-op); " +
-    "(4) hooks.json entry shape — PreToolUse entries MUST have matcher; " +
-    "non-PreToolUse MUST omit matcher; command MUST reference the script. " +
-    "For each item: quote the literal token/key, name which file (A or " +
-    "B), and classify as MISSING / EXTRA / RENAMED / NOVEL_SHAPE. Do " +
-    "NOT flag missing shell-out logic — the skill's Hard Rules restrict " +
-    "Bash to python3 invocation. Do not rate quality. Do not praise " +
-    "design. Report under 500 words. " +
-    "A:\n<paste candidate .py + hooks.json entry>\n\n" +
-    "B:\n<paste sibling .py + hooks.json entry>"
-})
-```
-
-Vocabulary the critic produces:
-
-- `MISSING` — structural element present in sibling but not candidate (maps to F2 — frontmatter incompleteness analog for hooks: missing safety wrapper, missing main()).
-- `EXTRA` — element present in candidate but not sibling (maps to F3 — may be legitimate; e.g. additional helper imports).
-- `RENAMED` — semantic match under different identifier (maps to F3).
-- `NOVEL_SHAPE` — structurally unprecedented (maps to F3 — strongest idiomaticity signal; includes safety-wrapper absence and output-shape mismatch).
-
-Skill-specific binary checks the critic must report:
-
-- Safety wrapper `try: main() except Exception: print("{}") finally: sys.exit(0)` (or equivalent shape) is present in the candidate — absence is `NOVEL_SHAPE`, never merely `MISSING`.
-- Output shape matches hook event type — mismatch is `NOVEL_SHAPE`.
-- `hooks.json` entry has `matcher` iff event type is `PreToolUse` — mismatched matcher presence is `NOVEL_SHAPE`.
-
-### Layer C — 6-dimension binary rubric (CheckEval-style)
-
-Bind Layer A failures and Layer B findings to a yes/no rubric. CheckEval (arXiv:2403.18771) reports +0.45 inter-evaluator agreement for binary vs. Likert. Any `NO` blocks the success report.
-
-```
-D1 VALIDATION_PASS    `make validate` exits 0 with both artifacts on disk
-                      AND the safety-wrapper / output-shape assertions in
-                      Layer A.2 pass. STRICT-tied. Catches F1, F2.
-D2 STRUCTURAL_VALID   The script has `def main(`, the `try / except
-                      Exception / sys.exit(0)` safety wrapper, and the
-                      output shape matching the declared hook event type;
-                      the hooks.json entry parses as JSON and (for
-                      PreToolUse) has a matcher field, or (for others)
-                      omits matcher. Catches F2.
-D3 PATH_CORRECT       The script path matches ^hooks/[a-z][a-z0-9-]*\.py$
-                      AND the registration target is hooks/hooks.json
-                      (Layer A.4). Catches F5.
-D4 IDIOMATIC_FIT      Zero NOVEL_SHAPE findings from Layer B union; ≤2
-                      RENAMED findings (RENAMED is judgment-call, hard cap
-                      2). Catches F3. Safety-wrapper absence and
-                      output-shape mismatch surface as NOVEL_SHAPE here.
-D5 COMPLETENESS       Both promised artifacts exist, are non-empty, AND
-                      hooks/hooks.json contains an entry whose `command`
-                      references <name>.py. STRICT-dimensioned 2 (both
-                      files required — F6 is this skill's dominant
-                      failure class). Catches F6.
-D6 NO_LEAKAGE         Zero matches for hook-sourced home-path patterns,
-                      zero RFC1918 IPs, zero literal-secret patterns in
-                      JSON files, zero GitHub PAT shape, zero JWT shape
-                      across both artifacts (Layer A.3). Catches F7.
-```
-
-Map Layer A failures → D1, D2, D3, D5, D6. Map Layer B `MISSING` → D2 / D5. Map `EXTRA`/`RENAMED`/`NOVEL_SHAPE` → D4. Map any safety-wrapper / output-shape critic finding → D2 AND D4 jointly.
-
 ### Reconciliation outcomes
 
-- **All STRICT pass + zero `MISSING`/`NOVEL_SHAPE` from critic + all D1–D6 = yes** → SCAFFOLD reported successful; proceed to Step 8 doc registration and Step 9 commit suggestion.
-- **Any STRICT fail OR any `MISSING`/`NOVEL_SHAPE` OR any D1–D6 = no** → restore inline. For safety-wrapper / output-shape / path issues the fix is mechanical (regenerate the script with the missing wrapper, switch the output shape to match the event type, move/rename the file, redact). Max **2 iterations**, then surface to the user with the exact failing dimension + the candidate-vs-sibling diff. Do NOT silently overwrite or hide the failure. The 2-iteration cap mirrors `rules/agentic-workflow.md §"Loop-on-symptom — stop after three"` — by iteration 3 the frame is wrong, not the artifact.
-- **Only SOFT warnings (e.g. A.5 doc-registration skipped, ≤2 `RENAMED` from Layer B)** → report in the Step 9 success notice but proceed. The Step 5 + Step 7 AskUserQuestion preview gates are the final human-glance opportunities.
+- **All STRICT pass (Layer A: A.1 both-files + entry-presence, A.2 `make validate` + safety-wrapper + output-shape, A.3 sensitive-content sweep, A.4 path predicates)** → SCAFFOLD reported successful; proceed to Step 8 doc registration and Step 9 commit suggestion.
+- **Any STRICT fail** → restore inline. For safety-wrapper / output-shape / path issues the fix is mechanical (regenerate the script with the missing wrapper, switch the output shape to match the event type, move/rename the file, redact). Max **2 iterations**, then surface to the user with the exact failing predicate + the candidate diff. Do NOT silently overwrite or hide the failure. The 2-iteration cap mirrors `rules/agentic-workflow.md §"Loop-on-symptom — stop after three"` — by iteration 3 the frame is wrong, not the artifact.
+- **Only SOFT warnings (e.g. A.5 doc-registration skipped)** → report in the Step 9 success notice but proceed. The Step 5 + Step 7 AskUserQuestion preview gates are the final human-glance opportunities.
 
 ### Acknowledged residuals (the pipeline does NOT catch these)
 
-1. **Semantic-wrong hook logic with valid form.** A script whose body is grammatically Python, has the safety wrapper, emits the right output shape, but implements the wrong predicate (user asked for "block writes to .env"; scaffolder emitted "block reads to .env"). D1–D6 all pass. Only the Step 5 human preview gate catches.
-2. **Matcher-regex overreach.** A `PreToolUse` hook's `matcher` field captures more tools than intended (e.g. `.*` instead of `Edit|Write`). The hook loads and runs successfully on every tool call, masking the over-broad scope as latency rather than as a failure. Out of scope for SCAFFOLD verification — addressed by manual review of the matcher pattern at the Step 5 preview gate.
-3. **Runtime-credential drift in the hook body.** The script references `${GITHUB_TOKEN}` or reads a config file at runtime; the variable is unset or the file is absent in the deployment environment. No declarative scaffold can detect runtime-state validity; detected only by the hook's first runtime execution.
-4. **hooks.json section ordering.** The skill's Hard Rules require preserving existing entries, but it does not verify the new entry appears in the hook-event section matching `$HOOKTYPE` (e.g. accidentally appending a `PostToolUse` entry under the `PreToolUse` block). Layer A.1 confirms presence, not section. Detected only by a careful reviewer at the Step 5 preview gate.
-5. **Future-template drift.** This skill reads `references/hook-template.py` — if the template falls out of sync with the Claude Code hook event schema (new fields, deprecated events), the scaffolder faithfully emits drifted content. Detected only by the 90-day baseline-refresh cadence; not in scope for per-scaffold verification.
+The deterministic Layer A checks bound **structural correctness and safety-wrapper presence**, not **quality**. Semantic defects (wrong-predicate-with-valid-form, matcher-regex overreach, runtime-credential drift, hooks.json section misordering) and template-drift detection live in `/review-hook` and the 90-day baseline-refresh cadence. See [`docs/skill-verification-architecture.md`](../../docs/skill-verification-architecture.md) for the full residual catalog and per-output-class form mapping rationale. Two representative residuals worth surfacing at the Step 9 notice:
 
-The Step 9 success notice MUST list which residual classes apply to passages the critic flagged as MISSING/EXTRA without resolution, so the operator has one last human-glance opportunity before the suggested commit lands.
+1. **Semantic-wrong hook logic with valid form.** A script whose body is grammatically Python, has the safety wrapper, and emits the right output shape, but implements the wrong predicate. All Layer A checks pass; only the Step 5 human preview gate catches.
+2. **Matcher-regex overreach.** A `PreToolUse` hook's `matcher` field captures more tools than intended (e.g. `.*` instead of `Edit|Write`). Detected only by manual review of the matcher pattern at the Step 5 preview gate.
 
 ## Hard Rules
 

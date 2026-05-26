@@ -113,11 +113,9 @@ On "Review the new rule": invoke `/review-rule` with the new rule's path. On "Sc
 
 ## Quality measurement (mandatory before Step 7 success report)
 
-Without verification, this skill fails at **convention/idiomatic drift** (F3) — specifically, emitting a rule file that begins with `---` YAML frontmatter. Rules have NO JSON Schema, so `make schema-validate` cannot enforce the no-frontmatter convention; a file like `---\nname: foo\n---\n# X` passes JSON validation and lint yet structurally violates the rule corpus convention (rules are plain Markdown, the Hard Rule in this skill, and the conventions in every sibling under `.claude/rules/`). The three-layer pipeline below binds `make validate` to a sibling-comparison critic and a 6-dimension binary rubric so a SCAFFOLD operation reports success only when every layer agrees.
+Per [`docs/skill-verification-architecture.md`](../../docs/skill-verification-architecture.md) (deep-research retrofit 2026-05-26), SCAFFOLD-class verification is deterministic — `make validate` exit-0 plus idempotency plus the rule-corpus content predicates (NO-FRONTMATTER, H1-FIRST, ENFORCEMENT-VERB) plus a sensitive-content sweep is the sufficient verification primitive for this output class. Adversarial-critic (Layer B) and binary-rubric (Layer C) layers were dropped because the scaffolder's contract is "did you produce a syntactically valid rule matching the corpus convention," not "is this a high-quality rule" — quality assessment belongs in `/review-rule`, not here. Only Layer A (mechanical invariants) remains; the section below is therefore single-layer.
 
-References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024).
-
-After Step 5 writes the file and before Step 7 reports success, record the artifact path for the verification layers:
+After Step 5 writes the file and before Step 7 reports success, record the artifact path for the verification layer:
 
 ```bash
 TMPDIR=$(mktemp -d -t scaffold-rule-XXXX)
@@ -125,7 +123,7 @@ PROMISED="$TMPDIR/promised.txt"   # exactly one absolute path: the new rule file
 # Write the scaffolded rule path to $PROMISED (and any doc-registration paths edited in Step 6).
 ```
 
-### Layer A — mechanical invariants (deterministic, fail-fast)
+### Pipeline — Layer A (mechanical invariants, deterministic, fail-fast)
 
 Run all five metrics. Any `STRICT` non-zero exit → abort and report; `SOFT` deltas → log and surface, do not auto-overwrite.
 
@@ -171,97 +169,18 @@ What each metric catches:
 | A.4 path regex | F5 |
 | A.5 registration-count | F6 (soft) |
 
-### Layer B — adversarial critic dispatch (sibling-comparison, blind)
-
-Pick a sibling: most-recently-edited `.claude/rules/*.md` in the same repo, excluding the candidate itself. If the candidate is the first rule scaffolded into this repo and no in-repo sibling exists, fall back to a recently-edited rule from the user-global rules tree (`$HOME/workspace/claude-config/rules/`).
-
-Dispatch a fresh subagent with the candidate (A) and sibling (B). Then dispatch a second time with order swapped — position bias is the dominant LLM-judge artifact (Shi et al. 2024 arXiv:2406.07791). Take the **union** of items flagged across both runs.
-
-```
-Agent({
-  description: "Adversarial scaffold-rule critic",
-  subagent_type: "general-purpose",
-  prompt:
-    "You are a blind reviewer of two Claude Code rule files (plain " +
-    "Markdown, no frontmatter). Neither label tells you which is the " +
-    "freshly-scaffolded candidate. Compare A and B for structural and " +
-    "conventional fit. List every: (1) top-level structural element " +
-    "(H1 heading, top-level subheading) present in EXACTLY ONE file; " +
-    "(2) presence of leading `---` YAML frontmatter on either file " +
-    "(this is a hard violation for rule files); (3) convention " +
-    "divergence — enforcement-verb usage (MUST/NEVER vs always/never/" +
-    "do not), directive-statement positioning, Scope / Edge Cases " +
-    "section presence; (4) required-element omission — H1 heading, " +
-    "directive sentence with enforcement verb, Scope paragraph, Edge " +
-    "Cases list. For each item: quote the literal token/heading, name " +
-    "which file (A or B), and classify as MISSING / EXTRA / RENAMED / " +
-    "NOVEL_SHAPE. Do not rate quality. Do not praise clarity. Report " +
-    "under 500 words. " +
-    "A:\n<paste candidate rule contents>\n\nB:\n<paste sibling rule contents>"
-})
-```
-
-Vocabulary the critic produces:
-
-- `MISSING` — element in sibling but not candidate (maps to F2/F6 — for rules, this means missing Scope or Edge Cases).
-- `EXTRA` — element in candidate but not sibling (maps to F3 — may be legitimate).
-- `RENAMED` — semantic match under different identifier (maps to F3).
-- `NOVEL_SHAPE` — structurally unprecedented for the rule class (maps to F3 — strongest idiomaticity signal). **Any frontmatter on the candidate is auto-classified as NOVEL_SHAPE** even if the critic does not explicitly flag it, because the rule class definition prohibits frontmatter.
-
-Skill-specific binary checks the critic must report:
-
-- Presence of leading `---` on either file → NOVEL_SHAPE on whichever file has it.
-- Absence of an H1 heading on either file → MISSING on whichever lacks it.
-- Directive sentence lacks an enforcement verb (`always`, `never`, `before`, `do not`, `must`) → MISSING on whichever lacks it.
-
-### Layer C — 6-dimension binary rubric (CheckEval-style)
-
-Bind Layer A failures and Layer B findings to a yes/no rubric. CheckEval (arXiv:2403.18771) reports +0.45 inter-evaluator agreement for binary vs. Likert. Any `NO` blocks the success report.
-
-```
-D1 VALIDATION_PASS    `make validate` exits 0 with the scaffolded rule
-                      on disk AND the NO-FRONTMATTER / H1-FIRST /
-                      ENFORCEMENT-VERB predicate greps all pass.
-                      STRICT-tied to Layer A.2. Catches F1, F4.
-D2 FRONTMATTER_VALID  INVERTED for rules — yes iff the file has NO
-                      leading `---` YAML frontmatter (per scaffold-rule
-                      Hard Rule "Rules have no frontmatter"). Catches
-                      F3 (frontmatter-leak — the load-bearing failure
-                      class for this skill).
-D3 PATH_CORRECT       Candidate path matches
-                      `^\.claude/rules/[a-z][a-z0-9-]*\.md$` (Layer A.4).
-                      Catches F5.
-D4 IDIOMATIC_FIT      Zero NOVEL_SHAPE findings from Layer B union;
-                      ≤2 RENAMED findings (RENAMED is judgment-call,
-                      hard cap 2); first non-blank line is `# ` heading;
-                      body contains an enforcement verb. Catches F3.
-                      Load-bearing for SCAFFOLD.
-D5 COMPLETENESS       The single rule file in $PROMISED exists,
-                      non-empty. Doc-registration is best-effort per
-                      the scaffolder's Hard Rules; D5 does NOT block
-                      on missing registration edits. Catches F6.
-D6 NO_LEAKAGE         Zero matches for the hook-sourced home-path
-                      patterns, zero RFC1918 IPs in the rule body
-                      (Layer A.3). Catches F7.
-```
-
-Map Layer A failures → D1 (make validate, predicates), D2 (NO-FRONTMATTER), D3 (path), D5 (existence), D6 (content sweep). Map Layer B `MISSING` → D2/D5. Map `EXTRA`/`RENAMED`/`NOVEL_SHAPE` → D4.
-
 ### Reconciliation outcomes
 
-- **All STRICT pass + zero `MISSING`/`NOVEL_SHAPE` from critic + all D1–D6 = yes** → SCAFFOLD reported successful; proceed to Step 7 commit-suggestion + next-step menu.
-- **Any STRICT fail OR any `MISSING`/`NOVEL_SHAPE` OR any D1–D6 = no** → restore inline. For frontmatter-leak the fix is mechanical (strip the leading `---` block, regenerate). For path mismatch, move the file to `.claude/rules/<name>.md`. For missing enforcement verb, rewrite the directive sentence. Max **2 iterations**, then surface to the user with the exact failing dimension + the candidate-vs-sibling diff. Do NOT silently overwrite or hide the failure. The 2-iteration cap mirrors `rules/agentic-workflow.md §"Loop-on-symptom — stop after three"` — by iteration 3 the frame is wrong, not the artifact.
-- **Only SOFT warnings (e.g. A.5 registration-skip when no listing target exists, ≤2 `RENAMED` from Layer B)** → report in the Step 7 success notice but proceed. The Step 4 AskUserQuestion preview gate is the final human-glance opportunity.
+- **All STRICT pass (Layer A: A.1 existence, A.2 `make validate` + NO-FRONTMATTER + H1-FIRST + ENFORCEMENT-VERB predicates, A.3 sensitive-content sweep, A.4 path regex)** → SCAFFOLD reported successful; proceed to Step 7 commit-suggestion + next-step menu.
+- **Any STRICT fail** → restore inline. For frontmatter-leak the fix is mechanical (strip the leading `---` block, regenerate). For path mismatch, move the file to `.claude/rules/<name>.md`. For missing enforcement verb, rewrite the directive sentence. Max **2 iterations**, then surface to the user with the exact failing predicate + the candidate diff. Do NOT silently overwrite or hide the failure. The 2-iteration cap mirrors `rules/agentic-workflow.md §"Loop-on-symptom — stop after three"` — by iteration 3 the frame is wrong, not the artifact.
+- **Only SOFT warnings (e.g. A.5 registration-skip when no listing target exists)** → report in the Step 7 success notice but proceed. The Step 4 AskUserQuestion preview gate is the final human-glance opportunity.
 
 ### Acknowledged residuals (the pipeline does NOT catch these)
 
-1. **Semantic-wrong directive with valid form.** A rule whose H1 + Scope + Edge Cases are all present and whose directive sentence uses `never` correctly, but the directive itself states the wrong constraint (user asked for "never overwrite logs"; scaffolder emitted "never overwrite configs"). D1, D2, D3, D4 all pass. Only the Step 4 human preview gate catches.
-2. **Cross-rule contradiction.** The new rule's directive contradicts an existing rule in `.claude/rules/` or `$HOME/workspace/claude-config/rules/`. Layer B compares structure to one sibling, not semantic consistency across the corpus. Detected only by `/review-rule` or human review at the AskUserQuestion preview gate.
-3. **Consolidation miss.** The Hard Rule "Constraint load check" asks the scaffolder to flag when ≥5 rules cover similar themes, but the threshold is heuristic — a new rule adjacent to 4 existing ones still passes the check and may compound rule sprawl. Detected only by `/review-claude-config` running the rule-corpus audit.
-4. **Description-graph regression on doc-registration edits.** A new line appended to `docs/skills/README.md` that contradicts an existing entry's description nudges the description-graph clarity score below the calibrated threshold for `make validate-descriptions`. A.5 counts edits, not semantic-fit.
-5. **Future-template drift.** This skill reads `references/rule-template.md` — if the template falls out of sync with the rule-corpus conventions or `engineering-baseline.md`, the scaffolder faithfully emits drifted content. Detected only by the 90-day baseline-refresh cadence.
+The deterministic Layer A checks bound **structural correctness**, not **quality**. Semantic defects (wrong-directive-with-valid-form, cross-rule contradiction, consolidation-miss heuristic) and template-drift detection live in `/review-rule`, `/review-claude-config`, and the 90-day baseline-refresh cadence. See [`docs/skill-verification-architecture.md`](../../docs/skill-verification-architecture.md) for the full residual catalog and per-output-class form mapping rationale. Two representative residuals worth surfacing at the Step 7 notice:
 
-The Step 7 success notice MUST list which residual classes apply to passages the critic flagged as MISSING/EXTRA without resolution, so the operator has one last human-glance opportunity before the suggested commit lands.
+1. **Semantic-wrong directive with valid form.** A rule whose H1 + Scope + Edge Cases are all present and whose directive sentence uses `never` correctly, but the directive itself states the wrong constraint. All Layer A checks pass; only the Step 4 human preview gate catches.
+2. **Cross-rule contradiction.** The new rule's directive contradicts an existing rule. Detected by `/review-rule` or human review, out of scope for SCAFFOLD verification.
 
 ## Hard Rules
 
