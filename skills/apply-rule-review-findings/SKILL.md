@@ -380,53 +380,38 @@ PY
 
 **Idempotency (F5) sub-test (separate dispatch).** After Layer A passes and before commit, re-run this apply skill in dry-run mode against the same report on the now-mutated working tree; the second run's `git diff` against the post-first-run state MUST be empty. Non-empty → STRICT fail D4.
 
-### Layer B — adversarial critic dispatch (blind, recall-framed)
+### Pipeline — Layer B (structural primitives)
 
-Dispatch a fresh subagent whose **single task** is to find drift between the report and the diff. Rule files are always-loaded in every `~/workspace/` session — the critic must treat DROPPED items in rule bodies as HIGH-priority surfacing, because a lost constraint here propagates to every future Claude Code session.
+Per `docs/skill-verification-architecture.md`, adversarial-critic on a
+diff is wrong-shape for APPLY. Replace with deterministic structural
+primitives:
 
-```
-Agent({
-  description: "Adversarial APPLY critic — finds drift between rule report and diff",
-  subagent_type: "general-purpose",
-  prompt:
-    "You are a blind reviewer. Two artifacts are attached: ARTIFACT-A and " +
-    "ARTIFACT-B. One is a /review-rule report listing findings with " +
-    "Evidence / Why it matters / Validation / Current / Recommended fields. " +
-    "The other is a unified git diff showing edits to one or more rule files " +
-    "(rules/*.md, always-loaded directives) that were supposed to address " +
-    "those findings. Neither label tells you which is which.\n\n" +
-    "List every constraint, recommendation, threshold, validation criterion, " +
-    "exception, conditional ('if X then Y', 'unless Z'), scope boundary, or " +
-    "behavioral assertion that appears in EXACTLY ONE artifact. For each item: " +
-    "quote the literal sentence or hunk, name which artifact (A or B), and " +
-    "classify as DROPPED (in report, not in diff) / WEAKENED (recommended " +
-    "fully, applied partially; OR strong directive 'must'/'never'/'always' " +
-    "replaced with aspirational 'should'/'try'/'consider') / ADDED (in diff, " +
-    "not justified by any report finding) / NEW (semantically new content in " +
-    "the post-edit file that was neither in the pre-edit file nor in any " +
-    "report recommendation).\n\n" +
-    "Rule files are loaded into every Claude Code session in ~/workspace/ via " +
-    "the ~/.claude/rules/ symlink — DROPPED items here have session-wide blast " +
-    "radius. Treat any DROPPED finding in a rule body as HIGH-priority " +
-    "surfacing.\n\n" +
-    "If artifact B (diff) modifies a rule body, additionally verify: (a) any " +
-    "`paths:` frontmatter glob in the pre-edit file is byte-identical in the " +
-    "post-edit file unless the report explicitly addresses a path-scoping " +
-    "finding (paths: is the harness path-scoping contract); (b) every " +
-    "intra-repo cross-link (`rules/<other>.md`, `references/<other>.md`) in " +
-    "the post-edit body still resolves to an existing file.\n\n" +
-    "Then check VALIDATION COHERENCE: for each report finding the diff claims " +
-    "to resolve, quote the finding's `validation:` field and state whether " +
-    "the post-edit text (visible in the diff's `+` lines) satisfies it. Rules " +
-    "have no executable form, so validation is textual; if you cannot tell " +
-    "from the diff alone, classify as UNVERIFIABLE-FROM-DIFF.\n\n" +
-    "Do not rate quality. Do not praise the diff. Report under 500 words.\n\n" +
-    "ARTIFACT-A:\n<paste report contents>\n\n" +
-    "ARTIFACT-B:\n<paste `git diff <pre-sha>..HEAD`>"
-})
-```
+**B1. AST-diff equivalence** (RefDiff, arXiv:1704.01544, precision
+100% / recall 88%). For each modified file:
+- Extract the AST / structural representation before and after the
+  edit (Markdown heading tree for SKILL.md / rule files; JSON tree
+  for .mcp.json; Python AST for hook scripts).
+- Assert: the structural diff matches the finding's claimed scope.
+  Edits outside the claimed-scope hunks → STRICT FAIL (F2 scope creep).
+- Assert: every claimed-resolved finding has at least ONE structural
+  change in its claimed-scope region.
 
-Then **dispatch a second time with the artifact bodies swapped** (A=diff, B=report). Position bias is the dominant LLM-judge artifact in pairwise settings (Shi et al. 2024 arXiv:2406.07791). Take the **union** of DROPPED / WEAKENED / ADDED / NEW / UNVERIFIABLE-FROM-DIFF items across both runs.
+**B2. Mutation-survival check** (Property-Based Mutation,
+arXiv:2301.13615; PGS framework FSE 2025 +37.3% correctness):
+- For each addressed finding, identify the failure-pattern the
+  finding flagged (regex, missing section, etc.).
+- Re-run that failure-pattern check against the post-edit file. If
+  the pattern STILL matches → STRICT FAIL (D5 PREDICATE_REVERIFIED
+  fails: the fix did not survive the pattern it claims to fix).
+
+**B3. Refactoring-aware diff classification** (RefDiff-style):
+- Classify each edit as one of: {bug-fix, refactor, formatting,
+  comment-only, structural}. Refactors that introduce new
+  functionality without a corresponding finding → STRICT FAIL
+  (F2 over-application).
+
+No subagent dispatch required for Layer B. All checks are
+mechanical / regex / AST-based.
 
 ### Layer C — rubric reconciliation (binary CheckEval-style)
 
@@ -437,14 +422,17 @@ D1 APPLY_COVERAGE         Every report H+M finding is accounted-for in claimed.j
                           count(applied ∪ manual_only ∪ skipped) == count(H+M findings).
                           No silent drops. (F1, F4)
 
-D2 SCOPE_FIDELITY         Every diff hunk maps to a `current` block in the report.
-                          Files modified ⊆ report frontmatter `summary[*].path`
-                          whitelist. Every `paths:` glob pattern in the pre-edit
-                          rule frontmatter is byte-identical in the post-edit file
-                          (harness path-scoping contract) UNLESS the report finding
-                          explicitly addresses path-scoping. (F2)
+D2 SCOPE_FIDELITY         Anchored to B1 (AST-diff scope-match). Every diff hunk
+                          maps to a `current` block in the report. Files modified
+                          ⊆ report frontmatter `summary[*].path` whitelist. Every
+                          `paths:` glob pattern in the pre-edit rule frontmatter
+                          is byte-identical in the post-edit file (harness
+                          path-scoping contract) UNLESS the report finding
+                          explicitly addresses path-scoping. B1 STRICT FAIL → D2
+                          NO. (F2)
 
-D3 INVARIANT_PRESERVATION Each modified rule file still passes: no YAML frontmatter
+D3 INVARIANT_PRESERVATION Anchored to B3 (no spurious structural changes). Each
+                          modified rule file still passes: no YAML frontmatter
                           injected (Hard Rule: rules in .claude/rules/ are plain
                           Markdown); `paths:` field (when present in workspace
                           rules) remains a non-empty list of glob patterns; every
@@ -453,18 +441,22 @@ D3 INVARIANT_PRESERVATION Each modified rule file still passes: no YAML frontmat
                           post-edit body resolves to an existing file; existing
                           Hard Rules and scope qualifiers intact; directive verbs
                           'must'/'never'/'always' not replaced with aspirational
-                          'should'/'try'/'consider'. (F3, F7)
+                          'should'/'try'/'consider'. B3 classification of a
+                          refactor without a corresponding finding → D3 NO.
+                          (F3, F7)
 
 D4 IDEMPOTENCY            Re-running this apply skill in dry-run mode on the same
                           report against the now-mutated tree produces an empty
                           diff. (F5)
 
-D5 PREDICATE_REVERIFIED   For every applied finding, the report's `validation:`
-                          field is satisfied by the post-edit rule body. Verified
-                          textually via the Layer B critic response — rules have
-                          no executable form, so re-invoking `/review-rule` on
-                          the modified file (and confirming the originally-flagged
-                          finding is gone) is the only re-verification path. (F8)
+D5 PREDICATE_REVERIFIED   Anchored to B2 (mutation-survival proves predicate
+                          re-verification). For every applied finding, the
+                          finding's failure-pattern no longer matches the
+                          post-edit rule body. B2 STRICT FAIL → D5 NO. Rules
+                          have no executable form, so for findings whose
+                          validation criterion is beyond AST/regex scope,
+                          re-invoke `/review-rule` on the modified file and
+                          confirm the originally-flagged finding is gone. (F8)
 
 D6 AUDIT_FIX_CHAIN        The upstream `*-review-rule.md` report is committed AND
                           its commit precedes the fix commit AND the fix commit
@@ -474,20 +466,22 @@ D6 AUDIT_FIX_CHAIN        The upstream `*-review-rule.md` report is committed AN
                           (F9)
 ```
 
-**Layer → rubric crosswalk.** Layer-A `hm_coverage`/`severity_order` FAIL → D1 NO. `path_scope`/`policy_gate` FAIL → D2 NO. `invariants` FAIL → D3 NO (or D2 NO when `paths-mutated`). `report_committed` FAIL → D6 NO. Second-run non-empty diff → D4 NO. Layer-B `DROPPED` → D1 NO and/or D5 NO. `WEAKENED` → D5 NO. `ADDED` → D2 NO. `NEW` → D2 NO and/or D3 NO. `UNVERIFIABLE-FROM-DIFF` → surface as Residual R3.
+**Layer → rubric crosswalk.** Layer-A `hm_coverage`/`severity_order` FAIL → D1 NO. `path_scope`/`policy_gate` FAIL → D2 NO. `invariants` FAIL → D3 NO (or D2 NO when `paths-mutated`). `report_committed` FAIL → D6 NO. Second-run non-empty diff → D4 NO. **B1** scope-match FAIL → D2 NO. **B2** mutation-survival FAIL (failure-pattern still matches post-edit) → D5 NO. **B3** uncorroborated refactor / over-application → D3 NO.
 
 ### Reconciliation outcomes
 
-- **All STRICT Layer-A pass + zero `DROPPED` / `WEAKENED` / `ADDED` / `NEW` + D1–D6 = YES** → commit (report first, then fix, per Phase 4 audit-fix chain).
-- **Any STRICT Layer-A fail OR any `DROPPED` / `WEAKENED` / `NEW`** → propose specific restorations inline (finding IDs with file:line for missed coverage; named diff hunks for ADDED / NEW; byte-identical `paths:` block restoration for path-mutation), then re-run Layer A. Maximum **2 iterations**; if still failing, surface to user and do NOT commit.
-- **Layer-A STRICT pass + only SOFT warnings + Layer-B only `UNVERIFIABLE-FROM-DIFF` + D1–D6 = YES** → report warnings in Phase 4 change summary, then commit.
+- **All STRICT Layer-A pass + B1/B2/B3 all PASS + D1–D6 = YES** → commit (report first, then fix, per Phase 4 audit-fix chain).
+- **Any STRICT Layer-A fail OR any B1/B2/B3 STRICT FAIL** → propose specific restorations inline (finding IDs with file:line for missed coverage; named diff hunks for B1 scope-violations or B3 over-applications; failure-pattern names for B2 survivors; byte-identical `paths:` block restoration for path-mutation), then re-run Layer A + B. Maximum **2 iterations**; if still failing, surface to user and do NOT commit.
+- **Layer-A STRICT pass + B1/B2/B3 PASS + only SOFT warnings + D1–D6 = YES** → report warnings in Phase 4 change summary, then commit.
 - **D6 NO (audit-fix chain broken)** → halt. Surface the missing report commit per Phase 4 "Commit with audit-fix chain"; the reconciliation does not fix this silently.
 
 ### Acknowledged residuals (the pipeline does NOT catch these)
 
-1. **R1 Semantic equivalence under syntactic divergence.** Recommendation text and actual edit may be syntactically different but semantically equivalent (reordered list items, paraphrased prose, synonyms for the same constraint). Layer-B flags this as DROPPED on the recommended phrasing and ADDED on the actual; operator reconciles. Source: arXiv:2301.01113 (Invalidator).
+Adversarial-critic Layer B is replaced by structural primitives per docs/skill-verification-architecture.md; semantic equivalence checks beyond AST scope are out-of-scope and route to `/review-rule` post-apply.
+
+1. **R1 Semantic equivalence under syntactic divergence.** Recommendation text and actual edit may be syntactically different but semantically equivalent (reordered list items, paraphrased prose, synonyms for the same constraint). B1's AST-diff treats reorderings as structural changes; operator reconciles via post-apply `/review-rule`. Source: arXiv:2301.01113 (Invalidator).
 2. **R2 Cross-file semantic coupling.** An edit to one rule may break an unstated assumption in a sibling rule or in `references/*.md` (e.g. a constraint removed here that another rule's body silently relies on). The pipeline checks intra-repo link existence but not behavioral coupling. Mitigation: run `/review-claude-config` on the broader repo after apply.
-3. **R3 Validation criteria the diff alone cannot verify.** When `validation:` requires observing operational behavior (e.g. "rule loads in next session", "harness path-scoping fires correctly"), Layer-B classifies as UNVERIFIABLE-FROM-DIFF. Operator must invoke `/review-rule` on the modified file or observe behavior in a fresh session.
+3. **R3 Validation criteria beyond AST/regex scope.** When `validation:` requires observing operational behavior (e.g. "rule loads in next session", "harness path-scoping fires correctly"), B2 cannot decide. Operator must invoke `/review-rule` on the modified file or observe behavior in a fresh session.
 4. **R4 Pragmatic / register drift in prose edits.** Curt "Never bypass." vs softer "Bypassing is discouraged" — both directions entail under NLI; only register-aware human review catches.
 
 ## Hard Rules

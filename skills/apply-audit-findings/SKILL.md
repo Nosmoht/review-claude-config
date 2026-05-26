@@ -355,49 +355,38 @@ PY
 
 **Idempotency (F5) sub-test (separate dispatch).** After Layer A passes and before commit, re-run this apply skill in dry-run mode against the same report on the now-mutated working tree; the second run's `git diff` against the post-first-run state MUST be empty. Non-empty → STRICT fail D4.
 
-### Layer B — adversarial critic dispatch (blind, recall-framed)
+### Pipeline — Layer B (structural primitives)
 
-Dispatch a fresh subagent whose **single task** is to find drift between the audit intervention matrix and the diff. Adversarial framing is the layer that catches DROPPED interventions and ADDED scope creep (F1 / F2 / F7 / F8). File-creation surface (vs edit-only) means the critic must also flag content in new files that no intervention row recommended.
+Per `docs/skill-verification-architecture.md`, adversarial-critic on a
+diff is wrong-shape for APPLY. Replace with deterministic structural
+primitives:
 
-```
-Agent({
-  description: "Adversarial APPLY critic — finds drift between audit report and diff",
-  subagent_type: "general-purpose",
-  prompt:
-    "You are a blind reviewer. Two artifacts are attached: ARTIFACT-A and " +
-    "ARTIFACT-B. One is an audit-repo (schema v2) report with an intervention " +
-    "matrix in the YAML frontmatter (`summary[]` entries with `error_class`, " +
-    "`gap`, `primitive`, `priority`, `token_impact`) and a body containing " +
-    "P0/P1/P2 Recommendations sections with fenced code blocks of the concrete " +
-    "content to create or append. The other is a unified git diff showing the " +
-    "edits and new files produced. Neither label tells you which is which.\n\n" +
-    "List every intervention row, recommended primitive (CLAUDE.md section / " +
-    "Hook entry / Rule body / Skill stub), threshold, or behavioral assertion " +
-    "that appears in EXACTLY ONE artifact. For each item: quote the literal " +
-    "row or hunk, name which artifact (A or B), and classify as " +
-    "DROPPED (intervention row exists in report, no matching diff content and " +
-    "       not marked Skipped / Deferred / Manual) / " +
-    "WEAKENED (recommendation body is concrete code-block, diff applies " +
-    "          partial or shape-changed content) / " +
-    "ADDED (diff content does not map to any intervention row) / " +
-    "NEW (new file created by diff with no matching intervention row " +
-    "     recommending a primitive at that path).\n\n" +
-    "Then check GAP-ADDRESSED COHERENCE: for each intervention the diff claims " +
-    "to apply, quote the `gap:` field from the intervention row and state " +
-    "whether the diff content (visible in `+` lines or new file body) " +
-    "addresses that gap. If you cannot tell from the diff alone (e.g., gap is " +
-    "behavioral and the diff only adds a rule file whose effect is observed at " +
-    "session time), classify as UNVERIFIABLE-FROM-DIFF.\n\n" +
-    "Finally, flag any NEW file whose body contains text that no intervention " +
-    "row's recommendation code-block contains. File creation without an " +
-    "anchored recommendation is the largest scope-creep risk in this skill.\n\n" +
-    "Do not rate quality. Do not praise the diff. Report under 500 words.\n\n" +
-    "ARTIFACT-A:\n<paste report contents>\n\n" +
-    "ARTIFACT-B:\n<paste `git diff <pre-sha>..HEAD`>"
-})
-```
+**B1. AST-diff equivalence** (RefDiff, arXiv:1704.01544, precision
+100% / recall 88%). For each modified file:
+- Extract the AST / structural representation before and after the
+  edit (Markdown heading tree for SKILL.md / rule files; JSON tree
+  for .mcp.json; Python AST for hook scripts).
+- Assert: the structural diff matches the finding's claimed scope.
+  Edits outside the claimed-scope hunks → STRICT FAIL (F2 scope creep).
+- Assert: every claimed-resolved finding has at least ONE structural
+  change in its claimed-scope region.
 
-Then **dispatch a second time with the artifact bodies swapped** (A=diff, B=report). Position bias is the dominant LLM-judge artifact in pairwise settings (Shi et al. 2024 arXiv:2406.07791). Take the **union** of DROPPED / WEAKENED / ADDED / NEW / UNVERIFIABLE-FROM-DIFF items across both runs.
+**B2. Mutation-survival check** (Property-Based Mutation,
+arXiv:2301.13615; PGS framework FSE 2025 +37.3% correctness):
+- For each addressed finding, identify the failure-pattern the
+  finding flagged (regex, missing section, etc.).
+- Re-run that failure-pattern check against the post-edit file. If
+  the pattern STILL matches → STRICT FAIL (D5 PREDICATE_REVERIFIED
+  fails: the fix did not survive the pattern it claims to fix).
+
+**B3. Refactoring-aware diff classification** (RefDiff-style):
+- Classify each edit as one of: {bug-fix, refactor, formatting,
+  comment-only, structural}. Refactors that introduce new
+  functionality without a corresponding finding → STRICT FAIL
+  (F2 over-application).
+
+No subagent dispatch required for Layer B. All checks are
+mechanical / regex / AST-based.
 
 ### Layer C — rubric reconciliation (binary CheckEval-style)
 
@@ -412,19 +401,21 @@ D1 APPLY_COVERAGE         Every intervention row in the audit report's `summary[
                           Within each priority group, primitive type order is
                           CLAUDE.md → Hook → Rule → Skill. (F1, F4)
 
-D2 SCOPE_FIDELITY         Every diff file is under the report's `target:` path
-                          (excluding the report and its sidecar). Every new
-                          file's path matches a primitive type recommended by
-                          some intervention row at that path (e.g., a new
-                          `<target>/hooks/<name>` requires a Hook-primitive
-                          intervention; a new `<target>/.claude/rules/<name>.md`
-                          requires a Rule-primitive intervention; a new
-                          CLAUDE.md section requires a CLAUDE.md-primitive
-                          intervention). No diff content outside the intervention
-                          matrix. File creation without an anchored
-                          recommendation is D2 NO. (F2, F7)
+D2 SCOPE_FIDELITY         Anchored to B1 (AST-diff scope-match). Every diff file
+                          is under the report's `target:` path (excluding the
+                          report and its sidecar). Every new file's path matches
+                          a primitive type recommended by some intervention row
+                          at that path (e.g., a new `<target>/hooks/<name>`
+                          requires a Hook-primitive intervention; a new
+                          `<target>/.claude/rules/<name>.md` requires a
+                          Rule-primitive intervention; a new CLAUDE.md section
+                          requires a CLAUDE.md-primitive intervention). No diff
+                          content outside the intervention matrix. File creation
+                          without an anchored recommendation is D2 NO. B1 STRICT
+                          FAIL → D2 NO. (F2, F7)
 
-D3 INVARIANT_PRESERVATION Each newly-created primitive passes its own type's
+D3 INVARIANT_PRESERVATION Anchored to B3 (no spurious structural changes). Each
+                          newly-created primitive passes its own type's
                           invariants: new CLAUDE.md exists with `# <repo>`
                           header and warning-only on body line count >200; new
                           Rule file is plain Markdown with NO YAML frontmatter
@@ -432,19 +423,21 @@ D3 INVARIANT_PRESERVATION Each newly-created primitive passes its own type's
                           executable and the updated `settings.local.json` is
                           valid JSON; no Skill SKILL.md created inline (must
                           defer to /scaffold-skill); existing CLAUDE.md sections
-                          are not modified (append-only). (F3)
+                          are not modified (append-only). B3 classification of a
+                          refactor without a corresponding finding → D3 NO. (F3)
 
 D4 IDEMPOTENCY            Re-running this apply skill in dry-run mode on the
                           same report against the now-mutated tree produces an
                           empty diff. Already-created files / already-appended
                           sections are detected and skipped. (F5)
 
-D5 PREDICATE_REVERIFIED   For every applied intervention, the `gap:` field is
-                          addressed by the diff content — verified textually via
-                          the Layer B critic response against the fenced
-                          code-block content in the report's Recommendations
-                          section, OR by re-running `/audit-repo` on the target
-                          and confirming the originally-flagged gap is gone. (F8)
+D5 PREDICATE_REVERIFIED   Anchored to B2 (mutation-survival proves predicate
+                          re-verification). For every applied intervention, the
+                          `gap:` field's failure-pattern no longer matches the
+                          post-edit content. B2 STRICT FAIL → D5 NO. As fallback
+                          for gaps that are behavioral (observed at session
+                          time), re-run `/audit-repo` on the target and confirm
+                          the originally-flagged gap is gone. (F8)
 
 D6 AUDIT_FIX_CHAIN        The upstream `*-audit-repo.md` report is committed
                           AND its commit precedes the fix commit AND the fix
@@ -454,20 +447,22 @@ D6 AUDIT_FIX_CHAIN        The upstream `*-audit-repo.md` report is committed
                           (F9)
 ```
 
-**Layer → rubric crosswalk.** Layer-A `schema_version_match`/`ix_coverage`/`intervention_priority_order`/`primitive_type_order_within_priority` FAIL → D1 NO. `path_scope`/`policy_gate`/`anchor_confirmation` FAIL → D2 NO. `primitive_invariants` FAIL → D3 NO. `report_committed` FAIL → D6 NO. Second-run non-empty diff → D4 NO. Layer-B `DROPPED` → D1 NO and/or D5 NO. `WEAKENED` → D5 NO. `ADDED` → D2 NO. `NEW` → D2 NO and/or D3 NO. `UNVERIFIABLE-FROM-DIFF` → surface as Residual R3.
+**Layer → rubric crosswalk.** Layer-A `schema_version_match`/`ix_coverage`/`intervention_priority_order`/`primitive_type_order_within_priority` FAIL → D1 NO. `path_scope`/`policy_gate`/`anchor_confirmation` FAIL → D2 NO. `primitive_invariants` FAIL → D3 NO. `report_committed` FAIL → D6 NO. Second-run non-empty diff → D4 NO. **B1** scope-match FAIL → D2 NO. **B2** mutation-survival FAIL (gap's failure-pattern still matches post-edit) → D5 NO. **B3** uncorroborated refactor / over-application → D3 NO.
 
 ### Reconciliation outcomes
 
-- **All STRICT Layer-A pass + zero `DROPPED` / `WEAKENED` / `ADDED` / `NEW` + D1–D6 = YES** → commit (report first, then fix, per Step 8 audit-fix chain).
-- **Any STRICT Layer-A fail OR any `DROPPED` / `WEAKENED` / `NEW`** → propose specific restorations inline (intervention IDs with priority + primitive for missed coverage; named new files / diff hunks for ADDED / NEW), then re-run Layer A. Maximum **2 iterations**; if still failing, surface to user and do NOT commit.
-- **Layer-A STRICT pass + only SOFT warnings (e.g. CLAUDE.md > 200 lines) + Layer-B only `UNVERIFIABLE-FROM-DIFF` + D1–D6 = YES** → report warnings in Step 9 final status, then commit.
+- **All STRICT Layer-A pass + B1/B2/B3 all PASS + D1–D6 = YES** → commit (report first, then fix, per Step 8 audit-fix chain).
+- **Any STRICT Layer-A fail OR any B1/B2/B3 STRICT FAIL** → propose specific restorations inline (intervention IDs with priority + primitive for missed coverage; named new files / diff hunks for B1 scope-violations or B3 over-applications; failure-pattern names for B2 survivors), then re-run Layer A + B. Maximum **2 iterations**; if still failing, surface to user and do NOT commit.
+- **Layer-A STRICT pass + B1/B2/B3 PASS + only SOFT warnings (e.g. CLAUDE.md > 200 lines) + D1–D6 = YES** → report warnings in Step 9 final status, then commit.
 - **D6 NO (audit-fix chain broken)** → halt. Surface the missing report commit per Step 8 "Commit with audit-fix chain"; the reconciliation does not fix this silently.
 
 ### Acknowledged residuals (the pipeline does NOT catch these)
 
-1. **R1 Semantic equivalence under syntactic divergence.** A Rule file's prose may paraphrase the recommendation body without literal-string overlap; Layer-B flags this as DROPPED on the recommended phrasing and ADDED on the actual phrasing. Operator reconciles. Source: arXiv:2301.01113 (Invalidator).
+Adversarial-critic Layer B is replaced by structural primitives per docs/skill-verification-architecture.md; semantic equivalence checks beyond AST scope are out-of-scope and route to `/review-skill` post-apply.
+
+1. **R1 Semantic equivalence under syntactic divergence.** A Rule file's prose may paraphrase the recommendation body without literal-string overlap; B1's AST-diff treats reorderings/paraphrases as structural changes. Operator reconciles via post-apply `/audit-repo` re-run. Source: arXiv:2301.01113 (Invalidator).
 2. **R2 Cross-file semantic coupling.** A new Rule in `<target>/.claude/rules/` may collide with an existing rule's behavior, or a new Hook entry may shadow an existing matcher. The pipeline reads each created file's own invariants but does not cross-link. Mitigation: run `/review-claude-config <target>` after apply.
-3. **R3 Validation criteria the diff alone cannot verify.** When the `gap:` is behavioral (e.g., "no secret detection on commit"), Layer-B classifies as UNVERIFIABLE-FROM-DIFF. Operator must observe the new rule / hook in action, or re-run `/audit-repo <target>` to confirm the gap is closed.
+3. **R3 Validation criteria beyond AST/regex scope.** When the `gap:` is behavioral (e.g., "no secret detection on commit"), B2 cannot decide. Operator must observe the new rule / hook in action, or re-run `/audit-repo <target>` to confirm the gap is closed.
 4. **R4 Pragmatic / register drift in prose edits.** New Rule files use prose with imperatives — curt "Never commit `.env`" vs softer "`.env` files should be gitignored" — both directions entail under NLI; only register-aware human review catches.
 5. **R5 Audit reports with non-anchored interventions** (`apply-audit-findings`-specific). When an intervention's body recommendation describes a section to "append" without a `current`-style anchor (existing-section-content quoted for replacement), the apply skill MUST present an explicit per-intervention confirmation gate before the create-action runs and MUST record the user's confirmation as `anchor_confirmed: true` in `claimed.json` for that intervention id. The Layer-A `anchor_confirmation` row is STRICT — an applied intervention with `anchor_confirmed: false` (or missing) fails the gate. This realises the CLAUDE.md §Development Conventions "Apply skills … require confirmation gates" mandate for the non-anchored case and bounds the F2 / F7 file-creation scope-creep risk specific to this skill.
 

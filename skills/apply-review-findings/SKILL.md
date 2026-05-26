@@ -341,45 +341,38 @@ PY
 
 **Idempotency (F5) sub-test (separate dispatch).** After Layer A passes and before commit, re-run this orchestrator in dry-run mode against the same report on the now-mutated working tree; the second run's `git diff` against the post-first-run state MUST be empty. Non-empty → STRICT fail D4. Per-type appliers run their own idempotency check; the orchestrator-level check catches drift introduced at the dispatch / aggregation boundary.
 
-### Layer B — adversarial critic dispatch (blind, recall-framed)
+### Pipeline — Layer B (structural primitives)
 
-Dispatch a fresh subagent whose **single task** is to find drift between the report and the diff. Adversarial framing is the layer that catches DROPPED constraints, ADDED scope creep, and silently-dropped per-type-applier results (F1 / F2 / F7 / F8).
+Per `docs/skill-verification-architecture.md`, adversarial-critic on a
+diff is wrong-shape for APPLY. Replace with deterministic structural
+primitives:
 
-```
-Agent({
-  description: "Adversarial APPLY critic — finds drift between batch report and diff",
-  subagent_type: "general-purpose",
-  prompt:
-    "You are a blind reviewer. Two artifacts are attached: ARTIFACT-A and " +
-    "ARTIFACT-B. One is a /review-claude-config batch report listing findings " +
-    "with Evidence / Why it matters / Validation / Current / Recommended fields " +
-    "across multiple Skill / Agent / Rule items. The other is a unified git " +
-    "diff showing edits across one or more files dispatched to specialized " +
-    "appliers. Neither label tells you which is which.\n\n" +
-    "List every constraint, recommendation, threshold, validation criterion, " +
-    "or behavioral assertion that appears in EXACTLY ONE artifact. For each " +
-    "item: quote the literal sentence or hunk, name which artifact (A or B), " +
-    "and classify as DROPPED (in report, not in diff) / WEAKENED (recommended " +
-    "fully, applied partially) / ADDED (in diff, not justified by any report " +
-    "finding) / NEW (semantically new content in the post-edit file that was " +
-    "neither in the pre-edit file nor in any report recommendation).\n\n" +
-    "Additionally, check ORCHESTRATOR DISPATCH COHERENCE: for each `type` " +
-    "group in artifact A's `summary` (Skill / Agent / Rule), confirm that " +
-    "artifact B (diff) contains at least one edit consistent with that type " +
-    "OR that the surrounding context names that group as 'No specialized " +
-    "applier found'. A type group present in the report but absent from the " +
-    "diff with no explicit Skipped row is DROPPED at the orchestrator level.\n\n" +
-    "Then check VALIDATION COHERENCE: for each report finding the diff claims " +
-    "to resolve, quote the finding's `validation:` field and state whether the " +
-    "post-edit text (visible in the diff's `+` lines) satisfies it. If you " +
-    "cannot tell from the diff alone, classify as UNVERIFIABLE-FROM-DIFF.\n\n" +
-    "Do not rate quality. Do not praise the diff. Report under 500 words.\n\n" +
-    "ARTIFACT-A:\n<paste report contents>\n\n" +
-    "ARTIFACT-B:\n<paste `git diff <pre-sha>..HEAD`>"
-})
-```
+**B1. AST-diff equivalence** (RefDiff, arXiv:1704.01544, precision
+100% / recall 88%). For each modified file:
+- Extract the AST / structural representation before and after the
+  edit (Markdown heading tree for SKILL.md / rule files; JSON tree
+  for .mcp.json; Python AST for hook scripts).
+- Assert: the structural diff matches the finding's claimed scope.
+  Edits outside the claimed-scope hunks → STRICT FAIL (F2 scope creep).
+- Assert: every claimed-resolved finding has at least ONE structural
+  change in its claimed-scope region.
 
-Then **dispatch a second time with the artifact bodies swapped** (A=diff, B=report). Position bias is the dominant LLM-judge artifact in pairwise settings (Shi et al. 2024 arXiv:2406.07791). Take the **union** of DROPPED / WEAKENED / ADDED / NEW / UNVERIFIABLE-FROM-DIFF items across both runs.
+**B2. Mutation-survival check** (Property-Based Mutation,
+arXiv:2301.13615; PGS framework FSE 2025 +37.3% correctness):
+- For each addressed finding, identify the failure-pattern the
+  finding flagged (regex, missing section, etc.).
+- Re-run that failure-pattern check against the post-edit file. If
+  the pattern STILL matches → STRICT FAIL (D5 PREDICATE_REVERIFIED
+  fails: the fix did not survive the pattern it claims to fix).
+
+**B3. Refactoring-aware diff classification** (RefDiff-style):
+- Classify each edit as one of: {bug-fix, refactor, formatting,
+  comment-only, structural}. Refactors that introduce new
+  functionality without a corresponding finding → STRICT FAIL
+  (F2 over-application).
+
+No subagent dispatch required for Layer B. All checks are
+mechanical / regex / AST-based.
 
 ### Layer C — rubric reconciliation (binary CheckEval-style)
 
@@ -393,29 +386,34 @@ D1 APPLY_COVERAGE         Every report H+M finding is accounted-for in claimed.j
                           specialized applier found for type [Type]". No silent type
                           drops at the orchestrator level. (F1, F4)
 
-D2 SCOPE_FIDELITY         Every diff hunk maps to a `current` block in the report.
-                          Files modified ⊆ report frontmatter `summary[*].path`
-                          whitelist. No path outside whitelist (excluding the report
-                          and its sidecar). (F2)
+D2 SCOPE_FIDELITY         Anchored to B1 (AST-diff scope-match). Every diff hunk
+                          maps to a `current` block in the report. Files modified
+                          ⊆ report frontmatter `summary[*].path` whitelist. No
+                          path outside whitelist (excluding the report and its
+                          sidecar). B1 STRICT FAIL → D2 NO. (F2)
 
-D3 INVARIANT_PRESERVATION Each modified file still passes its per-type invariants
+D3 INVARIANT_PRESERVATION Anchored to B3 (no spurious structural changes). Each
+                          modified file still passes its per-type invariants
                           (delegated to per-type appliers — apply-skill-review-findings
                           checks SKILL.md, apply-agent-review-findings checks
                           agent.md, apply-rule-review-findings checks rules/*.md).
                           The orchestrator confirms each specialized applier
                           reported PASS on its own Layer A; any per-type FAIL
-                          blocks D3. (F3, F7)
+                          blocks D3. B3 classification of a refactor without a
+                          corresponding finding → D3 NO. (F3, F7)
 
 D4 IDEMPOTENCY            Re-running this orchestrator in dry-run mode on the same
                           report against the now-mutated tree produces an empty
                           diff. Per-type appliers also pass their own D4. (F5)
 
-D5 PREDICATE_REVERIFIED   For every applied finding, the report's `validation:`
-                          field is satisfied by the post-edit artifact — verified
-                          textually via the Layer B critic response OR by
-                          re-invoking the matching `/review-*` command on the
-                          modified file and confirming the originally-flagged
-                          finding is gone. (F8)
+D5 PREDICATE_REVERIFIED   Anchored to B2 (mutation-survival proves predicate
+                          re-verification). For every applied finding, the
+                          finding's failure-pattern no longer matches the
+                          post-edit artifact. B2 STRICT FAIL → D5 NO. As
+                          fallback for findings whose validation criterion is
+                          beyond AST/regex scope, re-invoke the matching
+                          `/review-*` command on the modified file and confirm
+                          the originally-flagged finding is gone. (F8)
 
 D6 AUDIT_FIX_CHAIN        The upstream batch report is committed AND its commit
                           precedes the fix commit AND the fix commit message
@@ -425,20 +423,22 @@ D6 AUDIT_FIX_CHAIN        The upstream batch report is committed AND its commit
                           (F9)
 ```
 
-**Layer → rubric crosswalk.** Layer-A `hm_coverage` / `severity_order` / `dispatch_completeness` FAIL → D1 NO. `path_scope` / `policy_gate` FAIL → D2 NO. `report_committed` FAIL → D6 NO. Second-run non-empty diff → D4 NO. Per-type-applier Layer A FAIL surfaced through aggregate result → D3 NO. Layer-B `DROPPED` → D1 NO and/or D5 NO. `WEAKENED` → D5 NO. `ADDED` → D2 NO. `NEW` → D2 NO and/or D3 NO. `UNVERIFIABLE-FROM-DIFF` → surface as Residual R3.
+**Layer → rubric crosswalk.** Layer-A `hm_coverage` / `severity_order` / `dispatch_completeness` FAIL → D1 NO. `path_scope` / `policy_gate` FAIL → D2 NO. `report_committed` FAIL → D6 NO. Second-run non-empty diff → D4 NO. Per-type-applier Layer A FAIL surfaced through aggregate result → D3 NO. **B1** scope-match FAIL → D2 NO. **B2** mutation-survival FAIL (failure-pattern still matches post-edit) → D5 NO. **B3** uncorroborated refactor / over-application → D3 NO.
 
 ### Reconciliation outcomes
 
-- **All STRICT Layer-A pass + zero `DROPPED` / `WEAKENED` / `ADDED` / `NEW` + D1–D6 = YES** → commit (report first, then fix, per Step 7 audit-fix chain).
-- **Any STRICT Layer-A fail OR any `DROPPED` / `WEAKENED` / `NEW`** → propose specific restorations inline (finding IDs with file:line for missed coverage; named type groups for missing dispatches; named diff hunks for ADDED / NEW), then re-run Layer A. Maximum **2 iterations**; if still failing, surface to user and do NOT commit.
-- **Layer-A STRICT pass + only SOFT warnings + Layer-B only `UNVERIFIABLE-FROM-DIFF` + D1–D6 = YES** → report warnings in Step 6 change summary, then commit.
+- **All STRICT Layer-A pass + B1/B2/B3 all PASS + D1–D6 = YES** → commit (report first, then fix, per Step 7 audit-fix chain).
+- **Any STRICT Layer-A fail OR any B1/B2/B3 STRICT FAIL** → propose specific restorations inline (finding IDs with file:line for missed coverage; named type groups for missing dispatches; named diff hunks for B1 scope-violations or B3 over-applications; failure-pattern names for B2 survivors), then re-run Layer A + B. Maximum **2 iterations**; if still failing, surface to user and do NOT commit.
+- **Layer-A STRICT pass + B1/B2/B3 PASS + only SOFT warnings + D1–D6 = YES** → report warnings in Step 6 change summary, then commit.
 - **D6 NO (audit-fix chain broken)** → halt. Surface the missing report commit per Step 7 "Commit with audit-fix chain"; the reconciliation does not fix this silently.
 
 ### Acknowledged residuals (the pipeline does NOT catch these)
 
-1. **R1 Semantic equivalence under syntactic divergence.** Recommendation text and actual edit may be syntactically different but semantically equivalent (reordered YAML keys, paraphrased prose). Layer-B flags this as DROPPED on the recommended phrasing and ADDED on the actual; operator reconciles. Source: arXiv:2301.01113 (Invalidator).
+Adversarial-critic Layer B is replaced by structural primitives per docs/skill-verification-architecture.md; semantic equivalence checks beyond AST scope are out-of-scope and route to `/review-skill` post-apply.
+
+1. **R1 Semantic equivalence under syntactic divergence.** Recommendation text and actual edit may be syntactically different but semantically equivalent (reordered YAML keys, paraphrased prose). B1's AST-diff treats reorderings as structural changes; operator reconciles via post-apply `/review-skill`. Source: arXiv:2301.01113 (Invalidator).
 2. **R2 Cross-file semantic coupling.** An edit dispatched through one specialized applier may break an assumption in a file owned by another type group (e.g. a Hard Rule removed from a SKILL.md that a sibling rule depends on). The orchestrator delegates per-file invariants to per-type appliers but does not cross-link. Mitigation: re-run `/review-claude-config` on the broader repo after apply.
-3. **R3 Validation criteria the diff alone cannot verify.** When `validation:` requires running a command (`make validate` passes) or observing behavior, Layer-B classifies as UNVERIFIABLE-FROM-DIFF. Operator must run the command or invoke the matching `/review-*` on the modified file.
+3. **R3 Validation criteria beyond AST/regex scope.** When `validation:` requires running a command (`make validate` passes) or observing behavior outside the failure-pattern regex, B2 cannot decide. Operator must run the command or invoke the matching `/review-*` on the modified file.
 4. **R4 Pragmatic / register drift in prose edits.** Curt "Use JSON." vs softer "JSON is recommended" — both directions entail under NLI; only register-aware human review catches.
 5. **R6 Multi-run convergence under non-deterministic recommendation text.** Per `merge-rules.md`, advisory Low findings vary across review runs. Chaining auto-applies on consecutive reports of the same target can yield drift even though each apply is correct against its own report. The pipeline checks per-report idempotency (D4), not cross-report stability.
 
