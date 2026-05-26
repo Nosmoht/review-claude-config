@@ -308,8 +308,17 @@ CLAUDE.md §"Architecture → Advisory-only skills (orphan-by-design)".
 ### Layer A — mechanical invariants (deterministic, fail-fast)
 
 Run on the produced report file after Write. Any `STRICT` row → abort and
-report; `SOFT` row → log warning, proceed. The advisory-leakage check (S1)
-is the load-bearing dimension for this skill.
+report; `SOFT` row → log warning, proceed.
+
+**S1 timing — defense-of-last-resort verification.** Step 5 programmatically
+sets `finding.severity = "Low"` for every finding BEFORE the report Write
+(see §Step 5). S1 here runs AFTER Write against the persisted report and
+therefore CANNOT prevent a researcher-emitted High/Medium leak — that surface
+is closed at Step 5 by the deterministic rewrite. S1's structural role is to
+detect a **Step-5 regression** (someone removes the rewrite, the rewrite is
+buggy and skips a finding, the rewrite is bypassed via an alternate code
+path). When S1 fires post-Write, the bug is in this skill, not in the
+researcher. Map → D5.
 
 ```bash
 python3 - "$REPORT_PATH" <<'PY'
@@ -327,11 +336,15 @@ if not m:
     sys.exit(1)
 fm = yaml.safe_load(m.group(1)) or {}
 
-# S1 STRICT — advisory-leakage cap (load-bearing for orphan-by-design)
+# S1 STRICT — Step-5 regression detector (post-Write defense-of-last-resort)
+# NOTE: Step 5 already programmatically caps severity BEFORE Write, so any
+# leak here indicates a regression in the Step-5 rewrite path, not a
+# researcher escape. Researcher-emitted High/Medium is closed at Step 5.
 findings = fm.get("findings", []) or []
 leaked = [f for f in findings if f.get("severity") != "Low"]
 if leaked:
-    errors.append(f"STRICT S1 ADVISORY-LEAKAGE: non-Low severities found: "
+    errors.append(f"STRICT S1 STEP-5-REGRESSION: non-Low severities found in "
+                  f"written report (Step-5 cap should have prevented this): "
                   f"{[f.get('severity') for f in leaked]}")
 
 # S2 STRICT — required frontmatter keys
@@ -390,8 +403,9 @@ PY
 
 What each check catches:
 
-- **S1 (advisory-leakage cap)** → ADVISORY-LEAKAGE — the orphan-by-design
-  load-bearing invariant. Map → D5.
+- **S1 (Step-5 regression detector)** → ADVISORY-LEAKAGE — post-Write
+  detection of a Step-5 cap regression. The primary cap is Step 5 (pre-Write);
+  S1 is defense-of-last-resort that the cap actually ran. Map → D5.
 - **S2/S3/S4/S5 (frontmatter shape + status vocab + stub invariant)** →
   malformed-report / status-confusion. Map → D3.
 - **S6 ($HOME literal)** → `block-sensitive-content.sh` contract.
@@ -499,12 +513,24 @@ D6. Map `RESEARCHER-FABRICATED` / `UNCITED` → D4.
 
 - **All Layer-A STRICT pass + zero Layer-B `MIS-SEVERITY` / `OVERSPEC` /
   `RESEARCHER-FABRICATED` / `MARKER-LEAK`** → proceed to Output.
-- **Any Layer-A STRICT fail OR any of those Layer-B classes** → DO NOT WRITE
-  the report at the intended path. The S1 advisory-leakage check is the
-  defense-of-last-resort for an orphan-by-design skill: if D5 fails,
-  rewriting `finding.severity = "Low"` is the deterministic recovery (per
-  skill step 5). For S4/S5/D1 failures, rewrite as the appropriate stub
-  status. Max two recovery iterations; if still failing, surface to user.
+- **Any Layer-A STRICT fail (other than S1) OR any of those Layer-B classes**
+  → DO NOT WRITE the report at the intended path (next iteration; the failing
+  Write has already happened — delete or rewrite the file as the appropriate
+  stub status and re-run from the corrected state). For S4/S5/D1 failures,
+  rewrite as the appropriate stub status. Max two recovery iterations; if
+  still failing, surface to user.
+- **Layer-A S1 STRICT fail (Step-5 regression)** → the report has already
+  been written with a leaked non-Low severity, which is a contract violation
+  caused by a bug in Step 5 of THIS skill, not by the researcher (Step 5 caps
+  before Write). Deterministic recovery: rewrite the persisted report
+  in-place with `finding.severity = "Low"` for every leaked finding, then
+  re-run Layer A. Treat as a post-mortem signal — investigate why Step 5
+  did not apply the cap. Max two recovery iterations; if still failing,
+  surface to user.
+- **Layer-B `MIS-SEVERITY`** → distinct from S1: Layer-B's blind critic
+  judges the persisted report; if it flags MIS-SEVERITY when Layer-A S1
+  passed, the two layers disagree on what counts as a severity violation.
+  Surface to user; do not silently re-cap.
 - **Only Layer-A SOFT warnings (S8/S9) + Layer-B `UNCITED`** → record in the
   report's body under "### Layer-B Findings (Advisory)" but proceed. These
   do not block ship; reviewer triages.

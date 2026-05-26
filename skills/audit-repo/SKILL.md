@@ -485,17 +485,26 @@ EVIDENCE_CLASSES = {"repo-policy", "deterministic", "validated",
                     "literature", "advisory", "observation"}
 PRIORITIES = {"P0", "P1", "P2"}
 CONFIDENCES = {"High", "Medium", "Low"}
+ERROR_CLASSES = {"Toolchain", "Navigation", "Convention",
+                 "Architecture", "Repetition", "Domain", "Security"}
 
 matrix_rows = re.findall(r"^\|\s*(P[012])\s*\|([^\n]+)\|\s*$", body, re.M)
 bad_priority = [r for r in matrix_rows if r[0] not in PRIORITIES]
 
 rows_full = re.findall(r"^\|(?:[^\n]+)\|\s*$", body, re.M)
 rows_missing_ec, rows_missing_conf = [], []
+bad_error_class = []
 for row in rows_full:
     if re.match(r"^\|[\s\-:|]+\|$", row): continue
     if "P0" not in row and "P1" not in row and "P2" not in row: continue
     if not any(ec in row for ec in EVIDENCE_CLASSES): rows_missing_ec.append(row[:80])
     if not any(c in row for c in CONFIDENCES):       rows_missing_conf.append(row[:80])
+    # Extract error_class cell (column 3 after priority: primitive | error_class | ...)
+    cells = [c.strip() for c in row.strip("|").split("|")]
+    if len(cells) >= 3:
+        ec_value = cells[2]
+        if ec_value and ec_value not in ERROR_CLASSES:
+            bad_error_class.append(f"{row[:60]}... error_class={ec_value!r}")
 
 ic_m = re.search(r"^intervention_count:\s*(\d+)", fm, re.M)
 ic = int(ic_m.group(1)) if ic_m else None
@@ -520,6 +529,9 @@ add("STRICT", "required_frontmatter_keys", f"missing={missing_fm}", len(missing_
 add("STRICT", "schema_version_pinned",     f"v{schema_v}", schema_v == 1,
     note="bump invalidates analytics consumers")
 add("STRICT", "intervention_priority_valid", f"bad={bad_priority}", len(bad_priority) == 0)
+add("STRICT", "intervention_error_class_valid", f"bad={bad_error_class}",
+    len(bad_error_class) == 0,
+    note="error_class must be in D3 closed set {Toolchain, Navigation, Convention, Architecture, Repetition, Domain, Security}")
 add("STRICT", "intervention_matrix_complete_ec",   f"missing={len(rows_missing_ec)}",
     len(rows_missing_ec) == 0,   note="every matrix row needs an evidence_class")
 add("STRICT", "intervention_matrix_complete_conf", f"missing={len(rows_missing_conf)}",
@@ -550,6 +562,7 @@ Metric coverage matrix (which failure class each STRICT row catches):
 | `required_frontmatter_keys`              | F5                     |
 | `schema_version_pinned`                  | F10                    |
 | `intervention_priority_valid`            | F5 (enum drift)        |
+| `intervention_error_class_valid`         | F4 (D3 taxonomy drift) |
 | `intervention_matrix_complete_ec`        | F7 (D6 emission gate)  |
 | `intervention_matrix_complete_conf`      | F7 (D6 emission gate)  |
 | `action_plan_matches_count`              | F5 (count drift)       |
@@ -678,6 +691,7 @@ Layer-A row → Dimension mapping:
 - `frontmatter_present`, `required_frontmatter_keys`, `schema_version_pinned` → D1
 - `intervention_matrix_complete_ec`, `intervention_matrix_complete_conf` → D6
 - `intervention_priority_valid` → D4
+- `intervention_error_class_valid` → D3
 - `action_plan_matches_count` → D1
 
 Layer-B item → Dimension mapping:
