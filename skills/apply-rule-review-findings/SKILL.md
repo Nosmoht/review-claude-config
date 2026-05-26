@@ -278,6 +278,218 @@ Present next steps via AskUserQuestion (header: "What's next?"):
 
 On "Verify improvements": invoke `/review-rule` with the rule path. On "Apply findings from another report": ask for the report path, then invoke `/apply-rule-review-findings`. On "Done": acknowledge and stop.
 
+## Quality measurement (mandatory before commit)
+
+Without verification, this skill fails at **finding-coverage miss / scope-fidelity break / always-loaded-rule regression / audit-fix chain break** — concretely: a Medium finding silently dropped without a Skipped row, a `paths:` glob pattern mutated while replacing nearby text (breaks harness path-scoping for every future session), a cross-link to `rules/<sibling>.md` left dangling after a rename, or a fix commit landing without the upstream report commit (F1 / F2 / F3 / F7 / F9 per `.work/skill-verification/apply-template.md`). Rule files are loaded into every session in `~/workspace/` via the `~/.claude/rules/` symlink — a DROPPED constraint here has session-wide blast radius. The literature converges on a three-layer pipeline; any one layer alone is insufficient.
+
+References: CheckEval (arXiv:2403.18771), G-Eval (arXiv:2303.16634), Position bias in LLM-as-a-Judge (arXiv:2406.07791), IFEval (arXiv:2311.07911), FollowBench (ACL 2024), Beyond Consensus (NUS 2025), Invalidator (arXiv:2301.01113).
+
+Before any commit, the apply skill captures `PRE_SHA="$(git rev-parse HEAD)"` (recorded into `.work/<task-id>/pre-apply-sha`) and emits a result manifest `claimed.json` of the shape `{"applied":[...], "skipped":[...], "manual_only":[...], "policy_decisions":{<finding_id>: true|false}}` so the layers below can read both deterministically.
+
+### Layer A — mechanical invariants (deterministic, fail-fast)
+
+Run on the post-apply working tree. Any `STRICT` row FAIL → abort and report; any `SOFT` row delta → log warning, surface to user, do not auto-commit.
+
+```bash
+PRE_SHA="$(cat .work/<task-id>/pre-apply-sha)"
+REPORT="$1"   # *-review-rule.md report
+CLAIMED="$2"  # claimed.json {applied, skipped, manual_only, policy_decisions}
+
+python3 - "$REPORT" "$PRE_SHA" "$CLAIMED" <<'PY'
+import json, os, re, subprocess, sys
+report_path, pre_sha, claimed_path = sys.argv[1], sys.argv[2], sys.argv[3]
+sidecar = report_path.removesuffix(".md") + ".findings.json"
+findings = []
+if os.path.exists(sidecar):
+    findings = json.load(open(sidecar)).get("findings", [])
+else:
+    body = open(report_path).read()
+    for m in re.finditer(r"^#{3,4}\s+\d+\.\s+(.+?)\s+\(Impact:\s+(High|Medium|Low)", body, re.M):
+        findings.append({"id": m.group(1)[:60], "severity": m.group(2)})
+claimed = json.load(open(claimed_path))
+applied = set(claimed["applied"])
+body = open(report_path).read()
+fm = re.match(r"---\n(.*?)\n---", body, re.S)
+allowed_paths = set(re.findall(r"-\s+path:\s+([^\s]+)", fm.group(1))) if fm else set()
+diff_files = [f for f in subprocess.check_output(
+    ["git", "diff", "--name-only", pre_sha], text=True).strip().split("\n") if f]
+report_committed = subprocess.run(
+    ["git", "log", "--oneline", "--all", "--", report_path],
+    capture_output=True, text=True).stdout.strip()
+rows = []
+def row(sev, name, ok, detail=""): rows.append((sev, name, ok, detail))
+hm = [f for f in findings if f.get("severity") in ("High", "Medium")]
+applied_hm = [f for f in hm if f.get("id") in applied]
+row("STRICT", "hm_coverage",
+    len(applied_hm) + len(claimed["manual_only"]) + len(claimed["skipped"]) == len(hm),
+    f"hm={len(hm)} applied={len(applied_hm)} manual={len(claimed['manual_only'])} skipped={len(claimed['skipped'])}")
+out_of_scope = [f for f in diff_files if allowed_paths and f not in allowed_paths
+                and not f.endswith(".findings.json") and not f.endswith("-review-rule.md")]
+row("STRICT", "path_scope", not out_of_scope, f"out_of_scope={out_of_scope}")
+# Rule-specific invariants (F3, F7): paths:-field byte-identity, no frontmatter injection,
+# cross-link integrity. Rule files in this repo's .claude/rules/ are plain Markdown
+# (Hard Rule: no frontmatter); rule files in ~/workspace/claude-config/rules/ MAY carry
+# `paths:` globs that are LOAD-BEARING (harness path-scoping contract).
+violations = []
+REF_RE = r"\b(?:rules|references|agents|skills|hooks|bin)/[A-Za-z0-9._/-]+\.[a-z]+\b"
+for f in diff_files:
+    if not (f.endswith(".md") and "/rules/" in f and not f.endswith("-review-rule.md")):
+        continue
+    text = open(f).read()
+    # No frontmatter injection (Hard Rule, also F3 SKILL declaration)
+    pre_text = subprocess.run(["git", "show", f"{pre_sha}:{f}"],
+                              capture_output=True, text=True).stdout
+    pre_has_fm = pre_text.startswith("---\n")
+    post_has_fm = text.startswith("---\n")
+    if post_has_fm and not pre_has_fm:
+        violations.append(f"{f}=frontmatter-injected")
+    # paths: byte-identity when present (D2 SCOPE_FIDELITY load-bearing for rules)
+    pre_paths_m = re.search(r"^paths:\s*\n((?:\s+-\s+.+\n)+)", pre_text, re.M)
+    post_paths_m = re.search(r"^paths:\s*\n((?:\s+-\s+.+\n)+)", text, re.M)
+    if pre_paths_m and (not post_paths_m or pre_paths_m.group(1) != post_paths_m.group(1)):
+        violations.append(f"{f}=paths-mutated")
+    # Cross-link integrity: every intra-repo reference in the post-edit body must
+    # resolve to a file that exists in the working tree.
+    repo_root = subprocess.check_output(
+        ["git", "rev-parse", "--show-toplevel"], text=True).strip()
+    for ref in set(re.findall(REF_RE, text)):
+        if not os.path.exists(os.path.join(repo_root, ref)):
+            violations.append(f"{f}=broken-link:{ref}")
+row("STRICT", "invariants", not violations, f"violations={violations}")
+unresolved_high = [f for f in findings if f.get("severity") == "High"
+                   and f.get("id") not in applied and f.get("id") not in claimed["manual_only"]]
+applied_low = [f for f in findings if f.get("severity") == "Low" and f.get("id") in applied]
+row("STRICT", "severity_order", not (unresolved_high and applied_low),
+    f"unresolved_high={len(unresolved_high)} applied_low={len(applied_low)}")
+row("STRICT", "report_committed", bool(report_committed), f"log='{report_committed[:60]}'")
+policy = claimed.get("policy_decisions", {})
+policy_viol = [fid for fid in applied if policy.get(fid) is False]
+row("STRICT", "policy_gate", not policy_viol, f"violations={policy_viol}")
+row("SOFT", "idempotency_marker", True, "second-run dispatched separately")
+row("SOFT", "files_touched", True, f"n={len(diff_files)}")
+row("SOFT", "applied_count", True, f"applied={len(applied)}")
+fail = 0
+print(f"{'severity':9} {'metric':22} {'ok':>4}  detail")
+for sev, name, ok, detail in rows:
+    flag = "PASS" if ok else ("FAIL" if sev == "STRICT" else "warn")
+    if not ok and sev == "STRICT": fail += 1
+    print(f"{sev:9} {name:22} {flag:>4}  {detail}")
+sys.exit(1 if fail else 0)
+PY
+```
+
+**Idempotency (F5) sub-test (separate dispatch).** After Layer A passes and before commit, re-run this apply skill in dry-run mode against the same report on the now-mutated working tree; the second run's `git diff` against the post-first-run state MUST be empty. Non-empty → STRICT fail D4.
+
+### Layer B — adversarial critic dispatch (blind, recall-framed)
+
+Dispatch a fresh subagent whose **single task** is to find drift between the report and the diff. Rule files are always-loaded in every `~/workspace/` session — the critic must treat DROPPED items in rule bodies as HIGH-priority surfacing, because a lost constraint here propagates to every future Claude Code session.
+
+```
+Agent({
+  description: "Adversarial APPLY critic — finds drift between rule report and diff",
+  subagent_type: "general-purpose",
+  prompt:
+    "You are a blind reviewer. Two artifacts are attached: ARTIFACT-A and " +
+    "ARTIFACT-B. One is a /review-rule report listing findings with " +
+    "Evidence / Why it matters / Validation / Current / Recommended fields. " +
+    "The other is a unified git diff showing edits to one or more rule files " +
+    "(rules/*.md, always-loaded directives) that were supposed to address " +
+    "those findings. Neither label tells you which is which.\n\n" +
+    "List every constraint, recommendation, threshold, validation criterion, " +
+    "exception, conditional ('if X then Y', 'unless Z'), scope boundary, or " +
+    "behavioral assertion that appears in EXACTLY ONE artifact. For each item: " +
+    "quote the literal sentence or hunk, name which artifact (A or B), and " +
+    "classify as DROPPED (in report, not in diff) / WEAKENED (recommended " +
+    "fully, applied partially; OR strong directive 'must'/'never'/'always' " +
+    "replaced with aspirational 'should'/'try'/'consider') / ADDED (in diff, " +
+    "not justified by any report finding) / NEW (semantically new content in " +
+    "the post-edit file that was neither in the pre-edit file nor in any " +
+    "report recommendation).\n\n" +
+    "Rule files are loaded into every Claude Code session in ~/workspace/ via " +
+    "the ~/.claude/rules/ symlink — DROPPED items here have session-wide blast " +
+    "radius. Treat any DROPPED finding in a rule body as HIGH-priority " +
+    "surfacing.\n\n" +
+    "If artifact B (diff) modifies a rule body, additionally verify: (a) any " +
+    "`paths:` frontmatter glob in the pre-edit file is byte-identical in the " +
+    "post-edit file unless the report explicitly addresses a path-scoping " +
+    "finding (paths: is the harness path-scoping contract); (b) every " +
+    "intra-repo cross-link (`rules/<other>.md`, `references/<other>.md`) in " +
+    "the post-edit body still resolves to an existing file.\n\n" +
+    "Then check VALIDATION COHERENCE: for each report finding the diff claims " +
+    "to resolve, quote the finding's `validation:` field and state whether " +
+    "the post-edit text (visible in the diff's `+` lines) satisfies it. Rules " +
+    "have no executable form, so validation is textual; if you cannot tell " +
+    "from the diff alone, classify as UNVERIFIABLE-FROM-DIFF.\n\n" +
+    "Do not rate quality. Do not praise the diff. Report under 500 words.\n\n" +
+    "ARTIFACT-A:\n<paste report contents>\n\n" +
+    "ARTIFACT-B:\n<paste `git diff <pre-sha>..HEAD`>"
+})
+```
+
+Then **dispatch a second time with the artifact bodies swapped** (A=diff, B=report). Position bias is the dominant LLM-judge artifact in pairwise settings (Shi et al. 2024 arXiv:2406.07791). Take the **union** of DROPPED / WEAKENED / ADDED / NEW / UNVERIFIABLE-FROM-DIFF items across both runs.
+
+### Layer C — rubric reconciliation (binary CheckEval-style)
+
+Six binary dimensions. Any `NO` blocks the commit. CheckEval (arXiv:2403.18771) reports +0.45 inter-evaluator agreement for binary vs. Likert.
+
+```
+D1 APPLY_COVERAGE         Every report H+M finding is accounted-for in claimed.json:
+                          count(applied ∪ manual_only ∪ skipped) == count(H+M findings).
+                          No silent drops. (F1, F4)
+
+D2 SCOPE_FIDELITY         Every diff hunk maps to a `current` block in the report.
+                          Files modified ⊆ report frontmatter `summary[*].path`
+                          whitelist. Every `paths:` glob pattern in the pre-edit
+                          rule frontmatter is byte-identical in the post-edit file
+                          (harness path-scoping contract) UNLESS the report finding
+                          explicitly addresses path-scoping. (F2)
+
+D3 INVARIANT_PRESERVATION Each modified rule file still passes: no YAML frontmatter
+                          injected (Hard Rule: rules in .claude/rules/ are plain
+                          Markdown); `paths:` field (when present in workspace
+                          rules) remains a non-empty list of glob patterns; every
+                          intra-repo cross-link (`rules/<other>.md`,
+                          `references/<other>.md`, `agents/<other>.md`) in the
+                          post-edit body resolves to an existing file; existing
+                          Hard Rules and scope qualifiers intact; directive verbs
+                          'must'/'never'/'always' not replaced with aspirational
+                          'should'/'try'/'consider'. (F3, F7)
+
+D4 IDEMPOTENCY            Re-running this apply skill in dry-run mode on the same
+                          report against the now-mutated tree produces an empty
+                          diff. (F5)
+
+D5 PREDICATE_REVERIFIED   For every applied finding, the report's `validation:`
+                          field is satisfied by the post-edit rule body. Verified
+                          textually via the Layer B critic response — rules have
+                          no executable form, so re-invoking `/review-rule` on
+                          the modified file (and confirming the originally-flagged
+                          finding is gone) is the only re-verification path. (F8)
+
+D6 AUDIT_FIX_CHAIN        The upstream `*-review-rule.md` report is committed AND
+                          its commit precedes the fix commit AND the fix commit
+                          message carries the report timestamp per
+                          `commit-conventions.md`
+                          (`fix(<scope>): address findings from <timestamp> review`).
+                          (F9)
+```
+
+**Layer → rubric crosswalk.** Layer-A `hm_coverage`/`severity_order` FAIL → D1 NO. `path_scope`/`policy_gate` FAIL → D2 NO. `invariants` FAIL → D3 NO (or D2 NO when `paths-mutated`). `report_committed` FAIL → D6 NO. Second-run non-empty diff → D4 NO. Layer-B `DROPPED` → D1 NO and/or D5 NO. `WEAKENED` → D5 NO. `ADDED` → D2 NO. `NEW` → D2 NO and/or D3 NO. `UNVERIFIABLE-FROM-DIFF` → surface as Residual R3.
+
+### Reconciliation outcomes
+
+- **All STRICT Layer-A pass + zero `DROPPED` / `WEAKENED` / `ADDED` / `NEW` + D1–D6 = YES** → commit (report first, then fix, per Phase 4 audit-fix chain).
+- **Any STRICT Layer-A fail OR any `DROPPED` / `WEAKENED` / `NEW`** → propose specific restorations inline (finding IDs with file:line for missed coverage; named diff hunks for ADDED / NEW; byte-identical `paths:` block restoration for path-mutation), then re-run Layer A. Maximum **2 iterations**; if still failing, surface to user and do NOT commit.
+- **Layer-A STRICT pass + only SOFT warnings + Layer-B only `UNVERIFIABLE-FROM-DIFF` + D1–D6 = YES** → report warnings in Phase 4 change summary, then commit.
+- **D6 NO (audit-fix chain broken)** → halt. Surface the missing report commit per Phase 4 "Commit with audit-fix chain"; the reconciliation does not fix this silently.
+
+### Acknowledged residuals (the pipeline does NOT catch these)
+
+1. **R1 Semantic equivalence under syntactic divergence.** Recommendation text and actual edit may be syntactically different but semantically equivalent (reordered list items, paraphrased prose, synonyms for the same constraint). Layer-B flags this as DROPPED on the recommended phrasing and ADDED on the actual; operator reconciles. Source: arXiv:2301.01113 (Invalidator).
+2. **R2 Cross-file semantic coupling.** An edit to one rule may break an unstated assumption in a sibling rule or in `references/*.md` (e.g. a constraint removed here that another rule's body silently relies on). The pipeline checks intra-repo link existence but not behavioral coupling. Mitigation: run `/review-claude-config` on the broader repo after apply.
+3. **R3 Validation criteria the diff alone cannot verify.** When `validation:` requires observing operational behavior (e.g. "rule loads in next session", "harness path-scoping fires correctly"), Layer-B classifies as UNVERIFIABLE-FROM-DIFF. Operator must invoke `/review-rule` on the modified file or observe behavior in a fresh session.
+4. **R4 Pragmatic / register drift in prose edits.** Curt "Never bypass." vs softer "Bypassing is discouraged" — both directions entail under NLI; only register-aware human review catches.
+
 ## Hard Rules
 
 - **Edit-only operations.** Never delete files. Never create new files. Only edit existing files.
