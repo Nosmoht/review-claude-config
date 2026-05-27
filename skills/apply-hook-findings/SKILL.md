@@ -2,10 +2,12 @@
 name: apply-hook-findings
 description: >
   Applies findings from a /review-hook report to the reviewed hook
-  files (hooks/*.sh, hooks/*.py, .claude/settings*.json). Use after
-  /review-hook on a single hook or when delegated by
-  /apply-review-findings. Do NOT use for skill, agent, rule, or
-  CLAUDE.md reports — those have dedicated apply-* skills.
+  files (hooks/*.sh, hooks/*.py, hooks/hooks.json, .claude/settings.json,
+  .claude/settings.local.json). Use after /review-hook on a single hook
+  or when delegated by /apply-review-findings. Do NOT use for skill,
+  agent, rule, CLAUDE.md, or audit reports — those have dedicated
+  apply-* skills (apply-skill-review-findings, apply-agent-review-findings,
+  apply-rule-review-findings, apply-claude-md-findings, apply-audit-findings).
 argument-hint: "[report-path]"
 allowed-tools: Read, Edit, Glob, Bash
 disable-model-invocation: true
@@ -67,7 +69,12 @@ Locate the shared commit conventions: `**/review-claude-config/references/commit
 From the frontmatter, extract `target` (the reviewed hook file or directory). Validate via Bash:
 
 - The target path exists
-- It is under one of: `hooks/*.sh`, `hooks/*.py`, `.claude/settings.json`, `.claude/settings.local.json`, or a `hooks.json` file
+- It is under one of the canonical hook-artifact classes (used consistently across this skill — description, Step 3, Hard Rule 3):
+  - `hooks/*.sh`
+  - `hooks/*.py`
+  - `hooks/hooks.json`
+  - `.claude/settings.json`
+  - `.claude/settings.local.json`
 - The containing repo is a git repository (`git -C <repo> rev-parse --git-dir`)
 
 If the target does not match one of those classes, stop: "Target is not a hook artifact. apply-hook-findings only edits hook files."
@@ -193,7 +200,7 @@ The parent skill aggregates this into its multi-primitive results.
 
 1. Never use `git add -A` — stage only the files edited in this session.
 2. Never use `--no-verify` on commit. If pre-commit hooks fail, surface and stop.
-3. Never edit files outside `hooks/`, `.claude/settings*.json`, or `hooks.json` paths.
+3. Never edit files outside the canonical hook-artifact classes named in Phase 1 Step 3 (`hooks/*.sh`, `hooks/*.py`, `hooks/hooks.json`, `.claude/settings.json`, `.claude/settings.local.json`).
 4. Hooks are `blast_radius: security-sensitive`; respect apply-risk-policy classification before each Edit.
 5. JSON validation after settings-edit is mandatory; auto-revert on invalid JSON is the only auto-revert path.
 6. Stop on any pre-commit hook failure; user owns resolution.
