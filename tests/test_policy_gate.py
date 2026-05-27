@@ -10,6 +10,7 @@ import jsonschema
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hooks"))
+import policy_gate
 from policy_gate import (
     DEFAULT_POLICY,
     _check_overrides,
@@ -506,20 +507,60 @@ class TestLazyLoadPolicy:
     """Cover the PEP 562 lazy-load path for the 5 JSON-derived constants."""
 
     def test_config_missing_raises_runtime_error(
-        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ):
-        """When policy_gate.json is missing, attribute access raises
-        RuntimeError pointing at the config file."""
+        """When policy_gate.json is missing, attribute access via the PEP 562
+        facade returns the per-name fail-closed default and emits a stderr
+        warning — does NOT raise (was the #278 follow-up CRITICAL closed in
+        Phase 8.5: prior behavior was unguarded propagation to __main__ →
+        silent allow)."""
         import policy_gate
 
         monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(tmp_path / "absent.json"))
         policy_gate._load_config_cached.cache_clear()
         try:
-            with pytest.raises(
-                RuntimeError,
-                match=r"policy_gate\.json missing at .* — see hooks/policy_gate\.json",
-            ):
-                _ = policy_gate.TOOL_LEVELS
+            # __getattr__ now routes through _safe_resolve with per-name default
+            value = policy_gate.TOOL_LEVELS
+            assert value == {}, (
+                f"missing canonical config should fail-closed to empty dict for "
+                f"TOOL_LEVELS, got {value!r}"
+            )
+            err = capsys.readouterr().err
+            assert "TOOL_LEVELS" in err
+            assert "fail-closed" in err
+        finally:
+            policy_gate._load_config_cached.cache_clear()
+
+    def test_pep562_getattr_fail_closed_per_lazy_name(
+        self,
+        tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ):
+        """Phase 8.5 R2 CRITICAL: PEP 562 __getattr__ must NOT bypass _safe_resolve.
+        Every lazy name returns its per-name fail-closed default on missing canonical
+        config (DEFAULT_POLICY → hardcoded fail-closed dict, others → empty container)."""
+        import policy_gate
+
+        monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(tmp_path / "absent.json"))
+        policy_gate._load_config_cached.cache_clear()
+        try:
+            assert policy_gate.TOOL_LEVELS == {}
+            assert policy_gate.L5_BASH_PATTERNS == []
+            assert policy_gate._MCP_L1_PREFIXES == ()
+            assert policy_gate._MCP_L4_VERBS == frozenset()
+            # DEFAULT_POLICY is the only lazy name whose default is the hardcoded
+            # fail-closed dict (not an empty container).
+            assert policy_gate.DEFAULT_POLICY == {
+                1: "ask", 2: "ask", 3: "ask", 4: "deny", 5: "deny",
+            }
+            err = capsys.readouterr().err
+            for name in ("TOOL_LEVELS", "L5_BASH_PATTERNS", "_MCP_L1_PREFIXES",
+                         "_MCP_L4_VERBS", "DEFAULT_POLICY"):
+                assert name in err, f"stderr missing fail-closed trace for {name}"
         finally:
             policy_gate._load_config_cached.cache_clear()
 
@@ -574,10 +615,16 @@ class TestLazyLoadPolicy:
         policy_gate._load_config_cached.cache_clear()
         assert policy_gate.TOOL_LEVELS == {"Custom": 1}
 
-    def test_malformed_json_raises_validation_error(
-        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    def test_malformed_json_fail_closed_to_default(
+        self,
+        tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ):
-        """A schema-mismatched JSON raises jsonschema.ValidationError on access."""
+        """A schema-mismatched canonical config makes the PEP 562 facade
+        fail-closed to the per-name default (Phase 8.5 R2 CRITICAL closed:
+        __getattr__ used to propagate jsonschema.ValidationError / RuntimeError
+        to __main__ → silent allow; now routes through _safe_resolve)."""
         import policy_gate
 
         bad_config = {"tool_levels": "not-a-dict"}
@@ -585,5 +632,208 @@ class TestLazyLoadPolicy:
         config_file.write_text(json.dumps(bad_config))
         monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(config_file))
         policy_gate._load_config_cached.cache_clear()
-        with pytest.raises((jsonschema.ValidationError, RuntimeError)):
-            _ = policy_gate.TOOL_LEVELS
+        # No raise — fail-closed default returned, stderr names the failure
+        value = policy_gate.TOOL_LEVELS
+        assert value == {}
+        err = capsys.readouterr().err
+        assert "TOOL_LEVELS" in err
+        assert "fail-closed" in err
+
+
+class TestDecisionJsonFailClosedOnUnrecognizedAction:
+    """#277 R1, R2 — _decision_json must NOT silently emit "{}" on unrecognized actions.
+
+    Spec: issue #277 R1+R2 — four mis-action shapes covered (string typo, unknown
+    verb, empty string, None). Per ai-written-tests.md practice #1, additional
+    boundary cases (int, list, bool) cover the same defect class — JSON-parseable
+    types that escape pure-string validation.
+    """
+
+    @pytest.mark.parametrize(
+        "bad_action",
+        [
+            "Deny",   # capital-D typo
+            "warn",   # unknown verb
+            "",       # empty string
+            None,     # null
+            4,        # integer from policy.json {"action": 4}
+            ["deny"], # list from policy.json {"action": ["deny"]}
+            True,     # boolean from policy.json {"action": true}
+            {"deny": True},  # dict
+        ],
+    )
+    def test_unrecognized_action_emits_ask_json_not_empty_string(self, bad_action):
+        """Spec #277 R1: result must be a JSON object with permissionDecision=ask,
+        NOT the literal '{}' that the harness interprets as silent-allow."""
+        result = policy_gate._decision_json(bad_action, 4, "Bash")
+        assert result != "{}", (
+            f"unrecognized action {bad_action!r} silently allowed via empty-JSON "
+            f"emission — same defect class as issue #277"
+        )
+        parsed = json.loads(result)
+        assert parsed["hookSpecificOutput"]["permissionDecision"] == "ask", (
+            f"unrecognized action {bad_action!r} should fail-closed to ask, "
+            f"not {parsed!r}"
+        )
+        # The unknown-verb reason must surface attacker-controlled bytes via
+        # repr() so prompt-injection via stderr is mitigated.
+        assert "unrecognized" in parsed["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+class TestLoadPolicyFailClosedOnResolveRaise:
+    """#278 R1 — _load_policy must NOT raise out when _resolve raises.
+
+    Spec: issue #278 R1+R3 — when _resolve('DEFAULT_POLICY') raises (canonical
+    policy_gate.json missing, corrupted, or schema-invalid), _load_policy must
+    return the hardcoded fail-closed dict instead of letting the raise reach
+    __main__'s except-Exception → silent-allow path.
+    """
+
+    def test_when_canonical_policy_unreachable_returns_hardcoded_failclosed(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Spec #278 R1: monkeypatch _resolve to simulate canonical policy
+        unreachable; _load_policy returns the hardcoded fail-closed dict and
+        emits a warn to stderr; does NOT raise."""
+        # Set up an empty policy.json (triggers the empty-policy fallback path)
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text(json.dumps({"rules": []}))
+
+        def raising_resolve(name):
+            raise RuntimeError(f"simulated canonical-policy corruption for {name!r}")
+
+        monkeypatch.setattr(policy_gate, "_resolve", raising_resolve)
+
+        result_policy, overrides = policy_gate._load_policy(str(tmp_path))
+
+        # Fail-closed dict is the spec-defined posture, NOT the canonical default.
+        # The literal values are checked against the documented contract (see
+        # _HARDCODED_FAILCLOSED_POLICY definition + plan.md §Hardcoded fail-closed).
+        assert result_policy == {1: "ask", 2: "ask", 3: "ask", 4: "deny", 5: "deny"}, (
+            f"_load_policy on _resolve raise must return _HARDCODED_FAILCLOSED_POLICY, "
+            f"got {result_policy!r}"
+        )
+        assert overrides == []
+        captured = capsys.readouterr()
+        assert "fail-closed" in captured.err
+        assert "#278" in captured.err
+
+
+class TestLoadPolicyValidatesActionsAtLoadTime:
+    """#277 R3 — _load_policy validates action strings against {allow, ask, deny}
+    at load time, on both rules[] and overrides[]. Substitutes 'ask' + stderr warn.
+    """
+
+    def test_unrecognized_rule_action_substituted_to_ask_with_stderr_warn(
+        self, tmp_path, capsys
+    ):
+        """Spec #277 R3 — rules[]: unknown action verb substituted to ask."""
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text(json.dumps({"rules": [{"level": "L4", "action": "Deny"}]}))
+
+        result_policy, _ = policy_gate._load_policy(str(tmp_path))
+
+        assert result_policy[4] == "ask", (
+            f"unknown rule action 'Deny' should be substituted to 'ask', got {result_policy[4]!r}"
+        )
+        captured = capsys.readouterr()
+        assert "'Deny'" in captured.err
+        assert "rule level=L4" in captured.err
+
+    def test_unrecognized_override_action_substituted_to_ask(self, tmp_path, capsys):
+        """Spec #277 R3 — overrides[]: unknown action verb substituted at load time.
+
+        Closes the override-action-injection bypass that reviewer-flagged: a
+        policy.json with overrides[].action='Allow' (capital A) or any non-canonical
+        verb must NOT reach _decision_json with a fail-permissive value.
+        """
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text(
+            json.dumps(
+                {
+                    "rules": [{"level": "L4", "action": "ask"}],
+                    "overrides": [
+                        {"tool": "Bash", "path_pattern": "*", "action": "Allow"}
+                    ],
+                }
+            )
+        )
+
+        _, overrides = policy_gate._load_policy(str(tmp_path))
+
+        assert overrides[0]["action"] == "ask", (
+            f"override action 'Allow' should be substituted to 'ask' at load time, "
+            f"got {overrides[0]['action']!r}"
+        )
+        captured = capsys.readouterr()
+        assert "'Allow'" in captured.err
+        assert "override tool=Bash" in captured.err
+
+
+class TestMainEndToEndFailClosedOnMissingCanonical:
+    """#278 R3 end-to-end — main() must NOT emit '{}' when canonical config missing.
+
+    Spec: issue #278 R3 — hook stdout contract is non-{} JSON when _resolve
+    raises. Phase 7.5 evaluator surfaced that the v3 fix only guarded
+    _resolve('DEFAULT_POLICY') via _safe_resolve_default; _classify_tool's
+    _resolve('TOOL_LEVELS') raise path bypassed it, propagated to __main__
+    catch-all → '{}'. This test exercises main() end-to-end to lock in the
+    follow-up fix (_safe_resolve helper used in _classify_tool / _classify_mcp_tool).
+    """
+
+    def test_when_canonical_policy_unreachable_main_emits_non_empty_decision(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Spec #278 R3: with canonical config missing AND user policy present,
+        main() must emit a JSON object containing 'permissionDecision' on
+        stdout, NOT the silent-allow '{}'."""
+        # Point canonical config to a uniquely-named non-existent path
+        missing_canonical = tmp_path / "no-such-policy-gate.json"
+        monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(missing_canonical))
+
+        # Provide a user policy so _load_policy enters the load path (not None pass-through)
+        plugin_data = tmp_path / "plugin"
+        plugin_data.mkdir()
+        (plugin_data / "audit").mkdir()
+        (plugin_data / "policy.json").write_text(json.dumps({"rules": [], "overrides": []}))
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(plugin_data))
+
+        # Clear LRU caches so the missing-canonical path is exercised this run
+        policy_gate._load_config_cached.cache_clear()
+        policy_gate._load_schema_cached.cache_clear()
+
+        # Drive main() via stdin
+        stdin_input = json.dumps(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "echo hi"},
+                "session_id": "test",
+            }
+        )
+        monkeypatch.setattr("sys.stdin", io.StringIO(stdin_input))
+
+        policy_gate.main()
+
+        captured = capsys.readouterr()
+        assert captured.out.strip() != "{}", (
+            f"main() must NOT emit silent-allow '{{}}' on missing canonical "
+            f"config (Phase 7.5 evaluator finding for issue #278 R3); "
+            f"got stdout={captured.out!r}"
+        )
+        # Parse the JSON; permissionDecision must be present
+        parsed = json.loads(captured.out.strip())
+        assert "hookSpecificOutput" in parsed, (
+            f"main() stdout should be a hookSpecificOutput JSON, got {parsed!r}"
+        )
+        assert "permissionDecision" in parsed["hookSpecificOutput"], (
+            f"missing permissionDecision in {parsed!r}"
+        )
+        # Under hardcoded fail-closed L4=deny, Bash is denied; under canonical L4=ask,
+        # _safe_resolve fallback empty-dict-default gives L4 (since TOOL_LEVELS={}),
+        # and _safe_resolve_default's hardcoded {4:"deny"} applies via policy.get.
+        assert parsed["hookSpecificOutput"]["permissionDecision"] in ("ask", "deny"), (
+            f"unexpected permissionDecision {parsed['hookSpecificOutput']['permissionDecision']!r}"
+        )
+
+        # Stderr should mention the fail-closed fallback for trace-ability
+        assert "fail-closed" in captured.err

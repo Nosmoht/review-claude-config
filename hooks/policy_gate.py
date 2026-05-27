@@ -19,6 +19,7 @@ import os
 import pathlib
 import re
 import sys
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -31,6 +32,21 @@ if TYPE_CHECKING:
     _MCP_L4_VERBS: frozenset[str]
 
 LEVEL_LABELS = {1: "Read", 2: "Analyze", 3: "Recommend", 4: "Act", 5: "Irreversible"}
+
+# Defense-in-depth fail-closed posture for #278.
+# Used ONLY when _resolve("DEFAULT_POLICY") raises (canonical policy_gate.json
+# unreachable or corrupted). Intentionally stricter than canonical default_policy
+# (which is L1-L3 allow, L4 ask, L5 deny) to make sessions degrade conservatively.
+# DO NOT refactor into _resolve(...) call: the duplication IS the defense — if
+# the canonical source is unreachable, this hardcoded copy MUST remain reachable
+# in-process. See issue #278 and plan.md §Hardcoded fail-closed default.
+# MappingProxyType wraps a plain dict to make module-level state read-only,
+# defending against in-process mutation by sibling tests or compromised callers
+# (per v2 reviewer team-red H_T2). Callers MUST defensively `dict(...)` to copy
+# before returning since downstream code may need a mutable dict.
+_HARDCODED_FAILCLOSED_POLICY = MappingProxyType({1: "ask", 2: "ask", 3: "ask", 4: "deny", 5: "deny"})
+
+_VALID_ACTIONS = frozenset({"allow", "ask", "deny"})
 
 _LAZY_NAMES = frozenset(
     {
@@ -145,10 +161,54 @@ def _resolve(name: str) -> Any:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+# Per-name fail-closed defaults for the PEP 562 facade. Every lazy name MUST
+# appear here so a missing/corrupted canonical config cannot reach module-attribute
+# consumers (telemetry hooks, audit summaries, future external readers) with an
+# unguarded raise. Same defect class as #278 but on the module's public surface.
+# Without this map, `policy_gate.TOOL_LEVELS` from a future caller bypasses
+# _safe_resolve entirely. Phase 8.5 team-red R2 finding.
+_LAZY_DEFAULTS: dict[str, Any] = {
+    "TOOL_LEVELS": {},
+    "L5_BASH_PATTERNS": [],
+    "DEFAULT_POLICY": None,  # sentinel; resolved below to hardcoded fail-closed copy
+    "_MCP_L1_PREFIXES": (),
+    "_MCP_L4_VERBS": frozenset(),
+}
+
+
 def __getattr__(name: str) -> Any:  # PEP 562
     if name in _LAZY_NAMES:
-        return _resolve(name)
+        # Route through _safe_resolve so the module-attribute facade inherits
+        # the same fail-closed posture as internal _classify_* callsites.
+        # Without this, external consumers re-introduce the #278 bypass.
+        if name == "DEFAULT_POLICY":
+            # DEFAULT_POLICY default is the hardcoded fail-closed posture, not
+            # an empty dict (which would route every L1..L5 lookup to L=4 ask).
+            return _safe_resolve(name, dict(_HARDCODED_FAILCLOSED_POLICY))
+        return _safe_resolve(name, _LAZY_DEFAULTS[name])
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def _safe_resolve(name, default):
+    """Resolve a lazy name from canonical policy_gate.json; return `default`
+    (with stderr warn) on any raise.
+
+    Used by classification paths (_classify_tool, _classify_mcp_tool) so a
+    missing or corrupted canonical config does NOT propagate through to
+    __main__'s top-level except → silent allow ("{}"). Companion to
+    _safe_resolve_default which guards the DEFAULT_POLICY resolve. Phase 7.5
+    evaluator finding (issue #277 follow-up): the v3 plan covered
+    _resolve("DEFAULT_POLICY") but left TOOL_LEVELS, L5_BASH_PATTERNS,
+    _MCP_L1_PREFIXES, _MCP_L4_VERBS as fall-open paths in the same defect class.
+    """
+    try:
+        return _resolve(name)
+    except Exception as e:  # noqa: BLE001 — defense-in-depth catch-all
+        sys.stderr.write(
+            f"policy_gate: _resolve({name!r}) raised {type(e).__name__}: {e!s}; "
+            f"falling back to {default!r} (fail-closed #278 follow-up)\n"
+        )
+        return default
 
 
 def _classify_mcp_tool(tool_name):
@@ -156,16 +216,23 @@ def _classify_mcp_tool(tool_name):
     if "__" not in tool_name:
         return 4  # malformed name — conservative fallback
     suffix = tool_name.split("__")[-1]
-    is_l1_shape = any(suffix.startswith(p) for p in _resolve("_MCP_L1_PREFIXES")) or suffix.endswith("_read")
-    has_l4_verb = bool(set(suffix.split("_")) & _resolve("_MCP_L4_VERBS"))
+    is_l1_shape = any(suffix.startswith(p) for p in _safe_resolve("_MCP_L1_PREFIXES", ())) or suffix.endswith("_read")
+    has_l4_verb = bool(set(suffix.split("_")) & _safe_resolve("_MCP_L4_VERBS", frozenset()))
     if is_l1_shape and not has_l4_verb:
         return 1
     return 4
 
 
 def _classify_tool(tool_name, tool_input):
-    """Return authorization level (1-5) for a tool call."""
-    level = _resolve("TOOL_LEVELS").get(tool_name, 4)  # unknown tools default to L4
+    """Return authorization level (1-5) for a tool call.
+
+    Every _resolve(...) call routes through _safe_resolve so a missing
+    or corrupted canonical config cannot propagate to __main__'s top-level
+    catch-all (which would emit "{}" = silent allow). Fail-closed defaults
+    on resolution failure: empty TOOL_LEVELS → every tool defaults to L4;
+    empty L5_BASH_PATTERNS → no L5 escalation but Bash stays at L4.
+    """
+    level = _safe_resolve("TOOL_LEVELS", {}).get(tool_name, 4)  # unknown tools default to L4
 
     # MCP tools: pattern-based classification (reads vs mutations vs unknown)
     if tool_name.startswith("mcp__"):
@@ -174,15 +241,80 @@ def _classify_tool(tool_name, tool_input):
     # Bash escalation check
     if tool_name == "Bash" and level == 4:
         command = tool_input.get("command", "")
-        for pattern in _resolve("L5_BASH_PATTERNS"):
+        for pattern in _safe_resolve("L5_BASH_PATTERNS", []):
             if re.search(pattern, command, re.IGNORECASE):
                 return 5
 
     return level
 
 
+def _validated_action(raw_action, where, default="ask"):
+    """Return raw_action if it's a recognized action verb, else default + stderr warn.
+
+    Called from both policy-rule loading and override-rule loading so the
+    fail-closed default reaches every action-string parse site at load time.
+
+    `where` is repr-escaped before formatting to prevent attacker-controlled
+    policy.json byte injection into stderr (which the harness captures into
+    the orchestrator context per rules/tool-error-contract.md). v2 reviewer
+    team-red H_T3.
+    """
+    if isinstance(raw_action, str) and raw_action in _VALID_ACTIONS:
+        return raw_action
+    sys.stderr.write(
+        f"policy_gate: unrecognized action {raw_action!r} at {where!r}; substituting {default!r} (fail-closed)\n"
+    )
+    return default
+
+
+def _safe_resolve_default():
+    """Return canonical DEFAULT_POLICY, OR hardcoded fail-closed dict on any raise.
+
+    Catches the documented raise classes from _resolve → _load_config_cached:
+    RuntimeError (from _minimal_shape_check + 'policy_gate.json missing'),
+    jsonschema.exceptions.ValidationError (schema-invalid canonical),
+    FileNotFoundError, json.JSONDecodeError. Imports jsonschema lazily inside
+    the function to preserve graceful-degradation when jsonschema is not
+    importable (matches the conditional-import pattern in _load_config_cached).
+    Final `except Exception` is the defense-in-depth catch-all for unforeseen
+    raise classes; KeyboardInterrupt / SystemExit / MemoryError still propagate
+    via Python's BaseException hierarchy.
+    """
+    # Lazy-imported tuple — match _load_config_cached's pattern.
+    failure_types = [RuntimeError, FileNotFoundError, json.JSONDecodeError]
+    try:
+        import jsonschema  # may itself raise ImportError
+
+        failure_types.append(jsonschema.exceptions.ValidationError)
+    except ImportError:
+        pass  # ValidationError won't be raised if jsonschema is unimportable
+
+    try:
+        return _resolve("DEFAULT_POLICY")
+    except tuple(failure_types) as e:
+        sys.stderr.write(
+            f"policy_gate: _resolve(DEFAULT_POLICY) raised {type(e).__name__}: {e!s}; "
+            f"falling back to hardcoded fail-closed posture (#278)\n"
+        )
+        return dict(_HARDCODED_FAILCLOSED_POLICY)
+    except Exception as e:  # noqa: BLE001 — defense-in-depth catch-all
+        sys.stderr.write(
+            f"policy_gate: _resolve(DEFAULT_POLICY) raised unforeseen {type(e).__name__}: {e!s}; "
+            f"falling back to hardcoded fail-closed posture (#278)\n"
+        )
+        return dict(_HARDCODED_FAILCLOSED_POLICY)
+
+
 def _load_policy(plugin_data):
-    """Load policy from file. Return None if no policy file exists (opt-in design)."""
+    """Load policy from file. Return None if no policy file exists (opt-in design).
+
+    Both action-string parsing and the canonical-default fallback use
+    fail-closed semantics: unrecognized action verbs are substituted with
+    "ask" + stderr warn (#277 R3); _resolve raises yield a hardcoded
+    fail-closed dict (#278 R1). OSError (PermissionError on policy.json,
+    stale-mount, etc.) is added to the except tuple to close the parallel
+    fall-open path on the user policy.json file (v2 reviewer M_R1).
+    """
     policy_path = os.path.join(plugin_data, "policy.json")
     if not os.path.isfile(policy_path):
         return None, []  # No policy file = pass-through, zero enforcement
@@ -193,11 +325,20 @@ def _load_policy(plugin_data):
         for rule in data.get("rules", []):
             level_str = rule.get("level", "")
             if level_str.startswith("L") and level_str[1:].isdigit():
-                policy[int(level_str[1:])] = rule.get("action", "ask")
+                raw_action = rule.get("action", "ask")
+                policy[int(level_str[1:])] = _validated_action(raw_action, f"rule level={level_str}")
+        # Validate override actions at load time too — same defect class as rules.
         overrides = data.get("overrides", [])
-        return policy if policy else _resolve("DEFAULT_POLICY"), overrides
-    except (json.JSONDecodeError, KeyError, TypeError):
-        return _resolve("DEFAULT_POLICY"), []
+        for override in overrides:
+            if "action" in override:
+                override["action"] = _validated_action(
+                    override["action"],
+                    f"override tool={override.get('tool', '?')} path={override.get('path_pattern', '?')}",
+                    default="ask",
+                )
+        return policy if policy else _safe_resolve_default(), overrides
+    except (json.JSONDecodeError, KeyError, TypeError, OSError):
+        return _safe_resolve_default(), []
 
 
 def _check_overrides(overrides, tool_name, tool_input):
@@ -255,10 +396,9 @@ def _log_decision(plugin_data, input_data, level, action):
 def _decision_json(action, level, tool_name):
     """Build the stdout JSON string for an action (deny/ask/allow/unknown).
 
-    Pure function — no side effects. Returning the string (rather than
-    printing) lets main() emit the permission decision BEFORE any
-    audit-write side effect, so an audit failure cannot displace the
-    JSON contract with the harness.
+    Pure function — no side effects. Returning the string lets main() emit
+    the permission decision BEFORE any audit-write side effect, so an audit
+    failure cannot displace the JSON contract with the harness.
     """
     if action == "allow":
         return "{}"
@@ -284,7 +424,25 @@ def _decision_json(action, level, tool_name):
                 }
             }
         )
-    return "{}"
+    # #277 R1 — unrecognized action verb (string typo, None, int, list, dict, bool).
+    # Fail-closed to ask: emit the ask shape with a reason naming the unknown verb.
+    # repr(action) escapes injection attempts in attacker-controlled policy.json.
+    sys.stderr.write(
+        f"policy_gate: unrecognized action {action!r} reached _decision_json "
+        f"(level={level}, tool={tool_name!r}); defaulting to ask\n"
+    )
+    label = LEVEL_LABELS.get(level, "Unknown")
+    return json.dumps(
+        {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "ask",
+                "permissionDecisionReason": (
+                    f"L{level} ({label}): {tool_name} — unrecognized policy action {action!r}, defaulting to ask"
+                ),
+            }
+        }
+    )
 
 
 def main():
