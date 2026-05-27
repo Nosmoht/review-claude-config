@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.15.0](https://github.com/Nosmoht/review-claude-config/compare/v2.14.0...v2.15.0) (2026-05-27)
+
+
+### Changed
+
+* **apply-audit-findings:** route non-skill primitives to scaffold-* ([#27](https://github.com/Nosmoht/review-claude-config/issues/27)) ([#292](https://github.com/Nosmoht/review-claude-config/issues/292)) ([1ebfc1a](https://github.com/Nosmoht/review-claude-config/commit/1ebfc1a8646f449f7f547fbed47ad755aafb5046))
+
 ## [2.14.0](https://github.com/Nosmoht/review-claude-config/compare/v2.13.1...v2.14.0) (2026-05-27)
 
 
