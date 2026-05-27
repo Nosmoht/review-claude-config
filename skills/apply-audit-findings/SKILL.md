@@ -144,10 +144,12 @@ For each intervention, follow the type-specific procedure below.
 1. Do NOT create the agent inline. Present the recommendation details:
    ```
    Agent recommended: <name>
+   Intervention ID: <intervention-number-from-matrix>
    Description: <from recommendation>
    Context: <key details from audit, including the dual-test gate
             from audit-repo Phase 4C — own toolchain AND own
             evaluation criteria — both must hold for an Agent>
+   Rationale anchor: audit-finding #<intervention-number>
 
    Run `/scaffold-agent <name>` to create this agent.
    ```
@@ -159,8 +161,10 @@ For each intervention, follow the type-specific procedure below.
 1. Do NOT create the skill. Present the recommendation details:
    ```
    Skill recommended: <name>
+   Intervention ID: <intervention-number-from-matrix>
    Description: <from recommendation>
    Context: <key details from audit>
+   Rationale anchor: audit-finding #<intervention-number>
 
    Run `/scaffold-skill plugin <name>` to create this skill.
    ```
