@@ -10,6 +10,7 @@ import jsonschema
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hooks"))
+import policy_gate
 from policy_gate import (
     DEFAULT_POLICY,
     _check_overrides,
@@ -587,3 +588,133 @@ class TestLazyLoadPolicy:
         policy_gate._load_config_cached.cache_clear()
         with pytest.raises((jsonschema.ValidationError, RuntimeError)):
             _ = policy_gate.TOOL_LEVELS
+
+
+class TestDecisionJsonFailClosedOnUnrecognizedAction:
+    """#277 R1, R2 — _decision_json must NOT silently emit "{}" on unrecognized actions.
+
+    Spec: issue #277 R1+R2 — four mis-action shapes covered (string typo, unknown
+    verb, empty string, None). Per ai-written-tests.md practice #1, additional
+    boundary cases (int, list, bool) cover the same defect class — JSON-parseable
+    types that escape pure-string validation.
+    """
+
+    @pytest.mark.parametrize(
+        "bad_action",
+        [
+            "Deny",   # capital-D typo
+            "warn",   # unknown verb
+            "",       # empty string
+            None,     # null
+            4,        # integer from policy.json {"action": 4}
+            ["deny"], # list from policy.json {"action": ["deny"]}
+            True,     # boolean from policy.json {"action": true}
+            {"deny": True},  # dict
+        ],
+    )
+    def test_unrecognized_action_emits_ask_json_not_empty_string(self, bad_action):
+        """Spec #277 R1: result must be a JSON object with permissionDecision=ask,
+        NOT the literal '{}' that the harness interprets as silent-allow."""
+        result = policy_gate._decision_json(bad_action, 4, "Bash")
+        assert result != "{}", (
+            f"unrecognized action {bad_action!r} silently allowed via empty-JSON "
+            f"emission — same defect class as issue #277"
+        )
+        parsed = json.loads(result)
+        assert parsed["hookSpecificOutput"]["permissionDecision"] == "ask", (
+            f"unrecognized action {bad_action!r} should fail-closed to ask, "
+            f"not {parsed!r}"
+        )
+        # The unknown-verb reason must surface attacker-controlled bytes via
+        # repr() so prompt-injection via stderr is mitigated.
+        assert "unrecognized" in parsed["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+class TestLoadPolicyFailClosedOnResolveRaise:
+    """#278 R1 — _load_policy must NOT raise out when _resolve raises.
+
+    Spec: issue #278 R1+R3 — when _resolve('DEFAULT_POLICY') raises (canonical
+    policy_gate.json missing, corrupted, or schema-invalid), _load_policy must
+    return the hardcoded fail-closed dict instead of letting the raise reach
+    __main__'s except-Exception → silent-allow path.
+    """
+
+    def test_when_canonical_policy_unreachable_returns_hardcoded_failclosed(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Spec #278 R1: monkeypatch _resolve to simulate canonical policy
+        unreachable; _load_policy returns the hardcoded fail-closed dict and
+        emits a warn to stderr; does NOT raise."""
+        # Set up an empty policy.json (triggers the empty-policy fallback path)
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text(json.dumps({"rules": []}))
+
+        def raising_resolve(name):
+            raise RuntimeError(f"simulated canonical-policy corruption for {name!r}")
+
+        monkeypatch.setattr(policy_gate, "_resolve", raising_resolve)
+
+        result_policy, overrides = policy_gate._load_policy(str(tmp_path))
+
+        # Fail-closed dict is the spec-defined posture, NOT the canonical default.
+        # The literal values are checked against the documented contract (see
+        # _HARDCODED_FAILCLOSED_POLICY definition + plan.md §Hardcoded fail-closed).
+        assert result_policy == {1: "ask", 2: "ask", 3: "ask", 4: "deny", 5: "deny"}, (
+            f"_load_policy on _resolve raise must return _HARDCODED_FAILCLOSED_POLICY, "
+            f"got {result_policy!r}"
+        )
+        assert overrides == []
+        captured = capsys.readouterr()
+        assert "fail-closed" in captured.err
+        assert "#278" in captured.err
+
+
+class TestLoadPolicyValidatesActionsAtLoadTime:
+    """#277 R3 — _load_policy validates action strings against {allow, ask, deny}
+    at load time, on both rules[] and overrides[]. Substitutes 'ask' + stderr warn.
+    """
+
+    def test_unrecognized_rule_action_substituted_to_ask_with_stderr_warn(
+        self, tmp_path, capsys
+    ):
+        """Spec #277 R3 — rules[]: unknown action verb substituted to ask."""
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text(json.dumps({"rules": [{"level": "L4", "action": "Deny"}]}))
+
+        result_policy, _ = policy_gate._load_policy(str(tmp_path))
+
+        assert result_policy[4] == "ask", (
+            f"unknown rule action 'Deny' should be substituted to 'ask', got {result_policy[4]!r}"
+        )
+        captured = capsys.readouterr()
+        assert "'Deny'" in captured.err
+        assert "rule level=L4" in captured.err
+
+    def test_unrecognized_override_action_substituted_to_ask(self, tmp_path, capsys):
+        """Spec #277 R3 — overrides[]: unknown action verb substituted at load time.
+
+        Closes the override-action-injection bypass that reviewer-flagged: a
+        policy.json with overrides[].action='Allow' (capital A) or any non-canonical
+        verb must NOT reach _decision_json with a fail-permissive value.
+        """
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text(
+            json.dumps(
+                {
+                    "rules": [{"level": "L4", "action": "ask"}],
+                    "overrides": [
+                        {"tool": "Bash", "path_pattern": "*", "action": "Allow"}
+                    ],
+                }
+            )
+        )
+
+        _, overrides = policy_gate._load_policy(str(tmp_path))
+
+        assert overrides[0]["action"] == "ask", (
+            f"override action 'Allow' should be substituted to 'ask' at load time, "
+            f"got {overrides[0]['action']!r}"
+        )
+        captured = capsys.readouterr()
+        assert "'Allow'" in captured.err
+        assert "override tool=Bash" in captured.err
