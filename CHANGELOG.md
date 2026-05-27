@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.0](https://github.com/Nosmoht/review-claude-config/compare/v2.12.2...v2.13.0) (2026-05-27)
+
+
+### Changed
+
+* **hooks:** auto-pull main after gh pr merge ([5bac390](https://github.com/Nosmoht/review-claude-config/commit/5bac390b083ccaa6de7f1c49572d9743c740f1d2))
+
 ## [2.12.2](https://github.com/Nosmoht/review-claude-config/compare/v2.12.1...v2.12.2) (2026-05-27)
 
 
