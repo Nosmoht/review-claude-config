@@ -53,6 +53,26 @@ Rules are evaluated on three dimensions only:
 
 Prompt Engineering, Context Engineering, Safety, and Metadata do not apply — rules have no tools or frontmatter.
 
+## Quality-Gate Mapping
+
+Each section of the canonical structure exists to satisfy specific item IDs
+from `skills/review-rule/references/rule-evaluation-guide.md`:
+
+| Template section | Item IDs |
+|---|---|
+| Directive | CL-1, CL-4, GA-1, GA-3 |
+| `## Scope` | CL-3, CO-3 |
+| `## Edge Cases` | CO-1, CO-2, GA-4 |
+| Thresholds (if any) | EP-1, EP-2 |
+
+Following this template literally hits ≥4 distinct IDs — enough to pass
+`/review-rule` without follow-up.
+
+## Verbs that fail CL-4 (do not generate)
+
+Reject: `should`, `try to`, `prefer`, `consider`, `attempt`, `where possible`.
+Use instead: `must`, `never`, `always`, `before X do Y`, `only when`, `stop if`.
+
 ## Minimal Example
 
 ```markdown

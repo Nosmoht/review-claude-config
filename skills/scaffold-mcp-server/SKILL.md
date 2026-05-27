@@ -92,15 +92,31 @@ Use atomic write semantics — write to a sibling temp path, then rename.
 
 ### 7. Post-write checks
 
-After write:
+After write, run these preflight checks. Each cites the `/review-mcp-server`
+checklist ID it defends (see
+`skills/review-claude-config/references/mcp-evaluation-guide.md`):
 
-1. Glob for `.gitignore` at the same level as `.mcp.json`. If the new
-   entry contains any `${VAR}` referencing a credential-like name
-   (`*_TOKEN`, `*_SECRET`, `*_KEY`, `*_PASSWORD`), warn the user that
-   `.mcp.json` MUST appear in `.gitignore` (SP-3 in
-   `mcp-evaluation-guide.md`).
-2. Recommend running `/review-mcp-server .mcp.json` to confirm zero
-   Medium findings.
+1. **MC-1, SP-2 (location)** — confirm `.mcp.json` is at project root, not
+   nested in `settings.json` (the latter is silently ignored per #24477).
+2. **MC-2 (required fields)** — for stdio entries, both `command` and
+   (if non-empty) `args` are present; for remote, both `type` and `url`.
+3. **MC-4, MC-5 (secret hygiene)** — `env` and `headers` contain no literal
+   credentials; every credential-shaped value uses `${VAR}` or
+   `${VAR:-default}` expansion.
+4. **SP-3 (gitignore)** — Glob for `.gitignore` at the `.mcp.json` directory
+   level. If the new entry contains any `${VAR}` referencing a
+   credential-like name (`*_TOKEN`, `*_SECRET`, `*_KEY`, `*_PASSWORD`),
+   warn the user that `.mcp.json` MUST appear in `.gitignore`.
+5. **MC-9 (metadata)** — `metadata.description` is populated for non-trivial
+   servers; `metadata.homepage` populated if a URL is known.
+6. **TD-1 (defer_loading)** — for servers with >50 tools or >10 K
+   tool-description tokens, `defer_loading: true` is set; otherwise the
+   server auto-injects all tool defs at session start (~10% context cost).
+7. **MG-1, MG-2 (relevance + cap)** — confirm total tool count across all
+   servers stays ≤50 (warn) / ≤128 (hard limit) and the new server is
+   topically distinct from existing entries (no overlap).
+8. Recommend running `/review-mcp-server .mcp.json` to confirm zero High
+   findings.
 
 ## Quality measurement (mandatory before Output)
 

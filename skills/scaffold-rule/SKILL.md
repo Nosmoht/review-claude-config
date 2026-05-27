@@ -64,12 +64,20 @@ Build the rule content as plain Markdown with no frontmatter:
 - <Another exception, or "None" if truly universal>
 ```
 
-Before presenting, run these validation checks against the generated content:
-- The rule file must NOT start with `---` (YAML frontmatter is not allowed in rule files)
-- The first non-blank line must be a Markdown heading (`# ...`)
-- The directive section must contain at least one enforcement verb: `always`, `never`, `before`, `do not`, `must`
+Before presenting, run these validation checks against the generated content.
+Each check cites the `/review-rule` checklist ID it defends (see
+`skills/review-rule/references/rule-evaluation-guide.md`):
 
-If any check fails, report the specific violation and correct it before presenting.
+- **Format** — the rule file must NOT start with `---` (YAML frontmatter is not allowed in rule files).
+- **Heading** — the first non-blank line must be a Markdown heading (`# ...`).
+- **CL-4 (verbs)** — directive must contain ≥1 of `always | never | before | do not | must | only when | stop if`. Reject `should`, `try to`, `prefer`, `consider`, `attempt`, `where possible`. See `references/rule-template.md §Verbs that fail CL-4`.
+- **CL-3 (scope)** — `## Scope` section must name the file types, tools, commands, or contexts the rule binds to. A bare "applies to all" without enumeration fails CL-3.
+- **CO-1 (edge cases)** — `## Edge Cases` section must list ≥1 concrete exception OR the literal string `None` to assert universality explicitly. Empty list fails CO-1.
+- **CO-3 (scope boundary)** — Scope text must say where the rule does **not** apply (boundary), not only where it does.
+- **GA-1 (constraint achievement)** — directive must name the behavior it prevents or requires, not just the topic. "No insecure code" fails GA-1; "Never run `git push --force` against `main` or `master`" passes.
+- **EP-1 (thresholds, if present)** — any numeric threshold ("high risk", "too many") must be replaced with a measurable bound ("risk score >7", ">3 consecutive failures"). Skip this check if the rule has no thresholds.
+
+If any check fails, report the specific violation by ID and correct it before presenting.
 
 Present the full generated content to the user. Confirm via AskUserQuestion (header: "Rule preview"):
 - Option 1 label: "Correct — write file" (Recommended) — description: `"Write the rule to .claude/rules/<rule-name>.md"`
