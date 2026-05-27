@@ -161,9 +161,31 @@ def _resolve(name: str) -> Any:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+# Per-name fail-closed defaults for the PEP 562 facade. Every lazy name MUST
+# appear here so a missing/corrupted canonical config cannot reach module-attribute
+# consumers (telemetry hooks, audit summaries, future external readers) with an
+# unguarded raise. Same defect class as #278 but on the module's public surface.
+# Without this map, `policy_gate.TOOL_LEVELS` from a future caller bypasses
+# _safe_resolve entirely. Phase 8.5 team-red R2 finding.
+_LAZY_DEFAULTS: dict[str, Any] = {
+    "TOOL_LEVELS": {},
+    "L5_BASH_PATTERNS": [],
+    "DEFAULT_POLICY": None,  # sentinel; resolved below to hardcoded fail-closed copy
+    "_MCP_L1_PREFIXES": (),
+    "_MCP_L4_VERBS": frozenset(),
+}
+
+
 def __getattr__(name: str) -> Any:  # PEP 562
     if name in _LAZY_NAMES:
-        return _resolve(name)
+        # Route through _safe_resolve so the module-attribute facade inherits
+        # the same fail-closed posture as internal _classify_* callsites.
+        # Without this, external consumers re-introduce the #278 bypass.
+        if name == "DEFAULT_POLICY":
+            # DEFAULT_POLICY default is the hardcoded fail-closed posture, not
+            # an empty dict (which would route every L1..L5 lookup to L=4 ask).
+            return _safe_resolve(name, dict(_HARDCODED_FAILCLOSED_POLICY))
+        return _safe_resolve(name, _LAZY_DEFAULTS[name])
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

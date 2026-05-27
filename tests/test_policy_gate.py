@@ -507,20 +507,60 @@ class TestLazyLoadPolicy:
     """Cover the PEP 562 lazy-load path for the 5 JSON-derived constants."""
 
     def test_config_missing_raises_runtime_error(
-        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ):
-        """When policy_gate.json is missing, attribute access raises
-        RuntimeError pointing at the config file."""
+        """When policy_gate.json is missing, attribute access via the PEP 562
+        facade returns the per-name fail-closed default and emits a stderr
+        warning — does NOT raise (was the #278 follow-up CRITICAL closed in
+        Phase 8.5: prior behavior was unguarded propagation to __main__ →
+        silent allow)."""
         import policy_gate
 
         monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(tmp_path / "absent.json"))
         policy_gate._load_config_cached.cache_clear()
         try:
-            with pytest.raises(
-                RuntimeError,
-                match=r"policy_gate\.json missing at .* — see hooks/policy_gate\.json",
-            ):
-                _ = policy_gate.TOOL_LEVELS
+            # __getattr__ now routes through _safe_resolve with per-name default
+            value = policy_gate.TOOL_LEVELS
+            assert value == {}, (
+                f"missing canonical config should fail-closed to empty dict for "
+                f"TOOL_LEVELS, got {value!r}"
+            )
+            err = capsys.readouterr().err
+            assert "TOOL_LEVELS" in err
+            assert "fail-closed" in err
+        finally:
+            policy_gate._load_config_cached.cache_clear()
+
+    def test_pep562_getattr_fail_closed_per_lazy_name(
+        self,
+        tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ):
+        """Phase 8.5 R2 CRITICAL: PEP 562 __getattr__ must NOT bypass _safe_resolve.
+        Every lazy name returns its per-name fail-closed default on missing canonical
+        config (DEFAULT_POLICY → hardcoded fail-closed dict, others → empty container)."""
+        import policy_gate
+
+        monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(tmp_path / "absent.json"))
+        policy_gate._load_config_cached.cache_clear()
+        try:
+            assert policy_gate.TOOL_LEVELS == {}
+            assert policy_gate.L5_BASH_PATTERNS == []
+            assert policy_gate._MCP_L1_PREFIXES == ()
+            assert policy_gate._MCP_L4_VERBS == frozenset()
+            # DEFAULT_POLICY is the only lazy name whose default is the hardcoded
+            # fail-closed dict (not an empty container).
+            assert policy_gate.DEFAULT_POLICY == {
+                1: "ask", 2: "ask", 3: "ask", 4: "deny", 5: "deny",
+            }
+            err = capsys.readouterr().err
+            for name in ("TOOL_LEVELS", "L5_BASH_PATTERNS", "_MCP_L1_PREFIXES",
+                         "_MCP_L4_VERBS", "DEFAULT_POLICY"):
+                assert name in err, f"stderr missing fail-closed trace for {name}"
         finally:
             policy_gate._load_config_cached.cache_clear()
 
@@ -575,10 +615,16 @@ class TestLazyLoadPolicy:
         policy_gate._load_config_cached.cache_clear()
         assert policy_gate.TOOL_LEVELS == {"Custom": 1}
 
-    def test_malformed_json_raises_validation_error(
-        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    def test_malformed_json_fail_closed_to_default(
+        self,
+        tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ):
-        """A schema-mismatched JSON raises jsonschema.ValidationError on access."""
+        """A schema-mismatched canonical config makes the PEP 562 facade
+        fail-closed to the per-name default (Phase 8.5 R2 CRITICAL closed:
+        __getattr__ used to propagate jsonschema.ValidationError / RuntimeError
+        to __main__ → silent allow; now routes through _safe_resolve)."""
         import policy_gate
 
         bad_config = {"tool_levels": "not-a-dict"}
@@ -586,8 +632,12 @@ class TestLazyLoadPolicy:
         config_file.write_text(json.dumps(bad_config))
         monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(config_file))
         policy_gate._load_config_cached.cache_clear()
-        with pytest.raises((jsonschema.ValidationError, RuntimeError)):
-            _ = policy_gate.TOOL_LEVELS
+        # No raise — fail-closed default returned, stderr names the failure
+        value = policy_gate.TOOL_LEVELS
+        assert value == {}
+        err = capsys.readouterr().err
+        assert "TOOL_LEVELS" in err
+        assert "fail-closed" in err
 
 
 class TestDecisionJsonFailClosedOnUnrecognizedAction:
