@@ -1,4 +1,4 @@
-.PHONY: validate lint format schema-validate token-budget validate-descriptions test test-cov sync-marketplace-ref
+.PHONY: validate lint format schema-validate token-budget validate-descriptions check-scaffold-quality test test-cov sync-marketplace-ref
 
 PYTHON ?= $(shell test -x .venv/bin/python && echo .venv/bin/python || echo python3)
 
@@ -27,6 +27,10 @@ test:
 
 test-cov:
 	$(PYTHON) -m pytest tests/ -v --tb=short --cov=hooks --cov=scripts --cov-report=term-missing
+
+check-scaffold-quality:
+	$(PYTHON) scripts/check_scaffold_quality.py
+	$(PYTHON) scripts/check_scaffold_quality.py --verify-matrix-complete
 
 sync-marketplace-ref:
 	bash bin/sync-marketplace-ref.sh
