@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.0](https://github.com/Nosmoht/review-claude-config/compare/v2.13.1...v2.14.0) (2026-05-27)
+
+
+### Changed
+
+* **scaffold-*:** close generator/evaluator rubric coverage gap ([#161](https://github.com/Nosmoht/review-claude-config/issues/161)) ([#290](https://github.com/Nosmoht/review-claude-config/issues/290)) ([53a765e](https://github.com/Nosmoht/review-claude-config/commit/53a765e0bf45e08da627b8c9961236f37699b86f))
+
 ## [2.13.1](https://github.com/Nosmoht/review-claude-config/compare/v2.13.0...v2.13.1) (2026-05-27)
 
 
