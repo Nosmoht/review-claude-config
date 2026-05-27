@@ -2,7 +2,9 @@
 name: apply-audit-findings
 description: >
   Creates primitives recommended by an /audit-repo report — CLAUDE.md
-  sections, rules, hooks; delegates skills to /scaffold-skill. Use after
+  sections inline; delegates Skill recommendations to /scaffold-skill,
+  Agent recommendations to /scaffold-agent, Rule recommendations to
+  /scaffold-rule, Hook recommendations to /develop-hooks. Use after
   /audit-repo to act on the intervention matrix. Do NOT use for review
   findings — use /apply-review-findings.
 argument-hint: "[report-path]"
@@ -65,6 +67,7 @@ Show all interventions with their planned action:
 | 1 | Navigation | repository.py 1,969 lines | CLAUDE.md | P0 | Append section |
 | 2 | Convention | No linter/formatter | Hook | P1 | Create hook |
 | 6 | Security | No secret detection | Rule | P2 | Create rule |
+| 7 | Specialization | Domain-specific QA | Agent | P2 | Defer to /scaffold-agent |
 | 8 | Repetition | k8s manifest patterns | Skill | P2 | Defer to /scaffold-skill |
 
 Total: N interventions (N auto, N manual, N deferred)
@@ -86,7 +89,7 @@ If not a git repo, warn: "Target is not a git repository. Changes will be applie
 
 ### 6. Apply interventions by priority group
 
-Process groups in order: P0, then P1, then P2. Within each priority group, process by primitive type in this order: CLAUDE.md, Hook, Rule, Skill.
+Process groups in order: P0, then P1, then P2. Within each priority group, process by primitive type in this order: CLAUDE.md, Hook, Rule, Agent, Skill.
 
 For each intervention, follow the type-specific procedure below.
 
@@ -136,6 +139,21 @@ For each intervention, follow the type-specific procedure below.
    On "Create this rule": proceed. On "Skip": record as Skipped. On "Stop": halt.
 7. If yes, write the file using Write tool.
 
+#### Agent Interventions
+
+1. Do NOT create the agent inline. Present the recommendation details:
+   ```
+   Agent recommended: <name>
+   Description: <from recommendation>
+   Context: <key details from audit, including the dual-test gate
+            from audit-repo Phase 4C — own toolchain AND own
+            evaluation criteria — both must hold for an Agent>
+
+   Run `/scaffold-agent <name>` to create this agent.
+   ```
+2. Record as "Deferred to /scaffold-agent" in the results table.
+3. No confirmation needed — nothing is written.
+
 #### Skill Interventions
 
 1. Do NOT create the skill. Present the recommendation details:
@@ -149,6 +167,23 @@ For each intervention, follow the type-specific procedure below.
 2. Record as "Deferred to /scaffold-skill" in the results table.
 3. No confirmation needed — nothing is written.
 
+#### Alternative scaffold paths for Rule and Hook interventions (suggestion only)
+
+For Rule and Hook interventions handled inline above (sections "Rule
+Interventions" and "Hook Interventions"), after a successful inline
+create, include in the success message:
+
+- Rule: "For richer rule scaffolding (template + token-budget check),
+  the equivalent command is `/scaffold-rule <name>` — invoke for
+  next-time use; this run already created the rule inline."
+- Hook: "For richer hook scaffolding with full hook-event configuration
+  + script template, the equivalent command is
+  `/develop-hooks <hook-type> <name>` — invoke for next-time use; this
+  run already created the hook inline."
+
+These suggestions surface the broader chain without breaking the
+existing inline-create path users may rely on.
+
 ### 7. Aggregate results
 
 Show a results table:
@@ -161,6 +196,7 @@ Show a results table:
 | 1 | repository.py navigation | CLAUDE.md | P0 | Applied |
 | 2 | No linter/formatter | Hook | P1 | Applied |
 | 6 | No secret detection | Rule | P2 | Skipped |
+| 7 | Domain-specific QA | Agent | P2 | Deferred to /scaffold-agent |
 | 8 | k8s manifest patterns | Skill | P2 | Deferred to /scaffold-skill |
 
 Applied: N / Deferred: N / Skipped: N / Manual: N
@@ -202,6 +238,7 @@ Present final status:
 - Files modified (with paths)
 - Commits created (with hashes)
 - Deferred skill interventions (with the `/scaffold-skill` commands to run)
+- Deferred agent interventions (with the `/scaffold-agent` commands to run)
 - Interventions marked manual (with descriptions)
 
 Then end your response with this menu (substitute `<target>` with the target repo path):
