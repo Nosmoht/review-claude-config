@@ -47,6 +47,11 @@ Ask the user for the following before generating anything:
 
 ### 4. Generate rule file
 
+Apply all directives from `references/quality-patterns.md` during generation. Before writing,
+verify compliance against `references/rubric-coverage.md` — for each `by-directive` row,
+confirm the corresponding directive was applied; `runtime-OOS` rows are NA and require no
+action.
+
 Build the rule content as plain Markdown with no frontmatter:
 
 ```

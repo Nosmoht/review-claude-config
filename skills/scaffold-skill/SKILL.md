@@ -150,7 +150,10 @@ On Option 2, 3, or Other: incorporate the correction, redisplay the updated tabl
 
 ### 4. Generate SKILL.md
 
-Apply all directives from `references/quality-patterns.md` during generation.
+Apply all directives from `references/quality-patterns.md` during generation. Before writing,
+verify compliance against `references/rubric-coverage.md` — for each `by-directive` row,
+confirm the corresponding directive was applied; `runtime-OOS` rows are NA and require no
+action.
 
 **Frontmatter:**
 - `name`, `description`, `allowed-tools`, `argument-hint`, `disable-model-invocation` from user answers and auto-derived spec.
