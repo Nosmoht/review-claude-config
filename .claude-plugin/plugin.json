@@ -1,6 +1,6 @@
 {
   "name": "claude-config",
-  "version": "2.12.1",
+  "version": "2.12.2",
   "description": "Evidence-based quality review and audit suite for Claude Code primitives — skills, agents, rules, hooks, MCP servers, plugins, settings.json, CLAUDE.md, session traces, memory, trust chains, and policy compliance. Provides /review-* and /audit-* commands and injects quality guidelines when editing primitives.",
   "author": {
     "name": "ntbc"
