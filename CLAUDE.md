@@ -188,6 +188,8 @@ The agent track uses `status: needs-review` (machine-set by `scripts/issue-state
 | Cross-primitive references | `/validate-primitive-dependencies` |
 | Any batch of changes | `/review-claude-config .` |
 
+- **Snapshot tests are antipattern when the SUT reads ambient state.** Byte-identical / golden-master / approval-style snapshots silently degrade to rubber-stamps and force fix-by-regenerate workflows. Use a snapshot only when **all** of the following hold: no executable spec exists; output is small and human-readable; input is hermetic (no FS glob, env, branch, symlink reads); a property-based or invariant-based assertion does not exist. Treat as antipattern when **any** of: SUT reads ambient state (filesystem glob, env vars, branch state, symlinks); output is large or opaque; the snapshot is the sole assertion; a property (idempotence, ordering, cardinality, schema conformance) exists; the fix workflow is "regenerate" rather than "diagnose." When a property exists, prefer property-based testing (Hypothesis) over snapshots. Canon: Coulman 2016 (https://randycoulman.com/blog/2016/09/06/snapshot-testing-use-with-care/), Falco *Approval Testing* SE Radio 595 (https://se-radio.net/2023/12/se-radio-595-llewelyn-falco-on-approval-testing/), Feathers *Working Effectively with Legacy Code* (characterization tests), Hillel Wayne *Beyond Unit Tests* (https://www.hillelwayne.com/talks/beyond-unit-tests/).
+
 ## Hard Constraints
 
 Diff-checkable never-violate rules. The `builder-evaluator` subagent enforces this list as its constraint sweep; humans verify the same rules at PR-merge time.
