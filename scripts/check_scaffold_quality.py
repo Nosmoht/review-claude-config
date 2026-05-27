@@ -14,7 +14,8 @@ Two operating modes:
 
 Exit codes:
     0  — all checks pass
-    1  — harness crash or rubric parse degraded (RUBRIC_PARSE_DEGRADED)
+    1  — harness crash or rubric parse degraded (RUBRIC_PARSE_DEGRADED /
+         AGENT_RUBRIC_PARSE_DEGRADED)
     2  — at least one fixture has a new in-scope FAIL
 
 Usage:
@@ -39,7 +40,10 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 FIXTURE_SENTINEL = "<!-- TEST FIXTURE"
 
 # Minimum number of binary skill IDs to accept as a valid rubric parse.
-MIN_BINARY_IDS = 25
+MIN_BINARY_IDS = 30
+
+# Minimum number of agent-specific IDs to accept as a valid rubric parse.
+MIN_AGENT_IDS = 30
 
 # Paths to rubric-coverage matrices to check in --verify-matrix-complete mode.
 # Rules use a separate narrative rubric (Clarity/Completeness/GA), NOT the binary
@@ -104,6 +108,47 @@ def parse_binary_skill_ids(rubric_path: pathlib.Path) -> list[str]:
             f"RUBRIC_PARSE_DEGRADED: only {len(ids)} binary IDs parsed "
             f"(expected >= {MIN_BINARY_IDS}). "
             f"Check that '### Binary-Evaluated Items' exists in {rubric_path}."
+        )
+
+    return ids
+
+
+def parse_agent_ids(rubric_path: pathlib.Path) -> list[str]:
+    """Return list of agent-specific item IDs from scoring-rubric.md §Agent Items.
+
+    Parses lines inside the '## Agent Items' section (H2, not H3).
+    Stops at the next ## heading.
+    Regex: ^|  <ID>  | where ID matches [A-Z]+(-[A-Z0-9a-z]+)+
+    Exits with code 1 if fewer than MIN_AGENT_IDS are found
+    (AGENT_RUBRIC_PARSE_DEGRADED).
+    """
+    try:
+        text = rubric_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        _halt(f"Cannot read scoring rubric: {exc}")
+
+    in_section = False
+    ids: list[str] = []
+    item_re = re.compile(r"^\|\s+([A-Z]+(?:-[A-Z0-9a-z]+)+)\s+\|")
+    agent_section_re = re.compile(r"^##\s+Agent Items")
+    next_h2_re = re.compile(r"^##\s")
+
+    for line in text.splitlines():
+        if agent_section_re.match(line):
+            in_section = True
+            continue
+        if in_section and next_h2_re.match(line):
+            break
+        if in_section:
+            m = item_re.match(line)
+            if m:
+                ids.append(m.group(1))
+
+    if len(ids) < MIN_AGENT_IDS:
+        _halt(
+            f"AGENT_RUBRIC_PARSE_DEGRADED: only {len(ids)} agent IDs parsed "
+            f"(expected >= {MIN_AGENT_IDS}). "
+            f"Check that '## Agent Items' exists in {rubric_path}."
         )
 
     return ids
@@ -269,21 +314,54 @@ def validate_skill_agent_fixture(path: pathlib.Path) -> CheckResult:
 # ---------------------------------------------------------------------------
 
 
-def check_matrix_complete(coverage_path: pathlib.Path, binary_ids: list[str]) -> CheckResult:
-    """Verify that coverage_path's table contains every binary ID."""
+def check_matrix_complete(
+    coverage_path: pathlib.Path,
+    required_ids: list[str],
+) -> CheckResult:
+    """Verify that coverage_path's table contains every required ID.
+
+    Rows whose Enforcement column contains 'runtime-OOS' are excluded from
+    the required set (they are out-of-scope for scaffold-time checking).
+    Only rows inside tables with an '| Item ID |' header are inspected;
+    divider lines (|---|) are skipped.
+    """
     try:
         text = coverage_path.read_text(encoding="utf-8")
     except OSError as exc:
         return CheckResult(path=coverage_path, ok=False, detail=f"Cannot read: {exc}")
 
-    id_re = re.compile(r"^\|\s+([A-Z]+(?:-[A-Z0-9a-z]+)+)\s+\|")
-    covered = set()
-    for line in text.splitlines():
-        m = id_re.match(line)
-        if m:
-            covered.add(m.group(1))
+    # Identify which IDs are marked runtime-OOS in the matrix.
+    # A row is NA when any cell in the row contains 'runtime-OOS'.
+    na_ids: set[str] = set()
+    covered: set[str] = set()
 
-    missing = [id_ for id_ in binary_ids if id_ not in covered]
+    # Only match rows inside tables that have an '| Item ID |' header line.
+    header_re = re.compile(r"^\|\s+Item ID\s+\|", re.IGNORECASE)
+    divider_re = re.compile(r"^\|[-| ]+\|")
+    id_re = re.compile(r"^\|\s+([A-Z]+(?:-[A-Z0-9a-z]+)+)\s+\|")
+
+    in_table = False
+    for line in text.splitlines():
+        if header_re.match(line):
+            in_table = True
+            continue
+        if divider_re.match(line):
+            continue
+        if in_table:
+            if not line.startswith("|"):
+                # Blank line or non-table line ends the table.
+                in_table = False
+                continue
+            m = id_re.match(line)
+            if m:
+                item_id = m.group(1)
+                covered.add(item_id)
+                if "runtime-OOS" in line:
+                    na_ids.add(item_id)
+
+    # Required set = all requested IDs minus those exempted as runtime-OOS.
+    effective_required = [id_ for id_ in required_ids if id_ not in na_ids]
+    missing = [id_ for id_ in effective_required if id_ not in covered]
     if missing:
         return CheckResult(
             path=coverage_path,
@@ -354,12 +432,18 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    binary_ids = parse_binary_skill_ids(SCORING_RUBRIC_PATH)
-
     if args.verify_matrix_complete:
+        binary_ids = parse_binary_skill_ids(SCORING_RUBRIC_PATH)
+        agent_ids = parse_agent_ids(SCORING_RUBRIC_PATH)
         results: list[CheckResult] = []
         for matrix_path in COVERAGE_MATRIX_PATHS:
-            results.append(check_matrix_complete(matrix_path, binary_ids))
+            # Binary IDs are required in all matrices.
+            # Agent IDs are required only in the scaffold-agent matrix.
+            if "scaffold-agent" in str(matrix_path):
+                required = list(dict.fromkeys(binary_ids + agent_ids))
+            else:
+                required = binary_ids
+            results.append(check_matrix_complete(matrix_path, required))
         _report(results)
         if any(not r.ok for r in results):
             sys.exit(2)

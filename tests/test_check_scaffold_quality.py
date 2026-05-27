@@ -272,11 +272,12 @@ _SPEC.loader.exec_module(csq)
 # --- parse_binary_skill_ids -------------------------------------------------
 
 
-def test_parse_binary_skill_ids_extracts_ge_25_ids() -> None:
-    """parse_binary_skill_ids returns >=25 IDs from the committed scoring-rubric.
+def test_parse_binary_skill_ids_extracts_ge_30_ids() -> None:
+    """parse_binary_skill_ids returns >=30 IDs from the committed scoring-rubric.
 
     Spec ref: scripts/check_scaffold_quality.py:parse_binary_skill_ids docstring
     — "Exits with code 1 if fewer than MIN_BINARY_IDS are found".
+    MIN_BINARY_IDS is 30 per R2 finding HIGH F3.
     """
     ids = csq.parse_binary_skill_ids(csq.SCORING_RUBRIC_PATH)
     assert len(ids) >= csq.MIN_BINARY_IDS, (
@@ -604,6 +605,93 @@ def test_check_matrix_complete_fail_on_unreadable_path(tmp_path: Path) -> None:
     assert result.ok is False and "Cannot read" in result.detail, (
         "spec check_matrix_complete: expected ok=False with 'Cannot read' on "
         f"missing path, got ok={result.ok}, detail={result.detail!r}"
+    )
+
+
+def test_check_matrix_complete_respects_na_status(tmp_path: Path) -> None:
+    """NA row (runtime-OOS) is excluded from required set; missing NA ID passes.
+
+    Spec ref: scripts/check_scaffold_quality.py:check_matrix_complete
+    — 'Rows whose Enforcement column contains runtime-OOS are excluded'.
+    R2 CRITICAL F2: check_matrix_complete must not count runtime-OOS rows as
+    missing coverage.
+    """
+    matrix = tmp_path / "rubric-coverage.md"
+    # FOO-1 is covered; BAR-2 is runtime-OOS (excluded); BAZ-3 is not in matrix
+    # at all. With required=[FOO-1, BAR-2], BAR-2 is excluded → only FOO-1
+    # required → FOO-1 is covered → ok=True.
+    matrix.write_text(
+        "| Item ID | Status | Enforcement |\n"
+        "|---------|--------|-------------|\n"
+        "| FOO-1 | covered | binary |\n"
+        "| BAR-2 | N/A | runtime-OOS |\n",
+        encoding="utf-8",
+    )
+    result = csq.check_matrix_complete(matrix, ["FOO-1", "BAR-2"])
+    assert result.ok is True, (
+        "spec check_matrix_complete: expected ok=True when only missing ID is "
+        f"runtime-OOS, got ok={result.ok}, detail={result.detail!r}"
+    )
+
+
+def test_check_matrix_complete_regex_skips_non_id_rows(tmp_path: Path) -> None:
+    """Divider lines and non-ID table rows are not matched as covered IDs.
+
+    Spec ref: scripts/check_scaffold_quality.py:check_matrix_complete
+    — 'divider lines (|---|) are skipped'.
+    R2 HIGH F3: regex must not match |---| divider as an item ID.
+    """
+    matrix = tmp_path / "rubric-coverage.md"
+    # The divider line '|---|---|' must not be interpreted as covering any ID.
+    # FOO-1 is in required but not in any data row → should be missing.
+    matrix.write_text(
+        "| Item ID | Status |\n"
+        "|---------|--------|\n"
+        "| NOT-REAL | some text |\n",
+        encoding="utf-8",
+    )
+    result = csq.check_matrix_complete(matrix, ["FOO-1"])
+    assert result.ok is False and "FOO-1" in result.detail, (
+        "spec check_matrix_complete: expected ok=False naming 'FOO-1' when "
+        f"only divider + unrelated row present, got ok={result.ok}, "
+        f"detail={result.detail!r}"
+    )
+
+
+# --- parse_agent_ids --------------------------------------------------------
+
+
+def test_parse_agent_ids_extracts_ge_30() -> None:
+    """parse_agent_ids returns >=30 IDs from the committed scoring-rubric.
+
+    Spec ref: scripts/check_scaffold_quality.py:parse_agent_ids docstring
+    — 'Exits with code 1 if fewer than MIN_AGENT_IDS are found'.
+    R2 CRITICAL F1: parse_agent_ids must exist and parse ## Agent Items (H2).
+    """
+    ids = csq.parse_agent_ids(csq.SCORING_RUBRIC_PATH)
+    assert len(ids) >= csq.MIN_AGENT_IDS, (
+        f"spec parse_agent_ids: expected >= {csq.MIN_AGENT_IDS} IDs "
+        f"from real rubric, got {len(ids)}"
+    )
+
+
+def test_parse_agent_ids_exits_on_degraded_rubric(tmp_path: Path) -> None:
+    """Renaming '## Agent Items' heading triggers SystemExit(1) (AGENT_RUBRIC_PARSE_DEGRADED).
+
+    Spec ref: scripts/check_scaffold_quality.py:parse_agent_ids
+    — 'Exits with code 1 if fewer than MIN_AGENT_IDS are found'.
+    R2 CRITICAL F1: AGENT_RUBRIC_PARSE_DEGRADED sentinel must be emitted.
+    """
+    real = csq.SCORING_RUBRIC_PATH.read_text(encoding="utf-8")
+    degraded = real.replace("## Agent Items", "## Agent-Items (renamed)")
+    tmp_rubric = tmp_path / "scoring-rubric.md"
+    tmp_rubric.write_text(degraded, encoding="utf-8")
+
+    with pytest.raises(SystemExit) as excinfo:
+        csq.parse_agent_ids(tmp_rubric)
+    assert excinfo.value.code == 1, (
+        "spec parse_agent_ids: expected SystemExit(1) on degraded rubric, "
+        f"got code={excinfo.value.code!r}"
     )
 
 
