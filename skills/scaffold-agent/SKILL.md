@@ -53,6 +53,11 @@ If any required field is missing after asking, prompt again. Do not generate the
 
 ### 4. Generate and validate agent .md
 
+Apply all directives from `references/quality-patterns.md` during generation. Before writing,
+verify compliance against `references/rubric-coverage.md` — for each `by-directive` row,
+confirm the corresponding directive was applied; `runtime-OOS` rows are NA and require no
+action.
+
 Build the content from `references/agent-template.md`:
 
 - **Frontmatter:** `name`, `description` (with any `<example>` blocks embedded), `model`, and optionally `color` and `tools`/`allowed-tools`.

@@ -231,6 +231,9 @@ Diff-checkable never-violate rules. The `builder-evaluator` subagent enforces th
 | `test` | `make test` | `pytest tests/ -v --tb=short` |
 | `test-cov` | `make test-cov` | `pytest tests/ -v --tb=short --cov=hooks --cov=scripts` |
 | `validate-descriptions` | `make validate-descriptions` | Run description-graph validator |
+| `check-scaffold-fixtures` | `make check-scaffold-fixtures` | Validate scaffold fixture files against binary rubric evaluator (default mode) |
+| `check-scaffold-matrix` | `make check-scaffold-matrix` | Verify rubric-coverage matrices cover all binary + agent IDs (`--verify-matrix-complete`) |
+| `check-scaffold-quality` | `make check-scaffold-quality` | PHONY parent: runs `check-scaffold-fixtures` then `check-scaffold-matrix` |
 - Local-dev venv: `.venv/` at repo root; the Makefile auto-detects `.venv/bin/python` when present and falls back to `python3` (CI path). Recreate via `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"` if missing or corrupt.
 - Domain-cache entries are read-only at runtime; maintainer refresh is hand-edit + commit in source repo (90-day cadence). Runtime researcher findings surface as `### Domain Cache Drift` in the review report — copy into the relevant `references/domain-cache/{key}.md` to refresh.
 - Audit-fix chain: commit review report first, then commit fixes
