@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.1](https://github.com/Nosmoht/review-claude-config/compare/v2.13.0...v2.13.1) (2026-05-27)
+
+
+### Fixed
+
+* **hooks:** close policy_gate fail-open on unrecognized action and load-policy raise ([#287](https://github.com/Nosmoht/review-claude-config/issues/287)) ([8c71fbd](https://github.com/Nosmoht/review-claude-config/commit/8c71fbdf5392c6aa4cc1b95cce0f0313d1b45d16))
+
 ## [2.13.0](https://github.com/Nosmoht/review-claude-config/compare/v2.12.2...v2.13.0) (2026-05-27)
 
 
