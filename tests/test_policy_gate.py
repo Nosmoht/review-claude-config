@@ -718,3 +718,72 @@ class TestLoadPolicyValidatesActionsAtLoadTime:
         captured = capsys.readouterr()
         assert "'Allow'" in captured.err
         assert "override tool=Bash" in captured.err
+
+
+class TestMainEndToEndFailClosedOnMissingCanonical:
+    """#278 R3 end-to-end — main() must NOT emit '{}' when canonical config missing.
+
+    Spec: issue #278 R3 — hook stdout contract is non-{} JSON when _resolve
+    raises. Phase 7.5 evaluator surfaced that the v3 fix only guarded
+    _resolve('DEFAULT_POLICY') via _safe_resolve_default; _classify_tool's
+    _resolve('TOOL_LEVELS') raise path bypassed it, propagated to __main__
+    catch-all → '{}'. This test exercises main() end-to-end to lock in the
+    follow-up fix (_safe_resolve helper used in _classify_tool / _classify_mcp_tool).
+    """
+
+    def test_when_canonical_policy_unreachable_main_emits_non_empty_decision(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Spec #278 R3: with canonical config missing AND user policy present,
+        main() must emit a JSON object containing 'permissionDecision' on
+        stdout, NOT the silent-allow '{}'."""
+        # Point canonical config to a uniquely-named non-existent path
+        missing_canonical = tmp_path / "no-such-policy-gate.json"
+        monkeypatch.setenv("POLICY_GATE_CONFIG_PATH", str(missing_canonical))
+
+        # Provide a user policy so _load_policy enters the load path (not None pass-through)
+        plugin_data = tmp_path / "plugin"
+        plugin_data.mkdir()
+        (plugin_data / "audit").mkdir()
+        (plugin_data / "policy.json").write_text(json.dumps({"rules": [], "overrides": []}))
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(plugin_data))
+
+        # Clear LRU caches so the missing-canonical path is exercised this run
+        policy_gate._load_config_cached.cache_clear()
+        policy_gate._load_schema_cached.cache_clear()
+
+        # Drive main() via stdin
+        stdin_input = json.dumps(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "echo hi"},
+                "session_id": "test",
+            }
+        )
+        monkeypatch.setattr("sys.stdin", io.StringIO(stdin_input))
+
+        policy_gate.main()
+
+        captured = capsys.readouterr()
+        assert captured.out.strip() != "{}", (
+            f"main() must NOT emit silent-allow '{{}}' on missing canonical "
+            f"config (Phase 7.5 evaluator finding for issue #278 R3); "
+            f"got stdout={captured.out!r}"
+        )
+        # Parse the JSON; permissionDecision must be present
+        parsed = json.loads(captured.out.strip())
+        assert "hookSpecificOutput" in parsed, (
+            f"main() stdout should be a hookSpecificOutput JSON, got {parsed!r}"
+        )
+        assert "permissionDecision" in parsed["hookSpecificOutput"], (
+            f"missing permissionDecision in {parsed!r}"
+        )
+        # Under hardcoded fail-closed L4=deny, Bash is denied; under canonical L4=ask,
+        # _safe_resolve fallback empty-dict-default gives L4 (since TOOL_LEVELS={}),
+        # and _safe_resolve_default's hardcoded {4:"deny"} applies via policy.get.
+        assert parsed["hookSpecificOutput"]["permissionDecision"] in ("ask", "deny"), (
+            f"unexpected permissionDecision {parsed['hookSpecificOutput']['permissionDecision']!r}"
+        )
+
+        # Stderr should mention the fail-closed fallback for trace-ability
+        assert "fail-closed" in captured.err

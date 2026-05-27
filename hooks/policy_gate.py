@@ -167,21 +167,50 @@ def __getattr__(name: str) -> Any:  # PEP 562
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+def _safe_resolve(name, default):
+    """Resolve a lazy name from canonical policy_gate.json; return `default`
+    (with stderr warn) on any raise.
+
+    Used by classification paths (_classify_tool, _classify_mcp_tool) so a
+    missing or corrupted canonical config does NOT propagate through to
+    __main__'s top-level except → silent allow ("{}"). Companion to
+    _safe_resolve_default which guards the DEFAULT_POLICY resolve. Phase 7.5
+    evaluator finding (issue #277 follow-up): the v3 plan covered
+    _resolve("DEFAULT_POLICY") but left TOOL_LEVELS, L5_BASH_PATTERNS,
+    _MCP_L1_PREFIXES, _MCP_L4_VERBS as fall-open paths in the same defect class.
+    """
+    try:
+        return _resolve(name)
+    except Exception as e:  # noqa: BLE001 — defense-in-depth catch-all
+        sys.stderr.write(
+            f"policy_gate: _resolve({name!r}) raised {type(e).__name__}: {e!s}; "
+            f"falling back to {default!r} (fail-closed #278 follow-up)\n"
+        )
+        return default
+
+
 def _classify_mcp_tool(tool_name):
     """Classify an mcp__ tool by name pattern. Default L4 for unknown suffixes."""
     if "__" not in tool_name:
         return 4  # malformed name — conservative fallback
     suffix = tool_name.split("__")[-1]
-    is_l1_shape = any(suffix.startswith(p) for p in _resolve("_MCP_L1_PREFIXES")) or suffix.endswith("_read")
-    has_l4_verb = bool(set(suffix.split("_")) & _resolve("_MCP_L4_VERBS"))
+    is_l1_shape = any(suffix.startswith(p) for p in _safe_resolve("_MCP_L1_PREFIXES", ())) or suffix.endswith("_read")
+    has_l4_verb = bool(set(suffix.split("_")) & _safe_resolve("_MCP_L4_VERBS", frozenset()))
     if is_l1_shape and not has_l4_verb:
         return 1
     return 4
 
 
 def _classify_tool(tool_name, tool_input):
-    """Return authorization level (1-5) for a tool call."""
-    level = _resolve("TOOL_LEVELS").get(tool_name, 4)  # unknown tools default to L4
+    """Return authorization level (1-5) for a tool call.
+
+    Every _resolve(...) call routes through _safe_resolve so a missing
+    or corrupted canonical config cannot propagate to __main__'s top-level
+    catch-all (which would emit "{}" = silent allow). Fail-closed defaults
+    on resolution failure: empty TOOL_LEVELS → every tool defaults to L4;
+    empty L5_BASH_PATTERNS → no L5 escalation but Bash stays at L4.
+    """
+    level = _safe_resolve("TOOL_LEVELS", {}).get(tool_name, 4)  # unknown tools default to L4
 
     # MCP tools: pattern-based classification (reads vs mutations vs unknown)
     if tool_name.startswith("mcp__"):
@@ -190,7 +219,7 @@ def _classify_tool(tool_name, tool_input):
     # Bash escalation check
     if tool_name == "Bash" and level == 4:
         command = tool_input.get("command", "")
-        for pattern in _resolve("L5_BASH_PATTERNS"):
+        for pattern in _safe_resolve("L5_BASH_PATTERNS", []):
             if re.search(pattern, command, re.IGNORECASE):
                 return 5
 
