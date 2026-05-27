@@ -2,11 +2,12 @@
 name: apply-audit-findings
 description: >
   Creates primitives recommended by an /audit-repo report — CLAUDE.md
-  sections inline; delegates Skill recommendations to /scaffold-skill,
-  Agent recommendations to /scaffold-agent, Rule recommendations to
-  /scaffold-rule, Hook recommendations to /develop-hooks. Use after
-  /audit-repo to act on the intervention matrix. Do NOT use for review
-  findings — use /apply-review-findings.
+  sections, rules, and hooks inline; delegates Skill recommendations
+  to /scaffold-skill and Agent recommendations to /scaffold-agent;
+  surfaces /scaffold-rule and /develop-hooks as richer-next-time
+  alternatives after inline rule/hook creates. Use after /audit-repo
+  to act on the intervention matrix. Do NOT use for review findings —
+  use /apply-review-findings.
 argument-hint: "[report-path]"
 allowed-tools: Read, Write, Edit, Glob, Bash
 disable-model-invocation: true
