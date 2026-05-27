@@ -77,7 +77,7 @@ For each (skill, dimension):
 - **ΔCost**: `mean(isolated_total_cost_usd) - mean(single_pass_total_cost_usd)`. Per-skill marginal cost.
 - **Cache hit rate**: `cache_read_input_tokens / (input_tokens + cache_read_input_tokens)`, computed per mode.
 
-### AC-5: Recommendation derivation framework
+## Recommendation derivation framework (AC-5)
 
 Decision rules (to apply after empirical data lands):
 
