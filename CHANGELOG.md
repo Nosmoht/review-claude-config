@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.16.0](https://github.com/Nosmoht/review-claude-config/compare/v2.15.0...v2.16.0) (2026-05-27)
+
+
+### Changed
+
+* **apply-hook-findings:** close hook workflow chain ([#23](https://github.com/Nosmoht/review-claude-config/issues/23)) ([#294](https://github.com/Nosmoht/review-claude-config/issues/294)) ([80534bc](https://github.com/Nosmoht/review-claude-config/commit/80534bc8cde9b783a8d39d8f814a1907046d4c96))
+
 ## [2.15.0](https://github.com/Nosmoht/review-claude-config/compare/v2.14.0...v2.15.0) (2026-05-27)
 
 
