@@ -129,9 +129,14 @@ For each High/Medium finding, in numerical order:
 
 If a finding's Category is `Commands` (skill added, renamed, or removed):
 
-- Locate the `## Commands` section in CLAUDE.md (or `### Review` / `### Maintain` / etc. sub-sections per repo convention).
-- Apply the Current→Recommended swap on the row-or-row-block.
-- After Edit: grep the rest of CLAUDE.md for stale references to the renamed/removed skill (e.g., `/old-skill-name`) and surface count to user. Do NOT auto-fix the stale references — surface for separate review (avoids accidental edits in unrelated sections).
+1. Locate the `## Commands` section in CLAUDE.md (or `### Review` / `### Maintain` / etc. sub-sections per repo convention).
+2. Apply the Current→Recommended swap on the row-or-row-block.
+3. **Derive the affected skill names mechanically** by extracting `/<skill-name>` tokens from BOTH the Current and Recommended blocks via regex `/\/[a-z][a-z0-9-]+/g`. The symmetric-difference of the two token-sets is the renamed/removed set. (If no `/skill-name` tokens are extractable from either block, skip the stale-reference grep — the finding does not concern a skill rename.)
+4. **Stale-reference scan**: for each name in the renamed/removed set, grep CLAUDE.md (whole file) for that exact token, EXCLUDING the section just edited. Count occurrences.
+5. **Decide status**:
+   - If stale-reference count is 0: mark finding `Applied (clean)`.
+   - If count > 0: mark finding `Applied (with N stale refs in sections [list])`. Per Hard Rule 7, do NOT auto-fix; surface count + section list to user.
+6. **Emit `stale_references_surfaced`** in the orchestrated-mode return contract so the parent `/apply-review-findings` can aggregate and present a final report. The parent MUST NOT auto-close the workflow if `stale_references_surfaced` is non-empty; downstream merge-blocking is the parent's decision per its own policy.
 
 ## Phase 4 — Aggregate results (standalone mode)
 
