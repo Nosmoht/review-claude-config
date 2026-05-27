@@ -216,24 +216,75 @@ def _check_overrides(overrides, tool_name, tool_input):
 
 
 def _log_decision(plugin_data, input_data, level, action):
-    """Append policy decision to audit trace."""
-    session_id = input_data.get("session_id", "unknown")
-    audit_dir = os.path.join(plugin_data, "audit")
-    os.makedirs(audit_dir, exist_ok=True)
-    path = os.path.join(audit_dir, f"{session_id}.audit.jsonl")
+    """Append policy decision to audit trace.
 
-    entry = {
-        "type": "policy_decision",
-        "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "session_id": session_id,
-        "tool_name": input_data.get("tool_name", "unknown"),
-        "level": level,
-        "level_label": LEVEL_LABELS.get(level, "Unknown"),
-        "action": action,
-        "agent_id": input_data.get("agent_id"),
-    }
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, default=str) + "\n")
+    Side-effect isolation: failures from disk I/O (EACCES, ENOSPC, broken
+    mount) or JSON serialization MUST NOT propagate to main(). Otherwise
+    the top-level except in __main__ would catch them and emit "{}" — a
+    "no decision" output the harness interprets as ALLOW, silently
+    downgrading a deny/ask to an allow on disk-full.
+
+    Catches OSError (disk full, EACCES, ENOENT on mount), TypeError and
+    ValueError (JSON serialization of unexpected types). Broad Exception
+    is deliberately avoided — KeyboardInterrupt / SystemExit must still
+    propagate.
+    """
+    try:
+        session_id = input_data.get("session_id", "unknown")
+        audit_dir = os.path.join(plugin_data, "audit")
+        os.makedirs(audit_dir, exist_ok=True)
+        path = os.path.join(audit_dir, f"{session_id}.audit.jsonl")
+
+        entry = {
+            "type": "policy_decision",
+            "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "session_id": session_id,
+            "tool_name": input_data.get("tool_name", "unknown"),
+            "level": level,
+            "level_label": LEVEL_LABELS.get(level, "Unknown"),
+            "action": action,
+            "agent_id": input_data.get("agent_id"),
+        }
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, default=str) + "\n")
+    except (OSError, TypeError, ValueError) as e:
+        # stderr only — stdout is reserved for the hook's JSON contract.
+        print(f"Audit log write failed: {e}", file=sys.stderr)
+
+
+def _decision_json(action, level, tool_name):
+    """Build the stdout JSON string for an action (deny/ask/allow/unknown).
+
+    Pure function — no side effects. Returning the string (rather than
+    printing) lets main() emit the permission decision BEFORE any
+    audit-write side effect, so an audit failure cannot displace the
+    JSON contract with the harness.
+    """
+    if action == "allow":
+        return "{}"
+    if action == "ask":
+        label = LEVEL_LABELS.get(level, "Unknown")
+        return json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "ask",
+                    "permissionDecisionReason": f"L{level} ({label}): {tool_name} requires confirmation",
+                }
+            }
+        )
+    if action == "deny":
+        label = LEVEL_LABELS.get(level, "Unknown")
+        return json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": f"L{level} ({label}): {tool_name} blocked by policy",
+                }
+            }
+        )
+    return "{}"
 
 
 def main():
@@ -262,39 +313,15 @@ def main():
     else:
         action = policy.get(level, "ask")
 
-    # Log the decision to audit trace
-    _log_decision(plugin_data, input_data, level, action)
-
-    if action == "allow":
-        print("{}")
-    elif action == "ask":
-        label = LEVEL_LABELS.get(level, "Unknown")
-        print(
-            json.dumps(
-                {
-                    "hookSpecificOutput": {
-                        "hookEventName": "PreToolUse",
-                        "permissionDecision": "ask",
-                        "permissionDecisionReason": f"L{level} ({label}): {tool_name} requires confirmation",
-                    }
-                }
-            )
-        )
-    elif action == "deny":
-        label = LEVEL_LABELS.get(level, "Unknown")
-        print(
-            json.dumps(
-                {
-                    "hookSpecificOutput": {
-                        "hookEventName": "PreToolUse",
-                        "permissionDecision": "deny",
-                        "permissionDecisionReason": f"L{level} ({label}): {tool_name} blocked by policy",
-                    }
-                }
-            )
-        )
-    else:
-        print("{}")
+    # Decide-then-side-effect: emit permission JSON before any audit write
+    # so a _log_decision failure cannot displace it. Outer try is
+    # belt-and-braces in case a future audit backend bypasses the inner
+    # swallow in _log_decision.
+    print(_decision_json(action, level, tool_name))
+    try:
+        _log_decision(plugin_data, input_data, level, action)
+    except Exception as e:  # noqa: BLE001 — audit must not break enforcement
+        print(f"Audit log write failed: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":  # pragma: no cover

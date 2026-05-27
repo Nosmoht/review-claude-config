@@ -366,6 +366,142 @@ class TestMain:
         assert entry["action"] == "ask"
 
 
+class TestAuditFailureIsolation:
+    """Audit-log write failures must NEVER displace the deny/ask/allow JSON.
+
+    Regression: prior to this fix, _log_decision raising (disk full,
+    EACCES, broken mount) would bubble to the top-level except in
+    __main__ and emit "{}" — which the harness reads as "no decision"
+    and falls back to allow. A deny silently became an allow.
+
+    The fix has two layers: (a) emit the JSON BEFORE calling
+    _log_decision, and (b) _log_decision swallows OSError/TypeError/
+    ValueError internally and writes to stderr.
+
+    These tests cover the call-site contract by patching _log_decision
+    to raise — exercising the belt-and-braces ordering guarantee — and
+    also assert the stderr surface format.
+    """
+
+    @staticmethod
+    def _raise_disk_full(*_args, **_kwargs):
+        raise OSError("disk full")
+
+    def test_deny_emitted_when_log_decision_raises(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        """L5 deny path: disk-full during audit must NOT downgrade to allow."""
+        import policy_gate
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        policy_data = {
+            "rules": [{"level": "L5", "action": "deny"}],
+            "overrides": [],
+        }
+        (tmp_path / "policy.json").write_text(json.dumps(policy_data))
+
+        input_data = {
+            "session_id": "test",
+            "tool_name": "Bash",
+            "tool_input": {"command": "rm -rf /tmp"},
+        }
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(input_data)))
+        monkeypatch.setattr(policy_gate, "_log_decision", self._raise_disk_full)
+
+        main()
+        captured = capsys.readouterr()
+
+        # Decision JSON must reach stdout, NOT "{}".
+        output = json.loads(captured.out.strip())
+        assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+        # And the failure must surface on stderr in the contracted format.
+        assert captured.err.startswith("Audit log write failed: ")
+        assert "disk full" in captured.err
+
+    def test_ask_emitted_when_log_decision_raises(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        """L4 ask path: disk-full during audit must NOT downgrade to allow."""
+        import policy_gate
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        policy_data = {
+            "rules": [{"level": "L4", "action": "ask"}],
+            "overrides": [],
+        }
+        (tmp_path / "policy.json").write_text(json.dumps(policy_data))
+
+        input_data = {
+            "session_id": "test",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": "foo.py"},
+        }
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(input_data)))
+        monkeypatch.setattr(policy_gate, "_log_decision", self._raise_disk_full)
+
+        main()
+        captured = capsys.readouterr()
+
+        output = json.loads(captured.out.strip())
+        assert output["hookSpecificOutput"]["permissionDecision"] == "ask"
+        assert captured.err.startswith("Audit log write failed: ")
+        assert "disk full" in captured.err
+
+    def test_allow_path_still_emits_empty_when_log_decision_raises(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        """Allow path: _log_decision raises, hook must still emit "{}" — not
+        an error JSON, not a deny/ask. The stderr message is still required."""
+        import policy_gate
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        policy_data = {
+            "rules": [{"level": "L1", "action": "allow"}],
+            "overrides": [],
+        }
+        (tmp_path / "policy.json").write_text(json.dumps(policy_data))
+
+        input_data = {
+            "session_id": "test",
+            "tool_name": "Read",
+            "tool_input": {"file_path": "/some/file"},
+        }
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(input_data)))
+        monkeypatch.setattr(policy_gate, "_log_decision", self._raise_disk_full)
+
+        main()
+        captured = capsys.readouterr()
+
+        assert captured.out.strip() == "{}"
+        assert captured.err.startswith("Audit log write failed: ")
+        assert "disk full" in captured.err
+
+
+class TestLogDecisionInternalIsolation:
+    """The internal try/except in _log_decision itself must swallow disk
+    errors and emit to stderr — independent of main()'s call-site ordering."""
+
+    def test_oserror_in_makedirs_is_swallowed(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        import policy_gate
+
+        def _boom(*_a, **_kw):
+            raise OSError("EACCES on audit dir")
+
+        monkeypatch.setattr(policy_gate.os, "makedirs", _boom)
+        policy_gate._log_decision(
+            str(tmp_path),
+            {"session_id": "s", "tool_name": "Edit"},
+            4,
+            "ask",
+        )
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err.startswith("Audit log write failed: ")
+        assert "EACCES" in captured.err
+
+
 class TestLazyLoadPolicy:
     """Cover the PEP 562 lazy-load path for the 5 JSON-derived constants."""
 
