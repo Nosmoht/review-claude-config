@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.0](https://github.com/Nosmoht/review-claude-config/compare/v2.16.0...v2.17.0) (2026-05-27)
+
+
+### Changed
+
+* **apply-claude-md-findings:** close CLAUDE.md workflow chain ([#24](https://github.com/Nosmoht/review-claude-config/issues/24)) ([#296](https://github.com/Nosmoht/review-claude-config/issues/296)) ([c19c219](https://github.com/Nosmoht/review-claude-config/commit/c19c219249e7d4ce5c79a3b912028039aee518b4))
+
 ## [2.16.0](https://github.com/Nosmoht/review-claude-config/compare/v2.15.0...v2.16.0) (2026-05-27)
 
 
