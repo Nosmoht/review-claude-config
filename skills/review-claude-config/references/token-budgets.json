@@ -1,7 +1,8 @@
 {
   "BUDGETS": {
     "scoring-rubric.md": 13500,
-    "quality-patterns.md": 550,
+    "quality-patterns.md": 1500,
+    "rubric-coverage.md": 4000,
     "tool-grant-decision-tree.md": 800,
     "engineering-baseline.md": 4400,
     "signal-catalog.md": 1400,
