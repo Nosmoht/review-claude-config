@@ -32,8 +32,8 @@ Rules are evaluated under a 3-dimension rubric (Clarity 30%, Completeness 30%, G
 | No YAML frontmatter | First line is not `---` | `rule-template.md §Why Rules Have No Frontmatter` — template has no frontmatter block; `quality-patterns.md §No-Frontmatter` directive forbids adding frontmatter | by-template | in-scope |
 | H1 present and first | First non-empty line is `# <Title>` | `rule-template.md §Canonical Rule Structure` — template slot `# <Rule Title>` is first | by-template | in-scope |
 | Required H2 sections present | Sections derived from `rule-template.md §Canonical Rule Structure` at runtime | `rule-template.md §Canonical Rule Structure` — canonical `## Scope` and `## Edge Cases` headings required | by-template | in-scope |
-| Dimensional anchor present | Body contains `/\b(Clarity|Completeness|Goal\s+Alignment)\b/i` OR strong enforcement verb | `quality-patterns.md §Dimensional-Anchor` — directive instructs LLM to include at least one dimension-relevant verb anchor (MUST/SHALL/REQUIRED/PROHIBITED) | by-directive | in-scope |
-| Body length within budget | Character count within `rule-evaluation-guide.md` budget | `quality-patterns.md §Body-Length` — directive: keep rule body concise; reference `references/` files for supporting evidence rather than inlining it | by-directive | in-scope |
+| Dimensional anchor present | Body contains `/\b(Clarity|Completeness|Goal\s+Alignment)\b/i` OR strong enforcement verb | `quality-patterns.md §Dimensional Anchor` — directive instructs LLM to include at least one dimension-relevant verb anchor (MUST/SHALL/REQUIRED/PROHIBITED) | by-directive | in-scope |
+| Body length within budget | Character count within `rule-evaluation-guide.md` budget | `quality-patterns.md §Body-Length Budget` — directive: keep rule body concise; reference `references/` files for supporting evidence rather than inlining it | by-directive | in-scope |
 
 ## Binary Evaluator Inapplicability Note
 
