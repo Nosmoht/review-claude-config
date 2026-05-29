@@ -54,6 +54,17 @@ PreToolUse — allow with rewritten input:
 PreToolUse — ask user to decide:
     {"permissionDecision": "ask", "userMessage": "reason"}
 
+PreToolUse — defer (pause a headless/CI session at this tool boundary; v2.1.89+,
+REAL but officially-undocumented — tracked anthropics/claude-code#41791. ALL three
+specifics below — the field shape, the resume invocation, and the single-tool-call
+constraint — are undocumented; re-verify each against code.claude.com/docs/en/hooks
+before relying on them):
+    {"permissionDecision": "defer"}
+# Resumes via:  claude -p --resume <session-id>  (session-level headless resume —
+#   distinct from subagent-dispatch resume, which the plain CLI does not support).
+# GOTCHA: only works when Claude makes a SINGLE tool call in the turn —
+#         a multi-tool turn cannot defer one call while leaving the rest unresolved.
+
 SessionStart — inject session context:
     {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "..."}}
 

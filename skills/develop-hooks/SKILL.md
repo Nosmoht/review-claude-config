@@ -28,7 +28,7 @@ Valid hook types (26 events):
 
 | Event | When it fires |
 |-------|--------------|
-| `PreToolUse` | Before a tool call — can allow/deny/rewrite input |
+| `PreToolUse` | Before a tool call — can allow/deny/rewrite input + defer (pause headless session) |
 | `PostToolUse` | After a successful tool call |
 | `PostToolUseFailure` | After a tool call that returned an error |
 | `UserPromptSubmit` | When the user submits a prompt |
@@ -77,7 +77,7 @@ Ask the user for:
 3. **Input fields** — Which `tool_input` fields does the hook inspect (e.g., `file_path`, `command`)? Not applicable to `SessionStart` or `Stop`.
 4. **Output type** — Choose one:
    - `systemMessage` — inject guidance text into Claude's context (PreToolUse)
-   - `permissionDecision` — `"allow"`, `"deny"`, or `"ask"` (PreToolUse); deny takes priority over ask, which takes priority over allow when multiple hooks run
+   - `permissionDecision` — `"allow"`, `"deny"`, `"ask"`, or `"defer"` (v2.1.89+, officially-undocumented — see hook-template.py / anthropics/claude-code#41791) (PreToolUse); deny takes priority over ask, which takes priority over allow when multiple hooks run
    - `updatedInput` — rewrite tool input fields before execution (PreToolUse)
    - `additionalContext` — inject session context (SessionStart)
    - `{}` — no-op or async logging only
