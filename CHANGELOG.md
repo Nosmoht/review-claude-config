@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.23.0](https://github.com/Nosmoht/review-claude-config/compare/v2.22.0...v2.23.0) (2026-05-29)
+
+
+### Changed
+
+* **eval-cases:** add behavior_review kind + reference exemplar ([b9b1a2b](https://github.com/Nosmoht/review-claude-config/commit/b9b1a2bdaa4276a646ddc1a4cdbbb785b0988076))
+
 ## [2.22.0](https://github.com/Nosmoht/review-claude-config/compare/v2.21.0...v2.22.0) (2026-05-29)
 
 
