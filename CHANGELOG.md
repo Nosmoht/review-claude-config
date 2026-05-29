@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.24.0](https://github.com/Nosmoht/review-claude-config/compare/v2.23.0...v2.24.0) (2026-05-29)
+
+
+### Changed
+
+* **eval-cases:** add D6 stub-primitive behavior_review case ([#132](https://github.com/Nosmoht/review-claude-config/issues/132)) ([#315](https://github.com/Nosmoht/review-claude-config/issues/315)) ([e5f332f](https://github.com/Nosmoht/review-claude-config/commit/e5f332fdec5c45c094988f81a58eb3f73b6894c6))
+
 ## [2.23.0](https://github.com/Nosmoht/review-claude-config/compare/v2.22.0...v2.23.0) (2026-05-29)
 
 
