@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.19.0](https://github.com/Nosmoht/review-claude-config/compare/v2.18.0...v2.19.0) (2026-05-29)
+
+
+### Changed
+
+* **eval-cases:** add D8 analytics regression eval case ([#305](https://github.com/Nosmoht/review-claude-config/issues/305)) ([fae7d81](https://github.com/Nosmoht/review-claude-config/commit/fae7d819ffa6634f48c0b69f81f4975f615c4845))
+
 ## [2.18.0](https://github.com/Nosmoht/review-claude-config/compare/v2.17.1...v2.18.0) (2026-05-29)
 
 
