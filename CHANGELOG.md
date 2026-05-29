@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.1](https://github.com/Nosmoht/review-claude-config/compare/v2.17.0...v2.17.1) (2026-05-29)
+
+
+### Fixed
+
+* **skill/review-skill:** pin target: to repo root, fix dangling pointer ([#163](https://github.com/Nosmoht/review-claude-config/issues/163)) ([#300](https://github.com/Nosmoht/review-claude-config/issues/300)) ([a2264a6](https://github.com/Nosmoht/review-claude-config/commit/a2264a6fb1d6ee4230ecb037ed1f2cd0f64cc6ce))
+
 ## [2.17.0](https://github.com/Nosmoht/review-claude-config/compare/v2.16.0...v2.17.0) (2026-05-27)
 
 
