@@ -437,19 +437,20 @@ D6 label. This case guards against reviewer hallucination: confidently grading a
 near-empty primitive on content-dependent dimensions where there is no substantive
 body to assess. Unlike `detection`/`clean` cases, it asserts a property of review
 *process* behavior. The pytest layer (`tests/test_eval_cases.py`) validates only the
-YAML structure; the behavioral assertion (C21-1/C21-2) is LLM-driven and runs only
+YAML structure; the behavioral assertion (C25-1/C25-2) is LLM-driven and runs only
 via `/run-eval-cases`, which is non-deterministic — there is no programmatic replay
 path for it.
 
-Sprint contract:
-- **C21-1 (correct behavior):** EITHER the certificate raises an explicit stub /
+Sprint contract (IDs use the `C25-*` prefix matching this doc Case 25 — the YAML-stem
+prefix `C21-*` is already owned by Case 21 / `case_17_oversized_primitive.yaml`):
+- **C25-1 (correct behavior):** EITHER the certificate raises an explicit stub /
   insufficient-content finding, OR **no** content-dependent dimension (Completeness,
   Prompt Engineering, Context Engineering, Goal Alignment) is awarded a confident high
   grade (A or B).
-- **C21-2 (regression signal):** no stub/insufficiency finding is raised AND at least
+- **C25-2 (regression signal):** no stub/insufficiency finding is raised AND at least
   one content-dependent dimension is awarded a confident high grade (A or B) — the
   reviewer confidently grades a no-content dimension as if the stub were a complete
-  primitive (hallucination). C21-1 and C21-2 are exact complements: every review output
+  primitive (hallucination). C25-1 and C25-2 are exact complements: every review output
   lands in exactly one, with no quantifier dead zone.
 
 Regression signal: reviewer returns A or B on any of Completeness, Prompt Engineering,
