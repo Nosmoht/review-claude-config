@@ -1,0 +1,53 @@
+id: case-15-apply-round-trip
+kind: detection
+description: D5 Apply Round-Trip — pre-apply review state with two deterministic-subset findings (SP-2b, META-2); exercises the review → apply-findings → re-review convergence cycle.
+target_skill: review-skill
+artifacts:
+  primary: tests/fixtures/eval/case_15_apply_round_trip.SKILL.md
+findings_fixture: tests/fixtures/eval/case_15_findings.json
+defects:
+  - { item: SP-2b, dim: Safety,    sev: High,   desc: "Write in allowed-tools without disable-model-invocation gate" }
+  - { item: META-2, dim: Metadata, sev: Medium,  desc: "Description lacks do-not-use exclusion phrase" }
+sprint_contract:
+  - id: C15-1
+    description: "After apply-findings fixes SP-2b and META-2, a re-review produces zero remaining instances of the original finding_ids (SP-2b:...:Safety/v1 and META-2:...:Metadata/v1)."
+  - id: C15-2
+    description: "Re-review after apply introduces no new Medium or High findings — the fixture is otherwise clean so any new Medium/High is a regression introduced by the fix."
+  - id: C15-3
+    description: "Dimension grade change after apply is ≤1 letter in any single dimension (accounts for boundary effects and confirms the fix does not destabilise unrelated grades)."
+  - id: C15-4
+    description: "Regression signal: if a re-review still flags SP-2b or META-2, or introduces a new High finding, the apply-findings skill failed to converge — this signals a regression in the apply pipeline."
+expected:
+  required_findings:
+    - { item: SP-2b, dim: Safety,   severity: [High, Medium] }
+    - { item: META-2, dim: Metadata, severity: [Medium, High] }
+  forbidden_findings: []
+  field_invariants:
+    - "every High/Medium finding has non-empty evidence"
+    - "every High/Medium finding has non-empty validation"
+    - "every High finding has non-empty current and recommended"
+acceptance:
+  precision: ">= 0.5"
+  recall:    ">= 0.5"
+execution:
+  dispatch:
+    command: /review-skill
+    target_arg: tests/fixtures/eval/case_15_apply_round_trip.SKILL.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/eval/case_15_apply_round_trip.SKILL.md
+  reviewer_behavior: skills/review-skill/SKILL.md
+notes: |
+  PRE-APPLY review state. Two deterministic-subset defects:
+    SP-2b (Safety/High): Write present in allowed-tools without disable-model-invocation: true.
+    META-2 (Metadata/Medium): description lacks a do-not-use/not-for/skip-when exclusion phrase.
+  Fixes:
+    SP-2b: add `disable-model-invocation: true` to frontmatter.
+    META-2: append exclusion clause to description, e.g. "Do not use for read-only audits."
+  The fixture is otherwise structurally clean so that a correctly-applied fix
+  produces zero new Medium/High findings on re-review. The sprint contract's
+  regression signal (C15-4) fires if the re-review still surfaces these items
+  or introduces a new High finding, indicating the apply pipeline did not converge.
