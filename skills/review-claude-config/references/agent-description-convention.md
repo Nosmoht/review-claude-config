@@ -19,10 +19,14 @@ The first sentence of any agent description MUST start with `Use this when …` 
 
 ## 2. Cluster-Density-Aware Length `[E]`
 
-No hard character cap below Anthropic's 1024-char absolute ceiling. Length scales
-with the number of competing primitives in the same trigger cluster — more
-competition needs more disambiguation tokens. A single-agent repo may succeed with
-40 chars; a 10-agent plugin requires 150–300 chars to route reliably.
+No *platform* character cap applies below Anthropic's 1024-char absolute ceiling.
+Separately, the team applies a ≤250-char conciseness standard: a review flagging a
+description >250 chars cites that team standard (`Repo default`, Medium), NOT a
+platform error — 251–1024 chars are platform-valid but above team standard.
+Length otherwise scales with the number of competing primitives in the same trigger
+cluster — more competition needs more disambiguation tokens. A single-agent repo
+may succeed with 40 chars; a 10-agent plugin requires 150–300 chars to route
+reliably.
 
 Reference: Microsoft 775-tool catalog — collision probability rises sharply when
 descriptions share ≥2 trigger tokens across ≥5 siblings.
