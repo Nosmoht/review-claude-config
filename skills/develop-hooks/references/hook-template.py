@@ -54,6 +54,14 @@ PreToolUse — allow with rewritten input:
 PreToolUse — ask user to decide:
     {"permissionDecision": "ask", "userMessage": "reason"}
 
+PreToolUse — defer (pause a headless/CI session at this tool boundary; v2.1.89+,
+REAL but officially-undocumented — tracked anthropics/claude-code#41791; re-verify
+against code.claude.com/docs/en/hooks before relying on the exact field shape):
+    {"permissionDecision": "defer"}
+# Resumes via:  claude -p --resume <session-id>
+# GOTCHA: only works when Claude makes a SINGLE tool call in the turn —
+#         a multi-tool turn cannot defer one call while leaving the rest unresolved.
+
 SessionStart — inject session context:
     {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "..."}}
 
