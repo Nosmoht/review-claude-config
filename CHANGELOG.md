@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.22.0](https://github.com/Nosmoht/review-claude-config/compare/v2.21.0...v2.22.0) (2026-05-29)
+
+
+### Changed
+
+* **eval-cases:** add D1 rule 3-dimension eval case ([#311](https://github.com/Nosmoht/review-claude-config/issues/311)) ([abe4a73](https://github.com/Nosmoht/review-claude-config/commit/abe4a73133ff5eaa777904902a5015ac41743e79))
+
 ## [2.21.0](https://github.com/Nosmoht/review-claude-config/compare/v2.20.0...v2.21.0) (2026-05-29)
 
 
