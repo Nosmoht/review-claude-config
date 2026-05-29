@@ -1,0 +1,38 @@
+id: case-20-behavior-review-reference
+kind: behavior_review
+description: >-
+  Reference exemplar for the behavior_review kind — asserts review-process behavior
+  (complete per-dimension grade traversal on a clean skill), not finding detection.
+  Template for the D-series review-behavior cases (#128/#129/#130/#132/#136).
+target_skill: review-skill
+artifacts:
+  primary: tests/fixtures/eval/case_02_cosmetic.SKILL.md
+defects: N/A
+sprint_contract:
+  - id: C20-1
+    description: "Reviewer emits a grade for every dimension applicable to a skill artifact — review traversal is complete (all applicable dimensions scored, not only dimensions that carry a finding)."
+  - id: C20-2
+    description: "Behavior is process-level: the per-dimension grade block is produced even on a clean artifact (no early termination after finding zero High/Medium defects)."
+  - id: C20-3
+    description: "Regression signal — reviewer emits a partial grade block missing one or more applicable dimensions, OR scores a dimension structurally inapplicable to a skill artifact."
+acceptance: null
+execution:
+  dispatch:
+    command: /review-skill
+    target_arg: tests/fixtures/eval/case_02_cosmetic.SKILL.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  reviewer_behavior: skills/review-skill/SKILL.md
+notes: |
+  Reference exemplar for kind: behavior_review. No findings_fixture — behavior
+  cases have no programmatic replay path in tests/test_eval_cases.py (only the
+  universal YAML-structure check runs); the actual behavioural assertion is
+  evaluated by /run-eval-cases (LLM-driven), the same as behavior_analytics /
+  behavior_scaffold. defects: N/A (process behaviour, not detection accuracy).
+  Reuses the clean case_02 fixture read-only (staged via cp; /review-skill does
+  not mutate its target). Dispatch follows the detection/clean staging flow: the
+  STAGED temp path is reviewed, not the live fixture. Template for the D-series
+  review-behaviour cases #128/#129/#130/#132/#136.

@@ -20,6 +20,8 @@ Cases C6–C18 below remain as narrative specifications — they enumerate gaps 
 
 Cases that test finding detection include a `defects:` block listing expected defects. Each defect has `{item, dim, sev, desc}`. Cases testing behavior (not detection) have `defects: N/A`. Clean-artifact cases have `defects: []`. Used by `/run-eval-cases` for FP/FN precision/recall measurement.
 
+The behavior kinds split by what they assert: `behavior_analytics` (analytics diff-tracking), `behavior_scaffold` (scaffold filesystem writes), `behavior_apply_policy` (deterministic apply-risk policy lookup — verified in pytest, not by the LLM runner), and **`behavior_review`** (review-orchestrator *process* behavior — e.g. dimension-traversal completeness or meta-condition detection, as opposed to which findings the reviewer emits). `behavior_review` is the form the D-series review-behavior cases (#128/#129/#130/#132/#136) use; see Case 24 for the reference exemplar.
+
 The C1–C5 narrative sections were removed when those cases moved to YAML. The C6–C18 sections below preserve the narrative format pending a follow-up migration.
 
 ## Case 6 — Cross-Run Consistency
@@ -384,3 +386,36 @@ Sprint contract:
 - **C23-2:** flags the seeded CL-2/CO-2/GA-5 defects
 - **C23-3 (regression signal):** reviewer emits a 7-dimension grade or misses a seeded
   defect — signals a regression in the rule-evaluation 3-dimension path
+
+## Case 24 — behavior_review reference exemplar
+
+(YAML: `tests/eval_cases/case_20_behavior_review_reference.yaml`)
+
+Fixture: reuses the clean `tests/fixtures/eval/case_02_cosmetic.SKILL.md` (read-only;
+staged via `cp`, `/review-skill` does not mutate its target). No new fixture and no
+`findings_fixture` — this is a behavior case, not a detection case.
+
+defects: N/A (asserts review *process* behavior, not detection accuracy)
+
+This is the **reference exemplar** for `kind: behavior_review` — the template the
+D-series review-behavior cases (#128/#129/#130/#132/#136) copy. Unlike `detection`/
+`clean` cases, it asserts a property of the review *process* (complete per-dimension
+grade traversal on a clean skill), not which findings are emitted. The pytest layer
+(`tests/test_eval_cases.py`) validates only the YAML structure and the kind-coverage
+floor (`test_every_kind_has_coverage` requires ≥1 `behavior_review` case); the actual
+behavioural assertion (C20-1/C20-2) is LLM-driven and runs only via `/run-eval-cases`,
+which is non-deterministic — there is no programmatic replay path for it.
+
+Note: the doc `## Case N` heading sequence is decoupled from the YAML `case_NN`
+filename sequence (this Case 24 maps to `case_20`); the YAML pointer line above is the
+disambiguator.
+
+Sprint contract:
+- **C20-1:** reviewer emits a grade for every dimension applicable to a skill artifact
+  — review traversal is complete (all applicable dimensions scored, not only those
+  carrying a finding)
+- **C20-2:** behavior is process-level — the per-dimension grade block is produced even
+  on a clean artifact (no early termination after zero High/Medium defects)
+- **C20-3 (regression signal):** reviewer emits a partial grade block missing one or
+  more applicable dimensions, OR scores a dimension structurally inapplicable to a
+  skill artifact

@@ -61,6 +61,8 @@ The YAML's `kind` field discriminates execution shape:
   3. Verify `expected_writes_under` exists with the new SKILL.md
   4. Diff `README.md` and `CLAUDE.md` against the stored snapshot — pass entries from `expected_doc_updates`, fail entries that landed under any `forbidden_doc_targets` heading
   5. After verification, ALWAYS run `case.execution.cleanup` regardless of scenario outcome (scaffold writes to shared docs)
+- **`behavior_review`** — single-artifact review-process behavior (e.g. dimension-traversal completeness, meta-condition detection — the artifact's structure/context, not a planted finding). Same staging + dispatch flow as `detection`/`clean`: stage `case.artifacts.primary` to a temp path under `.claude/eval-temp/<case-id>/` (Bash `cp`), dispatch `case.execution.dispatch.command <staged-path>` (the STAGED temp path, exactly as `detection`/`clean` do — `target_arg` is the pre-staging source, not the dispatched path), evaluate every `sprint_contract[].description` against the captured review output (PASS/FAIL with one-sentence excerpt). No cleanup (review skills are read-only on their target).
+- **`behavior_apply_policy`** — apply-risk policy lookup. Its assertion is *deterministic* and is verified programmatically by `tests/test_eval_cases.py::test_apply_policy_lookup` against `docs/apply-risk-policy.md`, NOT by this LLM runner. These cases carry no `execution.dispatch` block (only `expected.policy_lookup`), so there is nothing to dispatch here — skip them in this runner.
 
 If a dispatch agent produces no tool calls within `case.execution.timeout_seconds` or returns an error, mark every sprint_contract criterion FAIL with note "agent timeout or crash" and proceed to the next case. Do not retry.
 

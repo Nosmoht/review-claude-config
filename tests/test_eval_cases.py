@@ -8,10 +8,16 @@ the case is built around, and (b) for ``kind: detection`` and ``kind: clean``
 cases, a synthesised ``findings.json`` representing what a well-behaved
 ``/review-skill`` (or downstream merge layer) should produce on that input.
 
-Behavior cases (``kind: behavior_*``) test analytics or scaffold side effects
-rather than findings.json; they have no programmatic replay path here. The
-harness validates their YAML schema only — actual behavioural validation
-happens through ``/run-eval-cases`` (LLM-driven).
+Behavior cases (``kind: behavior_*``) assert side effects or process behavior
+rather than a findings.json: ``behavior_analytics`` (analytics diff-tracking),
+``behavior_scaffold`` (scaffold filesystem writes), ``behavior_review`` (review-
+orchestrator process behavior — e.g. dimension-traversal completeness, meta-
+condition detection), and ``behavior_apply_policy`` (apply-risk policy lookup).
+Most ride the universal YAML-structure check here, with the real assertion
+validated through ``/run-eval-cases`` (LLM-driven). ``behavior_apply_policy`` is
+the exception: its policy lookup is deterministic, so it ALSO has a programmatic
+pytest path (``test_apply_policy_lookup``). ``behavior_review`` is LLM-driven like
+analytics/scaffold — no programmatic replay path here beyond the structural check.
 
 Schema (per case YAML)
 ----------------------
@@ -20,7 +26,8 @@ Schema (per case YAML)
 
     id: case-01-real-issue
     kind: detection                       # detection | clean | behavior_analytics |
-                                          # behavior_scaffold
+                                          # behavior_scaffold | behavior_apply_policy |
+                                          # behavior_review
     description: <one-line>
     target_skill: review-skill            # which skill the case exercises
     artifacts:
@@ -101,7 +108,19 @@ SCHEMAS_DIR = REPO_ROOT / "skills" / "review-claude-config" / "references" / "sc
 # ---------------------------------------------------------------------------
 
 
-VALID_KINDS = ("detection", "clean", "behavior_analytics", "behavior_scaffold", "behavior_apply_policy")
+# VALID_KINDS is a CLOSED set: the only mechanical kind-gate is the
+# ``case["kind"] in VALID_KINDS`` assertion in test_yaml_loads_and_has_required_fields.
+# Append-only via an AHE-reviewed PR that updates all consumers in lockstep
+# (this docstring + tuple, skills/run-eval-cases/SKILL.md §Case kinds,
+# docs/review-eval-cases.md). Parity decisions: rules/schema-contract-parity.md.
+VALID_KINDS = (
+    "detection",
+    "clean",
+    "behavior_analytics",
+    "behavior_scaffold",
+    "behavior_apply_policy",
+    "behavior_review",
+)
 DIM_ALIASES = {
     "Meta": "Metadata",
     "PE": "Prompt Engineering",
@@ -373,18 +392,21 @@ def test_at_least_five_cases() -> None:
 
 
 def test_every_kind_has_coverage() -> None:
-    """At least one detection, one clean, one behavior_* case must exist —
-    confirms the schema discriminator is exercised across all branches.
+    """Every kind declared in VALID_KINDS must have ≥1 exercising case.
+
+    Uniform per-kind floor (not a family-level ``any(behavior_*)`` check): guards
+    each declared kind — including each ``behavior_*`` kind individually — against
+    becoming a dead enum member with no exercising case (e.g. the last case of a
+    kind being deleted). This does NOT guard against a typo in a case file's
+    ``kind:`` value — that is caught by the closed-set membership assert in
+    test_yaml_loads_and_has_required_fields, which rejects any unknown kind.
     """
     by_kind: dict[str, int] = {}
     for p in CASES:
         case = _load_case(p)
         by_kind[case["kind"]] = by_kind.get(case["kind"], 0) + 1
-    assert by_kind.get("detection", 0) >= 1, f"need ≥1 detection case, have {by_kind}"
-    assert by_kind.get("clean", 0) >= 1, f"need ≥1 clean case, have {by_kind}"
-    assert any(k.startswith("behavior_") for k in by_kind), (
-        f"need ≥1 behavior_* case, have {by_kind}"
-    )
+    for kind in VALID_KINDS:
+        assert by_kind.get(kind, 0) >= 1, f"need ≥1 {kind} case, have {by_kind}"
 
 
 # ---------------------------------------------------------------------------
