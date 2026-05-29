@@ -558,10 +558,11 @@ In standalone mode:
 1. Present the certificate to the user.
 Before Write: scan the assembled report (frontmatter `target:`, optional `origin:`, and the entire body including per-finding evidence quotations) and replace any literal absolute home-directory prefix with `$HOME/`. The `~/.claude/hooks/block-sensitive-content.sh` PreToolUse hook denies Writes containing such prefixes. Also applies to the findings.json sidecar (Phase 4 step 5).
 2. Confirm before writing: "Save review report to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-skill.md`?"
-3. If confirmed, assemble the report using the canonical frontmatter contract located in Step 1 with:
+3. If confirmed, assemble the report using the canonical frontmatter contract in `references/review-report-contract.md` (Glob-located at Step 1) with:
    - `generated_by: review-skill`
    - one `summary` item of type `Skill`
    - `repo: <slug>` and optionally `origin: <git-remote-url>`
+   - `target: <repo-root>` — the **target repo root** directory (the CWD at invocation per the cross-repo CWD convention), written with the literal `$HOME/` token prefix per `review-report-contract.md:46` (`target: $HOME/path/to/repo`). This is NOT the reviewed-artifact path — that belongs in the `summary` item's `path` field. Never emit the reviewed SKILL.md path as `target:`.
    - `type + path` as the canonical identity and `name` as display-only
 4. Write the report file. Suggest committing with: `docs(reviews): add YYYY-MM-DDTHHMMSS review report`
 5. **Persist findings.json sidecar (multi-perspective mode only).** When b.5 produced `${HOME}/.claude/plugins/data/claude-config/audit/perspectives/<session_id>/findings.json`, copy it atomically to `${HOME}/.claude/plugins/data/claude-config/reports/<repo-slug>/YYYY-MM-DDTHHMMSS-review-skill.findings.json` (sibling of the `.md` report — same prefix, `.findings.json` suffix) via `Bash("cp <audit-side> <report-side>.tmp && mv <report-side>.tmp <report-side>")`. The tmp+rename pattern prevents a partial-write window where `/apply-skill-review-findings` could read a half-flushed sidecar. The sidecar conforms to `skills/review-claude-config/references/schemas/findings-list.schema.json` and is the authoritative input for `/apply-skill-review-findings`. In `--single-perspective` or orchestrated mode no sidecar is emitted; apply-* falls back to Markdown parsing for back-compat with legacy reports.
