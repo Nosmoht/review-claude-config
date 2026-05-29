@@ -224,3 +224,41 @@ Expected analytics behavior:
 - C18-3: Convergence verdict is "Not converged" — `SP-2` differs between reports and is in the deterministic subset (NARRATIVE_PARENT).
 - C18-4: Grade variance for Safety reported as 1 (C→B).
 - C18-5: If both differing finding_ids were advisory (e.g. `WS-1`, `RF-1`), verdict would be "Converged" under the post-#71 scoped policy. View 4 may still report "Not converged" until the analytics scope filter ships in #72 — see the banner in `skills/review-analytics/SKILL.md` View 4.
+
+## Case 19 — D5 Apply Round-Trip
+
+YAML: [`case_15_apply_round_trip.yaml`](../tests/eval_cases/case_15_apply_round_trip.yaml)
+
+defects:
+- {item: SP-2b, dim: Safety, sev: High, desc: "Write in allowed-tools without disable-model-invocation gate"}
+- {item: META-2, dim: Metadata, sev: Medium, desc: "Description lacks do-not-use exclusion phrase"}
+
+Fixture: `tests/fixtures/eval/case_15_apply_round_trip.SKILL.md` — a known-bad skill
+with exactly two deterministic-subset findings of known impact and known mechanical
+fixes. The fixture is otherwise structurally clean (all other binary rubric items are
+PASS or NA) so that a correctly-applied fix produces zero new Medium/High findings on
+re-review.
+
+Sprint contract:
+- **C15-1 (zero remaining original finding_ids):** After `/apply-skill-review-findings`
+  fixes SP-2b and META-2, a re-review produces zero remaining instances of the original
+  finding_ids (`SP-2b:...:Safety/v1` and `META-2:...:Metadata/v1`).
+- **C15-2 (no new Medium/High findings introduced):** Re-review after apply introduces
+  no new Medium or High findings — since the fixture is otherwise clean, any new
+  Medium/High would be a regression introduced by the fix itself.
+- **C15-3 (≤1-letter dimension grade change):** Dimension grade change after apply is
+  at most one letter in any single dimension, confirming the fix does not destabilise
+  unrelated grades.
+- **C15-4 (regression signal):** If a re-review still flags SP-2b or META-2, or
+  introduces a new High finding, the apply-findings skill failed to converge — this
+  signals a regression in the apply pipeline.
+
+Mechanical fixes:
+- **SP-2b:** Add `disable-model-invocation: true` to the fixture's frontmatter.
+- **META-2:** Append a `do not use` exclusion clause to the description, e.g.
+  "Do not use for read-only audits."
+
+This case is the first to exercise the full D5 round-trip. It is a `kind: detection`
+YAML case under `tests/eval_cases/` (not a narrative-only case) and is replayed
+programmatically by `tests/test_eval_cases.py`. The live review → apply → re-review
+loop is driven by `/run-eval-cases`.
