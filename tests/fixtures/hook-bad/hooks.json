@@ -1,0 +1,18 @@
+{
+  "description": "Synthetic hooks.json fixture for eval case 18 (D9 Hook Quality). Deliberately defective hook bound to PreToolUse (blocking) so HC-7 applies.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "description": "Bad hook: seeded with HC-7, SR-1, PY-1 defects for /review-hook eval",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 tests/fixtures/hook-bad/bad_hook.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

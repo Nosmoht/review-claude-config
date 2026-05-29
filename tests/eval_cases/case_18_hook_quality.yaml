@@ -1,0 +1,60 @@
+id: case-18-hook-quality
+kind: detection
+description: Hook Quality (D9) — defective hook must surface HC-7/SR-1/PY-1 findings from /review-hook.
+target_skill: review-hook
+artifacts:
+  hooks_json: tests/fixtures/hook-bad/hooks.json
+  bad_hook: tests/fixtures/hook-bad/bad_hook.py
+findings_fixture: tests/fixtures/eval/case_18_findings.json
+defects:
+  - { item: HC-7, dim: Safety,      sev: High,   desc: "Non-zero exit on PreToolUse success path blocks action unconditionally" }
+  - { item: SR-1, dim: Safety,      sev: High,   desc: "Credential (API_TOKEN) read and logged to stdout via print()" }
+  - { item: PY-1, dim: Completeness, sev: Medium, desc: "Reads input from sys.argv instead of sys.stdin; event payload is silently dropped" }
+sprint_contract:
+  - id: C22-1
+    description: "≥3 findings matching the seeded defects (HC-7 exit-code, SR-1 redaction, PY-1 stdin) at expected severity"
+  - id: C22-2
+    description: "each seeded defect flagged (no silent miss)"
+  - id: C22-3
+    description: "regression signal: any seeded defect goes unflagged"
+expected:
+  required_findings:
+    - { item: HC-7, dim: Safety,      severity: [High, Medium] }
+    - { item: SR-1, dim: Safety,      severity: [High, Medium] }
+    - { item: PY-1, dim: Completeness, severity: [Medium, Low] }
+  forbidden_findings: []
+  field_invariants:
+    - "every High/Medium finding has non-empty evidence"
+    - "every High/Medium finding has non-empty validation"
+    - "every High finding has non-empty current and recommended"
+acceptance:
+  precision: ">= 0.5"
+  recall:    ">= 0.5"
+execution:
+  dispatch:
+    command: /review-hook
+    target_arg: tests/fixtures/hook-bad/hooks.json
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  reviewer_behavior: skills/review-hook/SKILL.md
+notes: |
+  Findings are hook-quality items (HC-7, SR-1, PY-1) from the hook evaluation
+  guide (skills/review-hook/references/hook-evaluation-guide.md), NOT skill
+  binary-evaluator items (BINARY_ITEM_IDS). The D5 deterministic-subset predicate
+  does NOT apply — the pytest layer validates only the findings_fixture schema
+  and precision/recall internal consistency. LLM-driven evaluation via
+  /run-eval-cases is the real assertion for C22-1 and C22-2.
+
+  The fixture hooks.json binds bad_hook.py to PreToolUse (a blocking event) so
+  HC-7 is FAIL rather than N/A. SR-1 uses a credential-read-inside-print pattern
+  (no literal token embedded). PY-1 uses sys.argv instead of sys.stdin.
+
+  A stray 4th finding (e.g. PY-8 no top-level handler) is acceptable — it does
+  not break the mechanical gate (precision >= 0.5 with 3 TP + 1 FP = 0.75).
+
+  C22-3 is the regression signal clause: if /review-hook runs on this fixture
+  and any of HC-7, SR-1, or PY-1 goes unflagged, the hook-quality reviewer has
+  regressed. This signal is delivered via /run-eval-cases, not CI.

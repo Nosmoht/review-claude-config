@@ -1,0 +1,58 @@
+{
+  "generated_by": "synth-case-18-hook-quality",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-18-hook-quality",
+  "artifact_path": "tests/fixtures/hook-bad/hooks.json",
+  "artifact_type": "hook",
+  "findings": [
+    {
+      "id": "HC-7:tests/fixtures/hook-bad/bad_hook.py:Safety/v1",
+      "checklist_item": "HC-7",
+      "dimension": "Safety",
+      "severity": "High",
+      "evidence": "bad_hook.py line 26: `sys.exit(1)` is on the success path — after no error condition, the hook exits non-zero, which causes PreToolUse to block the action unconditionally.",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/hook-bad/bad_hook.py",
+      "line_range": "26",
+      "why": "HC-7 FAIL: PreToolUse is a blocking event. A non-zero exit code blocks the tool call. The hook has no error condition on the success path yet exits 1, so every tool call is erroneously blocked.",
+      "validation": "Inspect bad_hook.py and confirm the success path exits 0 (allow) and only genuine error conditions exit non-zero.",
+      "current": "sys.exit(1)  # unconditional, on success path",
+      "recommended": "sys.exit(0)  # allow the action; use sys.exit(1) only when the hook explicitly wants to block",
+      "perspective": "hook-evaluator"
+    },
+    {
+      "id": "SR-1:tests/fixtures/hook-bad/bad_hook.py:Safety/v1",
+      "checklist_item": "SR-1",
+      "dimension": "Safety",
+      "severity": "High",
+      "evidence": "bad_hook.py line 23: `print(os.environ.get(\"API_TOKEN\"))` reads a credential from the environment and logs it to stdout, which Claude Code injects into the conversation context.",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/hook-bad/bad_hook.py",
+      "line_range": "23",
+      "why": "SR-1 FAIL: Credentials must never be logged to stdout or stderr. The API_TOKEN value is exposed in the conversation transcript on every hook invocation.",
+      "validation": "Remove all credential reads from stdout/stderr paths. If the token is needed, use it in-memory only (e.g. in a header dict) without printing it.",
+      "current": "print(os.environ.get(\"API_TOKEN\"))",
+      "recommended": "# Do not log credentials. If the token is required, read it into a variable and\n# use it directly without printing:\n# token = os.environ.get(\"API_TOKEN\", \"\")\n# headers = {\"Authorization\": f\"Bearer {token}\"}",
+      "perspective": "hook-evaluator"
+    },
+    {
+      "id": "PY-1:tests/fixtures/hook-bad/bad_hook.py:Completeness/v1",
+      "checklist_item": "PY-1",
+      "dimension": "Completeness",
+      "severity": "Medium",
+      "evidence": "bad_hook.py line 20: `tool_name = sys.argv[1] if len(sys.argv) > 1 else \"unknown\"` reads the tool name from argv. Claude Code delivers the hook event payload as JSON on stdin, not as argv arguments.",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/hook-bad/bad_hook.py",
+      "line_range": "20",
+      "why": "PY-1 FAIL: Hook scripts receive event data (tool name, parameters, session context) as a JSON object on stdin. Reading from argv silently ignores the event payload, making the hook unable to inspect or act on the actual tool call.",
+      "validation": "Replace argv-based input with `import json; event = json.load(sys.stdin)` and derive the tool name from `event.get('tool_name', 'unknown')`.",
+      "perspective": "hook-evaluator"
+    }
+  ]
+}
