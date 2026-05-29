@@ -1,0 +1,56 @@
+{
+  "generated_by": "synth-case-19-rule-three-dim",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-19-rule-three-dim",
+  "artifact_path": "tests/fixtures/rule-bad/test-fixture-rule.md",
+  "artifact_type": "rule",
+  "findings": [
+    {
+      "id": "CL-2:tests/fixtures/rule-bad/test-fixture-rule.md:Clarity/v1",
+      "checklist_item": "CL-2",
+      "dimension": "Clarity",
+      "severity": "High",
+      "evidence": "Line 11: 'should be handled appropriately' — 'appropriately' is a vague qualifier that admits multiple opposite actions. Line 13: 'reasonable validation' — 'reasonable' is undefined and implementation-dependent.",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/rule-bad/test-fixture-rule.md",
+      "line_range": "11-13",
+      "why": "CL-2 FAIL: Terms like 'appropriately' and 'reasonable' fail the precision test. Two implementers reading 'handle appropriately given the session state' can take opposite actions (e.g. one escalates, one falls back silently). 'Reasonable validation' gives no measurable criterion for what constitutes a valid request.",
+      "validation": "Replace 'appropriately' with a concrete action verb (e.g. 'prompt the user for clarification via AskUserQuestion') and replace 'reasonable validation' with a named check (e.g. 'schema-validate the request payload against the handler contract before dispatching').",
+      "current": "Requests with ambiguous intent should be handled appropriately given the session's current state.\nFor requests involving external services, apply reasonable validation before dispatching.",
+      "recommended": "Requests with ambiguous intent must be surfaced to the user via AskUserQuestion before dispatch.\nFor requests involving external services, validate the request payload against the handler's declared input schema before dispatching.",
+      "perspective": "rule-evaluator"
+    },
+    {
+      "id": "CO-2:tests/fixtures/rule-bad/test-fixture-rule.md:Completeness/v1",
+      "checklist_item": "CO-2",
+      "dimension": "Completeness",
+      "severity": "Medium",
+      "evidence": "The rule has no section or clause stating when it does NOT apply. There is no 'When NOT to apply', 'Exclusions', or 'Suppressors' section. Trivial requests, headless sessions, and direct-user-override cases are not addressed.",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/rule-bad/test-fixture-rule.md",
+      "line_range": "1-23",
+      "why": "CO-2 FAIL: A routing rule that applies universally without exceptions will misfire on trivial one-liner requests, session-start status checks, and cases where the user explicitly says 'skip pipeline'. Without stated exceptions, an implementer has no basis to bypass the pipeline on legitimate no-pipeline paths.",
+      "validation": "Add an 'Exclusions' or 'When NOT to apply' section that lists: (1) trivial one-liner changes; (2) questions (no deliverable output); (3) session-start actions; (4) user-explicit 'skip pipeline' directive.",
+      "perspective": "rule-evaluator"
+    },
+    {
+      "id": "GA-5:tests/fixtures/rule-bad/test-fixture-rule.md:Goal Alignment/v1",
+      "checklist_item": "GA-5",
+      "dimension": "Goal Alignment",
+      "severity": "Medium",
+      "evidence": "The stated goal (line 20–21) is 'ensure that user requests are handled quickly and effectively', but the rule contains no constraint on latency or quality of dispatch. The mandate (lines 8–13) only requires routing to 'an appropriate handler' with no success criterion, timeout bound, or fallback when no handler matches.",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/rule-bad/test-fixture-rule.md",
+      "line_range": "8-13",
+      "why": "GA-5 FAIL: The goal asserts 'quickly and effectively' but the mandate supplies no constraint that enforces either property. A handler selected by the dispatch pipeline can silently fail or take unbounded time without violating any stated rule constraint. The missing constraints are: (1) a fallback action when no handler matches; (2) a definition of 'effective' dispatch (e.g. the handler must acknowledge the request before the next user turn).",
+      "validation": "Add to the mandate: (1) an explicit fallback clause ('if no handler matches, surface the gap to the user via AskUserQuestion'); (2) a measurable success criterion for dispatch quality.",
+      "perspective": "rule-evaluator"
+    }
+  ]
+}
