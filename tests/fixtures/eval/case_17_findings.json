@@ -1,0 +1,26 @@
+{
+  "generated_by": "merge_findings",
+  "schema_version": "1.0.0",
+  "session_id": "synth-case-17-oversized-primitive",
+  "artifact_path": "tests/fixtures/skill-oversized.md",
+  "artifact_type": "skill",
+  "findings": [
+    {
+      "id": "verbosity-token-density:tests/fixtures/skill-oversized.md:Context Engineering/v1",
+      "checklist_item": "verbosity-token-density",
+      "dimension": "Context Engineering",
+      "severity": "Medium",
+      "evidence": "Skill body is approximately 4200 estimated tokens — more than 5× the default reference-file token budget (≤500) and more than 2× the typical named-file budget (800). Multiple sections repeat the same information: the retry policy is fully described in the Configuration Schema section and again in Step 4 (Execute stages); the error classes listed in the Error Handling section duplicate descriptions already present in Execution Steps. The verbosity level explanations appear both in the Inputs section and in the Run Report section.",
+      "primary_focus": true,
+      "owner_conflict": false,
+      "hint_owner": null,
+      "path": "tests/fixtures/skill-oversized.md",
+      "line_range": "1-300",
+      "why": "A skill body this large imposes a high per-invocation context cost. Low signal-density and repeated prose reduce the useful information per token, making it harder for the model to locate the relevant step at invocation time and increasing the probability of attention loss on key constraints.",
+      "validation": "Refactor the skill body to remove redundant repetition across sections. After refactoring, re-estimate the token count: `python3 -c \"print(len(open('tests/fixtures/skill-oversized.md').read())//4)\"` should produce a value below 1600 (the default × 2 threshold).",
+      "current": "Skill body ~4200 estimated tokens with repeated prose across Configuration Schema, Execution Steps, and Error Handling sections.",
+      "recommended": "Consolidate repeated policy descriptions to a single canonical location in the body. Remove restatements: the retry policy should appear once (in Configuration Schema), with Execution Steps referencing it by name. Aim for a total body length below 1600 tokens.",
+      "perspective": "context-engineering"
+    }
+  ]
+}

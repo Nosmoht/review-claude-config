@@ -291,3 +291,32 @@ classifies the trajectory as Stable/Improving, the grade-step (C→D) and score-
 This case exercises the analytics trajectory-detection path defined in
 `skills/review-analytics/SKILL.md` §4 "Compute trajectories" (Regressing predicate:
 latest grade lower than previous report OR score dropped by ≥5).
+
+## Case 21 — D7 Oversized Primitive
+
+(YAML: `tests/eval_cases/case_17_oversized_primitive.yaml`)
+
+defects:
+- {item: verbosity-token-density, dim: Context Engineering, sev: Medium, desc: "Skill body ~4200 estimated tokens with repeated prose; exceeds 2× typical reference-file budget"}
+
+Fixture: `tests/fixtures/skill-oversized.md` — a syntactically valid skill with correct
+frontmatter (`name`, `description`) but a deliberately verbose, redundant body of
+approximately 4200 estimated tokens (chars/4). The body describes a data pipeline
+orchestrator with multiple sections that repeat the same policy information (retry
+logic appears in Configuration Schema and again in Execution Step 4; error classes
+appear in Execution Steps and again in the Error Handling section). The verbosity is
+plausibly real — structured prose, not lorem ipsum — so the reviewer has genuine
+signal-density concerns to flag.
+
+The verbosity-token-density finding is a **judgment-based finding**, NOT a binary
+rubric item (no BINARY_ITEM_IDS predicate). The pytest layer validates the
+findings fixture schema and precision/recall internal consistency only. The real
+reviewer-judgment assertion is driven by `/run-eval-cases`.
+
+Sprint contract:
+- **C21-1:** reviewer flags a Completeness OR Context Engineering finding citing
+  token-density / verbosity
+- **C21-2:** reviewer does NOT silently accept the oversized skill (no clean pass)
+- **C21-3 (regression signal):** review passes the oversized fixture without a
+  token-density-related finding — signals that the reviewer is failing to apply
+  signal-density heuristics to oversized primitives

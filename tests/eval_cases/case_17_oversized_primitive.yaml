@@ -1,0 +1,55 @@
+id: case-17-oversized-primitive
+kind: detection
+description: D7 Oversized Primitive — oversized skill must surface a Context Engineering / verbosity-token-density finding.
+target_skill: review-skill
+artifacts:
+  primary: tests/fixtures/skill-oversized.md
+findings_fixture: tests/fixtures/eval/case_17_findings.json
+defects:
+  - { item: verbosity-token-density, dim: Context Engineering, sev: Medium, desc: "Skill body ~4200 estimated tokens with repeated prose; exceeds 2× typical reference-file budget" }
+sprint_contract:
+  - id: C21-1
+    description: "reviewer flags a Completeness OR Context Engineering finding citing token-density / verbosity"
+  - id: C21-2
+    description: "reviewer does NOT silently accept the oversized skill (no clean pass)"
+  - id: C21-3
+    description: "regression signal: review passes the oversized fixture without a token-density finding"
+expected:
+  required_findings:
+    - { item: verbosity-token-density, dim: Context Engineering, severity: [Medium, Low] }
+  forbidden_findings: []
+  field_invariants:
+    - "every High/Medium finding has non-empty evidence"
+    - "every High/Medium finding has non-empty validation"
+    - "every High finding has non-empty current and recommended"
+acceptance:
+  precision: ">= 0.5"
+  recall:    ">= 0.5"
+execution:
+  dispatch:
+    command: /review-skill
+    target_arg: tests/fixtures/skill-oversized.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  artifact: tests/fixtures/skill-oversized.md
+  reviewer_behavior: skills/review-skill/SKILL.md
+notes: |
+  The verbosity-token-density finding is a judgment-based finding, NOT a binary
+  rubric item. No BINARY_ITEM_IDS predicate applies. The pytest layer validates
+  the findings_fixture schema and internal precision/recall consistency only.
+  The real reviewer-judgment assertion — whether /review-skill actually flags
+  verbosity on a live invocation — is driven by /run-eval-cases (LLM-executed).
+
+  The fixture (tests/fixtures/skill-oversized.md) is ~4200 estimated tokens,
+  more than 5× the default ≤500 token budget and more than 2× the typical
+  named-file 800-token budget. This is a deliberate verbosity signal; the
+  reviewer is expected to flag signal density / token-budget concerns under
+  Context Engineering (or Completeness if the reviewer maps it there instead —
+  the sprint contract accepts either dimension at LLM-eval time).
+
+  The case-NN filename (case_17) and the doc-narrative number (Case 21) are
+  independent numbering schemes in this repo; the cross-reference in
+  docs/review-eval-cases.md §"Case 21" makes the mapping explicit.
