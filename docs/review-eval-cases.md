@@ -352,3 +352,35 @@ Sprint contract:
 - **C22-3 (regression signal):** any seeded defect goes unflagged — signals a regression
   in hook-quality reviewer coverage for exit-code discipline, credential redaction,
   or stdin contract
+
+## Case 23 — D1 Rule 3-Dimension Scoring
+
+(YAML: `tests/eval_cases/case_19_rule_three_dim.yaml`)
+
+Fixture: `tests/fixtures/rule-bad/` — a synthetic rule file (`test-fixture-rule.md`)
+describing a request-routing mandate, with three deliberate defects seeded across the
+three dimensions applicable to rules.
+
+defects:
+- {item: CL-2, dim: Clarity, sev: High, desc: "Vague terms 'appropriately' and 'reasonable' admit multiple opposite actions"}
+- {item: CO-2, dim: Completeness, sev: Medium, desc: "No exceptions / when-rule-does-NOT-apply section"}
+- {item: GA-5, dim: Goal Alignment, sev: Medium, desc: "Stated goal ('quickly and effectively') has no constraints enforcing it in the mandate"}
+
+Rules use only **Clarity (30%) / Completeness (30%) / Goal Alignment (40%)**. PE,
+CE, Safety, and Metadata are structurally inapplicable
+(`skills/review-rule/references/rule-evaluation-guide.md` line 11). A correct
+reviewer must score exclusively these three dimensions and must NOT emit grades for
+PE/CE/Safety/Metadata.
+
+These are **rule-evaluation-guide findings** (CL-2, CO-2, GA-5) from
+`skills/review-rule/references/rule-evaluation-guide.md`, NOT skill binary-evaluator
+items. The pytest layer validates the findings fixture schema and precision/recall
+internal consistency only. LLM-driven evaluation via `/run-eval-cases` is the real
+assertion for C23-1 and C23-2.
+
+Sprint contract:
+- **C23-1:** reviewer scores ONLY the 3 applicable dimensions (Clarity/Completeness/Goal
+  Alignment); PE/CE/Safety/Metadata absent or N/A
+- **C23-2:** flags the seeded CL-2/CO-2/GA-5 defects
+- **C23-3 (regression signal):** reviewer emits a 7-dimension grade or misses a seeded
+  defect — signals a regression in the rule-evaluation 3-dimension path
