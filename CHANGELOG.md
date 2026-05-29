@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.21.0](https://github.com/Nosmoht/review-claude-config/compare/v2.20.0...v2.21.0) (2026-05-29)
+
+
+### Changed
+
+* **eval-cases:** add D9 hook quality eval case ([#309](https://github.com/Nosmoht/review-claude-config/issues/309)) ([939be5e](https://github.com/Nosmoht/review-claude-config/commit/939be5eac072e2545155bd1a9b6fa69266338cc0))
+
 ## [2.20.0](https://github.com/Nosmoht/review-claude-config/compare/v2.19.0...v2.20.0) (2026-05-29)
 
 
