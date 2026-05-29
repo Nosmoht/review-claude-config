@@ -262,3 +262,32 @@ This case is the first to exercise the full D5 round-trip. It is a `kind: detect
 YAML case under `tests/eval_cases/` (not a narrative-only case) and is replayed
 programmatically by `tests/test_eval_cases.py`. The live review → apply → re-review
 loop is driven by `/run-eval-cases`.
+
+## Case 20 — D8 Analytics Regression
+
+YAML: [`case_16_analytics_regression.yaml`](../tests/eval_cases/case_16_analytics_regression.yaml)
+
+defects: N/A (tests analytics regression detection, not finding detection)
+
+Fixture: `tests/fixtures/analytics-regression/` — three timestamped review reports
+for the same artifact (`type: skill`, `path: skills/test-safety-skill/SKILL.md`,
+`name: test-safety-skill`) with dates 2026-01-01, 2026-02-01, and 2026-03-01. The
+`safety` dimension drops B→C→D (score 82→68→55) across the three reports, while all
+other dimensions remain stable at B.
+
+Sprint contract:
+- **C16-1 (regression flagged with correct dimension):** `/review-analytics` surfaces
+  the `safety` dimension as the dropping axis in the regression report.
+- **C16-2 (trajectory direction = Regressing):** The artifact's overall trajectory is
+  classified as Regressing or decline — not Stable or Improving.
+- **C16-3 (regression signal):** Trajectory drop goes unflagged OR direction is
+  inverted (Stable/Improving reported instead of Regressing) — signals a regression
+  in the analytics detection logic.
+
+Regression signal: if `/review-analytics` fails to flag the safety dimension drop or
+classifies the trajectory as Stable/Improving, the grade-step (C→D) and score-drop
+(≥5 points: 68→55) classifier branches have both been bypassed.
+
+This case exercises the analytics trajectory-detection path defined in
+`skills/review-analytics/SKILL.md` §4 "Compute trajectories" (Regressing predicate:
+latest grade lower than previous report OR score dropped by ≥5).

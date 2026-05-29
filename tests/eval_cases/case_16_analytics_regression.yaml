@@ -1,0 +1,35 @@
+id: case-16-analytics-regression
+kind: behavior_analytics
+description: Analytics regression detection — grade trajectory drops B→C→D on the safety dimension across three reports for the same artifact.
+target_skill: review-analytics
+artifacts:
+  report_1: tests/fixtures/analytics-regression/test-safety-skill-2026-01-01.md
+  report_2: tests/fixtures/analytics-regression/test-safety-skill-2026-02-01.md
+  report_3: tests/fixtures/analytics-regression/test-safety-skill-2026-03-01.md
+defects: N/A
+sprint_contract:
+  - id: C16-1
+    description: "Regression is flagged with the correct dimension (safety — the dropping axis)."
+  - id: C16-2
+    description: "Trajectory direction is Regressing or decline (not Stable or Improving)."
+  - id: C16-3
+    description: "Regression signal: trajectory drop goes unflagged OR direction is inverted (Stable/Improving reported instead of Regressing)."
+acceptance: null
+execution:
+  dispatch:
+    command: /review-analytics
+    target_arg: ".claude/eval-temp/"
+    setup: "stage report_1 + report_2 + report_3 under target_arg before dispatch"
+  timeout_seconds: 60
+fix_target:
+  reviewer_behavior: skills/review-analytics/SKILL.md
+notes: |
+  Behavior case — exercises analytics regression detection. The three
+  reports describe the same artifact (name=test-safety-skill,
+  path=skills/test-safety-skill/SKILL.md) across three timestamps.
+  The safety dimension drops B→C→D (score 82→68→55) while all other
+  dimensions remain stable at B. The /review-analytics skill must
+  classify the artifact's overall trajectory as Regressing and surface
+  the safety dimension as the dropping axis.
+  No findings.json contract — the assertion target is the analytics
+  report's narrative output, evaluated by /run-eval-cases.
