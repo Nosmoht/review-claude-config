@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.0](https://github.com/Nosmoht/review-claude-config/compare/v2.17.1...v2.18.0) (2026-05-29)
+
+
+### Changed
+
+* **eval-cases:** add D5 apply round-trip eval case ([#302](https://github.com/Nosmoht/review-claude-config/issues/302)) ([db3fc3b](https://github.com/Nosmoht/review-claude-config/commit/db3fc3bb3bf2f59e1446515b7c77922d1282a451))
+
 ## [2.17.1](https://github.com/Nosmoht/review-claude-config/compare/v2.17.0...v2.17.1) (2026-05-29)
 
 
