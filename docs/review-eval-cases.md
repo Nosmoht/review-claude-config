@@ -20,7 +20,7 @@ Cases C6–C18 below remain as narrative specifications — they enumerate gaps 
 
 Cases that test finding detection include a `defects:` block listing expected defects. Each defect has `{item, dim, sev, desc}`. Cases testing behavior (not detection) have `defects: N/A`. Clean-artifact cases have `defects: []`. Used by `/run-eval-cases` for FP/FN precision/recall measurement.
 
-The behavior kinds split by what they assert: `behavior_analytics` (analytics diff-tracking), `behavior_scaffold` (scaffold filesystem writes), `behavior_apply_policy` (deterministic apply-risk policy lookup — verified in pytest, not by the LLM runner), and **`behavior_review`** (review-orchestrator *process* behavior — e.g. dimension-traversal completeness or meta-condition detection, as opposed to which findings the reviewer emits). `behavior_review` is the form the D-series review-behavior cases (#128/#129/#130/#132/#136) use; see Case 24 for the reference exemplar.
+The behavior kinds split by what they assert: `behavior_analytics` (analytics diff-tracking), `behavior_scaffold` (scaffold filesystem writes), `behavior_apply_policy` (deterministic apply-risk policy lookup — verified in pytest, not by the LLM runner), and **`behavior_review`** (review-orchestrator *process* behavior — e.g. dimension-traversal completeness or meta-condition detection, as opposed to which findings the reviewer emits). `behavior_review` is the form the D-series review-behavior cases (#128/#129/#130/#132/#136) use; see Case 24 for the reference exemplar and Case 25 for stub-primitive handling.
 
 The C1–C5 narrative sections were removed when those cases moved to YAML. The C6–C18 sections below preserve the narrative format pending a follow-up migration.
 
@@ -419,3 +419,52 @@ Sprint contract:
 - **C20-3 (regression signal):** reviewer emits a partial grade block missing one or
   more applicable dimensions, OR scores a dimension structurally inapplicable to a
   skill artifact
+
+## Case 25 — D6 stub-primitive handling (behavior_review)
+
+(YAML: `tests/eval_cases/case_21_stub_behavior_review.yaml`)
+
+Fixture: `tests/fixtures/eval/case_21_stub.SKILL.md` — a well-formed SKILL.md with
+valid YAML frontmatter (`name:` + `description:`) followed by exactly one non-blank
+body line. No workflow, steps, error-handling, or sections — the absence of substantive
+body content is the point. Staged read-only via `cp`; `/review-skill` does not mutate
+its target.
+
+defects: N/A (asserts reviewer behavior against a stub primitive, not detection of a
+seeded defect in a complete artifact)
+
+D6 label. This case guards against reviewer hallucination: confidently grading a
+near-empty primitive on content-dependent dimensions where there is no substantive
+body to assess. Unlike `detection`/`clean` cases, it asserts a property of review
+*process* behavior. The pytest layer (`tests/test_eval_cases.py`) validates only the
+YAML structure; the behavioral assertion (C25-1/C25-2) is LLM-driven and runs only
+via `/run-eval-cases`, which is non-deterministic — there is no programmatic replay
+path for it.
+
+Sprint contract (IDs use the `C25-*` prefix matching this doc Case 25 — the YAML-stem
+prefix `C21-*` is already owned by Case 21 / `case_17_oversized_primitive.yaml`):
+- **C25-1 (correct behavior):** EITHER the certificate raises an explicit stub /
+  insufficient-content finding, OR **no** content-dependent dimension (Completeness,
+  Prompt Engineering, Context Engineering, Goal Alignment) is awarded a confident high
+  grade (A or B).
+- **C25-2 (regression signal):** no stub/insufficiency finding is raised AND at least
+  one content-dependent dimension is awarded a confident high grade (A or B) — the
+  reviewer confidently grades a no-content dimension as if the stub were a complete
+  primitive (hallucination). C25-1 and C25-2 are exact complements: every review output
+  lands in exactly one, with no quantifier dead zone.
+
+Regression signal: reviewer returns A or B on any of Completeness, Prompt Engineering,
+Context Engineering, or Goal Alignment for a primitive with no substantive body content,
+without raising a stub / insufficient-content finding.
+
+Reconciliation note: issue #132 specified "reviewer returns NOT letter grades / all
+dimensions null/N/A" but `/review-skill` mandates exactly 7 dimension rows plus Overall
+(`skills/review-skill/SKILL.md:118-119`). The sprint contract is reconciled to the SUT
+contract — correct behavior is the mandated 7-row block where content-dependent
+dimensions grade low and/or an explicit stub/insufficient finding is raised. User
+decision: close #132 on the four structural ACs; post-merge layer-(b) verification
+(`/run-eval-cases 21`) confirms the behavioral guard fires.
+
+Note: the doc `## Case N` heading sequence is decoupled from the YAML `case_NN`
+filename sequence (this Case 25 maps to `case_21`); the YAML pointer line above is the
+disambiguator.

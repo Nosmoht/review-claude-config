@@ -1,0 +1,65 @@
+id: case-21-stub-behavior-review
+kind: behavior_review
+description: >-
+  D6 stub-primitive handling — asserts /review-skill reflects insufficiency on a
+  near-empty primitive rather than hallucinating confident high grades on
+  content-dependent dimensions with no substantive content to assess.
+target_skill: review-skill
+artifacts:
+  primary: tests/fixtures/eval/case_21_stub.SKILL.md
+defects: N/A
+sprint_contract:
+  - id: C25-1
+    description: >-
+      Correct behavior: EITHER the certificate raises an explicit stub /
+      insufficient-content finding, OR no content-dependent dimension
+      (Completeness, Prompt Engineering, Context Engineering, Goal Alignment)
+      is awarded a confident high grade (A or B). The presence of a confident
+      A/B on any content-dependent dimension — with no substantive body to
+      assess — is the hallucination signal this case guards against.
+  - id: C25-2
+    description: >-
+      Regression signal — exact complement of C25-1: no stub/insufficiency
+      finding is raised AND at least one content-dependent dimension
+      (Completeness, Prompt Engineering, Context Engineering, Goal Alignment)
+      is awarded a confident high grade (A or B). This means the reviewer
+      confidently graded a no-content dimension as if the stub were a complete
+      primitive (hallucination). Every review output lands in exactly one of
+      C25-1 / C25-2 — there is no quantifier dead zone.
+acceptance: null
+execution:
+  dispatch:
+    command: /review-skill
+    target_arg: tests/fixtures/eval/case_21_stub.SKILL.md
+    orchestration:
+      websearch_available: false
+      webfetch_available: false
+  timeout_seconds: 60
+fix_target:
+  reviewer_behavior: skills/review-skill/SKILL.md
+notes: |
+  D6 stub-primitive eval case. Reconciliation with #132 literal phrasing: issue
+  #132 specified "reviewer returns NOT letter grades / all dimensions null/N/A"
+  but /review-skill mandates exactly 7 dimension rows plus Overall
+  (skills/review-skill/SKILL.md:118-119). The sprint contract is reconciled to the
+  SUT contract — correct behavior is the mandated 7-row block where
+  content-dependent dimensions grade low and/or an explicit stub/insufficient
+  finding is raised; regression is confident high grades on dimensions with no
+  content to assess. User decision: close #132 on the four structural ACs.
+
+  kind: behavior_review — no findings_fixture; the behavioral assertion (C25-1/
+  C25-2) is LLM-driven and runs only via /run-eval-cases, which is
+  non-deterministic. There is no programmatic replay path for it in
+  tests/test_eval_cases.py (only the universal YAML-structure check runs).
+
+  defects: N/A (asserts reviewer behavior against a stub primitive, not
+  detection of a seeded defect in a complete artifact).
+
+  Reuses the detection/clean staging flow: the staged temp path is reviewed, not
+  the live fixture. /review-skill does not mutate its target. Template: see
+  Case 24 / case_20_behavior_review_reference.yaml.
+
+  Post-merge behavioral verification: run /run-eval-cases 21 in a fresh
+  plugin-loaded session (claude --plugin-dir .) to confirm /review-skill
+  satisfies C25-1 and does NOT exhibit C25-2. This is a layer-(b) follow-up,
+  not an issue-AC blocker.
