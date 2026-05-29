@@ -320,3 +320,35 @@ Sprint contract:
 - **C21-3 (regression signal):** review passes the oversized fixture without a
   token-density-related finding — signals that the reviewer is failing to apply
   signal-density heuristics to oversized primitives
+
+## Case 22 — D9 Hook Quality
+
+(YAML: `tests/eval_cases/case_18_hook_quality.yaml`)
+
+Fixture: `tests/fixtures/hook-bad/` — a synthetic `hooks.json` binding `bad_hook.py`
+to a `PreToolUse` (blocking) event, plus `bad_hook.py` containing three deliberate
+defects that map to known hook checklist items.
+
+defects:
+- {item: HC-7, dim: Safety, sev: High, desc: "Non-zero exit on PreToolUse success path blocks action unconditionally"}
+- {item: SR-1, dim: Safety, sev: High, desc: "Credential (API_TOKEN) read and logged to stdout via print()"}
+- {item: PY-1, dim: Completeness, sev: Medium, desc: "Reads input from sys.argv instead of sys.stdin; event payload is silently dropped"}
+
+The `hooks.json` binds the bad hook to `PreToolUse` (a blocking event) so that HC-7
+is FAIL rather than N/A — HC-7 only applies when the hook is on a blocking event.
+SR-1 uses a credential-read-inside-print pattern (no literal token embedded).
+PY-1 reads from `sys.argv` rather than `sys.stdin`, silently dropping the JSON
+event payload that Claude Code delivers on stdin.
+
+These are **hook-quality findings** from `skills/review-hook/references/hook-evaluation-guide.md`,
+NOT skill binary-evaluator items. The pytest layer validates the findings fixture schema
+and precision/recall internal consistency only. LLM-driven evaluation via `/run-eval-cases`
+is the real assertion for C22-1 and C22-2.
+
+Sprint contract:
+- **C22-1:** `/review-hook` flags ≥3 findings matching the seeded defects (HC-7 exit-code,
+  SR-1 redaction, PY-1 stdin) at expected severity
+- **C22-2:** each seeded defect is flagged (no silent miss)
+- **C22-3 (regression signal):** any seeded defect goes unflagged — signals a regression
+  in hook-quality reviewer coverage for exit-code discipline, credential redaction,
+  or stdin contract
