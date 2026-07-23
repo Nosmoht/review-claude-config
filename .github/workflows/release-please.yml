@@ -52,7 +52,7 @@ jobs:
 
       - name: Set up Python for validation
         if: ${{ steps.release.outputs.pr != '' && !inputs.dry-run }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
